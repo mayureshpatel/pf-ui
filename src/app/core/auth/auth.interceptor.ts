@@ -1,16 +1,16 @@
-import { HttpInterceptorFn, HttpRequest, HttpHandlerFn, HttpErrorResponse } from '@angular/common/http';
-import { inject } from '@angular/core';
-import { catchError, throwError } from 'rxjs';
-import { AuthService } from './auth.service';
+import {HttpErrorResponse, HttpHandlerFn, HttpInterceptorFn, HttpRequest} from '@angular/common/http';
+import {inject} from '@angular/core';
+import {catchError, Observable, throwError} from 'rxjs';
+import {AuthService} from './auth.service';
 
 export const authInterceptor: HttpInterceptorFn = (
   req: HttpRequest<unknown>,
   next: HttpHandlerFn
 ) => {
-  const authService = inject(AuthService);
-  const token = authService.getToken();
+  const authService: AuthService = inject(AuthService);
+  const token: string | null = authService.getToken();
 
-  let authReq = req;
+  let authReq: HttpRequest<unknown> = req;
   if (token && !req.url.includes('/auth/')) {
     authReq = req.clone({
       setHeaders: {
@@ -20,11 +20,11 @@ export const authInterceptor: HttpInterceptorFn = (
   }
 
   return next(authReq).pipe(
-    catchError((error: HttpErrorResponse) => {
+    catchError((error: HttpErrorResponse): Observable<never> => {
       if (error.status === 401 && !req.url.includes('/auth/')) {
         authService.handleUnauthorized();
       }
-      return throwError(() => error);
+      return throwError((): HttpErrorResponse => error);
     })
   );
 };

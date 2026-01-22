@@ -1,41 +1,41 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Router } from '@angular/router';
-import { catchError, tap, throwError } from 'rxjs';
-import { environment } from '@env';
-import { AuthRequest, AuthResponse, JwtPayload, User } from '@models/auth.model';
-import { StorageService } from '../services/storage.service';
-import { ToastService } from '../services/toast.service';
+import {computed, inject, Injectable, Signal, signal, WritableSignal} from '@angular/core';
+import {HttpClient} from '@angular/common/http';
+import {Router} from '@angular/router';
+import {catchError, Observable, tap, throwError} from 'rxjs';
+import {environment} from '@env';
+import {AuthRequest, AuthResponse, JwtPayload, User} from '@models/auth.model';
+import {StorageService} from '../services/storage.service';
+import {ToastService} from '../services/toast.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
-  private http = inject(HttpClient);
-  private router = inject(Router);
-  private storage = inject(StorageService);
-  private toast = inject(ToastService);
+  private readonly http: HttpClient = inject(HttpClient);
+  private readonly router: Router = inject(Router);
+  private readonly storage: StorageService = inject(StorageService);
+  private readonly toast: ToastService = inject(ToastService);
 
-  private readonly _isAuthenticated = signal<boolean>(this.storage.hasToken());
-  private readonly _user = signal<User | null>(this.getUserFromToken());
+  private readonly _isAuthenticated: WritableSignal<boolean> = signal<boolean>(this.storage.hasToken());
+  private readonly _user: WritableSignal<User | null> = signal<User | null>(this.getUserFromToken());
 
-  readonly isAuthenticated = this._isAuthenticated.asReadonly();
-  readonly user = this._user.asReadonly();
-  readonly username = computed(() => this._user()?.username ?? '');
+  readonly isAuthenticated: Signal<boolean> = this._isAuthenticated.asReadonly();
+  readonly user: Signal<User | null> = this._user.asReadonly();
+  readonly username: Signal<string> = computed(() => this._user()?.username ?? '');
 
-  login(credentials: AuthRequest, rememberMe: boolean) {
+  login(credentials: AuthRequest, rememberMe: boolean): Observable<AuthResponse> {
     return this.http
       .post<AuthResponse>(`${environment.apiUrl}/auth/authenticate`, credentials)
       .pipe(
-        tap((response) => {
+        tap((response: AuthResponse): void => {
           this.storage.setToken(response.token, rememberMe);
           this._isAuthenticated.set(true);
           this._user.set(this.getUserFromToken());
           this.toast.success('Welcome back!');
           this.router.navigate(['/dashboard']);
         }),
-        catchError((error) => {
-          const message =
+        catchError((error: any): Observable<never> => {
+          const message: string =
             error.status === 401
               ? 'Invalid username or password'
               : 'An error occurred. Please try again.';
@@ -64,7 +64,7 @@ export class AuthService {
   }
 
   private getUserFromToken(): User | null {
-    const token = this.storage.getToken();
+    const token: string | null = this.storage.getToken();
     if (!token) return null;
 
     try {
@@ -85,17 +85,17 @@ export class AuthService {
   }
 
   private decodeToken(token: string): JwtPayload {
-    const parts = token.split('.');
+    const parts: string[] = token.split('.');
     if (parts.length !== 3) {
       throw new Error('Invalid token format');
     }
-    const payload = parts[1];
-    const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+    const payload: string = parts[1];
+    const decoded: string = atob(payload.replaceAll('-', '+').replaceAll('_', '/'));
     return JSON.parse(decoded);
   }
 
   private isTokenExpired(payload: JwtPayload): boolean {
-    const now = Math.floor(Date.now() / 1000);
+    const now: number = Math.floor(Date.now() / 1000);
     return payload.exp < now;
   }
 }

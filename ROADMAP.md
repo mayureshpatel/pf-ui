@@ -1,6 +1,6 @@
 # Frontend Development Roadmap: pf-ui
 
-**Last Updated:** January 21, 2026
+**Last Updated:** January 22, 2026
 **Framework:** Angular 21 with Standalone Components
 **UI Library:** PrimeNG 21
 **Styling:** Tailwind CSS 4 + tailwindcss-primeui
@@ -679,28 +679,65 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
 
 ## 8. Implementation Phases
 
-### Phase 1: Core Setup & Authentication (Current)
+### Phase 1: Core Setup & Authentication
 
-**Status:** ✅ Partially Complete
+**Status:** ✅ Complete
 
 - [x] Angular 21 project scaffolding
 - [x] PrimeNG 21 installation and configuration
 - [x] Tailwind CSS 4 integration
 - [x] tailwindcss-primeui setup
-- [ ] Environment configuration
-- [ ] Core folder structure
-- [ ] Authentication service
-- [ ] Auth interceptor
-- [ ] Login page
-- [ ] Auth guard
-- [ ] App shell (sidebar + topbar layout)
+- [x] Environment configuration (`src/environments/`)
+- [x] Core folder structure with path aliases (`@core/*`, `@shared/*`, `@models/*`, `@features/*`, `@env`)
+- [x] Authentication service (`AuthService` with Angular Signals)
+- [x] Auth interceptor (JWT attachment, 401 handling)
+- [x] Login page (PrimeNG Card, InputText, Password, Checkbox, Button)
+- [x] Auth guards (`authGuard`, `noAuthGuard`)
+- [x] App shell with Drawer (mobile) + fixed sidebar (desktop)
+- [x] Storage service with remember-me support
+- [x] Toast service wrapper for PrimeNG MessageService
+
+**Files Created:**
+```
+src/
+├── environments/
+│   ├── environment.ts
+│   └── environment.prod.ts
+├── app/
+│   ├── models/
+│   │   └── auth.model.ts
+│   ├── core/
+│   │   ├── auth/
+│   │   │   ├── auth.service.ts
+│   │   │   ├── auth.interceptor.ts
+│   │   │   └── auth.guard.ts
+│   │   ├── services/
+│   │   │   ├── storage.service.ts
+│   │   │   └── toast.service.ts
+│   │   └── index.ts
+│   ├── shared/
+│   │   └── components/
+│   │       └── layout/
+│   │           └── shell/
+│   │               ├── shell.component.ts
+│   │               └── shell.component.html
+│   └── features/
+│       ├── auth/
+│       │   ├── login/
+│       │   │   ├── login.component.ts
+│       │   │   └── login.component.html
+│       │   └── auth.routes.ts
+│       └── dashboard/
+│           └── dashboard.component.ts (placeholder)
+```
 
 **Deliverables:**
-- Working login flow
-- Protected routes
-- Basic app layout
+- Working login flow with JWT authentication
+- Protected routes with automatic redirect
+- App shell with responsive sidebar navigation
+- Toast notifications for user feedback
 
-### Phase 2: Dashboard
+### Phase 2: Dashboard (Current)
 
 - [ ] Dashboard page component
 - [ ] Summary cards (income, expenses, net savings)
@@ -1080,7 +1117,7 @@ export interface Pagination {
 | `p-skeleton` | Loading states |
 | `p-tag` | Transaction type badges |
 | `p-menu` | Context menus, bulk actions |
-| `p-sidebar` | Navigation |
+| `p-drawer` | Mobile navigation (renamed from `p-sidebar` in v21) |
 | `p-toolbar` | Action bars |
 | `p-paginator` | Pagination |
 
