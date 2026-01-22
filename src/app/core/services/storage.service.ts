@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import {Injectable} from '@angular/core';
 
 const TOKEN_KEY = 'pf_auth_token';
 const STORAGE_TYPE_KEY = 'pf_storage_type';
@@ -8,7 +8,7 @@ const STORAGE_TYPE_KEY = 'pf_storage_type';
 })
 export class StorageService {
   private get storage(): Storage {
-    const storageType = localStorage.getItem(STORAGE_TYPE_KEY);
+    const storageType: string | null = localStorage.getItem(STORAGE_TYPE_KEY);
     return storageType === 'local' ? localStorage : sessionStorage;
   }
 
@@ -18,7 +18,8 @@ export class StorageService {
 
   setToken(token: string, rememberMe: boolean): void {
     this.clearToken();
-    const storage = rememberMe ? localStorage : sessionStorage;
+
+    const storage: Storage = rememberMe ? localStorage : sessionStorage;
     localStorage.setItem(STORAGE_TYPE_KEY, rememberMe ? 'local' : 'session');
     storage.setItem(TOKEN_KEY, token);
   }
