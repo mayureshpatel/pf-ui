@@ -1,0 +1,85 @@
+<div class="min-h-screen bg-surface-ground">
+  <!-- Drawer for mobile -->
+  <p-drawer [(visible)]="sidebarVisible" [modal]="true" styleClass="w-64">
+    <ng-template pTemplate="header">
+      <div class="flex items-center gap-2">
+        <i class="pi pi-wallet text-2xl text-primary"></i>
+        <span class="text-xl font-semibold text-color">Finance</span>
+      </div>
+    </ng-template>
+    <nav class="flex flex-col gap-1 mt-4">
+      @for (item of navItems; track item.label) {
+        <a
+          [routerLink]="item.routerLink"
+          routerLinkActive="bg-primary-50 text-primary"
+          class="flex items-center gap-3 px-4 py-3 rounded-lg text-color hover:bg-surface-100 transition-colors"
+          pRipple
+          (click)="sidebarVisible.set(false)"
+        >
+          <i [class]="item.icon"></i>
+          <span>{{ item.label }}</span>
+        </a>
+      }
+    </nav>
+  </p-drawer>
+
+  <!-- Desktop sidebar -->
+  <aside class="hidden lg:flex fixed left-0 top-0 h-full w-64 flex-col bg-surface-0 border-r border-surface-200">
+    <div class="flex items-center gap-2 px-6 py-4 border-b border-surface-200">
+      <i class="pi pi-wallet text-2xl text-primary"></i>
+      <span class="text-xl font-semibold text-color">Finance</span>
+    </div>
+    <nav class="flex flex-col gap-1 p-4 flex-1">
+      @for (item of navItems; track item.label) {
+        <a
+          [routerLink]="item.routerLink"
+          routerLinkActive="bg-primary-50 text-primary"
+          class="flex items-center gap-3 px-4 py-3 rounded-lg text-color hover:bg-surface-100 transition-colors"
+          pRipple
+        >
+          <i [class]="item.icon"></i>
+          <span>{{ item.label }}</span>
+        </a>
+      }
+    </nav>
+  </aside>
+
+  <!-- Main content area -->
+  <div class="lg:ml-64">
+    <!-- Top bar -->
+    <header class="sticky top-0 z-10 bg-surface-0 border-b border-surface-200">
+      <div class="flex items-center justify-between px-4 py-3">
+        <div class="flex items-center gap-4">
+          <p-button
+            icon="pi pi-bars"
+            [text]="true"
+            severity="secondary"
+            (onClick)="toggleSidebar()"
+            class="lg:hidden"
+          />
+        </div>
+        <div class="flex items-center gap-4">
+          <span class="text-muted-color hidden sm:block">{{ username() }}</span>
+          <p-avatar
+            [label]="username().charAt(0).toUpperCase()"
+            shape="circle"
+            styleClass="bg-primary text-white cursor-pointer"
+          />
+          <p-menu #userMenu [model]="userMenuItems" [popup]="true" appendTo="body" />
+          <p-button
+            icon="pi pi-sign-out"
+            [text]="true"
+            severity="secondary"
+            (onClick)="logout()"
+            pTooltip="Logout"
+          />
+        </div>
+      </div>
+    </header>
+
+    <!-- Page content -->
+    <main class="p-4 lg:p-6">
+      <router-outlet />
+    </main>
+  </div>
+</div>
