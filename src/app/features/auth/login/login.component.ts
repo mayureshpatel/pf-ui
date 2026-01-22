@@ -1,12 +1,13 @@
-import { Component, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { ButtonModule } from 'primeng/button';
-import { CardModule } from 'primeng/card';
-import { CheckboxModule } from 'primeng/checkbox';
-import { InputTextModule } from 'primeng/inputtext';
-import { PasswordModule } from 'primeng/password';
-import { MessageModule } from 'primeng/message';
-import { AuthService } from '@core/auth/auth.service';
+import {Component, inject, signal, WritableSignal} from '@angular/core';
+import {FormsModule} from '@angular/forms';
+import {ButtonModule} from 'primeng/button';
+import {CardModule} from 'primeng/card';
+import {CheckboxModule} from 'primeng/checkbox';
+import {InputTextModule} from 'primeng/inputtext';
+import {PasswordModule} from 'primeng/password';
+import {MessageModule} from 'primeng/message';
+import {AuthService} from '@core/auth/auth.service';
+import {AuthRequest} from '@models/auth.model';
 
 @Component({
   selector: 'app-login',
@@ -23,14 +24,14 @@ import { AuthService } from '@core/auth/auth.service';
   templateUrl: './login.component.html'
 })
 export class LoginComponent {
-  private authService = inject(AuthService);
+  private readonly authService: AuthService = inject(AuthService);
 
-  username = '';
-  password = '';
-  rememberMe = false;
+  username: string = '';
+  password: string = '';
+  rememberMe: boolean = false;
 
-  loading = signal(false);
-  errorMessage = signal<string | null>(null);
+  loading: WritableSignal<boolean> = signal(false);
+  errorMessage: WritableSignal<string | null> = signal<string | null>(null);
 
   onSubmit(): void {
     if (!this.username || !this.password) {
@@ -41,9 +42,10 @@ export class LoginComponent {
     this.loading.set(true);
     this.errorMessage.set(null);
 
-    this.authService.login({ username: this.username, password: this.password }, this.rememberMe)
+    let authRequest: AuthRequest = {username: this.username, password: this.password};
+    this.authService.login(authRequest, this.rememberMe)
       .subscribe({
-        error: (err: Error) => {
+        error: (err: Error): void => {
           this.errorMessage.set(err.message);
           this.loading.set(false);
         }
