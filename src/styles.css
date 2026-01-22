@@ -1,1 +1,11 @@
-/* You can add global styles to this file, and also import other style files */
+/* Tailwind CSS v4 */
+@import "tailwindcss";
+
+/* PrimeNG + Tailwind integration */
+@import "tailwindcss-primeui";
+
+/* PrimeIcons */
+@import "primeicons/primeicons.css";
+
+/* Define layer order for CSS specificity */
+@layer theme, base, primeng, components, utilities;
