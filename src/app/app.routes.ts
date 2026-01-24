@@ -10,6 +10,12 @@ export const routes: Routes = [
     canActivate: [noAuthGuard]
   },
   {
+    path: 'register',
+    loadComponent: () =>
+      import('./features/auth/register/register.component').then((m) => m.RegisterComponent),
+    canActivate: [noAuthGuard]
+  },
+  {
     path: '',
     component: ShellComponent,
     canActivate: [authGuard],

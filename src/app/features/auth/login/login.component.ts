@@ -1,5 +1,6 @@
 import {Component, inject, signal, WritableSignal} from '@angular/core';
 import {FormsModule} from '@angular/forms';
+import {RouterLink} from '@angular/router';
 import {ButtonModule} from 'primeng/button';
 import {CardModule} from 'primeng/card';
 import {CheckboxModule} from 'primeng/checkbox';
@@ -14,6 +15,7 @@ import {AuthRequest} from '@models/auth.model';
   standalone: true,
   imports: [
     FormsModule,
+    RouterLink,
     ButtonModule,
     CardModule,
     CheckboxModule,

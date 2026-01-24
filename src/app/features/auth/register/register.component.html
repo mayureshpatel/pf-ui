@@ -1,0 +1,101 @@
+<div class="flex items-center justify-center min-h-screen bg-surface-ground">
+  <p-card class="w-full max-w-md shadow-lg">
+    <ng-template pTemplate="header">
+      <div class="text-center pt-6">
+        <i class="pi pi-wallet text-5xl text-primary"></i>
+        <h1 class="text-2xl font-semibold mt-4 text-color">Personal Finance</h1>
+        <p class="text-muted-color mt-2">Create your account</p>
+      </div>
+    </ng-template>
+
+    <form (ngSubmit)="onSubmit()" class="flex flex-col gap-4">
+      @if (errorMessage()) {
+        <p-message severity="error" [text]="errorMessage()!" styleClass="w-full" />
+      }
+
+      <div class="flex flex-col gap-2">
+        <label for="username" class="font-medium text-color">Username</label>
+        <input
+          pInputText
+          id="username"
+          [(ngModel)]="username"
+          name="username"
+          placeholder="Choose a username"
+          class="w-full"
+          autocomplete="username"
+        />
+        @if (usernameError()) {
+          <small class="text-red-500">{{ usernameError() }}</small>
+        }
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <label for="email" class="font-medium text-color">Email</label>
+        <input
+          pInputText
+          id="email"
+          [(ngModel)]="email"
+          name="email"
+          type="email"
+          placeholder="Enter your email"
+          class="w-full"
+          autocomplete="email"
+        />
+        @if (emailError()) {
+          <small class="text-red-500">{{ emailError() }}</small>
+        }
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <label for="password" class="font-medium text-color">Password</label>
+        <p-password
+          id="password"
+          [(ngModel)]="password"
+          name="password"
+          placeholder="Create a password"
+          [feedback]="true"
+          [toggleMask]="true"
+          styleClass="w-full"
+          inputStyleClass="w-full"
+          autocomplete="new-password"
+        />
+        @if (passwordError()) {
+          <small class="text-red-500">{{ passwordError() }}</small>
+        }
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <label for="confirmPassword" class="font-medium text-color">Confirm Password</label>
+        <p-password
+          id="confirmPassword"
+          [(ngModel)]="confirmPassword"
+          name="confirmPassword"
+          placeholder="Confirm your password"
+          [feedback]="false"
+          [toggleMask]="true"
+          styleClass="w-full"
+          inputStyleClass="w-full"
+          autocomplete="new-password"
+        />
+        @if (confirmPasswordError()) {
+          <small class="text-red-500">{{ confirmPasswordError() }}</small>
+        }
+      </div>
+
+      <p-button
+        type="submit"
+        label="Create Account"
+        [loading]="loading()"
+        styleClass="w-full"
+        severity="primary"
+      />
+
+      <div class="text-center text-muted-color">
+        Already have an account?
+        <a routerLink="/login" class="text-primary cursor-pointer hover:underline ml-1">
+          Sign in
+        </a>
+      </div>
+    </form>
+  </p-card>
+</div>

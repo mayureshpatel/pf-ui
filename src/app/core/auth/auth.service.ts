@@ -3,7 +3,7 @@ import {HttpClient} from '@angular/common/http';
 import {Router} from '@angular/router';
 import {catchError, Observable, tap, throwError} from 'rxjs';
 import {environment} from '@env';
-import {AuthRequest, AuthResponse, JwtPayload, User} from '@models/auth.model';
+import {AuthRequest, AuthResponse, JwtPayload, RegistrationRequest, User} from '@models/auth.model';
 import {StorageService} from '../services/storage.service';
 import {ToastService} from '../services/toast.service';
 
@@ -39,6 +39,29 @@ export class AuthService {
             error.status === 401
               ? 'Invalid username or password'
               : 'An error occurred. Please try again.';
+          return throwError(() => new Error(message));
+        })
+      );
+  }
+
+  register(request: RegistrationRequest): Observable<AuthResponse> {
+    return this.http
+      .post<AuthResponse>(`${environment.apiUrl}/auth/register`, request)
+      .pipe(
+        tap((response: AuthResponse): void => {
+          this.storage.setToken(response.token, false);
+          this._isAuthenticated.set(true);
+          this._user.set(this.getUserFromToken());
+          this.toast.success('Welcome! Your account has been created successfully.');
+          this.router.navigate(['/dashboard']);
+        }),
+        catchError((error: any): Observable<never> => {
+          let message: string = 'Registration failed. Please try again.';
+          if (error.status === 409) {
+            message = error.error?.detail || 'Username or email already exists';
+          } else if (error.status === 400 && error.error?.validationErrors) {
+            message = error.error.validationErrors.map((e: any) => e.message).join('. ');
+          }
           return throwError(() => new Error(message));
         })
       );
