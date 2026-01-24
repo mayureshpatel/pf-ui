@@ -250,6 +250,14 @@
     (save)="onSave($event)"
   />
 
+  <!-- CSV Import Dialog -->
+  <app-csv-import-dialog
+    [visible]="showImportDialog()"
+    [accounts]="accounts()"
+    (visibleChange)="showImportDialog.set($event)"
+    (importComplete)="onImportComplete()"
+  />
+
   <!-- Confirmation Dialog -->
   <p-confirmDialog />
 </div>

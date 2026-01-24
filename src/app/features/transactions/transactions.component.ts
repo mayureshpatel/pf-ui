@@ -20,6 +20,7 @@ import {
 import { Account } from '@models/account.model';
 import { TransactionApiService } from './services/transaction-api.service';
 import { TransactionFormDialogComponent } from './components/transaction-form-dialog/transaction-form-dialog.component';
+import { CsvImportDialogComponent } from './components/csv-import-dialog/csv-import-dialog.component';
 import { AccountApiService } from '@features/accounts/services/account-api.service';
 import { ToastService } from '@core/services/toast.service';
 import {
@@ -44,7 +45,8 @@ import {
     CheckboxModule,
     TagModule,
     DatePicker,
-    TransactionFormDialogComponent
+    TransactionFormDialogComponent,
+    CsvImportDialogComponent
   ],
   providers: [ConfirmationService],
   templateUrl: './transactions.component.html'
@@ -60,6 +62,7 @@ export class TransactionsComponent implements OnInit {
   accounts: WritableSignal<Account[]> = signal([]);
   loading: WritableSignal<boolean> = signal(false);
   showDialog: WritableSignal<boolean> = signal(false);
+  showImportDialog: WritableSignal<boolean> = signal(false);
   selectedTransaction: WritableSignal<Transaction | null> = signal(null);
   selectedTransactions: WritableSignal<Transaction[]> = signal([]);
   savingTransaction: WritableSignal<boolean> = signal(false);
@@ -191,8 +194,12 @@ export class TransactionsComponent implements OnInit {
   }
 
   openImportDialog(): void {
-    // TODO: Implement CSV import dialog
-    this.toast.info('CSV import feature coming soon!');
+    this.showImportDialog.set(true);
+  }
+
+  onImportComplete(): void {
+    this.showImportDialog.set(false);
+    this.loadTransactions();
   }
 
   onSave(formData: TransactionFormData): void {

@@ -60,3 +60,32 @@ export interface TransactionTypeInfo {
   color: string;
   label: string;
 }
+
+// CSV Import Models
+export interface TransactionPreview {
+  date: string; // LocalDate from backend
+  description: string;
+  amount: number;
+  type: TransactionType;
+  suggestedCategory: string | null;
+  vendorName: string | null;
+}
+
+export interface SaveTransactionRequest {
+  transactions: TransactionFormData[];
+  fileName: string;
+  fileHash: string;
+}
+
+export enum BankName {
+  CAPITAL_ONE = 'CAPITAL_ONE',
+  DISCOVER = 'DISCOVER',
+  SYNOVUS = 'SYNOVUS',
+  STANDARD = 'STANDARD'
+}
+
+export interface BankOption {
+  label: string;
+  value: BankName;
+  description: string;
+}
