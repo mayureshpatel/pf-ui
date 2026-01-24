@@ -6,7 +6,7 @@ import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
 import { Category, CategoryFormData } from '@models/category.model';
-import { getCategoryColor } from '@shared/utils/category.utils';
+import { getCategoryColor, CATEGORY_COLORS } from '@shared/utils/category.utils';
 import { CategoryApiService } from '../../services/category-api.service';
 
 @Component({
@@ -32,20 +32,23 @@ export class CategoryFormDialogComponent implements OnChanges {
   @Output() save = new EventEmitter<CategoryFormData>();
 
   formData: CategoryFormData = {
-    name: ''
+    name: '',
+    color: ''
   };
 
   loading: WritableSignal<boolean> = signal(false);
   errorMessage: WritableSignal<string | null> = signal(null);
   allCategories: WritableSignal<Category[]> = signal([]);
 
+  availableColors = CATEGORY_COLORS;
   getCategoryColor = getCategoryColor;
 
   ngOnChanges(): void {
     const cat = this.category();
     if (cat) {
       this.formData = {
-        name: cat.name
+        name: cat.name,
+        color: cat.color || getCategoryColor(cat.name)
       };
     } else {
       this.resetForm();
@@ -95,15 +98,30 @@ export class CategoryFormDialogComponent implements OnChanges {
     }
 
     this.loading.set(true);
-    this.save.emit({ name: this.formData.name.trim() });
+    
+    // If no color selected (and not editing), use hash logic
+    let colorToSave = this.formData.color;
+    if (!colorToSave) {
+      colorToSave = getCategoryColor(this.formData.name);
+    }
+
+    this.save.emit({ 
+      name: this.formData.name.trim(),
+      color: colorToSave
+    });
   }
 
   resetForm(): void {
     this.formData = {
-      name: ''
+      name: '',
+      color: ''
     };
     this.errorMessage.set(null);
     this.loading.set(false);
+  }
+
+  selectColor(color: string): void {
+    this.formData.color = color;
   }
 
   get isEditMode(): boolean {
@@ -115,6 +133,9 @@ export class CategoryFormDialogComponent implements OnChanges {
   }
 
   get previewColor(): string {
+    if (this.formData.color) {
+      return this.formData.color;
+    }
     return this.formData.name ? getCategoryColor(this.formData.name) : 'bg-gray-300';
   }
 }

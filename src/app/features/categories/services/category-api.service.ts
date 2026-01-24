@@ -23,5 +23,7 @@ export class CategoryApiService {
     return this.http.put<Category>(`${this.apiUrl}/${id}`, data);
   }
 
-  // Note: Backend does not support DELETE endpoint
+  deleteCategory(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${id}`);
+  }
 }

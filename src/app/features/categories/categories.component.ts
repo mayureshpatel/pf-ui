@@ -1,5 +1,6 @@
 import { Component, computed, inject, OnInit, signal, WritableSignal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { CardModule } from 'primeng/card';
@@ -33,6 +34,8 @@ export class CategoriesComponent implements OnInit {
   private readonly categoryApi = inject(CategoryApiService);
   private readonly transactionApi = inject(TransactionApiService);
   private readonly toast = inject(ToastService);
+  private readonly confirmationService = inject(ConfirmationService);
+  private readonly router = inject(Router);
 
   categories: WritableSignal<Category[]> = signal([]);
   transactions: WritableSignal<any[]> = signal([]);
@@ -54,8 +57,6 @@ export class CategoriesComponent implements OnInit {
   });
 
   isEmpty = computed(() => this.categories().length === 0 && !this.loading());
-
-  getCategoryColor = getCategoryColor;
 
   ngOnInit(): void {
     this.loadData();
@@ -80,6 +81,10 @@ export class CategoriesComponent implements OnInit {
     });
   }
 
+  getDisplayColor(category: Category): string {
+    return category.color || getCategoryColor(category.name);
+  }
+
   openCreateDialog(): void {
     this.selectedCategory.set(null);
     this.showDialog.set(true);
@@ -90,6 +95,34 @@ export class CategoriesComponent implements OnInit {
     this.showDialog.set(true);
   }
 
+  deleteCategory(category: Category): void {
+    this.confirmationService.confirm({
+      header: 'Delete Category?',
+      message: `Are you sure you want to delete '${category.name}'?`,
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Delete',
+      rejectLabel: 'Cancel',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => {
+        this.categoryApi.deleteCategory(category.id).subscribe({
+          next: () => {
+            this.toast.success('Category deleted successfully');
+            this.categories.update(cats => cats.filter(c => c.id !== category.id));
+          },
+          error: (error) => {
+            this.toast.error(error.error?.detail || 'Failed to delete category');
+          }
+        });
+      }
+    });
+  }
+
+  viewTransactions(category: Category): void {
+    this.router.navigate(['/transactions'], { 
+      queryParams: { category: category.name } 
+    });
+  }
+
   onSave(formData: CategoryFormData): void {
     const category = this.selectedCategory();
 
@@ -97,12 +130,9 @@ export class CategoriesComponent implements OnInit {
       // Update existing category
       this.categoryApi.updateCategory(category.id, formData).subscribe({
         next: (updated) => {
-          const categories = this.categories();
-          const index = categories.findIndex(c => c.id === category.id);
-          if (index !== -1) {
-            categories[index] = updated;
-            this.categories.set([...categories]);
-          }
+          this.categories.update(cats => 
+            cats.map(c => c.id === category.id ? updated : c)
+          );
           this.toast.success('Category updated successfully');
           this.showDialog.set(false);
         },
@@ -114,7 +144,7 @@ export class CategoriesComponent implements OnInit {
       // Create new category
       this.categoryApi.createCategory(formData).subscribe({
         next: (created) => {
-          this.categories.set([...this.categories(), created]);
+          this.categories.update(cats => [...cats, created]);
           this.toast.success('Category created successfully');
           this.showDialog.set(false);
         },

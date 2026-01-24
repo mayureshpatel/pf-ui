@@ -29,15 +29,29 @@
       />
     </div>
 
-    <!-- Color Preview -->
+    <!-- Color Selection -->
     <div class="flex flex-col gap-2">
-      <label class="font-medium text-color">Color Preview</label>
-      <div class="flex items-center gap-3">
-        <div [class]="previewColor + ' w-8 h-8 rounded-full'"></div>
-        <small class="text-muted-color">
-          Color is automatically assigned based on the category name
-        </small>
+      <label class="font-medium text-color">Category Color</label>
+      <div class="flex flex-wrap gap-2">
+        @for (color of availableColors; track color) {
+          <div
+            [class]="color + ' w-8 h-8 rounded-full cursor-pointer transition-transform hover:scale-110 flex items-center justify-center'"
+            [class.ring-2]="formData.color === color"
+            [class.ring-offset-2]="formData.color === color"
+            [class.ring-primary]="formData.color === color"
+            (click)="selectColor(color)">
+            @if (formData.color === color) {
+              <i class="pi pi-check text-white text-sm"></i>
+            }
+          </div>
+        }
       </div>
+      @if (!formData.color && formData.name) {
+        <small class="text-muted-color">
+          Currently using auto-generated color based on name:
+          <span [class]="previewColor + ' inline-block w-3 h-3 rounded-full align-middle ml-1'"></span>
+        </small>
+      }
     </div>
   </form>
 

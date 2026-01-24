@@ -1,6 +1,7 @@
 import { Component, computed, inject, OnInit, signal, WritableSignal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { CardModule } from 'primeng/card';
@@ -67,6 +68,7 @@ export class TransactionsComponent implements OnInit {
   private readonly categoryApi = inject(CategoryApiService);
   private readonly toast = inject(ToastService);
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly route = inject(ActivatedRoute);
 
   // State
   transactions: WritableSignal<Transaction[]> = signal([]);
@@ -160,6 +162,19 @@ export class TransactionsComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadFilterState(); // Load saved filters first
+
+    // Check for query params (e.g. from categories page)
+    this.route.queryParams.subscribe(params => {
+      if (params['category']) {
+        this.filterCategoryName.set(params['category']);
+        this.showAdvancedFilters.set(true);
+        // We don't need to call saveFilterState here strictly, 
+        // as loadTransactions will do it, but calling it ensures 
+        // the state is consistent immediately.
+        this.saveFilterState();
+      }
+    });
+
     this.loadCategories();
     this.loadAccounts();
   }

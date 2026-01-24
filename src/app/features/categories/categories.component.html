@@ -36,7 +36,7 @@
           <tr>
             <!-- Color Badge -->
             <td>
-              <div [class]="getCategoryColor(category.name) + ' w-8 h-8 rounded-full'"></div>
+              <div [class]="getDisplayColor(category) + ' w-8 h-8 rounded-full'"></div>
             </td>
 
             <!-- Category Name -->
@@ -46,7 +46,11 @@
 
             <!-- Usage Count -->
             <td class="text-center">
-              <span class="text-muted-color">
+              <span 
+                class="text-primary hover:underline cursor-pointer"
+                (click)="viewTransactions(category)"
+                pTooltip="View transactions"
+                tooltipPosition="top">
                 {{ category.transactionCount }} transaction{{ category.transactionCount !== 1 ? 's' : '' }}
               </span>
             </td>
@@ -67,8 +71,9 @@
                 [text]="true"
                 [rounded]="true"
                 severity="danger"
-                [disabled]="true"
-                pTooltip="Delete not supported by backend"
+                (onClick)="deleteCategory(category)"
+                [disabled]="category.transactionCount > 0"
+                [pTooltip]="category.transactionCount > 0 ? 'Cannot delete category with transactions' : 'Delete'"
                 tooltipPosition="top"
               />
             </td>
