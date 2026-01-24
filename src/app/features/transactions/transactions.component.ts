@@ -233,12 +233,19 @@ export class TransactionsComponent implements OnInit {
     });
   }
 
-  onPageChange(event: any): void {
+  onLazyLoad(event: any): void {
     // PrimeNG lazy table sends event with 'first' and 'rows'
     // 'first' is the index of the first record (0-based), not the page number
     const page = event.first ? Math.floor(event.first / event.rows) : 0;
     this.currentPage.set(page);
     this.pageSize.set(event.rows || 20);
+
+    // Handle sorting
+    if (event.sortField) {
+      const direction = event.sortOrder === 1 ? 'asc' : 'desc';
+      this.currentSort.set(`${event.sortField},${direction}`);
+    }
+
     this.loadTransactions();
   }
 
@@ -247,11 +254,103 @@ export class TransactionsComponent implements OnInit {
     this.loadTransactions();
   }
 
+  debouncedFilterChange = this.debounce(() => {
+    this.onFilterChange();
+  }, 300);
+
+  toggleAdvancedFilters(): void {
+    this.showAdvancedFilters.update(v => !v);
+  }
+
+  onCategorySearch(event: AutoCompleteCompleteEvent): void {
+    const query = event.query.toLowerCase();
+    const suggestions = this.categories().map(c => c.name);
+    this.filteredCategories.set(
+      suggestions.filter(cat => cat.toLowerCase().includes(query))
+    );
+  }
+
+  onVendorSearch(event: AutoCompleteCompleteEvent): void {
+    const query = event.query.toLowerCase();
+    const uniqueVendors = [...new Set([
+      ...this.transactions().map(t => t.vendorName).filter(Boolean) as string[],
+      ...this.vendorSuggestions()
+    ])];
+    this.filteredVendors.set(
+      uniqueVendors.filter(v => v.toLowerCase().includes(query))
+    );
+  }
+
   clearFilters(): void {
     this.filterAccountId.set(null);
     this.filterType.set(null);
     this.filterDateRange.set(null);
+    this.filterDescription.set('');
+    this.filterVendorName.set('');
+    this.filterCategoryName.set('');
+    this.filterMinAmount.set(null);
+    this.filterMaxAmount.set(null);
+    localStorage.removeItem('pf_transaction_filters');
     this.onFilterChange();
+  }
+
+  private updateVendorSuggestions(transactions: Transaction[]): void {
+    const vendors = transactions
+      .map(t => t.vendorName)
+      .filter(Boolean) as string[];
+    const unique = [...new Set([...this.vendorSuggestions(), ...vendors])];
+    this.vendorSuggestions.set(unique);
+  }
+
+  private saveFilterState(): void {
+    const filterState = {
+      accountId: this.filterAccountId(),
+      type: this.filterType(),
+      dateRange: this.filterDateRange(),
+      description: this.filterDescription(),
+      vendorName: this.filterVendorName(),
+      categoryName: this.filterCategoryName(),
+      minAmount: this.filterMinAmount(),
+      maxAmount: this.filterMaxAmount(),
+      sort: this.currentSort()
+    };
+    localStorage.setItem('pf_transaction_filters', JSON.stringify(filterState));
+  }
+
+  private loadFilterState(): void {
+    const saved = localStorage.getItem('pf_transaction_filters');
+    if (saved) {
+      try {
+        const state = JSON.parse(saved);
+        if (state.accountId) this.filterAccountId.set(state.accountId);
+        if (state.type) this.filterType.set(state.type);
+        if (state.dateRange) this.filterDateRange.set(state.dateRange.map((d: string) => new Date(d)));
+        if (state.description) this.filterDescription.set(state.description);
+        if (state.vendorName) this.filterVendorName.set(state.vendorName);
+        if (state.categoryName) this.filterCategoryName.set(state.categoryName);
+        if (state.minAmount !== null) this.filterMinAmount.set(state.minAmount);
+        if (state.maxAmount !== null) this.filterMaxAmount.set(state.maxAmount);
+        if (state.sort) this.currentSort.set(state.sort);
+
+        // Auto-expand advanced filters if any are active
+        if (this.hasAdvancedFilters()) {
+          this.showAdvancedFilters.set(true);
+        }
+      } catch (e) {
+        // Ignore parse errors
+      }
+    }
+  }
+
+  private debounce<T extends (...args: any[]) => void>(
+    func: T,
+    wait: number
+  ): (...args: Parameters<T>) => void {
+    let timeout: ReturnType<typeof setTimeout> | null = null;
+    return (...args: Parameters<T>) => {
+      if (timeout) clearTimeout(timeout);
+      timeout = setTimeout(() => func(...args), wait);
+    };
   }
 
   openCreateDialog(): void {
