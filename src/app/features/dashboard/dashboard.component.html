@@ -1,8 +1,72 @@
-<div class="flex flex-col gap-6">
-  <h1 class="text-3xl font-semibold text-color">Dashboard</h1>
-  <p-card>
-    <p class="text-muted-color">
-      Welcome to your personal finance dashboard. This is a placeholder component.
-    </p>
-  </p-card>
+<div class="p-4">
+  <!-- Page Header -->
+  <div class="flex flex-col gap-4 mb-6">
+    <div>
+      <h1 class="text-3xl font-bold text-color">Dashboard</h1>
+      <p class="text-muted-color mt-1">Overview of your financial health</p>
+    </div>
+
+    <!-- Filters -->
+    <div class="flex flex-wrap gap-3 items-end">
+      <!-- Month Selector -->
+      <div class="flex flex-col gap-2">
+        <label class="text-sm font-medium text-color">Month</label>
+        <p-select
+          [(ngModel)]="selectedMonth"
+          [options]="monthOptions"
+          optionLabel="label"
+          optionValue="value"
+          (onChange)="onPeriodChange()"
+          styleClass="w-40"
+        />
+      </div>
+
+      <!-- Year Selector -->
+      <div class="flex flex-col gap-2">
+        <label class="text-sm font-medium text-color">Year</label>
+        <p-select
+          [(ngModel)]="selectedYear"
+          [options]="yearOptions"
+          optionLabel="label"
+          optionValue="value"
+          (onChange)="onPeriodChange()"
+          styleClass="w-32"
+        />
+      </div>
+
+      <!-- Account Filter -->
+      <div class="flex flex-col gap-2">
+        <label class="text-sm font-medium text-color">Account</label>
+        <p-select
+          [(ngModel)]="selectedAccountId"
+          [options]="accountOptions()"
+          optionLabel="label"
+          optionValue="value"
+          (onChange)="onFilterChange()"
+          placeholder="All Accounts"
+          styleClass="w-56"
+        />
+      </div>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="flex justify-center items-center py-12">
+      <p-progressSpinner styleClass="w-16 h-16" />
+    </div>
+  } @else {
+    <!-- Summary Cards -->
+    <div class="mb-6">
+      <app-summary-cards [data]="dashboardData()" />
+    </div>
+
+    <!-- Charts Row -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <!-- Category Breakdown Chart -->
+      <app-category-chart [categories]="dashboardData()?.categoryBreakdown || []" />
+
+      <!-- Net Worth History Chart -->
+      <app-net-worth-chart [balances]="netWorthHistory()" />
+    </div>
+  }
 </div>
