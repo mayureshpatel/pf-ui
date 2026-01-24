@@ -10,6 +10,9 @@ import { Select } from 'primeng/select';
 import { CheckboxModule } from 'primeng/checkbox';
 import { TagModule } from 'primeng/tag';
 import { DatePicker } from 'primeng/datepicker';
+import { AutoComplete, AutoCompleteCompleteEvent } from 'primeng/autocomplete';
+import { InputNumberModule } from 'primeng/inputnumber';
+import { InputTextModule } from 'primeng/inputtext';
 import { ConfirmationService } from 'primeng/api';
 import {
   Transaction,
@@ -18,10 +21,13 @@ import {
   TransactionType
 } from '@models/transaction.model';
 import { Account } from '@models/account.model';
+import { Category } from '@models/category.model';
 import { TransactionApiService } from './services/transaction-api.service';
 import { TransactionFormDialogComponent } from './components/transaction-form-dialog/transaction-form-dialog.component';
 import { CsvImportDialogComponent } from './components/csv-import-dialog/csv-import-dialog.component';
+import { BulkEditDialogComponent, BulkEditData } from './components/bulk-edit-dialog/bulk-edit-dialog.component';
 import { AccountApiService } from '@features/accounts/services/account-api.service';
+import { CategoryApiService } from '@features/categories/services/category-api.service';
 import { ToastService } from '@core/services/toast.service';
 import {
   formatTransactionAmount,
@@ -45,8 +51,12 @@ import {
     CheckboxModule,
     TagModule,
     DatePicker,
+    AutoComplete,
+    InputNumberModule,
+    InputTextModule,
     TransactionFormDialogComponent,
-    CsvImportDialogComponent
+    CsvImportDialogComponent,
+    BulkEditDialogComponent
   ],
   providers: [ConfirmationService],
   templateUrl: './transactions.component.html'
@@ -54,6 +64,7 @@ import {
 export class TransactionsComponent implements OnInit {
   private readonly transactionApi = inject(TransactionApiService);
   private readonly accountApi = inject(AccountApiService);
+  private readonly categoryApi = inject(CategoryApiService);
   private readonly toast = inject(ToastService);
   private readonly confirmationService = inject(ConfirmationService);
 
@@ -63,19 +74,38 @@ export class TransactionsComponent implements OnInit {
   loading: WritableSignal<boolean> = signal(false);
   showDialog: WritableSignal<boolean> = signal(false);
   showImportDialog: WritableSignal<boolean> = signal(false);
+  showBulkEditDialog: WritableSignal<boolean> = signal(false);
   selectedTransaction: WritableSignal<Transaction | null> = signal(null);
   selectedTransactions: WritableSignal<Transaction[]> = signal([]);
   savingTransaction: WritableSignal<boolean> = signal(false);
+  savingBulkEdit: WritableSignal<boolean> = signal(false);
 
   // Pagination
   currentPage: WritableSignal<number> = signal(0);
   pageSize: WritableSignal<number> = signal(20);
   totalRecords: WritableSignal<number> = signal(0);
 
-  // Filters
+  // Quick Filters
   filterAccountId: WritableSignal<number | null> = signal(null);
   filterType: WritableSignal<TransactionType | null> = signal(null);
   filterDateRange: WritableSignal<Date[] | null> = signal(null);
+
+  // Advanced Filters
+  showAdvancedFilters: WritableSignal<boolean> = signal(false);
+  filterDescription: WritableSignal<string> = signal('');
+  filterVendorName: WritableSignal<string> = signal('');
+  filterCategoryName: WritableSignal<string> = signal('');
+  filterMinAmount: WritableSignal<number | null> = signal(null);
+  filterMaxAmount: WritableSignal<number | null> = signal(null);
+
+  // Sorting
+  currentSort: WritableSignal<string> = signal('date,desc');
+
+  // Autocomplete data
+  categories: WritableSignal<Category[]> = signal([]);
+  filteredCategories: WritableSignal<string[]> = signal([]);
+  vendorSuggestions: WritableSignal<string[]> = signal([]);
+  filteredVendors: WritableSignal<string[]> = signal([]);
 
   // Computed
   isEmpty = computed(() => this.transactions().length === 0 && !this.loading());
@@ -83,6 +113,27 @@ export class TransactionsComponent implements OnInit {
   allSelected = computed(() =>
     this.selectedTransactions().length === this.transactions().length &&
     this.transactions().length > 0
+  );
+
+  activeFilterCount = computed(() => {
+    let count = 0;
+    if (this.filterAccountId()) count++;
+    if (this.filterType()) count++;
+    if (this.filterDateRange()) count++;
+    if (this.filterDescription()) count++;
+    if (this.filterVendorName()) count++;
+    if (this.filterCategoryName()) count++;
+    if (this.filterMinAmount() !== null) count++;
+    if (this.filterMaxAmount() !== null) count++;
+    return count;
+  });
+
+  hasAdvancedFilters = computed(() =>
+    !!this.filterDescription() ||
+    !!this.filterVendorName() ||
+    !!this.filterCategoryName() ||
+    this.filterMinAmount() !== null ||
+    this.filterMaxAmount() !== null
   );
 
   // Utility functions
@@ -108,6 +159,8 @@ export class TransactionsComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    this.loadFilterState(); // Load saved filters first
+    this.loadCategories();
     this.loadAccounts();
   }
 
@@ -124,12 +177,24 @@ export class TransactionsComponent implements OnInit {
     });
   }
 
+  loadCategories(): void {
+    this.categoryApi.getCategories().subscribe({
+      next: (categories) => this.categories.set(categories),
+      error: () => {} // Categories are optional for filtering
+    });
+  }
+
   loadTransactions(): void {
     this.loading.set(true);
 
     const filter: TransactionFilter = {};
     if (this.filterAccountId()) filter.accountId = this.filterAccountId()!;
     if (this.filterType()) filter.type = this.filterType()!;
+    if (this.filterDescription()) filter.description = this.filterDescription();
+    if (this.filterVendorName()) filter.vendorName = this.filterVendorName();
+    if (this.filterCategoryName()) filter.categoryName = this.filterCategoryName();
+    if (this.filterMinAmount() !== null) filter.minAmount = this.filterMinAmount()!;
+    if (this.filterMaxAmount() !== null) filter.maxAmount = this.filterMaxAmount()!;
 
     const dateRange = this.filterDateRange();
     if (dateRange && dateRange.length === 2 && dateRange[0] && dateRange[1]) {
@@ -137,10 +202,13 @@ export class TransactionsComponent implements OnInit {
       filter.endDate = this.toISODate(dateRange[1]);
     }
 
+    // Save filter state to localStorage
+    this.saveFilterState();
+
     this.transactionApi.getTransactions(filter, {
       page: this.currentPage(),
       size: this.pageSize(),
-      sort: 'date,desc'
+      sort: this.currentSort()
     }).subscribe({
       next: (response) => {
         // Enrich transactions with account names
@@ -154,6 +222,9 @@ export class TransactionsComponent implements OnInit {
         this.totalRecords.set(response.totalElements);
         this.loading.set(false);
         this.selectedTransactions.set([]);
+
+        // Update vendor suggestions for autocomplete
+        this.updateVendorSuggestions(enrichedTransactions);
       },
       error: () => {
         this.toast.error('Failed to load transactions');
@@ -280,6 +351,39 @@ export class TransactionsComponent implements OnInit {
             this.toast.error('Failed to delete transactions');
           }
         });
+      }
+    });
+  }
+
+  openBulkEditDialog(): void {
+    this.showBulkEditDialog.set(true);
+  }
+
+  onBulkSave(data: BulkEditData): void {
+    this.savingBulkEdit.set(true);
+
+    // Build update DTOs by merging selected transactions with bulk edit data
+    const updates: TransactionFormData[] = this.selectedTransactions().map(txn => ({
+      id: txn.id,
+      date: txn.date,
+      type: txn.type,
+      accountId: txn.accountId,
+      amount: txn.amount,
+      description: data.updateDescription ? data.description! : (txn.description || undefined),
+      vendorName: data.updateVendor ? data.vendorName : (txn.vendorName || undefined),
+      categoryName: data.updateCategory ? data.categoryName : (txn.categoryName || undefined)
+    }));
+
+    this.transactionApi.bulkUpdateTransactions(updates).subscribe({
+      next: (updated) => {
+        this.toast.success(`${updated.length} transaction${updated.length > 1 ? 's' : ''} updated successfully`);
+        this.showBulkEditDialog.set(false);
+        this.savingBulkEdit.set(false);
+        this.loadTransactions();
+      },
+      error: (error) => {
+        this.toast.error(error.error?.detail || 'Failed to update transactions');
+        this.savingBulkEdit.set(false);
       }
     });
   }

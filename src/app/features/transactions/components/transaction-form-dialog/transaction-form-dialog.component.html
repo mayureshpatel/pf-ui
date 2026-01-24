@@ -160,17 +160,25 @@
       <label for="category" class="font-medium text-color">
         Category
       </label>
-      <input
-        pInputText
+      <p-autocomplete
         id="category"
         [(ngModel)]="formData.categoryName"
         name="category"
+        [suggestions]="filteredCategories()"
+        (completeMethod)="onCategorySearch($event)"
+        [forceSelection]="false"
         placeholder="e.g., Groceries"
-        class="w-full"
-        maxlength="50"
-      />
+        styleClass="w-full"
+        inputStyleClass="w-full">
+        <ng-template let-category pTemplate="item">
+          <div class="flex items-center gap-2">
+            <div [class]="getCategoryColor(category) + ' w-4 h-4 rounded-full'"></div>
+            <span>{{ category }}</span>
+          </div>
+        </ng-template>
+      </p-autocomplete>
       <small class="text-muted-color">
-        Leave empty for uncategorized transactions
+        Select from existing categories or type a new one
       </small>
     </div>
   </form>

@@ -1,0 +1,60 @@
+<p-dialog
+  [header]="dialogTitle"
+  [modal]="true"
+  [visible]="visible()"
+  (visibleChange)="onHide()"
+  [style]="{ width: '450px' }"
+  [draggable]="false"
+  [resizable]="false">
+
+  <form (ngSubmit)="onSubmit()" class="flex flex-col gap-4">
+    @if (errorMessage()) {
+      <p-message severity="error" [text]="errorMessage()!" styleClass="w-full" />
+    }
+
+    <!-- Category Name -->
+    <div class="flex flex-col gap-2">
+      <label for="name" class="font-medium text-color">
+        Category Name <span class="text-red-500">*</span>
+      </label>
+      <input
+        pInputText
+        id="name"
+        [(ngModel)]="formData.name"
+        name="name"
+        placeholder="e.g., Groceries"
+        class="w-full"
+        maxlength="50"
+        required
+      />
+    </div>
+
+    <!-- Color Preview -->
+    <div class="flex flex-col gap-2">
+      <label class="font-medium text-color">Color Preview</label>
+      <div class="flex items-center gap-3">
+        <div [class]="previewColor + ' w-8 h-8 rounded-full'"></div>
+        <small class="text-muted-color">
+          Color is automatically assigned based on the category name
+        </small>
+      </div>
+    </div>
+  </form>
+
+  <ng-template pTemplate="footer">
+    <p-button
+      label="Cancel"
+      icon="pi pi-times"
+      (onClick)="onHide()"
+      [text]="true"
+      severity="secondary"
+    />
+    <p-button
+      [label]="isEditMode ? 'Update' : 'Create'"
+      icon="pi pi-check"
+      (onClick)="onSubmit()"
+      [loading]="loading()"
+      severity="primary"
+    />
+  </ng-template>
+</p-dialog>

@@ -43,8 +43,12 @@ export const routes: Routes = [
       {
         path: 'categories',
         loadComponent: () =>
-          import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
-        data: { placeholder: 'Categories' }
+          import('./features/categories/categories.component').then((m) => m.CategoriesComponent)
+      },
+      {
+        path: 'settings/vendor-rules',
+        loadComponent: () =>
+          import('./features/settings/vendor-rules/vendor-rules.component').then((m) => m.VendorRulesComponent)
       },
       {
         path: 'reports',

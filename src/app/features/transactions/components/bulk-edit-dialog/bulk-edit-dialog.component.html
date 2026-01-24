@@ -1,0 +1,118 @@
+<p-dialog
+  [header]="'Bulk Edit ' + transactionCount + ' Transaction' + (transactionCount === 1 ? '' : 's')"
+  [visible]="visible()"
+  (visibleChange)="visibleChange.emit($event)"
+  [modal]="true"
+  [style]="{ width: '500px' }"
+  [draggable]="false"
+  [resizable]="false">
+
+  <div class="flex flex-col gap-4">
+    <!-- Warning for large updates -->
+    @if (isLargeUpdate) {
+      <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+        <p class="text-sm text-yellow-800">
+          <i class="pi pi-exclamation-triangle mr-2"></i>
+          You are updating {{ transactionCount }} transactions. This may take a moment to process.
+        </p>
+      </div>
+    }
+
+    <!-- Help text -->
+    <p class="text-sm text-surface-600">
+      Select which fields you want to update for all selected transactions.
+      Only checked fields will be modified.
+    </p>
+
+    <!-- Category field -->
+    <div class="flex items-start gap-3">
+      <p-checkbox
+        [(ngModel)]="updateCategory"
+        [binary]="true"
+        inputId="update-category"
+        class="mt-2" />
+      <div class="flex-1">
+        <label for="category-input" class="block text-sm font-medium mb-2">
+          Category
+        </label>
+        <p-autoComplete
+          inputId="category-input"
+          [(ngModel)]="categoryName"
+          [suggestions]="filteredCategories()"
+          (completeMethod)="filterCategories($event)"
+          [disabled]="!updateCategory()"
+          placeholder="Select category"
+          [dropdown]="true"
+          styleClass="w-full"
+          [inputStyleClass]="'w-full'" />
+      </div>
+    </div>
+
+    <!-- Vendor Name field -->
+    <div class="flex items-start gap-3">
+      <p-checkbox
+        [(ngModel)]="updateVendor"
+        [binary]="true"
+        inputId="update-vendor"
+        class="mt-2" />
+      <div class="flex-1">
+        <label for="vendor-input" class="block text-sm font-medium mb-2">
+          Vendor Name
+        </label>
+        <input
+          pInputText
+          id="vendor-input"
+          type="text"
+          [(ngModel)]="vendorName"
+          [disabled]="!updateVendor()"
+          placeholder="Enter vendor name"
+          class="w-full" />
+      </div>
+    </div>
+
+    <!-- Description field -->
+    <div class="flex items-start gap-3">
+      <p-checkbox
+        [(ngModel)]="updateDescription"
+        [binary]="true"
+        inputId="update-description"
+        class="mt-2" />
+      <div class="flex-1">
+        <label for="description-input" class="block text-sm font-medium mb-2">
+          Description
+        </label>
+        <input
+          pInputText
+          id="description-input"
+          type="text"
+          [(ngModel)]="description"
+          [disabled]="!updateDescription()"
+          placeholder="Enter description"
+          class="w-full" />
+      </div>
+    </div>
+
+    <!-- Validation message -->
+    @if (!isValid && (updateCategory() || updateVendor() || updateDescription())) {
+      <div class="bg-red-50 border border-red-200 rounded-lg p-3">
+        <p class="text-sm text-red-800">
+          <i class="pi pi-times-circle mr-2"></i>
+          Please provide a value for each selected field.
+        </p>
+      </div>
+    }
+  </div>
+
+  <ng-template pTemplate="footer">
+    <p-button
+      label="Cancel"
+      severity="secondary"
+      (onClick)="onCancel()"
+      [disabled]="saving()" />
+    <p-button
+      label="Apply Changes"
+      (onClick)="onSave()"
+      [disabled]="!isValid || saving()"
+      [loading]="saving()" />
+  </ng-template>
+</p-dialog>

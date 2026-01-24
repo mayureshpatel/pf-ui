@@ -1,0 +1,119 @@
+<div class="p-4">
+  <!-- Page Header -->
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-3xl font-bold text-color">Categories</h1>
+      <p class="text-muted-color mt-1">Manage your transaction categories</p>
+    </div>
+    <p-button
+      label="New Category"
+      icon="pi pi-plus"
+      (onClick)="openCreateDialog()"
+      severity="primary"
+    />
+  </div>
+
+  <!-- Categories Table -->
+  @if (!isEmpty()) {
+    <p-card styleClass="shadow-sm">
+      <p-table
+        [value]="categoriesWithUsage()"
+        [loading]="loading()"
+        [paginator]="false"
+        styleClass="p-datatable-sm"
+        responsiveLayout="scroll">
+
+        <ng-template pTemplate="header">
+          <tr>
+            <th style="width: 60px"></th>
+            <th>Category Name</th>
+            <th class="text-center" style="width: 120px">Usage</th>
+            <th class="text-center" style="width: 150px">Actions</th>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="body" let-category>
+          <tr>
+            <!-- Color Badge -->
+            <td>
+              <div [class]="getCategoryColor(category.name) + ' w-8 h-8 rounded-full'"></div>
+            </td>
+
+            <!-- Category Name -->
+            <td>
+              <span class="font-medium">{{ category.name }}</span>
+            </td>
+
+            <!-- Usage Count -->
+            <td class="text-center">
+              <span class="text-muted-color">
+                {{ category.transactionCount }} transaction{{ category.transactionCount !== 1 ? 's' : '' }}
+              </span>
+            </td>
+
+            <!-- Actions -->
+            <td class="text-center">
+              <p-button
+                icon="pi pi-pencil"
+                [text]="true"
+                [rounded]="true"
+                severity="info"
+                (onClick)="openEditDialog(category)"
+                pTooltip="Edit"
+                tooltipPosition="top"
+              />
+              <p-button
+                icon="pi pi-trash"
+                [text]="true"
+                [rounded]="true"
+                severity="danger"
+                [disabled]="true"
+                pTooltip="Delete not supported by backend"
+                tooltipPosition="top"
+              />
+            </td>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="4" class="text-center py-8 text-muted-color">
+              No categories found
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </p-card>
+  }
+
+  <!-- Empty State -->
+  @if (isEmpty()) {
+    <p-card styleClass="shadow-sm">
+      <div class="flex flex-col items-center justify-center py-12">
+        <i class="pi pi-tags text-6xl text-muted-color mb-4"></i>
+        <h2 class="text-2xl font-semibold text-color mb-2">No categories yet</h2>
+        <p class="text-muted-color mb-6 text-center max-w-md">
+          Get started by creating your first category to organize your transactions
+        </p>
+        <p-button
+          label="Add Your First Category"
+          icon="pi pi-plus"
+          (onClick)="openCreateDialog()"
+          severity="primary"
+          size="large"
+        />
+      </div>
+    </p-card>
+  }
+
+  <!-- Form Dialog -->
+  <app-category-form-dialog
+    [visible]="showDialog()"
+    [category]="selectedCategory()"
+    (visibleChange)="showDialog.set($event)"
+    (save)="onSave($event)"
+  />
+
+  <!-- Confirmation Dialog -->
+  <p-confirmDialog />
+</div>

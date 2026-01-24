@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { CardModule } from 'primeng/card';
 import { UIChart } from 'primeng/chart';
 import { CategoryTotal } from '@models/dashboard.model';
+import { getCategoryColorHex } from '@shared/utils/category.utils';
 
 @Component({
   selector: 'app-category-chart',
@@ -33,8 +34,8 @@ export class CategoryChartComponent {
     const labels = categories.map(c => c.categoryName || 'Uncategorized');
     const data = categories.map(c => Math.abs(c.total));
 
-    // Generate colors for each category
-    const colors = this.generateColors(categories.length);
+    // Use consistent colors based on category names
+    const colors = categories.map(c => getCategoryColorHex(c.categoryName || 'Uncategorized'));
 
     this.chartData.set({
       labels,

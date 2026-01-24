@@ -18,6 +18,7 @@ export enum TransactionType {
 }
 
 export interface TransactionFormData {
+  id?: number;
   date: string;
   type: TransactionType;
   accountId: number;

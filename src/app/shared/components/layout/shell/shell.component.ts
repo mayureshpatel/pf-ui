@@ -34,6 +34,7 @@ export class ShellComponent {
     {label: 'Transactions', icon: 'pi pi-list', routerLink: '/transactions'},
     {label: 'Accounts', icon: 'pi pi-wallet', routerLink: '/accounts'},
     {label: 'Categories', icon: 'pi pi-tags', routerLink: '/categories'},
+    {label: 'Vendor Rules', icon: 'pi pi-filter', routerLink: '/settings/vendor-rules'},
     {label: 'Reports', icon: 'pi pi-chart-bar', routerLink: '/reports'}
   ];
 

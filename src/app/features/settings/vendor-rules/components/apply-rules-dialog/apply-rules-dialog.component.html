@@ -1,0 +1,93 @@
+<p-dialog
+  header="Apply Vendor Rules"
+  [visible]="visible()"
+  (visibleChange)="visibleChange.emit($event)"
+  [modal]="true"
+  [style]="{ width: '700px' }"
+  [draggable]="false"
+  [resizable]="false">
+
+  <div class="flex flex-col gap-4">
+    <!-- Summary -->
+    <div class="border border-primary-200 dark:border-primary-700 rounded-lg p-4">
+      <div class="flex items-start gap-3">
+        <i class="pi pi-info-circle text-primary text-xl"></i>
+        <div>
+          <h3 class="font-semibold text-color mb-1">
+            {{ totalCount() }} transaction{{ totalCount() === 1 ? '' : 's' }} will be updated
+          </h3>
+          <p class="text-sm text-color">
+            Vendor names will be assigned based on your current vendor rules.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Warning for large updates -->
+    @if (isLargeUpdate) {
+      <div class="bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-400 dark:border-yellow-600 rounded-lg p-3">
+        <p class="text-sm text-yellow-900 dark:text-yellow-100">
+          <i class="pi pi-exclamation-triangle mr-2"></i>
+          This is a large update that will affect {{ totalCount() }} transactions. This may take a moment to process.
+        </p>
+      </div>
+    }
+
+    <!-- Preview Table -->
+    <div>
+      <h4 class="font-semibold text-color mb-3">
+        Preview of Changes ({{ totalCount() }} transaction{{ totalCount() === 1 ? '' : 's' }})
+      </h4>
+      <p-table
+        [value]="affectedTransactions()"
+        [tableStyle]="{ 'min-width': '100%' }"
+        styleClass="p-datatable-sm"
+        [scrollable]="true"
+        scrollHeight="400px"
+      >
+        <ng-template pTemplate="header">
+          <tr>
+            <th class="w-2/5">Description</th>
+            <th class="w-1/4">Before</th>
+            <th class="w-1/4">After</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-txn>
+          <tr>
+            <td>
+              <span class="font-mono text-xs truncate block max-w-xs" [title]="txn.description">
+                {{ txn.description }}
+              </span>
+            </td>
+            <td>
+              @if (txn.oldVendor) {
+                <span class="text-muted-color line-through">{{ txn.oldVendor }}</span>
+              } @else {
+                <span class="text-muted-color italic">None</span>
+              }
+            </td>
+            <td>
+              <span class="font-medium text-green-600 dark:text-green-400">{{ txn.newVendor }}</span>
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <p-button
+      label="Cancel"
+      severity="secondary"
+      (onClick)="onCancel()"
+      [disabled]="loading()"
+    />
+    <p-button
+      label="Apply Changes"
+      icon="pi pi-check"
+      (onClick)="onConfirm()"
+      [disabled]="loading()"
+      [loading]="loading()"
+    />
+  </ng-template>
+</p-dialog>

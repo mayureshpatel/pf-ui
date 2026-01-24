@@ -1,4 +1,4 @@
-import { Component, EventEmitter, input, OnChanges, Output, signal, WritableSignal } from '@angular/core';
+import { Component, EventEmitter, inject, input, OnChanges, OnInit, Output, signal, WritableSignal, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { DialogModule } from 'primeng/dialog';
@@ -9,9 +9,13 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { MessageModule } from 'primeng/message';
 import { DatePicker } from 'primeng/datepicker';
 import { RadioButtonModule } from 'primeng/radiobutton';
+import { AutoComplete } from 'primeng/autocomplete';
 import { Transaction, TransactionFormData, TransactionType } from '@models/transaction.model';
 import { Account } from '@models/account.model';
+import { Category } from '@models/category.model';
 import { TRANSACTION_TYPE_INFO } from '@shared/utils/transaction.utils';
+import { CategoryApiService } from '@features/categories/services/category-api.service';
+import { getCategoryColor } from '@shared/utils/category.utils';
 
 interface AccountOption {
   label: string;
@@ -31,11 +35,14 @@ interface AccountOption {
     InputNumberModule,
     MessageModule,
     DatePicker,
-    RadioButtonModule
+    RadioButtonModule,
+    AutoComplete
   ],
   templateUrl: './transaction-form-dialog.component.html'
 })
-export class TransactionFormDialogComponent implements OnChanges {
+export class TransactionFormDialogComponent implements OnChanges, OnInit {
+  private readonly categoryApi = inject(CategoryApiService);
+
   visible = input.required<boolean>();
   transaction = input<Transaction | null>(null);
   accounts = input.required<Account[]>();
@@ -53,9 +60,16 @@ export class TransactionFormDialogComponent implements OnChanges {
 
   formDate: Date = new Date();
   errorMessage: WritableSignal<string | null> = signal(null);
+  categories: WritableSignal<Category[]> = signal([]);
+  filteredCategories: WritableSignal<string[]> = signal([]);
 
   TransactionType = TransactionType;
   transactionTypeInfo = TRANSACTION_TYPE_INFO;
+  getCategoryColor = getCategoryColor;
+
+  categorySuggestions = computed(() => {
+    return this.categories().map(c => c.name);
+  });
 
   accountOptions = (): AccountOption[] => {
     return this.accounts().map(a => ({
@@ -63,6 +77,25 @@ export class TransactionFormDialogComponent implements OnChanges {
       value: a.id
     }));
   };
+
+  ngOnInit(): void {
+    this.loadCategories();
+  }
+
+  loadCategories(): void {
+    this.categoryApi.getCategories().subscribe({
+      next: (categories) => this.categories.set(categories),
+      error: () => {} // Ignore errors - categories are optional
+    });
+  }
+
+  onCategorySearch(event: any): void {
+    const query = event.query.toLowerCase();
+    const suggestions = this.categorySuggestions();
+    this.filteredCategories.set(
+      suggestions.filter(cat => cat.toLowerCase().includes(query))
+    );
+  }
 
   ngOnChanges(): void {
     const txn = this.transaction();

@@ -1,0 +1,110 @@
+<p-dialog
+  header="Create Vendor Rule"
+  [visible]="visible()"
+  (visibleChange)="visibleChange.emit($event)"
+  [modal]="true"
+  [style]="{ width: '500px' }"
+  [draggable]="false"
+  [resizable]="false">
+
+  <div class="flex flex-col gap-4">
+    <!-- Help text -->
+    <div class="border border-primary-200 dark:border-primary-700 rounded-lg p-3">
+      <p class="text-sm text-color">
+        <i class="pi pi-info-circle mr-2 text-primary"></i>
+        Rules match keywords in transaction descriptions (case-insensitive) and assign clean vendor names.
+        Higher priority rules are matched first.
+      </p>
+    </div>
+
+    <!-- Keyword field -->
+    <div>
+      <label for="keyword-input" class="block text-sm font-medium mb-2">
+        Keyword <span class="text-red-500">*</span>
+      </label>
+      <input
+        pInputText
+        id="keyword-input"
+        type="text"
+        [(ngModel)]="keyword"
+        placeholder="e.g., AMZN, WALMART, STARB"
+        class="w-full"
+        [class.ng-invalid]="keyword().trim().length === 0 && keyword().length > 0"
+      />
+      <small class="text-muted-color block mt-1">
+        This text will be matched against transaction descriptions (case-insensitive)
+      </small>
+    </div>
+
+    <!-- Vendor Name field -->
+    <div>
+      <label for="vendor-name-input" class="block text-sm font-medium mb-2">
+        Vendor Name <span class="text-red-500">*</span>
+      </label>
+      <input
+        pInputText
+        id="vendor-name-input"
+        type="text"
+        [(ngModel)]="vendorName"
+        placeholder="e.g., Amazon, Walmart, Starbucks"
+        class="w-full"
+        [class.ng-invalid]="vendorName().trim().length === 0 && vendorName().length > 0"
+      />
+      <small class="text-muted-color block mt-1">
+        This clean name will be assigned to matching transactions
+      </small>
+    </div>
+
+    <!-- Priority field -->
+    <div>
+      <label for="priority-input" class="block text-sm font-medium mb-2">
+        Priority
+      </label>
+      <p-inputNumber
+        inputId="priority-input"
+        [(ngModel)]="priority"
+        [showButtons]="true"
+        [min]="0"
+        [max]="100"
+        placeholder="0"
+        styleClass="w-full"
+        [inputStyleClass]="'w-full'"
+      />
+      <small class="text-muted-color block mt-1">
+        Higher priority rules are matched first (default: 0)
+      </small>
+    </div>
+
+    <!-- Example -->
+    <div class="bg-surface-100 dark:bg-surface-700 border border-surface-200 dark:border-surface-600 rounded-lg p-3">
+      <p class="text-xs font-semibold text-color uppercase mb-2">Example</p>
+      @if (keyword().trim() && vendorName().trim()) {
+        <p class="text-sm text-color">
+          Transaction: <span class="font-mono text-xs bg-surface-0 dark:bg-surface-800 px-2 py-1 rounded border border-surface-300 dark:border-surface-500">
+            "PURCHASE {{ keyword().toUpperCase() }}*123 STORE #456"
+          </span>
+        </p>
+        <p class="text-sm mt-2 text-color">
+          Will be assigned vendor: <span class="font-semibold text-primary">{{ vendorName() }}</span>
+        </p>
+      } @else {
+        <p class="text-sm text-muted-color">Enter a keyword and vendor name to see an example</p>
+      }
+    </div>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <p-button
+      label="Cancel"
+      severity="secondary"
+      (onClick)="onCancel()"
+      [disabled]="saving()"
+    />
+    <p-button
+      label="Create"
+      (onClick)="onSave()"
+      [disabled]="!isValid || saving()"
+      [loading]="saving()"
+    />
+  </ng-template>
+</p-dialog>

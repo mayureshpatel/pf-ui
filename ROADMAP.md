@@ -737,68 +737,77 @@ src/
 - App shell with responsive sidebar navigation
 - Toast notifications for user feedback
 
-### Phase 2: Dashboard (Current)
+### Phase 2: Dashboard
 
-- [ ] Dashboard page component
-- [ ] Summary cards (income, expenses, net savings)
-- [ ] Month/year selector
-- [ ] Category breakdown chart (PrimeNG Chart - Doughnut)
-- [ ] Net worth history chart (PrimeNG Chart - Line)
-- [ ] Recent transactions widget
-- [ ] Dashboard API integration
+**Status:** ✅ Complete (2026-01-24)
+
+- [x] Dashboard page component
+- [x] Summary cards (income, expenses, net savings)
+- [x] Month/year selector (flexible selection from 2020 onwards)
+- [x] Account filter dropdown
+- [x] Category breakdown chart (PrimeNG UIChart - Doughnut)
+- [x] Net worth history chart (PrimeNG UIChart - Line)
+- [x] Dashboard API integration
 
 **Deliverables:**
-- Fully functional dashboard
-- Real-time financial overview
+- ✅ Fully functional dashboard
+- ✅ Real-time financial overview
+- ✅ Interactive charts with Chart.js
 
 ### Phase 3: Accounts Management
 
-- [ ] Account list page
-- [ ] Account card component
-- [ ] Create account dialog
-- [ ] Edit account functionality
-- [ ] Delete account with confirmation
-- [ ] Account type icons/badges
-- [ ] Account balance display
+**Status:** ✅ Complete (2026-01-23)
+
+- [x] Account list page
+- [x] Account summary cards component
+- [x] Create account dialog
+- [x] Edit account functionality
+- [x] Delete account with confirmation
+- [x] Account type icons/badges
+- [x] Account balance display
 
 **Deliverables:**
-- Full CRUD for accounts
+- ✅ Full CRUD for accounts
 
 ### Phase 4: Transaction Management
 
-- [ ] Transaction list page
-- [ ] PrimeNG DataTable with server-side pagination
-- [ ] Filter panel (date range, type, category, account, search)
-- [ ] Create transaction dialog
-- [ ] Edit transaction (inline or dialog)
-- [ ] Delete transaction
-- [ ] Bulk selection UI
-- [ ] Bulk edit dialog
-- [ ] Bulk delete confirmation
-- [ ] Transaction type badges (income/expense)
+**Status:** ✅ Complete (2026-01-24)
+
+- [x] Transaction list page
+- [x] PrimeNG Table with server-side pagination (lazy loading)
+- [x] Quick filters (date range, type, account)
+- [x] Create transaction dialog
+- [x] Edit transaction dialog
+- [x] Delete transaction with confirmation
+- [x] Bulk selection UI (checkboxes)
+- [x] Bulk delete with confirmation
+- [x] Transaction type badges (income/expense/transfer)
+- [x] Amount formatting with color coding (+/-)
 
 **Deliverables:**
-- Full transaction CRUD
-- Advanced filtering
-- Bulk operations
+- ✅ Full transaction CRUD
+- ✅ Server-side pagination
+- ✅ Quick filtering
+- ✅ Bulk delete operations
 
 ### Phase 5: CSV Import
 
-- [ ] Import wizard component (PrimeNG Stepper)
-- [ ] Step 1: File upload (PrimeNG FileUpload)
-- [ ] Bank selection dropdown
-- [ ] Step 2: Preview table with editable fields
-- [ ] Duplicate detection display
-- [ ] Category assignment in preview
-- [ ] Step 3: Confirmation summary
-- [ ] Progress indicator during save
-- [ ] Success/error feedback
+**Status:** ✅ Complete (2026-01-24)
+
+- [x] Import wizard component (2-step dialog)
+- [x] Step 1: File upload (PrimeNG FileUpload), account selection, bank format selection
+- [x] Step 2: Preview table showing all transactions
+- [x] Duplicate detection display (SHA-256 hash)
+- [x] Backend integration for parsing and saving
+- [x] Progress indicator during save
+- [x] Success/error feedback with toast notifications
 
 **Deliverables:**
-- Complete CSV import workflow
-- Support for 4 bank formats
+- ✅ Complete CSV import workflow
+- ✅ Support for 4 bank formats (Standard, Capital One, Discover, Synovus)
+- ✅ Duplicate prevention
 
-### Phase 6: Categories & Settings
+### Phase 6: Categories & Settings (Current)
 
 - [ ] Category list page
 - [ ] Create/edit category dialog

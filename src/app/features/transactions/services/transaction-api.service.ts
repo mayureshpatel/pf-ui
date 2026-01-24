@@ -58,4 +58,8 @@ export class TransactionApiService {
   bulkDeleteTransactions(ids: number[]): Observable<void> {
     return this.http.request<void>('delete', `${this.apiUrl}/bulk`, { body: ids });
   }
+
+  bulkUpdateTransactions(updates: TransactionFormData[]): Observable<Transaction[]> {
+    return this.http.patch<Transaction[]>(`${this.apiUrl}/bulk`, updates);
+  }
 }

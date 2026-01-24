@@ -1,0 +1,138 @@
+<div class="p-4">
+  <!-- Page Header -->
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-3xl font-bold text-color">Vendor Rules</h1>
+      <p class="text-muted-color mt-1">Manage automatic vendor name normalization rules</p>
+    </div>
+    <div class="flex gap-3">
+      @if (rules().length > 0) {
+        <p-button
+          label="Apply Rules to All"
+          icon="pi pi-refresh"
+          (onClick)="applyRulesToAll()"
+          severity="secondary"
+          [outlined]="true"
+          [disabled]="loading()"
+        />
+      }
+      <p-button
+        label="Create Rule"
+        icon="pi pi-plus"
+        (onClick)="openCreateDialog()"
+        severity="primary"
+      />
+    </div>
+  </div>
+
+  <!-- Info Card -->
+  <p-card styleClass="mb-4 border border-primary-200 dark:border-primary-700">
+    <div class="flex gap-3">
+      <i class="pi pi-info-circle text-primary text-xl"></i>
+      <div class="flex-1">
+        <h3 class="font-semibold text-color mb-2">How Vendor Rules Work</h3>
+        <ul class="text-sm text-color space-y-1 list-disc list-inside">
+          <li>Rules clean messy transaction descriptions by matching keywords</li>
+          <li>Matching is case-insensitive (e.g., "AMZN" matches "Amazon.com*123")</li>
+          <li>Higher priority rules match first; longer keywords match before shorter ones</li>
+          <li>Rules apply automatically during CSV import and can be applied retroactively</li>
+        </ul>
+      </div>
+    </div>
+  </p-card>
+
+  <!-- Rules Table -->
+  @if (!loading() && rules().length > 0) {
+    <p-card styleClass="shadow-sm">
+      <p-table
+        [value]="rules()"
+        [tableStyle]="{ 'min-width': '50rem' }"
+        styleClass="p-datatable-sm"
+      >
+        <ng-template pTemplate="header">
+          <tr>
+            <th class="w-2/5">Keyword</th>
+            <th class="w-2/5">Vendor Name</th>
+            <th class="w-1/6 text-center">Priority</th>
+            <th class="w-24 text-center">Actions</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-rule>
+          <tr>
+            <td>
+              <span class="font-mono text-sm">{{ rule.keyword }}</span>
+            </td>
+            <td>
+              <span class="font-medium">{{ rule.vendorName }}</span>
+            </td>
+            <td class="text-center">
+              <span class="inline-flex items-center justify-center bg-surface-100 dark:bg-surface-700 rounded px-2 py-1 text-sm font-medium">
+                {{ rule.priority }}
+              </span>
+            </td>
+            <td class="text-center">
+              <p-button
+                icon="pi pi-trash"
+                [text]="true"
+                [rounded]="true"
+                severity="danger"
+                (onClick)="deleteRule(rule)"
+                pTooltip="Delete"
+                tooltipPosition="top"
+              />
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </p-card>
+  }
+
+  <!-- Empty State -->
+  @if (!loading() && rules().length === 0) {
+    <p-card styleClass="shadow-sm">
+      <div class="flex flex-col items-center justify-center py-12">
+        <i class="pi pi-filter text-6xl text-muted-color mb-4"></i>
+        <h2 class="text-2xl font-semibold text-color mb-2">No vendor rules yet</h2>
+        <p class="text-muted-color text-center max-w-md mb-4">
+          Create vendor rules to automatically clean up transaction descriptions during CSV import.
+          Rules can also be applied retroactively to existing transactions.
+        </p>
+        <p-button
+          label="Create Your First Rule"
+          icon="pi pi-plus"
+          (onClick)="openCreateDialog()"
+        />
+      </div>
+    </p-card>
+  }
+
+  <!-- Loading State -->
+  @if (loading()) {
+    <p-card styleClass="shadow-sm">
+      <div class="flex justify-center items-center py-12">
+        <i class="pi pi-spin pi-spinner text-4xl text-primary"></i>
+      </div>
+    </p-card>
+  }
+
+  <!-- Form Dialog -->
+  <app-vendor-rule-form-dialog
+    [visible]="showDialog()"
+    [saving]="savingRule()"
+    (visibleChange)="showDialog.set($event)"
+    (save)="onSave($event)"
+  />
+
+  <!-- Apply Rules Dialog -->
+  <app-apply-rules-dialog
+    [visible]="showApplyDialog()"
+    [affectedTransactions]="affectedTransactions()"
+    [totalCount]="totalAffected()"
+    [loading]="applyingRules()"
+    (visibleChange)="showApplyDialog.set($event)"
+    (confirm)="onApplyConfirm()"
+  />
+
+  <!-- Confirmation Dialog -->
+  <p-confirmDialog/>
+</div>

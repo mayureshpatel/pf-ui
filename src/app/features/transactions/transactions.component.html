@@ -87,13 +87,22 @@
       <span class="text-color font-medium">
         {{ selectedTransactions().length }} transaction(s) selected
       </span>
-      <p-button
-        label="Delete Selected"
-        icon="pi pi-trash"
-        (onClick)="bulkDelete()"
-        severity="danger"
-        size="small"
-      />
+      <div class="flex gap-2">
+        <p-button
+          label="Bulk Edit"
+          icon="pi pi-pencil"
+          (onClick)="openBulkEditDialog()"
+          severity="secondary"
+          size="small"
+        />
+        <p-button
+          label="Delete Selected"
+          icon="pi pi-trash"
+          (onClick)="bulkDelete()"
+          severity="danger"
+          size="small"
+        />
+      </div>
     </div>
   }
 
@@ -257,6 +266,15 @@
     [accounts]="accounts()"
     (visibleChange)="showImportDialog.set($event)"
     (importComplete)="onImportComplete()"
+  />
+
+  <!-- Bulk Edit Dialog -->
+  <app-bulk-edit-dialog
+    [visible]="showBulkEditDialog()"
+    [transactions]="selectedTransactions()"
+    [saving]="savingBulkEdit()"
+    (visibleChange)="showBulkEditDialog.set($event)"
+    (save)="onBulkSave($event)"
   />
 
   <!-- Confirmation Dialog -->
