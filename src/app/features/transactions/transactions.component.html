@@ -7,6 +7,13 @@
     </div>
     <div class="flex gap-3">
       <p-button
+        label="Review Transfers"
+        icon="pi pi-arrow-right-arrow-left"
+        (onClick)="openTransferDialog()"
+        severity="info"
+        [outlined]="true"
+      />
+      <p-button
         label="Import CSV"
         icon="pi pi-upload"
         (onClick)="openImportDialog()"
@@ -380,6 +387,13 @@
     [accounts]="accounts()"
     (visibleChange)="showImportDialog.set($event)"
     (importComplete)="onImportComplete()"
+  />
+
+  <!-- Transfer Matching Dialog -->
+  <app-transfer-matching-dialog
+    [visible]="showTransferDialog()"
+    (visibleChange)="showTransferDialog.set($event)"
+    (matchComplete)="onTransferMatchComplete()"
   />
 
   <!-- Bulk Edit Dialog -->

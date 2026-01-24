@@ -7,7 +7,8 @@ import {
   TransactionFormData,
   TransactionFilter,
   PageRequest,
-  PageResponse
+  PageResponse,
+  TransferSuggestion
 } from '@models/transaction.model';
 
 @Injectable({
@@ -35,8 +36,8 @@ export class TransactionApiService {
     if (filter.description) params = params.set('description', filter.description);
     if (filter.categoryName) params = params.set('categoryName', filter.categoryName);
     if (filter.vendorName) params = params.set('vendorName', filter.vendorName);
-    if (filter.minAmount !== undefined) params = params.set('minAmount', filter.minAmount.toString());
-    if (filter.maxAmount !== undefined) params = params.set('maxAmount', filter.maxAmount.toString());
+    if (filter.minAmount) params = params.set('minAmount', filter.minAmount.toString());
+    if (filter.maxAmount) params = params.set('maxAmount', filter.maxAmount.toString());
     if (filter.startDate) params = params.set('startDate', filter.startDate);
     if (filter.endDate) params = params.set('endDate', filter.endDate);
 
@@ -61,5 +62,13 @@ export class TransactionApiService {
 
   bulkUpdateTransactions(updates: TransactionFormData[]): Observable<Transaction[]> {
     return this.http.patch<Transaction[]>(`${this.apiUrl}/bulk`, updates);
+  }
+
+  getTransferSuggestions(): Observable<TransferSuggestion[]> {
+    return this.http.get<TransferSuggestion[]>(`${this.apiUrl}/suggestions/transfers`);
+  }
+
+  markAsTransfer(ids: number[]): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/mark-as-transfer`, ids);
   }
 }

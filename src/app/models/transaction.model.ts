@@ -62,6 +62,12 @@ export interface TransactionTypeInfo {
   label: string;
 }
 
+export interface TransferSuggestion {
+  sourceTransaction: Transaction;
+  targetTransaction: Transaction;
+  confidenceScore: number;
+}
+
 // CSV Import Models
 export interface TransactionPreview {
   date: string; // LocalDate from backend

@@ -27,6 +27,7 @@ import { TransactionApiService } from './services/transaction-api.service';
 import { TransactionFormDialogComponent } from './components/transaction-form-dialog/transaction-form-dialog.component';
 import { CsvImportDialogComponent } from './components/csv-import-dialog/csv-import-dialog.component';
 import { BulkEditDialogComponent, BulkEditData } from './components/bulk-edit-dialog/bulk-edit-dialog.component';
+import { TransferMatchingDialogComponent } from './components/transfer-matching-dialog/transfer-matching-dialog.component';
 import { AccountApiService } from '@features/accounts/services/account-api.service';
 import { CategoryApiService } from '@features/categories/services/category-api.service';
 import { ToastService } from '@core/services/toast.service';
@@ -57,7 +58,8 @@ import {
     InputTextModule,
     TransactionFormDialogComponent,
     CsvImportDialogComponent,
-    BulkEditDialogComponent
+    BulkEditDialogComponent,
+    TransferMatchingDialogComponent
   ],
   providers: [ConfirmationService],
   templateUrl: './transactions.component.html'
@@ -77,6 +79,7 @@ export class TransactionsComponent implements OnInit {
   showDialog: WritableSignal<boolean> = signal(false);
   showImportDialog: WritableSignal<boolean> = signal(false);
   showBulkEditDialog: WritableSignal<boolean> = signal(false);
+  showTransferDialog: WritableSignal<boolean> = signal(false);
   selectedTransaction: WritableSignal<Transaction | null> = signal(null);
   selectedTransactions: WritableSignal<Transaction[]> = signal([]);
   savingTransaction: WritableSignal<boolean> = signal(false);
@@ -384,6 +387,15 @@ export class TransactionsComponent implements OnInit {
 
   onImportComplete(): void {
     this.showImportDialog.set(false);
+    this.openTransferDialog(); // Check for transfers after import
+    this.loadTransactions();
+  }
+
+  openTransferDialog(): void {
+    this.showTransferDialog.set(true);
+  }
+
+  onTransferMatchComplete(): void {
     this.loadTransactions();
   }
 
