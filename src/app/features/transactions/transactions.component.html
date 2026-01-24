@@ -1,0 +1,255 @@
+<div class="p-4">
+  <!-- Page Header -->
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-3xl font-bold text-color">Transactions</h1>
+      <p class="text-muted-color mt-1">View and manage your financial transactions</p>
+    </div>
+    <div class="flex gap-3">
+      <p-button
+        label="Import CSV"
+        icon="pi pi-upload"
+        (onClick)="openImportDialog()"
+        severity="secondary"
+        [outlined]="true"
+      />
+      <p-button
+        label="New Transaction"
+        icon="pi pi-plus"
+        (onClick)="openCreateDialog()"
+        severity="primary"
+      />
+    </div>
+  </div>
+
+  <!-- Quick Filters -->
+  @if (!isEmpty()) {
+    <div class="mb-4 flex flex-wrap gap-3 items-end">
+      <!-- Account Filter -->
+      <div class="flex flex-col gap-2">
+        <label class="text-sm font-medium text-color">Account</label>
+        <p-select
+          [(ngModel)]="filterAccountId"
+          [options]="accountOptions()"
+          optionLabel="label"
+          optionValue="value"
+          (onChange)="onFilterChange()"
+          placeholder="All Accounts"
+          styleClass="w-56"
+        />
+      </div>
+
+      <!-- Type Filter -->
+      <div class="flex flex-col gap-2">
+        <label class="text-sm font-medium text-color">Type</label>
+        <p-select
+          [(ngModel)]="filterType"
+          [options]="transactionTypes"
+          optionLabel="label"
+          optionValue="value"
+          (onChange)="onFilterChange()"
+          placeholder="All Types"
+          styleClass="w-48"
+        />
+      </div>
+
+      <!-- Date Range Filter -->
+      <div class="flex flex-col gap-2">
+        <label class="text-sm font-medium text-color">Date Range</label>
+        <p-datePicker
+          [(ngModel)]="filterDateRange"
+          selectionMode="range"
+          (onSelect)="onFilterChange()"
+          (onClearClick)="onFilterChange()"
+          [showButtonBar]="true"
+          [readonlyInput]="true"
+          placeholder="Select date range"
+          dateFormat="mm/dd/yy"
+          styleClass="w-64"
+        />
+      </div>
+
+      <!-- Clear Filters -->
+      @if (filterAccountId() || filterType() || filterDateRange()) {
+        <p-button
+          label="Clear Filters"
+          icon="pi pi-filter-slash"
+          (onClick)="clearFilters()"
+          [text]="true"
+          severity="secondary"
+        />
+      }
+    </div>
+  }
+
+  <!-- Bulk Actions Toolbar -->
+  @if (hasSelection()) {
+    <div class="mb-4 p-3 bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-700 rounded-lg flex items-center justify-between">
+      <span class="text-color font-medium">
+        {{ selectedTransactions().length }} transaction(s) selected
+      </span>
+      <p-button
+        label="Delete Selected"
+        icon="pi pi-trash"
+        (onClick)="bulkDelete()"
+        severity="danger"
+        size="small"
+      />
+    </div>
+  }
+
+  <!-- Transactions Table -->
+  @if (!isEmpty()) {
+    <p-card styleClass="shadow-sm">
+      <p-table
+        [value]="transactions()"
+        [(selection)]="selectedTransactions"
+        [loading]="loading()"
+        [paginator]="true"
+        [rows]="pageSize()"
+        [totalRecords]="totalRecords()"
+        [lazy]="true"
+        (onLazyLoad)="onPageChange($event)"
+        [rowsPerPageOptions]="[20, 50, 100]"
+        styleClass="p-datatable-sm"
+        responsiveLayout="scroll"
+        dataKey="id">
+
+        <ng-template pTemplate="header">
+          <tr>
+            <th style="width: 50px">
+              <p-checkbox
+                [ngModel]="allSelected()"
+                (onChange)="toggleSelectAll()"
+                [binary]="true"
+              />
+            </th>
+            <th>Date</th>
+            <th>Description</th>
+            <th>Vendor</th>
+            <th>Category</th>
+            <th>Account</th>
+            <th>Type</th>
+            <th class="text-right">Amount</th>
+            <th class="text-center" style="width: 150px">Actions</th>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="body" let-transaction>
+          <tr>
+            <!-- Checkbox -->
+            <td>
+              <p-checkbox
+                [(ngModel)]="selectedTransactions"
+                [value]="transaction"
+                [binary]="false"
+              />
+            </td>
+
+            <!-- Date -->
+            <td>
+              <span class="font-medium">{{ formatDate(transaction.date) }}</span>
+            </td>
+
+            <!-- Description -->
+            <td>
+              <span class="text-color" [pTooltip]="transaction.description" tooltipPosition="top">
+                {{ transaction.description || '-' }}
+              </span>
+            </td>
+
+            <!-- Vendor -->
+            <td>
+              <span class="text-color">{{ transaction.vendorName || '-' }}</span>
+            </td>
+
+            <!-- Category -->
+            <td>
+              <p-tag
+                [value]="getCategoryDisplay(transaction.categoryName)"
+                [severity]="getCategorySeverity(transaction.categoryName)"
+                styleClass="text-xs"
+              />
+            </td>
+
+            <!-- Account -->
+            <td>
+              <span class="text-color">{{ transaction.accountName }}</span>
+            </td>
+
+            <!-- Type -->
+            <td>
+              <div class="flex items-center gap-2">
+                <i [class]="'pi ' + getTransactionTypeInfo(transaction.type).icon + ' ' + getTransactionTypeInfo(transaction.type).color"></i>
+                <span>{{ getTransactionTypeInfo(transaction.type).label }}</span>
+              </div>
+            </td>
+
+            <!-- Amount -->
+            <td class="text-right">
+              <span class="font-semibold" [ngClass]="getAmountClass(transaction.type)">
+                {{ formatTransactionAmount(transaction.amount, transaction.type) }}
+              </span>
+            </td>
+
+            <!-- Actions -->
+            <td class="text-center">
+              <p-button
+                icon="pi pi-pencil"
+                [text]="true"
+                [rounded]="true"
+                severity="info"
+                (onClick)="openEditDialog(transaction)"
+                pTooltip="Edit"
+                tooltipPosition="top"
+              />
+              <p-button
+                icon="pi pi-trash"
+                [text]="true"
+                [rounded]="true"
+                severity="danger"
+                (onClick)="deleteTransaction(transaction)"
+                pTooltip="Delete"
+                tooltipPosition="top"
+              />
+            </td>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="9" class="text-center py-8 text-muted-color">
+              No transactions found
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </p-card>
+  }
+
+  <!-- Empty State -->
+  @if (isEmpty()) {
+    <p-card styleClass="shadow-sm">
+      <div class="flex flex-col items-center justify-center py-12">
+        <i class="pi pi-receipt text-6xl text-muted-color mb-4"></i>
+        <h2 class="text-2xl font-semibold text-color mb-2">No transactions yet</h2>
+        <p class="text-muted-color text-center max-w-md">
+          Add your first transaction using the "New Transaction" button above, or import transactions from a CSV file using the "Import CSV" button.
+        </p>
+      </div>
+    </p-card>
+  }
+
+  <!-- Form Dialog -->
+  <app-transaction-form-dialog
+    [visible]="showDialog()"
+    [transaction]="selectedTransaction()"
+    [accounts]="accounts()"
+    [saving]="savingTransaction()"
+    (visibleChange)="showDialog.set($event)"
+    (save)="onSave($event)"
+  />
+
+  <!-- Confirmation Dialog -->
+  <p-confirmDialog />
+</div>

@@ -1,0 +1,194 @@
+<p-dialog
+  [header]="dialogTitle"
+  [modal]="true"
+  [visible]="visible()"
+  (visibleChange)="onHide()"
+  [style]="{ width: '500px' }"
+  [draggable]="false"
+  [resizable]="false">
+
+  <form (ngSubmit)="onSubmit()" class="flex flex-col gap-4">
+    @if (errorMessage()) {
+      <p-message severity="error" [text]="errorMessage()!" styleClass="w-full" />
+    }
+
+    <!-- Date -->
+    <div class="flex flex-col gap-2">
+      <label for="date" class="font-medium text-color">
+        Date <span class="text-red-500">*</span>
+      </label>
+      <p-datePicker
+        id="date"
+        [(ngModel)]="formDate"
+        name="date"
+        (onSelect)="onDateChange($event)"
+        [showButtonBar]="true"
+        [maxDate]="maxDate"
+        dateFormat="mm/dd/yy"
+        placeholder="Select date"
+        styleClass="w-full"
+        required
+      />
+      <small class="text-muted-color">
+        Transaction date cannot be in the future
+      </small>
+    </div>
+
+    <!-- Transaction Type -->
+    <div class="flex flex-col gap-2">
+      <label class="font-medium text-color">
+        Type <span class="text-red-500">*</span>
+      </label>
+      <div class="flex gap-4">
+        <div class="flex items-center gap-2">
+          <p-radioButton
+            [(ngModel)]="formData.type"
+            name="type"
+            [value]="TransactionType.INCOME"
+            inputId="type-income"
+          />
+          <label for="type-income" class="cursor-pointer flex items-center gap-2">
+            <i [class]="'pi ' + transactionTypeInfo[TransactionType.INCOME].icon + ' ' + transactionTypeInfo[TransactionType.INCOME].color"></i>
+            <span>{{ transactionTypeInfo[TransactionType.INCOME].label }}</span>
+          </label>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <p-radioButton
+            [(ngModel)]="formData.type"
+            name="type"
+            [value]="TransactionType.EXPENSE"
+            inputId="type-expense"
+          />
+          <label for="type-expense" class="cursor-pointer flex items-center gap-2">
+            <i [class]="'pi ' + transactionTypeInfo[TransactionType.EXPENSE].icon + ' ' + transactionTypeInfo[TransactionType.EXPENSE].color"></i>
+            <span>{{ transactionTypeInfo[TransactionType.EXPENSE].label }}</span>
+          </label>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <p-radioButton
+            [(ngModel)]="formData.type"
+            name="type"
+            [value]="TransactionType.TRANSFER"
+            inputId="type-transfer"
+          />
+          <label for="type-transfer" class="cursor-pointer flex items-center gap-2">
+            <i [class]="'pi ' + transactionTypeInfo[TransactionType.TRANSFER].icon + ' ' + transactionTypeInfo[TransactionType.TRANSFER].color"></i>
+            <span>{{ transactionTypeInfo[TransactionType.TRANSFER].label }}</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Account -->
+    <div class="flex flex-col gap-2">
+      <label for="account" class="font-medium text-color">
+        Account <span class="text-red-500">*</span>
+      </label>
+      <p-select
+        id="account"
+        [(ngModel)]="formData.accountId"
+        name="account"
+        [options]="accountOptions()"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="Select account"
+        styleClass="w-full"
+        required
+      />
+    </div>
+
+    <!-- Amount -->
+    <div class="flex flex-col gap-2">
+      <label for="amount" class="font-medium text-color">
+        Amount <span class="text-red-500">*</span>
+      </label>
+      <p-inputNumber
+        id="amount"
+        [(ngModel)]="formData.amount"
+        name="amount"
+        mode="currency"
+        currency="USD"
+        locale="en-US"
+        [minFractionDigits]="2"
+        [maxFractionDigits]="2"
+        [min]="0.01"
+        styleClass="w-full"
+        inputStyleClass="w-full"
+        required
+      />
+      <small class="text-muted-color">
+        Enter amount as positive number. Transaction type determines if it's income or expense.
+      </small>
+    </div>
+
+    <!-- Description (Optional) -->
+    <div class="flex flex-col gap-2">
+      <label for="description" class="font-medium text-color">
+        Description
+      </label>
+      <input
+        pInputText
+        id="description"
+        [(ngModel)]="formData.description"
+        name="description"
+        placeholder="e.g., Grocery shopping"
+        class="w-full"
+        maxlength="200"
+      />
+    </div>
+
+    <!-- Vendor Name (Optional) -->
+    <div class="flex flex-col gap-2">
+      <label for="vendor" class="font-medium text-color">
+        Vendor Name
+      </label>
+      <input
+        pInputText
+        id="vendor"
+        [(ngModel)]="formData.vendorName"
+        name="vendor"
+        placeholder="e.g., Walmart"
+        class="w-full"
+        maxlength="100"
+      />
+    </div>
+
+    <!-- Category (Optional) -->
+    <div class="flex flex-col gap-2">
+      <label for="category" class="font-medium text-color">
+        Category
+      </label>
+      <input
+        pInputText
+        id="category"
+        [(ngModel)]="formData.categoryName"
+        name="category"
+        placeholder="e.g., Groceries"
+        class="w-full"
+        maxlength="50"
+      />
+      <small class="text-muted-color">
+        Leave empty for uncategorized transactions
+      </small>
+    </div>
+  </form>
+
+  <ng-template pTemplate="footer">
+    <p-button
+      label="Cancel"
+      icon="pi pi-times"
+      (onClick)="onHide()"
+      [text]="true"
+      severity="secondary"
+    />
+    <p-button
+      [label]="isEditMode ? 'Update' : 'Create'"
+      icon="pi pi-check"
+      (onClick)="onSubmit()"
+      [loading]="saving()"
+      severity="primary"
+    />
+  </ng-template>
+</p-dialog>
