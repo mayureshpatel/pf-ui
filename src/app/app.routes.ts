@@ -39,8 +39,7 @@ export const routes: Routes = [
       {
         path: 'accounts',
         loadComponent: () =>
-          import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
-        data: { placeholder: 'Accounts' }
+          import('./features/accounts/accounts.component').then((m) => m.AccountsComponent)
       },
       {
         path: 'categories',
