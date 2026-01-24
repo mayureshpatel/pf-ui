@@ -1,0 +1,29 @@
+<p-card header="Action Center" styleClass="h-full shadow-sm">
+  <div class="flex flex-col gap-3">
+    @if (items().length === 0) {
+      <div class="flex flex-col items-center justify-center py-8 text-muted-color gap-2">
+        <i class="pi pi-check-circle text-4xl text-green-500"></i>
+        <span class="font-medium">Everything is up to date!</span>
+      </div>
+    } @else {
+      @for (item of items(); track item.type) {
+        <div
+          class="flex items-center justify-between p-3 rounded-lg border border-surface-200 dark:border-surface-700 hover:border-primary transition-colors cursor-pointer"
+          (click)="onAction(item)">
+          <div class="flex items-center gap-3">
+            <div [class]="'w-10 h-10 rounded-full flex items-center justify-center'">
+              <i [class]="getIcon(item.type) + ' text-xl'"></i>
+            </div>
+            <div class="flex flex-col">
+              <span class="font-semibold text-color">{{ item.message }}</span>
+              @if (item.count > 1) {
+                <span class="text-xs text-muted-color">{{ item.count }} items need attention</span>
+              }
+            </div>
+          </div>
+          <i class="pi pi-chevron-right text-muted-color"></i>
+        </div>
+      }
+    }
+  </div>
+</p-card>

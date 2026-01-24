@@ -1,17 +1,28 @@
 import { Component, inject, OnInit, signal, WritableSignal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { forkJoin } from 'rxjs';
 import { CardModule } from 'primeng/card';
 import { Select } from 'primeng/select';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
-import { DashboardData, DailyBalance, MonthOption, YearOption } from '@models/dashboard.model';
+import { 
+  DashboardPulse, 
+  CashFlowTrend, 
+  YtdSummary, 
+  ActionItem, 
+  MonthOption, 
+  YearOption,
+  CategoryTotal
+} from '@models/dashboard.model';
 import { Account } from '@models/account.model';
 import { DashboardApiService } from './services/dashboard-api.service';
 import { AccountApiService } from '@features/accounts/services/account-api.service';
 import { ToastService } from '@core/services/toast.service';
-import { SummaryCardsComponent } from './components/summary-cards/summary-cards.component';
+import { PulseCardComponent } from './components/pulse-card/pulse-card.component';
+import { CashFlowTrendComponent } from './components/cash-flow-trend/cash-flow-trend.component';
+import { YtdSummaryComponent } from './components/ytd-summary/ytd-summary.component';
+import { ActionCenterComponent } from './components/action-center/action-center.component';
 import { CategoryChartComponent } from './components/category-chart/category-chart.component';
-import { NetWorthChartComponent } from './components/net-worth-chart/net-worth-chart.component';
 
 @Component({
   selector: 'app-dashboard',
@@ -22,9 +33,11 @@ import { NetWorthChartComponent } from './components/net-worth-chart/net-worth-c
     CardModule,
     Select,
     ProgressSpinnerModule,
-    SummaryCardsComponent,
-    CategoryChartComponent,
-    NetWorthChartComponent
+    PulseCardComponent,
+    CashFlowTrendComponent,
+    YtdSummaryComponent,
+    ActionCenterComponent,
+    CategoryChartComponent
   ],
   templateUrl: './dashboard.component.html'
 })
@@ -34,9 +47,12 @@ export class DashboardComponent implements OnInit {
   private readonly toast = inject(ToastService);
 
   // State
-  dashboardData: WritableSignal<DashboardData | null> = signal(null);
-  allDashboardData: WritableSignal<DashboardData | null> = signal(null); // Unfiltered data
-  netWorthHistory: WritableSignal<DailyBalance[]> = signal([]);
+  pulse: WritableSignal<DashboardPulse | null> = signal(null);
+  trends: WritableSignal<CashFlowTrend[]> = signal([]);
+  ytd: WritableSignal<YtdSummary | null> = signal(null);
+  actions: WritableSignal<ActionItem[]> = signal([]);
+  topCategories: WritableSignal<CategoryTotal[]> = signal([]);
+  
   accounts: WritableSignal<Account[]> = signal([]);
   loading: WritableSignal<boolean> = signal(false);
 
@@ -72,82 +88,55 @@ export class DashboardComponent implements OnInit {
   ngOnInit(): void {
     this.initializeYearOptions();
     this.loadAccounts();
-    this.loadDashboardData();
-    this.loadNetWorthHistory();
+    this.loadAllData();
   }
 
   private initializeYearOptions(): void {
     const currentYear = new Date().getFullYear();
     const years: YearOption[] = [];
-
-    // Generate years from 2020 to next year
     for (let year = 2020; year <= currentYear + 1; year++) {
       years.push({ label: year.toString(), value: year });
     }
-
     this.yearOptions = years;
   }
 
   private loadAccounts(): void {
     this.accountApi.getAccounts().subscribe({
-      next: (accounts) => {
-        this.accounts.set(accounts);
-      },
-      error: () => {
-        this.toast.error('Failed to load accounts');
-      }
+      next: (accounts) => this.accounts.set(accounts),
+      error: () => this.toast.error('Failed to load accounts')
     });
   }
 
   onFilterChange(): void {
-    this.applyAccountFilter();
+    // Note: Backend doesn't support account filtering for these specific widgets yet
+    this.toast.info('Account filtering will be added in a future update');
   }
 
   onPeriodChange(): void {
-    this.loadDashboardData();
+    this.loadAllData();
   }
 
-  private loadDashboardData(): void {
+  private loadAllData(): void {
     this.loading.set(true);
-    this.dashboardApi.getDashboardData(this.selectedMonth(), this.selectedYear()).subscribe({
-      next: (data) => {
-        this.allDashboardData.set(data);
-        this.applyAccountFilter();
+    
+    forkJoin({
+      pulse: this.dashboardApi.getPulse(this.selectedMonth(), this.selectedYear()),
+      trends: this.dashboardApi.getCashFlowTrend(),
+      ytd: this.dashboardApi.getYtdSummary(this.selectedYear()),
+      actions: this.dashboardApi.getActionItems(),
+      categories: this.dashboardApi.getCategoryBreakdown(this.selectedMonth(), this.selectedYear())
+    }).subscribe({
+      next: (results) => {
+        this.pulse.set(results.pulse);
+        this.trends.set(results.trends);
+        this.ytd.set(results.ytd);
+        this.actions.set(results.actions);
+        this.topCategories.set(results.categories);
         this.loading.set(false);
       },
       error: () => {
         this.toast.error('Failed to load dashboard data');
         this.loading.set(false);
-      }
-    });
-  }
-
-  private applyAccountFilter(): void {
-    const data = this.allDashboardData();
-    if (!data) {
-      this.dashboardData.set(null);
-      return;
-    }
-
-    const accountId = this.selectedAccountId();
-    if (accountId === null) {
-      // Show all data
-      this.dashboardData.set(data);
-    } else {
-      // Note: Backend doesn't support account filtering yet
-      // For now, we'll show a message that this feature requires backend support
-      this.toast.info('Account filtering will be available in a future update');
-      this.dashboardData.set(data);
-    }
-  }
-
-  private loadNetWorthHistory(): void {
-    this.dashboardApi.getNetWorthHistory().subscribe({
-      next: (history) => {
-        this.netWorthHistory.set(history);
-      },
-      error: () => {
-        this.toast.error('Failed to load net worth history');
       }
     });
   }

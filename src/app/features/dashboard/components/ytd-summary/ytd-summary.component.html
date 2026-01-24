@@ -1,0 +1,35 @@
+<p-card styleClass="h-full shadow-sm">
+  <div class="flex flex-col gap-4">
+    <div class="flex items-center justify-between">
+      <span class="text-lg font-bold text-color">{{ year() }} Year-to-Date</span>
+      <i class="pi pi-calendar text-muted-color"></i>
+    </div>
+
+    <div class="flex flex-col gap-1">
+      <span class="text-xs text-muted-color uppercase font-medium">Total Income</span>
+      <span class="text-xl font-semibold text-green-500">{{ formatCurrency(totalIncome()) }}</span>
+    </div>
+
+    <p-divider styleClass="m-0" />
+
+    <div class="flex flex-col gap-1">
+      <span class="text-xs text-muted-color uppercase font-medium">Total Expenses</span>
+      <span class="text-xl font-semibold text-red-500">{{ formatCurrency(totalExpense()) }}</span>
+    </div>
+
+    <p-divider styleClass="m-0" />
+
+    <div class="flex flex-col gap-1">
+      <span class="text-xs text-muted-color uppercase font-medium">Avg. Savings Rate</span>
+      <div class="flex items-center gap-2">
+        <span class="text-xl font-semibold text-color">{{ avgSavingsRate().toFixed(1) }}%</span>
+        <div class="flex-1 h-2 rounded-full overflow-hidden">
+          <div
+            class="bg-primary h-full rounded-full"
+            [style.width.%]="Math.min(Math.max(avgSavingsRate(), 0), 100)">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</p-card>

@@ -1,17 +1,18 @@
 import { Component, computed, effect, input, signal, WritableSignal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CardModule } from 'primeng/card';
-import { UIChart } from 'primeng/chart';
+import { ChartModule } from 'primeng/chart';
 import { CategoryTotal } from '@models/dashboard.model';
 import { getCategoryColorHex } from '@shared/utils/category.utils';
 
 @Component({
   selector: 'app-category-chart',
   standalone: true,
-  imports: [CommonModule, CardModule, UIChart],
+  imports: [CommonModule, CardModule, ChartModule],
   templateUrl: './category-chart.component.html'
 })
 export class CategoryChartComponent {
+  title = input<string>('Spending by Category');
   categories = input.required<CategoryTotal[]>();
 
   chartData: WritableSignal<any> = signal({});
@@ -31,19 +32,24 @@ export class CategoryChartComponent {
   }
 
   private updateChartData(categories: CategoryTotal[]): void {
-    const labels = categories.map(c => c.categoryName || 'Uncategorized');
-    const data = categories.map(c => Math.abs(c.total));
+    // Sort and take top 5
+    const top5 = [...categories]
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 5);
 
-    // Use consistent colors based on category names
-    const colors = categories.map(c => getCategoryColorHex(c.categoryName || 'Uncategorized'));
+    const labels = top5.map(c => c.categoryName || 'Uncategorized');
+    const data = top5.map(c => Math.abs(c.total));
+    const colors = top5.map(c => getCategoryColorHex(c.categoryName || 'Uncategorized'));
 
     this.chartData.set({
       labels,
       datasets: [
         {
+          label: 'Spent',
           data,
           backgroundColor: colors,
-          hoverBackgroundColor: colors.map(c => this.lightenColor(c, 10))
+          borderRadius: 6,
+          barThickness: 24
         }
       ]
     });
@@ -51,58 +57,46 @@ export class CategoryChartComponent {
 
   private initChartOptions(): void {
     const documentStyle = getComputedStyle(document.documentElement);
-    const textColor = documentStyle.getPropertyValue('--text-color');
+    const textColor = documentStyle.getPropertyValue('--text-color-secondary');
 
     this.chartOptions.set({
+      indexAxis: 'y', // Makes it horizontal
+      maintainAspectRatio: false,
+      aspectRatio: 0.8,
       plugins: {
         legend: {
-          labels: {
-            usePointStyle: true,
-            color: textColor
-          },
-          position: 'bottom'
+          display: false
         },
         tooltip: {
           callbacks: {
             label: (context: any) => {
-              const label = context.label || '';
-              const value = context.parsed || 0;
-              const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
-              const percentage = ((value / total) * 100).toFixed(1);
-              return `${label}: $${value.toLocaleString()} (${percentage}%)`;
+              const value = context.parsed.x || 0;
+              return `Spent: $${value.toLocaleString()}`;
             }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: {
+            display: false,
+            drawBorder: false
+          },
+          ticks: {
+            color: textColor
+          }
+        },
+        y: {
+          grid: {
+            display: false,
+            drawBorder: false
+          },
+          ticks: {
+            color: textColor
           }
         }
       }
     });
-  }
-
-  private generateColors(count: number): string[] {
-    const baseColors = [
-      '#3B82F6', // blue
-      '#10B981', // green
-      '#F59E0B', // amber
-      '#EF4444', // red
-      '#8B5CF6', // purple
-      '#EC4899', // pink
-      '#06B6D4', // cyan
-      '#F97316', // orange
-      '#14B8A6', // teal
-      '#6366F1'  // indigo
-    ];
-
-    if (count <= baseColors.length) {
-      return baseColors.slice(0, count);
-    }
-
-    // If more categories than colors, repeat with variations
-    const colors: string[] = [];
-    for (let i = 0; i < count; i++) {
-      const baseColor = baseColors[i % baseColors.length];
-      const variation = Math.floor(i / baseColors.length) * 15;
-      colors.push(this.lightenColor(baseColor, variation));
-    }
-    return colors;
   }
 
   private lightenColor(color: string, percent: number): string {

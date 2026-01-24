@@ -1,50 +1,34 @@
 <div class="p-4">
   <!-- Page Header -->
-  <div class="flex flex-col gap-4 mb-6">
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
     <div>
       <h1 class="text-3xl font-bold text-color">Dashboard</h1>
-      <p class="text-muted-color mt-1">Overview of your financial health</p>
+      <p class="text-muted-color mt-1">Operational Command Center</p>
     </div>
 
-    <!-- Filters -->
-    <div class="flex flex-wrap gap-3 items-end">
-      <!-- Month Selector -->
-      <div class="flex flex-col gap-2">
-        <label class="text-sm font-medium text-color">Month</label>
+    <!-- Period Filters -->
+    <div class="flex flex-wrap gap-3 items-end p-3 rounded-lg border border-surface-200 dark:border-surface-700">
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-semibold text-muted-color uppercase">Month</label>
         <p-select
           [(ngModel)]="selectedMonth"
           [options]="monthOptions"
           optionLabel="label"
           optionValue="value"
           (onChange)="onPeriodChange()"
-          styleClass="w-40"
+          styleClass="w-40 border-none bg-transparent"
         />
       </div>
 
-      <!-- Year Selector -->
-      <div class="flex flex-col gap-2">
-        <label class="text-sm font-medium text-color">Year</label>
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-semibold text-muted-color uppercase">Year</label>
         <p-select
           [(ngModel)]="selectedYear"
           [options]="yearOptions"
           optionLabel="label"
           optionValue="value"
           (onChange)="onPeriodChange()"
-          styleClass="w-32"
-        />
-      </div>
-
-      <!-- Account Filter -->
-      <div class="flex flex-col gap-2">
-        <label class="text-sm font-medium text-color">Account</label>
-        <p-select
-          [(ngModel)]="selectedAccountId"
-          [options]="accountOptions()"
-          optionLabel="label"
-          optionValue="value"
-          (onChange)="onFilterChange()"
-          placeholder="All Accounts"
-          styleClass="w-56"
+          styleClass="w-28 border-none bg-transparent"
         />
       </div>
     </div>
@@ -55,18 +39,52 @@
       <p-progressSpinner styleClass="w-16 h-16" />
     </div>
   } @else {
-    <!-- Summary Cards -->
-    <div class="mb-6">
-      <app-summary-cards [data]="dashboardData()" />
+    <!-- Row 1: The Pulse -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+      <app-pulse-card
+        title="Total Income"
+        [value]="pulse()?.currentIncome || 0"
+        [previousValue]="pulse()?.previousIncome || 0"
+      />
+      <app-pulse-card
+        title="Total Expenses"
+        [value]="pulse()?.currentExpense || 0"
+        [previousValue]="pulse()?.previousExpense || 0"
+        [inverseTrend]="true"
+      />
+      <app-pulse-card
+        title="Savings Rate"
+        [value]="pulse()?.currentSavingsRate || 0"
+        [previousValue]="pulse()?.previousSavingsRate || 0"
+        type="percent"
+      />
     </div>
 
-    <!-- Charts Row -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-      <!-- Category Breakdown Chart -->
-      <app-category-chart [categories]="dashboardData()?.categoryBreakdown || []" />
+    <!-- Row 2: The Big Picture -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+      <div class="lg:col-span-2">
+        <app-cash-flow-trend [data]="trends()" />
+      </div>
+      <div class="lg:col-span-1">
+        <app-ytd-summary
+          [year]="ytd()?.year || selectedYear()"
+          [totalIncome]="ytd()?.totalIncome || 0"
+          [totalExpense]="ytd()?.totalExpense || 0"
+          [avgSavingsRate]="ytd()?.avgSavingsRate || 0"
+        />
+      </div>
+    </div>
 
-      <!-- Net Worth History Chart -->
-      <app-net-worth-chart [balances]="netWorthHistory()" />
+    <!-- Row 3: Analysis & Action -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <!-- Top Categories -->
+      <app-category-chart
+        title="Top Expenses"
+        [categories]="topCategories()"
+      />
+
+      <!-- Action Center -->
+      <app-action-center [items]="actions()" />
     </div>
   }
 </div>
