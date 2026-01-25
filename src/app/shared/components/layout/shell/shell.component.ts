@@ -32,6 +32,7 @@ export class ShellComponent {
   navItems: MenuItem[] = [
     {label: 'Dashboard', icon: 'pi pi-home', routerLink: '/dashboard'},
     {label: 'Transactions', icon: 'pi pi-list', routerLink: '/transactions'},
+    {label: 'Recurring', icon: 'pi pi-refresh', routerLink: '/recurring'},
     {label: 'Accounts', icon: 'pi pi-wallet', routerLink: '/accounts'},
     {label: 'Budgets', icon: 'pi pi-calendar', routerLink: '/budgets'},
     {label: 'Categories', icon: 'pi pi-tags', routerLink: '/categories'},

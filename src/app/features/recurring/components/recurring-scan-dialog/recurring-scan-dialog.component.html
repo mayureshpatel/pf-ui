@@ -1,0 +1,90 @@
+<p-dialog
+  header="Scan for Recurring Transactions"
+  [modal]="true"
+  [visible]="visible()"
+  (visibleChange)="onHide()"
+  [style]="{ width: '900px', 'max-width': '95vw' }"
+  [draggable]="false"
+  [resizable]="false">
+
+  <p class="text-muted-color mb-4">
+    We scanned your last 12 months of history and found these potential recurring transactions.
+  </p>
+
+  <p-table
+    [value]="suggestions()"
+    [loading]="loading()"
+    styleClass="p-datatable-sm"
+    responsiveLayout="scroll">
+    
+    <ng-template pTemplate="header">
+      <tr>
+        <th>Merchant</th>
+        <th>Frequency</th>
+        <th class="text-right">Amount</th>
+        <th>Next Expected</th>
+        <th class="text-center">Confidence</th>
+        <th class="text-center" style="width: 120px">Action</th>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="body" let-s>
+      <tr>
+        <td class="font-medium">{{ s.merchantName }}</td>
+        <td>
+          <p-tag [value]="s.frequency" severity="secondary" styleClass="text-xs"></p-tag>
+        </td>
+        <td class="text-right font-semibold">{{ formatCurrency(s.amount) }}</td>
+        <td class="text-muted-color">{{ formatDate(s.nextDate) }}</td>
+        <td class="text-center">
+          <p-tag 
+            [value]="(s.confidenceScore * 100).toFixed(0) + '%'" 
+            severity="info" 
+            styleClass="text-xs">
+          </p-tag>
+          <div class="text-xs text-muted-color mt-1">{{ s.occurrenceCount }} occurrences</div>
+        </td>
+        <td class="text-center">
+          <div class="flex justify-center gap-2">
+            <p-button 
+              icon="pi pi-check" 
+              (onClick)="confirm(s)"
+              [rounded]="true"
+              severity="success"
+              pTooltip="Add"
+              tooltipPosition="left"
+              size="small">
+            </p-button>
+            <p-button 
+              icon="pi pi-times" 
+              (onClick)="ignore(s)"
+              [rounded]="true"
+              [text]="true"
+              severity="secondary"
+              pTooltip="Ignore"
+              tooltipPosition="left"
+              size="small">
+            </p-button>
+          </div>
+        </td>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="emptymessage">
+      <tr>
+        <td colspan="6" class="text-center py-8 text-muted-color">
+          No recurring patterns found.
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+
+  <ng-template pTemplate="footer">
+    <p-button 
+      label="Close" 
+      (onClick)="onHide()" 
+      [text]="true" 
+      severity="secondary">
+    </p-button>
+  </ng-template>
+</p-dialog>

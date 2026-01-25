@@ -1,0 +1,119 @@
+<p-dialog
+  [header]="isEditMode ? 'Edit Recurring Transaction' : 'New Recurring Transaction'"
+  [modal]="true"
+  [visible]="visible()"
+  (visibleChange)="onHide()"
+  [style]="{ width: '450px' }"
+  [draggable]="false"
+  [resizable]="false">
+
+  <form (ngSubmit)="onSubmit()" class="flex flex-col gap-4">
+    @if (errorMessage()) {
+      <p-message severity="error" [text]="errorMessage()!" styleClass="w-full" />
+    }
+
+    <!-- Merchant Name -->
+    <div class="flex flex-col gap-2">
+      <label for="merchant" class="font-medium text-color">Merchant Name</label>
+      <input
+        pInputText
+        id="merchant"
+        [(ngModel)]="formData.merchantName"
+        name="merchantName"
+        placeholder="e.g., Netflix"
+        class="w-full"
+        required
+      />
+    </div>
+
+    <!-- Amount -->
+    <div class="flex flex-col gap-2">
+      <label for="amount" class="font-medium text-color">Amount</label>
+      <p-inputNumber
+        id="amount"
+        [(ngModel)]="formData.amount"
+        name="amount"
+        mode="currency"
+        currency="USD"
+        [min]="0"
+        placeholder="$0.00"
+        class="w-full"
+        styleClass="w-full"
+      />
+    </div>
+
+    <!-- Frequency -->
+    <div class="flex flex-col gap-2">
+      <label for="frequency" class="font-medium text-color">Frequency</label>
+      <p-select
+        id="frequency"
+        [(ngModel)]="formData.frequency"
+        [options]="frequencyOptions"
+        optionLabel="label"
+        optionValue="value"
+        name="frequency"
+        class="w-full"
+        appendTo="body"
+      />
+    </div>
+
+    <!-- Account (Optional) -->
+    <div class="flex flex-col gap-2">
+      <label for="account" class="font-medium text-color">Linked Account (Optional)</label>
+      <p-select
+        id="account"
+        [(ngModel)]="formData.accountId"
+        [options]="accountOptions()"
+        optionLabel="label"
+        optionValue="value"
+        name="accountId"
+        placeholder="Select an account"
+        class="w-full"
+        appendTo="body"
+        [showClear]="true"
+      />
+    </div>
+
+    <!-- Next Due Date -->
+    <div class="flex flex-col gap-2">
+      <label for="nextDate" class="font-medium text-color">Next Due Date</label>
+      <p-datePicker
+        id="nextDate"
+        [(ngModel)]="nextDate"
+        name="nextDate"
+        dateFormat="mm/dd/yy"
+        [showIcon]="true"
+        styleClass="w-full"
+        appendTo="body"
+      />
+    </div>
+
+    <!-- Active Status -->
+    <div class="flex items-center gap-2">
+      <p-checkbox
+        id="active"
+        [(ngModel)]="formData.active"
+        name="active"
+        [binary]="true"
+      />
+      <label for="active" class="text-color">Active</label>
+    </div>
+  </form>
+
+  <ng-template pTemplate="footer">
+    <p-button
+      label="Cancel"
+      icon="pi pi-times"
+      (onClick)="onHide()"
+      [text]="true"
+      severity="secondary"
+    />
+    <p-button
+      [label]="isEditMode ? 'Update' : 'Create'"
+      icon="pi pi-check"
+      (onClick)="onSubmit()"
+      [loading]="loading()"
+      severity="primary"
+    />
+  </ng-template>
+</p-dialog>
