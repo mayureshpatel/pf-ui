@@ -3,7 +3,7 @@
   [modal]="true"
   [visible]="visible()"
   (visibleChange)="onHide()"
-  [style]="{ width: '450px' }"
+  [style]="{ width: '25vw'}"
   [draggable]="false"
   [resizable]="false">
 
@@ -38,6 +38,8 @@
         id="type"
         [(ngModel)]="formData.type"
         name="type"
+        appendTo="body"
+        scrollHeight="180px"
         [options]="accountTypes"
         optionLabel="label"
         optionValue="value"
@@ -49,6 +51,18 @@
             <i [class]="'pi ' + option.icon"></i>
             <span>{{ option.label }}</span>
           </div>
+        </ng-template>
+
+        <ng-template let-option pTemplate="selectedItem">
+          @if (option) {
+          <div class="flex items-center gap-2">
+            <i [class]="'pi ' + option.icon"></i>
+            <span>{{ option.label }}</span>
+          </div>
+          }
+          @else {
+          <span class="text-muted-color">Select account type</span>
+          }
         </ng-template>
       </p-select>
     </div>

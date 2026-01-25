@@ -1,14 +1,14 @@
-import { Component, EventEmitter, input, OnChanges, Output, signal, WritableSignal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { CommonModule } from '@angular/common';
-import { DialogModule } from 'primeng/dialog';
-import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
-import { Select } from 'primeng/select';
-import { InputNumberModule } from 'primeng/inputnumber';
-import { MessageModule } from 'primeng/message';
-import { Account, AccountType, AccountFormData } from '@models/account.model';
-import { ACCOUNT_TYPE_INFO } from '@shared/utils/account.utils';
+import {Component, EventEmitter, input, OnChanges, Output, signal, WritableSignal} from '@angular/core';
+import {FormsModule} from '@angular/forms';
+import {CommonModule} from '@angular/common';
+import {DialogModule} from 'primeng/dialog';
+import {ButtonModule} from 'primeng/button';
+import {InputTextModule} from 'primeng/inputtext';
+import {Select} from 'primeng/select';
+import {InputNumberModule} from 'primeng/inputnumber';
+import {MessageModule} from 'primeng/message';
+import {Account, AccountFormData, AccountType} from '@models/account.model';
+import {ACCOUNT_TYPE_INFO} from '@shared/utils/account.utils';
 
 interface AccountTypeOption {
   label: string;
