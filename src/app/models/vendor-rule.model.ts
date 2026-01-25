@@ -5,8 +5,8 @@ export interface VendorRule {
   priority: number;
 }
 
-export interface VendorRuleFormData {
+export interface VendorRuleDto {
   keyword: string;
   vendorName: string;
-  priority: number;
+  priority?: number;
 }
