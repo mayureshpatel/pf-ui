@@ -7,6 +7,7 @@ import {ButtonModule} from 'primeng/button';
 import {TableModule} from 'primeng/table';
 import {ProgressBarModule} from 'primeng/progressbar';
 import {Select} from 'primeng/select';
+import {SelectButton} from 'primeng/selectbutton';
 import {CheckboxModule} from 'primeng/checkbox';
 import {ConfirmDialog} from 'primeng/confirmdialog';
 import {ProgressSpinnerModule} from 'primeng/progressspinner';
@@ -37,6 +38,7 @@ export interface BudgetStatusViewModel extends BudgetStatus {
     TableModule,
     ProgressBarModule,
     Select,
+    SelectButton,
     CheckboxModule,
     ConfirmDialog,
     ProgressSpinnerModule,
@@ -57,12 +59,17 @@ export class BudgetsComponent implements OnInit {
   categories: WritableSignal<Category[]> = signal([]);
   loading: WritableSignal<boolean> = signal(false);
   showDialog: WritableSignal<boolean> = signal(false);
-  showAllTime: WritableSignal<boolean> = signal(false);
+  viewMode: WritableSignal<'monthly' | 'all'> = signal('monthly');
 
   selectedMonth: WritableSignal<number> = signal(new Date().getMonth() + 1);
   selectedYear: WritableSignal<number> = signal(new Date().getFullYear());
 
   // Options
+  viewOptions = [
+    {label: 'Monthly Status', value: 'monthly', icon: 'pi pi-calendar'},
+    {label: 'Manage All', value: 'all', icon: 'pi pi-list'}
+  ];
+
   monthOptions: MonthOption[] = [
     {label: 'January', value: 1},
     {label: 'February', value: 2},
@@ -110,7 +117,7 @@ export class BudgetsComponent implements OnInit {
   }
 
   refreshData(): void {
-    if (this.showAllTime()) {
+    if (this.viewMode() === 'all') {
       this.loadAllBudgets();
     } else {
       this.loadBudgetStatus();
