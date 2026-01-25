@@ -60,6 +60,20 @@ export class VendorRulesComponent implements OnInit {
     this.loadRules();
   }
 
+  applyRules(): void {
+    this.loading.set(true);
+    this.api.applyRules().subscribe({
+      next: () => {
+        this.toast.success('Rules applied to existing transactions');
+        this.loading.set(false);
+      },
+      error: (error) => {
+        this.toast.error(error.error?.detail || 'Failed to apply rules');
+        this.loading.set(false);
+      }
+    });
+  }
+
   deleteRule(rule: VendorRule): void {
     this.confirmationService.confirm({
       header: 'Delete Rule?',

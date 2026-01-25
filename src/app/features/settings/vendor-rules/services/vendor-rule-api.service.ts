@@ -19,6 +19,10 @@ export class VendorRuleApiService {
     return this.http.post<VendorRule>(this.apiUrl, data);
   }
 
+  applyRules(): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/apply`, {});
+  }
+
   deleteRule(id: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
