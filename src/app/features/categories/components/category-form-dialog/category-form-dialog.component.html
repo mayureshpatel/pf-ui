@@ -29,6 +29,22 @@
       />
     </div>
 
+    <div class="flex flex-col gap-2">
+      <label for="vendorName" class="font-medium text-color">Parent Category (Optional)</label>
+      <p-select
+        id="parent"
+        [(ngModel)]="formData.parentId"
+        [options]="parentOptions()"
+        optionLabel="label"
+        optionValue="value"
+        name="parent"
+        placeholder="None (Top Level)"
+        [showClear]="true"
+        class="w-full"
+        appendTo="body"
+      />
+    </div>
+
     <!-- Color Selection -->
     <div class="flex flex-col gap-2">
       <label class="font-medium text-color">Category Color</label>

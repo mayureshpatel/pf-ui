@@ -37,24 +37,10 @@ export class CategoriesComponent implements OnInit {
   private readonly confirmationService = inject(ConfirmationService);
   private readonly router = inject(Router);
 
-  categories: WritableSignal<Category[]> = signal([]);
-  transactions: WritableSignal<any[]> = signal([]);
+  categories: WritableSignal<CategoryWithUsage[]> = signal([]);
   loading: WritableSignal<boolean> = signal(false);
   showDialog: WritableSignal<boolean> = signal(false);
   selectedCategory: WritableSignal<Category | null> = signal(null);
-
-  categoriesWithUsage = computed(() => {
-    const cats = this.categories();
-    const txns = this.transactions();
-
-    return cats.map(cat => {
-      const count = txns.filter(t => t.categoryName === cat.name).length;
-      return {
-        ...cat,
-        transactionCount: count
-      } as CategoryWithUsage;
-    }).sort((a, b) => a.name.localeCompare(b.name));
-  });
 
   isEmpty = computed(() => this.categories().length === 0 && !this.loading());
 
@@ -70,8 +56,34 @@ export class CategoriesComponent implements OnInit {
       transactions: this.transactionApi.getTransactions({}, { page: 0, size: 10000 })
     }).subscribe({
       next: ({ categories, transactions }) => {
-        this.categories.set(categories);
-        this.transactions.set(transactions.content);
+        // Calculate usage and normalize parent names
+        const enriched = categories.map(cat => {
+          const count = transactions.content.filter(t => t.categoryName === cat.name).length;
+          return {
+            ...cat,
+            transactionCount: count,
+            // If no parent, group under itself (or "Other")? 
+            // For row grouping, we want the group header to be the Parent Name.
+            // If it IS a parent (root), its parentName is null.
+            // Let's use a computed 'groupName' field for sorting.
+            groupName: cat.parentName || cat.name
+          } as CategoryWithUsage & { groupName: string };
+        });
+
+        // Sort by Group Name, then by Category Name
+        // This ensures parents and children stay together
+        enriched.sort((a, b) => {
+          const groupCompare = a.groupName.localeCompare(b.groupName);
+          if (groupCompare !== 0) return groupCompare;
+          
+          // Within the group, put the Parent first
+          if (a.name === a.groupName) return -1;
+          if (b.name === b.groupName) return 1;
+          
+          return a.name.localeCompare(b.name);
+        });
+
+        this.categories.set(enriched);
         this.loading.set(false);
       },
       error: () => {
@@ -79,6 +91,12 @@ export class CategoriesComponent implements OnInit {
         this.loading.set(false);
       }
     });
+  }
+
+  calculateGroupTotal(groupName: string): number {
+    return this.categories()
+      .filter(c => c.parentName === groupName || c.name === groupName)
+      .reduce((sum, c) => sum + c.transactionCount, 0);
   }
 
   getDisplayColor(category: Category): string {
@@ -107,7 +125,7 @@ export class CategoriesComponent implements OnInit {
         this.categoryApi.deleteCategory(category.id).subscribe({
           next: () => {
             this.toast.success('Category deleted successfully');
-            this.categories.update(cats => cats.filter(c => c.id !== category.id));
+            this.loadData();
           },
           error: (error) => {
             this.toast.error(error.error?.detail || 'Failed to delete category');
@@ -130,11 +148,9 @@ export class CategoriesComponent implements OnInit {
       // Update existing category
       this.categoryApi.updateCategory(category.id, formData).subscribe({
         next: (updated) => {
-          this.categories.update(cats => 
-            cats.map(c => c.id === category.id ? updated : c)
-          );
           this.toast.success('Category updated successfully');
           this.showDialog.set(false);
+          this.loadData();
         },
         error: (error) => {
           this.toast.error(error.error?.detail || 'Failed to update category');
@@ -144,9 +160,9 @@ export class CategoriesComponent implements OnInit {
       // Create new category
       this.categoryApi.createCategory(formData).subscribe({
         next: (created) => {
-          this.categories.update(cats => [...cats, created]);
           this.toast.success('Category created successfully');
           this.showDialog.set(false);
+          this.loadData();
         },
         error: (error) => {
           this.toast.error(error.error?.detail || 'Failed to create category');

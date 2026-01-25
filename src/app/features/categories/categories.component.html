@@ -13,30 +13,50 @@
     />
   </div>
 
-  <!-- Categories Table -->
+  <!-- Categories Table with Row Grouping -->
   @if (!isEmpty()) {
     <p-card styleClass="shadow-sm">
       <p-table
-        [value]="categoriesWithUsage()"
+        [value]="categories()"
         [loading]="loading()"
         [paginator]="false"
         styleClass="p-datatable-sm"
-        responsiveLayout="scroll">
+        rowGroupMode="subheader"
+        groupRowsBy="groupName"
+        sortField="groupName"
+        sortMode="single"
+        [scrollable]="true"
+        scrollHeight="600px">
 
         <ng-template pTemplate="header">
           <tr>
             <th style="width: 60px"></th>
             <th>Category Name</th>
-            <th class="text-center" style="width: 120px">Usage</th>
-            <th class="text-center" style="width: 150px">Actions</th>
+            <th class="text-center" style="width: 150px">Usage</th>
+            <th class="text-center" style="width: 120px">Actions</th>
           </tr>
         </ng-template>
 
-        <ng-template pTemplate="body" let-category>
+        <!-- Group Header -->
+        <ng-template pTemplate="groupheader" let-category>
+          <tr pRowGroupHeader>
+            <td colspan="4">
+              <div class="flex items-center gap-2 py-1">
+                <span class="font-bold uppercase tracking-wide">{{ category.groupName }}</span>
+                <span class="text-sm text-muted-color font-normal">
+                  ({{ calculateGroupTotal(category.groupName) }} transactions)
+                </span>
+              </div>
+            </td>
+          </tr>
+        </ng-template>
+
+        <!-- Data Rows -->
+        <ng-template pTemplate="body" let-category let-rowIndex="rowIndex">
           <tr>
             <!-- Color Badge -->
             <td>
-              <div [class]="getDisplayColor(category) + ' w-8 h-8 rounded-full'"></div>
+              <div [class]="getDisplayColor(category) + ' w-8 h-8 rounded-full ml-4'"></div>
             </td>
 
             <!-- Category Name -->
@@ -46,7 +66,7 @@
 
             <!-- Usage Count -->
             <td class="text-center">
-              <span 
+              <span
                 class="text-primary hover:underline cursor-pointer"
                 (click)="viewTransactions(category)"
                 pTooltip="View transactions"

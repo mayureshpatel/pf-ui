@@ -1,9 +1,10 @@
-import { Component, EventEmitter, input, OnChanges, Output, signal, WritableSignal, inject } from '@angular/core';
+import { Component, EventEmitter, input, OnChanges, Output, signal, WritableSignal, inject, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { DialogModule } from 'primeng/dialog';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
+import { Select } from 'primeng/select';
 import { MessageModule } from 'primeng/message';
 import { Category, CategoryFormData } from '@models/category.model';
 import { getCategoryColor, CATEGORY_COLORS } from '@shared/utils/category.utils';
@@ -18,6 +19,7 @@ import { CategoryApiService } from '../../services/category-api.service';
     DialogModule,
     ButtonModule,
     InputTextModule,
+    Select,
     MessageModule
   ],
   templateUrl: './category-form-dialog.component.html'
@@ -33,7 +35,8 @@ export class CategoryFormDialogComponent implements OnChanges {
 
   formData: CategoryFormData = {
     name: '',
-    color: ''
+    color: '',
+    parentId: undefined
   };
 
   loading: WritableSignal<boolean> = signal(false);
@@ -43,18 +46,26 @@ export class CategoryFormDialogComponent implements OnChanges {
   availableColors = CATEGORY_COLORS;
   getCategoryColor = getCategoryColor;
 
+  parentOptions = computed(() => {
+    const currentId = this.category()?.id;
+    return this.allCategories()
+      .filter(c => c.id !== currentId) // Exclude self
+      .map(c => ({ label: c.name, value: c.id }));
+  });
+
   ngOnChanges(): void {
     const cat = this.category();
     if (cat) {
       this.formData = {
         name: cat.name,
-        color: cat.color || getCategoryColor(cat.name)
+        color: cat.color || getCategoryColor(cat.name),
+        parentId: cat.parentId
       };
     } else {
       this.resetForm();
     }
 
-    // Load all categories for duplicate check
+    // Load all categories for duplicate check & parent dropdown
     if (this.visible()) {
       this.loadCategories();
     }
@@ -107,14 +118,16 @@ export class CategoryFormDialogComponent implements OnChanges {
 
     this.save.emit({ 
       name: this.formData.name.trim(),
-      color: colorToSave
+      color: colorToSave,
+      parentId: this.formData.parentId
     });
   }
 
   resetForm(): void {
     this.formData = {
       name: '',
-      color: ''
+      color: '',
+      parentId: undefined
     };
     this.errorMessage.set(null);
     this.loading.set(false);
