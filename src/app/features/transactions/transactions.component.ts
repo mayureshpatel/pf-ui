@@ -245,12 +245,19 @@ export class TransactionsComponent implements OnInit {
       sort: this.currentSort()
     }).subscribe({
       next: (response) => {
-        // Enrich transactions with account names
+        // Enrich transactions with account and category info
         const accountMap = new Map(this.accounts().map(a => [a.id, a.name]));
-        const enrichedTransactions = response.content.map(t => ({
-          ...t,
-          accountName: accountMap.get(t.accountId) || 'Unknown Account'
-        }));
+        const categoryMap = new Map(this.categories().map(c => [c.name, c]));
+
+        const enrichedTransactions = response.content.map(t => {
+          const category = t.categoryName ? categoryMap.get(t.categoryName) : undefined;
+          return {
+            ...t,
+            accountName: accountMap.get(t.accountId) || 'Unknown Account',
+            categoryIcon: category?.icon,
+            categoryColor: category?.color
+          };
+        });
 
         this.transactions.set(enrichedTransactions);
         this.totalRecords.set(response.totalElements);

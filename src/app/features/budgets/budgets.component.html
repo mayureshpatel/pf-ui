@@ -72,27 +72,34 @@
       </p-card>
     </div>
 
-    <!-- Budget Status List -->
-    <p-card styleClass="shadow-sm">
-      <p-table
-        [value]="budgetStatuses()"
-        styleClass="p-datatable-sm"
-        responsiveLayout="scroll">
-
-        <ng-template pTemplate="header">
-          <tr>
-            <th>Category</th>
-            <th class="text-right">Budgeted</th>
-            <th class="text-right">Spent</th>
-            <th style="width: 30%">Progress</th>
-            <th class="text-right">Remaining</th>
-          </tr>
-        </ng-template>
-
-        <ng-template pTemplate="body" let-status>
-          <tr>
-            <td class="font-medium">{{ status.categoryName }}</td>
-            <td class="text-right">{{ formatCurrency(status.budgetedAmount) }}</td>
+        <!-- Budget Status List -->
+        <p-card styleClass="shadow-sm">
+          <p-table
+            [value]="budgetStatuses()"
+            styleClass="p-datatable-sm"
+            responsiveLayout="scroll">
+            
+            <ng-template pTemplate="header">
+              <tr>
+                <th style="width: 50px"></th>
+                <th>Category</th>
+                <th class="text-right">Budgeted</th>
+                <th class="text-right">Spent</th>
+                <th style="width: 30%">Progress</th>
+                <th class="text-right">Remaining</th>
+              </tr>
+            </ng-template>
+    
+            <ng-template pTemplate="body" let-status>
+              <tr>
+                <td>
+                  <div [class]="(status.color || getCategoryColor(status.categoryName)) + ' w-8 h-8 rounded-full flex items-center justify-center text-white'">
+                    @if (status.icon) {
+                      <i [class]="'pi ' + status.icon + ' text-xs'"></i>
+                    }
+                  </div>
+                </td>
+                <td class="font-medium">{{ status.categoryName }}</td>            <td class="text-right">{{ formatCurrency(status.budgetedAmount) }}</td>
             <td class="text-right text-red-500">{{ formatCurrency(status.spentAmount) }}</td>
             <td>
               <div class="flex flex-col gap-1">

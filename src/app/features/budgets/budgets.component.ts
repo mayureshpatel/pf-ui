@@ -1,6 +1,7 @@
 import { Component, computed, inject, OnInit, signal, WritableSignal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { forkJoin } from 'rxjs';
 import { CardModule } from 'primeng/card';
 import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
@@ -15,6 +16,12 @@ import { formatCurrency } from '@shared/utils/account.utils';
 import { BudgetFormDialogComponent } from './components/budget-form-dialog/budget-form-dialog.component';
 import { CategoryApiService } from '@features/categories/services/category-api.service';
 import { Category } from '@models/category.model';
+import { getCategoryColor } from '@shared/utils/category.utils';
+
+export interface BudgetStatusViewModel extends BudgetStatus {
+  icon?: string;
+  color?: string;
+}
 
 @Component({
   selector: 'app-budgets',
@@ -38,7 +45,7 @@ export class BudgetsComponent implements OnInit {
   private readonly toast = inject(ToastService);
 
   // State
-  budgetStatuses: WritableSignal<BudgetStatus[]> = signal([]);
+  budgetStatuses: WritableSignal<BudgetStatusViewModel[]> = signal([]);
   categories: WritableSignal<Category[]> = signal([]);
   loading: WritableSignal<boolean> = signal(false);
   showDialog: WritableSignal<boolean> = signal(false);
@@ -69,6 +76,7 @@ export class BudgetsComponent implements OnInit {
   totalRemaining = computed(() => this.totalBudgeted() - this.totalSpent());
 
   formatCurrency = formatCurrency;
+  getCategoryColor = getCategoryColor;
 
   ngOnInit(): void {
     this.initializeYearOptions();
@@ -94,9 +102,24 @@ export class BudgetsComponent implements OnInit {
 
   loadBudgetStatus(): void {
     this.loading.set(true);
-    this.budgetApi.getBudgetStatus(this.selectedMonth(), this.selectedYear()).subscribe({
-      next: (status) => {
-        this.budgetStatuses.set(status);
+    
+    forkJoin({
+      status: this.budgetApi.getBudgetStatus(this.selectedMonth(), this.selectedYear()),
+      categories: this.categoryApi.getCategories()
+    }).subscribe({
+      next: ({ status, categories }) => {
+        const catMap = new Map(categories.map(c => [c.name, c]));
+        
+        const enriched = status.map(s => {
+          const cat = catMap.get(s.categoryName);
+          return {
+            ...s,
+            icon: cat?.icon,
+            color: cat?.color || getCategoryColor(s.categoryName)
+          };
+        });
+
+        this.budgetStatuses.set(enriched);
         this.loading.set(false);
       },
       error: () => {

@@ -12,7 +12,7 @@ import { RadioButtonModule } from 'primeng/radiobutton';
 import { AutoComplete } from 'primeng/autocomplete';
 import { Transaction, TransactionFormData, TransactionType } from '@models/transaction.model';
 import { Account } from '@models/account.model';
-import { Category } from '@models/category.model';
+import { Category, CategoryType } from '@models/category.model';
 import { TRANSACTION_TYPE_INFO } from '@shared/utils/transaction.utils';
 import { CategoryApiService } from '@features/categories/services/category-api.service';
 import { getCategoryColor } from '@shared/utils/category.utils';
@@ -68,7 +68,16 @@ export class TransactionFormDialogComponent implements OnChanges, OnInit {
   getCategoryColor = getCategoryColor;
 
   categorySuggestions = computed(() => {
-    return this.categories().map(c => c.name);
+    const type = this.formData.type;
+    return this.categories()
+      .filter(c => {
+        // Filter logic: show if category type is BOTH or matches transaction type
+        if (!c.type || c.type === CategoryType.BOTH) return true;
+        if (type === TransactionType.INCOME) return c.type === CategoryType.INCOME;
+        if (type === TransactionType.EXPENSE) return c.type === CategoryType.EXPENSE;
+        return true; // Show all for TRANSFERS or others
+      })
+      .map(c => c.name);
   });
 
   accountOptions = (): AccountOption[] => {

@@ -17,7 +17,9 @@ import {
 import { Account } from '@models/account.model';
 import { DashboardApiService } from './services/dashboard-api.service';
 import { AccountApiService } from '@features/accounts/services/account-api.service';
+import { CategoryApiService } from '@features/categories/services/category-api.service';
 import { ToastService } from '@core/services/toast.service';
+import { getCategoryColor } from '@shared/utils/category.utils';
 import { PulseCardComponent } from './components/pulse-card/pulse-card.component';
 import { CashFlowTrendComponent } from './components/cash-flow-trend/cash-flow-trend.component';
 import { YtdSummaryComponent } from './components/ytd-summary/ytd-summary.component';
@@ -44,6 +46,7 @@ import { CategoryChartComponent } from './components/category-chart/category-cha
 export class DashboardComponent implements OnInit {
   private readonly dashboardApi = inject(DashboardApiService);
   private readonly accountApi = inject(AccountApiService);
+  private readonly categoryApi = inject(CategoryApiService);
   private readonly toast = inject(ToastService);
 
   // State
@@ -124,14 +127,24 @@ export class DashboardComponent implements OnInit {
       trends: this.dashboardApi.getCashFlowTrend(),
       ytd: this.dashboardApi.getYtdSummary(this.selectedYear()),
       actions: this.dashboardApi.getActionItems(),
-      categories: this.dashboardApi.getCategoryBreakdown(this.selectedMonth(), this.selectedYear())
+      categories: this.dashboardApi.getCategoryBreakdown(this.selectedMonth(), this.selectedYear()),
+      categoryMeta: this.categoryApi.getCategories()
     }).subscribe({
       next: (results) => {
         this.pulse.set(results.pulse);
         this.trends.set(results.trends);
         this.ytd.set(results.ytd);
         this.actions.set(results.actions);
-        this.topCategories.set(results.categories);
+        
+        // Enrich top categories with metadata
+        const metaMap = new Map(results.categoryMeta.map(c => [c.name, c]));
+        const enrichedCategories = results.categories.map(c => ({
+          ...c,
+          icon: metaMap.get(c.categoryName)?.icon,
+          color: metaMap.get(c.categoryName)?.color || getCategoryColor(c.categoryName)
+        }));
+        this.topCategories.set(enrichedCategories);
+        
         this.loading.set(false);
       },
       error: () => {

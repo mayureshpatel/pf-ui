@@ -33,6 +33,8 @@
             <th style="width: 60px"></th>
             <th>Category Name</th>
             <th class="text-center" style="width: 150px">Usage</th>
+            <th class="text-right" style="width: 120px">Budget</th>
+            <th style="width: 200px">Monthly Progress</th>
             <th class="text-center" style="width: 120px">Actions</th>
           </tr>
         </ng-template>
@@ -40,9 +42,9 @@
         <!-- Group Header -->
         <ng-template pTemplate="groupheader" let-category>
           <tr pRowGroupHeader>
-            <td colspan="4">
+            <td colspan="6">
               <div class="flex items-center gap-2 py-1">
-                <span class="font-bold uppercase tracking-wide">{{ category.groupName }}</span>
+                <span class="font-bold text-lg text-primary uppercase tracking-wide">{{ category.groupName }}</span>
                 <span class="text-sm text-muted-color font-normal">
                   ({{ calculateGroupTotal(category.groupName) }} transactions)
                 </span>
@@ -56,8 +58,10 @@
           <tr>
             <!-- Color Badge / Icon -->
             <td>
-              <div
-                [class]="getDisplayColor(category) + ' w-8 h-8 rounded-full ml-4 flex items-center justify-center text-white'">
+              <div 
+                [class]="getDisplayColor(category) + ' w-8 h-8 rounded-full ml-4 flex items-center justify-center text-white cursor-help'"
+                [pTooltip]="getIconLabel(category.icon)"
+                tooltipPosition="top">
                 @if (category.icon) {
                   <i [class]="'pi ' + category.icon + ' text-sm'"></i>
                 }
@@ -76,7 +80,7 @@
 
             <!-- Usage Count -->
             <td class="text-center">
-              <span
+              <span 
                 class="text-primary hover:underline cursor-pointer"
                 (click)="viewTransactions(category)"
                 pTooltip="View transactions"
@@ -85,34 +89,59 @@
               </span>
             </td>
 
+            <!-- Budget -->
+            <td class="text-right font-medium">
+              {{ category.budgetedAmount ? formatCurrency(category.budgetedAmount) : '-' }}
+            </td>
+
+            <!-- Monthly Progress -->
+            <td>
+              @if (category.budgetedAmount !== undefined) {
+                <div class="flex flex-col gap-1 pr-4">
+                  <p-progressBar 
+                    [value]="category.percentageUsed" 
+                    [showValue]="false"
+                    [styleClass]="'h-2 ' + getProgressBarTailwind(category.percentageUsed)">
+                  </p-progressBar>
+                  <span class="text-xs text-muted-color text-right">
+                    {{ category.percentageUsed?.toFixed(0) }}% used
+                  </span>
+                </div>
+              } @else {
+                <span class="text-xs text-muted-color italic">No budget set</span>
+              }
+            </td>
+
             <!-- Actions -->
             <td class="text-center">
-              <p-button
-                icon="pi pi-pencil"
-                [text]="true"
-                [rounded]="true"
-                severity="info"
-                (onClick)="openEditDialog(category)"
-                pTooltip="Edit"
-                tooltipPosition="top"
-              />
-              <p-button
-                icon="pi pi-trash"
-                [text]="true"
-                [rounded]="true"
-                severity="danger"
-                (onClick)="deleteCategory(category)"
-                [disabled]="category.transactionCount > 0"
-                [pTooltip]="category.transactionCount > 0 ? 'Cannot delete category with transactions' : 'Delete'"
-                tooltipPosition="top"
-              />
+              <div class="flex justify-center gap-1">
+                <p-button
+                  icon="pi pi-pencil"
+                  [text]="true"
+                  [rounded]="true"
+                  severity="info"
+                  (onClick)="openEditDialog(category)"
+                  pTooltip="Edit"
+                  tooltipPosition="top"
+                />
+                <p-button
+                  icon="pi pi-trash"
+                  [text]="true"
+                  [rounded]="true"
+                  severity="danger"
+                  (onClick)="deleteCategory(category)"
+                  [disabled]="category.transactionCount > 0"
+                  [pTooltip]="category.transactionCount > 0 ? 'Cannot delete category with transactions' : 'Delete'"
+                  tooltipPosition="top"
+                />
+              </div>
             </td>
           </tr>
         </ng-template>
 
         <ng-template pTemplate="emptymessage">
           <tr>
-            <td colspan="4" class="text-center py-8 text-muted-color">
+            <td colspan="6" class="text-center py-8 text-muted-color">
               No categories found
             </td>
           </tr>

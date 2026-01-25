@@ -283,10 +283,15 @@
             <!-- Category -->
             <td>
               <p-tag
-                [value]="getCategoryDisplay(transaction.categoryName)"
                 [severity]="getCategorySeverity(transaction.categoryName)"
-                styleClass="text-xs"
-              />
+                styleClass="text-xs">
+                <div class="flex items-center gap-1">
+                  @if (transaction.categoryIcon) {
+                    <i [class]="'pi ' + transaction.categoryIcon + ' text-[10px]'"></i>
+                  }
+                  <span>{{ getCategoryDisplay(transaction.categoryName) }}</span>
+                </div>
+              </p-tag>
             </td>
 
             <!-- Account -->

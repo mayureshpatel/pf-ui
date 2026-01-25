@@ -45,6 +45,8 @@ export interface ActionItem {
 export interface CategoryTotal {
   categoryName: string;
   total: number;
+  icon?: string;
+  color?: string;
 }
 
 export interface DailyBalance {

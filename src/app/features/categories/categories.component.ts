@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
+import { ProgressBarModule } from 'primeng/progressbar';
 import { CardModule } from 'primeng/card';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TooltipModule } from 'primeng/tooltip';
@@ -11,9 +12,18 @@ import { forkJoin } from 'rxjs';
 import { Category, CategoryFormData, CategoryWithUsage } from '@models/category.model';
 import { CategoryApiService } from './services/category-api.service';
 import { TransactionApiService } from '@features/transactions/services/transaction-api.service';
+import { BudgetApiService } from '@features/budgets/services/budget-api.service';
 import { CategoryFormDialogComponent } from './components/category-form-dialog/category-form-dialog.component';
 import { ToastService } from '@core/services/toast.service';
 import { getCategoryColor } from '@shared/utils/category.utils';
+import { formatCurrency } from '@shared/utils/account.utils';
+
+export interface CategoryViewModel extends CategoryWithUsage {
+  groupName: string;
+  budgetedAmount?: number;
+  remainingAmount?: number;
+  percentageUsed?: number;
+}
 
 @Component({
   selector: 'app-categories',
@@ -22,6 +32,7 @@ import { getCategoryColor } from '@shared/utils/category.utils';
     CommonModule,
     ButtonModule,
     TableModule,
+    ProgressBarModule,
     CardModule,
     ConfirmDialogModule,
     TooltipModule,
@@ -33,16 +44,19 @@ import { getCategoryColor } from '@shared/utils/category.utils';
 export class CategoriesComponent implements OnInit {
   private readonly categoryApi = inject(CategoryApiService);
   private readonly transactionApi = inject(TransactionApiService);
+  private readonly budgetApi = inject(BudgetApiService);
   private readonly toast = inject(ToastService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly router = inject(Router);
 
-  categories: WritableSignal<CategoryWithUsage[]> = signal([]);
+  categories: WritableSignal<CategoryViewModel[]> = signal([]);
   loading: WritableSignal<boolean> = signal(false);
   showDialog: WritableSignal<boolean> = signal(false);
   selectedCategory: WritableSignal<Category | null> = signal(null);
 
   isEmpty = computed(() => this.categories().length === 0 && !this.loading());
+
+  formatCurrency = formatCurrency;
 
   ngOnInit(): void {
     this.loadData();
@@ -50,36 +64,38 @@ export class CategoriesComponent implements OnInit {
 
   loadData(): void {
     this.loading.set(true);
+    const now = new Date();
 
     forkJoin({
       categories: this.categoryApi.getCategories(),
-      transactions: this.transactionApi.getTransactions({}, { page: 0, size: 10000 })
+      transactions: this.transactionApi.getTransactions({}, { page: 0, size: 10000 }),
+      budgets: this.budgetApi.getBudgetStatus(now.getMonth() + 1, now.getFullYear())
     }).subscribe({
-      next: ({ categories, transactions }) => {
+      next: ({ categories, transactions, budgets }) => {
+        // Map budgets for quick lookup
+        const budgetMap = new Map(budgets.map(b => [b.categoryName, b]));
+
         // Calculate usage and normalize parent names
         const enriched = categories.map(cat => {
           const count = transactions.content.filter(t => t.categoryName === cat.name).length;
+          const budget = budgetMap.get(cat.name);
+
           return {
             ...cat,
             transactionCount: count,
-            // If no parent, group under itself (or "Other")? 
-            // For row grouping, we want the group header to be the Parent Name.
-            // If it IS a parent (root), its parentName is null.
-            // Let's use a computed 'groupName' field for sorting.
-            groupName: cat.parentName || cat.name
-          } as CategoryWithUsage & { groupName: string };
+            groupName: cat.parentName || cat.name,
+            budgetedAmount: budget?.budgetedAmount,
+            remainingAmount: budget?.remainingAmount,
+            percentageUsed: budget?.percentageUsed
+          } as CategoryViewModel;
         });
 
         // Sort by Group Name, then by Category Name
-        // This ensures parents and children stay together
         enriched.sort((a, b) => {
           const groupCompare = a.groupName.localeCompare(b.groupName);
           if (groupCompare !== 0) return groupCompare;
-          
-          // Within the group, put the Parent first
           if (a.name === a.groupName) return -1;
           if (b.name === b.groupName) return 1;
-          
           return a.name.localeCompare(b.name);
         });
 
@@ -110,6 +126,13 @@ export class CategoriesComponent implements OnInit {
       .split('-')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
+  }
+
+  getProgressBarTailwind(percentage: number | undefined): string {
+    if (percentage === undefined) return '';
+    if (percentage < 80) return '!bg-green-500';
+    if (percentage <= 100) return '!bg-yellow-500';
+    return '!bg-red-500';
   }
 
   openCreateDialog(): void {
