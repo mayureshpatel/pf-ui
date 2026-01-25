@@ -5,8 +5,10 @@ import { DialogModule } from 'primeng/dialog';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { Select } from 'primeng/select';
+import { RadioButtonModule } from 'primeng/radiobutton';
+import { TooltipModule } from 'primeng/tooltip';
 import { MessageModule } from 'primeng/message';
-import { Category, CategoryFormData } from '@models/category.model';
+import { Category, CategoryFormData, CategoryType } from '@models/category.model';
 import { getCategoryColor, CATEGORY_COLORS } from '@shared/utils/category.utils';
 import { CategoryApiService } from '../../services/category-api.service';
 
@@ -20,6 +22,8 @@ import { CategoryApiService } from '../../services/category-api.service';
     ButtonModule,
     InputTextModule,
     Select,
+    RadioButtonModule,
+    TooltipModule,
     MessageModule
   ],
   templateUrl: './category-form-dialog.component.html'
@@ -36,6 +40,8 @@ export class CategoryFormDialogComponent implements OnChanges {
   formData: CategoryFormData = {
     name: '',
     color: '',
+    icon: '',
+    type: CategoryType.EXPENSE,
     parentId: undefined
   };
 
@@ -45,6 +51,19 @@ export class CategoryFormDialogComponent implements OnChanges {
 
   availableColors = CATEGORY_COLORS;
   getCategoryColor = getCategoryColor;
+
+  iconOptions = [
+    'pi-shopping-cart', 'pi-home', 'pi-car', 'pi-money-bill', 'pi-briefcase',
+    'pi-heart', 'pi-bolt', 'pi-globe', 'pi-gift', 'pi-users',
+    'pi-book', 'pi-desktop', 'pi-phone', 'pi-wrench', 'pi-shield',
+    'pi-tag', 'pi-ticket', 'pi-wallet', 'pi-star', 'pi-key'
+  ];
+
+  typeOptions = [
+    { label: 'Expense', value: CategoryType.EXPENSE },
+    { label: 'Income', value: CategoryType.INCOME },
+    { label: 'Both', value: CategoryType.BOTH }
+  ];
 
   parentOptions = computed(() => {
     const currentId = this.category()?.id;
@@ -59,6 +78,8 @@ export class CategoryFormDialogComponent implements OnChanges {
       this.formData = {
         name: cat.name,
         color: cat.color || getCategoryColor(cat.name),
+        icon: cat.icon || '',
+        type: cat.type || CategoryType.EXPENSE,
         parentId: cat.parentId
       };
     } else {
@@ -81,6 +102,15 @@ export class CategoryFormDialogComponent implements OnChanges {
   onHide(): void {
     this.visibleChange.emit(false);
     this.resetForm();
+  }
+
+  getIconLabel(iconCode: string): string {
+    if (!iconCode) return '';
+    return iconCode
+      .replace('pi-', '')
+      .split('-')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
   }
 
   onSubmit(): void {
@@ -119,6 +149,8 @@ export class CategoryFormDialogComponent implements OnChanges {
     this.save.emit({ 
       name: this.formData.name.trim(),
       color: colorToSave,
+      icon: this.formData.icon,
+      type: this.formData.type,
       parentId: this.formData.parentId
     });
   }
@@ -127,6 +159,8 @@ export class CategoryFormDialogComponent implements OnChanges {
     this.formData = {
       name: '',
       color: '',
+      icon: '',
+      type: CategoryType.EXPENSE,
       parentId: undefined
     };
     this.errorMessage.set(null);
@@ -135,6 +169,10 @@ export class CategoryFormDialogComponent implements OnChanges {
 
   selectColor(color: string): void {
     this.formData.color = color;
+  }
+
+  selectIcon(icon: string): void {
+    this.formData.icon = icon;
   }
 
   get isEditMode(): boolean {

@@ -30,7 +30,25 @@
     </div>
 
     <div class="flex flex-col gap-2">
-      <label for="vendorName" class="font-medium text-color">Parent Category (Optional)</label>
+      <label class="font-medium text-color">Category Type</label>
+      <div class="flex gap-4">
+        @for (option of typeOptions; track option.value) {
+          <div class="flex items-center">
+            <p-radioButton
+              [inputId]="option.value"
+              name="type"
+              [value]="option.value"
+              [(ngModel)]="formData.type"
+            />
+            <label [for]="option.value" class="ml-2 cursor-pointer">{{ option.label }}</label>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Parent Category -->
+    <div class="flex flex-col gap-2">
+      <label for="parent" class="font-medium text-color">Parent Category (Optional)</label>
       <p-select
         id="parent"
         [(ngModel)]="formData.parentId"
@@ -43,6 +61,22 @@
         class="w-full"
         appendTo="body"
       />
+    </div>
+
+    <!-- Icon Selection -->
+    <div class="flex flex-col gap-2">
+      <label class="font-medium text-color">Icon</label>
+      <div class="grid grid-cols-5 gap-2 max-h-40 overflow-y-auto p-2 border border-surface-200 dark:border-surface-700 rounded-lg">
+        @for (icon of iconOptions; track icon) {
+          <div
+            [class]="'flex items-center justify-center p-2 rounded cursor-pointer transition-colors hover:bg-surface-100 dark:hover:bg-surface-700 ' + (formData.icon === icon ? 'bg-primary-100 dark:bg-primary-900/30 text-primary' : 'text-color')"
+            [pTooltip]="getIconLabel(icon)"
+            tooltipPosition="top"
+            (click)="selectIcon(icon)">
+            <i [class]="'pi ' + icon + ' text-xl'"></i>
+          </div>
+        }
+      </div>
     </div>
 
     <!-- Color Selection -->

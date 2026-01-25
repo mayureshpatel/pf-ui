@@ -54,14 +54,24 @@
         <!-- Data Rows -->
         <ng-template pTemplate="body" let-category let-rowIndex="rowIndex">
           <tr>
-            <!-- Color Badge -->
+            <!-- Color Badge / Icon -->
             <td>
-              <div [class]="getDisplayColor(category) + ' w-2 h-2 rounded-full ml-4'"></div>
+              <div
+                [class]="getDisplayColor(category) + ' w-8 h-8 rounded-full ml-4 flex items-center justify-center text-white'">
+                @if (category.icon) {
+                  <i [class]="'pi ' + category.icon + ' text-sm'"></i>
+                }
+              </div>
             </td>
 
             <!-- Category Name -->
             <td>
-              <span class="font-medium">{{ category.name }}</span>
+              <div class="flex flex-col">
+                <span class="font-medium">{{ category.name }}</span>
+                @if (category.type) {
+                  <span class="text-xs text-muted-color capitalize">{{ category.type.toLowerCase() }}</span>
+                }
+              </div>
             </td>
 
             <!-- Usage Count -->

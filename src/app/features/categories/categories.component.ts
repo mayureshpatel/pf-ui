@@ -103,6 +103,15 @@ export class CategoriesComponent implements OnInit {
     return category.color || getCategoryColor(category.name);
   }
 
+  getIconLabel(iconCode: string | undefined): string {
+    if (!iconCode) return '';
+    return iconCode
+      .replace('pi-', '')
+      .split('-')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  }
+
   openCreateDialog(): void {
     this.selectedCategory.set(null);
     this.showDialog.set(true);
