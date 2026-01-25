@@ -1,6 +1,6 @@
-import { Routes } from '@angular/router';
-import { authGuard, noAuthGuard } from '@core/auth/auth.guard';
-import { ShellComponent } from '@shared/components/layout/shell/shell.component';
+import {Routes} from '@angular/router';
+import {authGuard, noAuthGuard} from '@core/auth/auth.guard';
+import {ShellComponent} from '@shared/components/layout/shell/shell.component';
 
 export const routes: Routes = [
   {
@@ -44,18 +44,16 @@ export const routes: Routes = [
         path: 'categories',
         loadComponent: () => import('./features/categories/categories.component').then(m => m.CategoriesComponent)
       },
-  {
-    path: 'budgets',
-    loadComponent: () => import('./features/budgets/budgets.component').then(m => m.BudgetsComponent),
-    canActivate: [authGuard]
-  },
-  {
-    path: 'recurring',
-    loadComponent: () => import('./features/recurring/recurring.component').then(m => m.RecurringComponent),
-    canActivate: [authGuard]
-  },
-  {
-    path: 'settings',
+      {
+        path: 'budgets',
+        loadComponent: () => import('./features/budgets/budgets.component').then(m => m.BudgetsComponent)
+      },
+      {
+        path: 'recurring',
+        loadComponent: () => import('./features/recurring/recurring.component').then(m => m.RecurringComponent)
+      },
+      {
+        path: 'settings',
         children: [
           {
             path: 'vendor-rules',
@@ -68,7 +66,7 @@ export const routes: Routes = [
         path: 'reports',
         loadComponent: () =>
           import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
-        data: { placeholder: 'Reports' }
+        data: {placeholder: 'Reports'}
       }
     ]
   },
