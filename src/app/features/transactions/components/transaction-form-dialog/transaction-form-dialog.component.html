@@ -163,10 +163,12 @@
       <p-autocomplete
         id="category"
         [(ngModel)]="formData.categoryName"
+        [dropdown]="true"
         name="category"
         [suggestions]="filteredCategories()"
         (completeMethod)="onCategorySearch($event)"
         [forceSelection]="false"
+        appendTo="body"
         placeholder="e.g., Groceries"
         styleClass="w-full"
         inputStyleClass="w-full">
