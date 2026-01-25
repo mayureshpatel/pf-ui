@@ -1,11 +1,11 @@
-import {Component, computed, inject, OnInit, signal, WritableSignal} from '@angular/core';
+import {Component, computed, inject, OnInit, OnDestroy, signal, WritableSignal, DestroyRef} from '@angular/core';
+import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {CommonModule} from '@angular/common';
 import {FormsModule} from '@angular/forms';
 import {ActivatedRoute} from '@angular/router';
 import {ButtonModule} from 'primeng/button';
 import {TableModule} from 'primeng/table';
 import {CardModule} from 'primeng/card';
-import {ConfirmDialogModule} from 'primeng/confirmdialog';
 import {TooltipModule} from 'primeng/tooltip';
 import {Select} from 'primeng/select';
 import {CheckboxModule} from 'primeng/checkbox';
@@ -52,7 +52,6 @@ import { TableToolbarComponent } from '@shared/components/table-toolbar/table-to
     ButtonModule,
     TableModule,
     CardModule,
-    ConfirmDialogModule,
     TooltipModule,
     Select,
     CheckboxModule,
@@ -71,16 +70,16 @@ import { TableToolbarComponent } from '@shared/components/table-toolbar/table-to
     VendorRuleFormDialogComponent,
     RecurringFormDialogComponent
   ],
-  providers: [ConfirmationService],
   templateUrl: './transactions.component.html'
 })
-export class TransactionsComponent implements OnInit {
+export class TransactionsComponent implements OnInit, OnDestroy {
   private readonly transactionApi = inject(TransactionApiService);
   private readonly accountApi = inject(AccountApiService);
   private readonly categoryApi = inject(CategoryApiService);
   private readonly toast = inject(ToastService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly route = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
 
   // State
   transactions: WritableSignal<Transaction[]> = signal([]);
@@ -186,40 +185,57 @@ export class TransactionsComponent implements OnInit {
     this.loadFilterState(); // Load saved filters first
 
     // Check for query params (e.g. from categories page)
-    this.route.queryParams.subscribe(params => {
-      if (params['category']) {
-        this.filterCategoryName.set(params['category']);
-        this.showAdvancedFilters.set(true);
-        // We don't need to call saveFilterState here strictly,
-        // as loadTransactions will do it, but calling it ensures
-        // the state is consistent immediately.
-        this.saveFilterState();
-      }
-    });
+    this.route.queryParams
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(params => {
+        if (params['category']) {
+          this.filterCategoryName.set(params['category']);
+          this.showAdvancedFilters.set(true);
+          // We don't need to call saveFilterState here strictly,
+          // as loadTransactions will do it, but calling it ensures
+          // the state is consistent immediately.
+          this.saveFilterState();
+        }
+      });
 
     this.loadCategories();
     this.loadAccounts();
   }
 
+  ngOnDestroy(): void {
+    // Explicitly clear all signals holding large data to allow garbage collection
+    this.transactions.set([]);
+    this.selectedTransactions.set([]);
+    this.categories.set([]);
+    this.accounts.set([]);
+    this.vendorSuggestions.set([]);
+    this.filteredCategories.set([]);
+    this.filteredVendors.set([]);
+  }
+
   loadAccounts(): void {
-    this.accountApi.getAccounts().subscribe({
-      next: (accounts) => {
-        this.accounts.set(accounts);
-        // Load transactions after accounts are loaded (needed for account name enrichment)
-        this.loadTransactions();
-      },
-      error: () => {
-        this.toast.error('Failed to load accounts');
-      }
-    });
+    this.accountApi.getAccounts()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (accounts) => {
+          this.accounts.set(accounts);
+          // Load transactions after accounts are loaded (needed for account name enrichment)
+          this.loadTransactions();
+        },
+        error: () => {
+          this.toast.error('Failed to load accounts');
+        }
+      });
   }
 
   loadCategories(): void {
-    this.categoryApi.getCategories().subscribe({
-      next: (categories) => this.categories.set(categories),
-      error: () => {
-      } // Categories are optional for filtering
-    });
+    this.categoryApi.getCategories()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (categories) => this.categories.set(categories),
+        error: () => {
+        } // Categories are optional for filtering
+      });
   }
 
   loadTransactions(): void {
@@ -247,35 +263,37 @@ export class TransactionsComponent implements OnInit {
       page: this.currentPage(),
       size: this.pageSize(),
       sort: this.currentSort()
-    }).subscribe({
-      next: (response) => {
-        // Enrich transactions with account and category info
-        const accountMap = new Map(this.accounts().map(a => [a.id, a.name]));
-        const categoryMap = new Map(this.categories().map(c => [c.name, c]));
+    })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (response) => {
+          // Enrich transactions with account and category info
+          const accountMap = new Map(this.accounts().map(a => [a.id, a.name]));
+          const categoryMap = new Map(this.categories().map(c => [c.name, c]));
 
-        const enrichedTransactions = response.content.map(t => {
-          const category = t.categoryName ? categoryMap.get(t.categoryName) : undefined;
-          return {
-            ...t,
-            accountName: accountMap.get(t.accountId) || 'Unknown Account',
-            categoryIcon: category?.icon,
-            categoryColor: category?.color
-          };
-        });
+          const enrichedTransactions = response.content.map(t => {
+            const category = t.categoryName ? categoryMap.get(t.categoryName) : undefined;
+            return {
+              ...t,
+              accountName: accountMap.get(t.accountId) || 'Unknown Account',
+              categoryIcon: category?.icon,
+              categoryColor: category?.color
+            };
+          });
 
-        this.transactions.set(enrichedTransactions);
-        this.totalRecords.set(response.totalElements);
-        this.loading.set(false);
-        this.selectedTransactions.set([]);
+          this.transactions.set(enrichedTransactions);
+          this.totalRecords.set(response.totalElements);
+          this.loading.set(false);
+          this.selectedTransactions.set([]);
 
-        // Update vendor suggestions for autocomplete
-        this.updateVendorSuggestions(enrichedTransactions);
-      },
-      error: () => {
-        this.toast.error('Failed to load transactions');
-        this.loading.set(false);
-      }
-    });
+          // Update vendor suggestions for autocomplete
+          this.updateVendorSuggestions(enrichedTransactions);
+        },
+        error: () => {
+          this.toast.error('Failed to load transactions');
+          this.loading.set(false);
+        }
+      });
   }
 
   onLazyLoad(event: any): void {
@@ -340,10 +358,11 @@ export class TransactionsComponent implements OnInit {
   }
 
   private updateVendorSuggestions(transactions: Transaction[]): void {
+    // Only use current page vendors - don't accumulate across loads to prevent memory leak
     const vendors = transactions
       .map(t => t.vendorName)
       .filter(Boolean) as string[];
-    const unique = [...new Set([...this.vendorSuggestions(), ...vendors])];
+    const unique = [...new Set(vendors)];
     this.vendorSuggestions.set(unique);
   }
 
@@ -471,13 +490,15 @@ export class TransactionsComponent implements OnInit {
       header: 'Mark as Transfer?',
       message: 'This will remove this transaction from income/expense calculations.',
       accept: () => {
-        this.transactionApi.markAsTransfer([transaction.id]).subscribe({
-          next: () => {
-            this.toast.success('Marked as transfer');
-            this.loadTransactions();
-          },
-          error: () => this.toast.error('Failed to update transaction')
-        });
+        this.transactionApi.markAsTransfer([transaction.id])
+          .pipe(takeUntilDestroyed(this.destroyRef))
+          .subscribe({
+            next: () => {
+              this.toast.success('Marked as transfer');
+              this.loadTransactions();
+            },
+            error: () => this.toast.error('Failed to update transaction')
+          });
       }
     });
   }
@@ -540,32 +561,36 @@ export class TransactionsComponent implements OnInit {
 
     if (transaction) {
       // Update existing transaction
-      this.transactionApi.updateTransaction(transaction.id, formData).subscribe({
-        next: () => {
-          this.toast.success('Transaction updated successfully');
-          this.showDialog.set(false);
-          this.savingTransaction.set(false);
-          this.loadTransactions();
-        },
-        error: (error) => {
-          this.toast.error(error.error?.detail || 'Failed to update transaction');
-          this.savingTransaction.set(false);
-        }
-      });
+      this.transactionApi.updateTransaction(transaction.id, formData)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: () => {
+            this.toast.success('Transaction updated successfully');
+            this.showDialog.set(false);
+            this.savingTransaction.set(false);
+            this.loadTransactions();
+          },
+          error: (error) => {
+            this.toast.error(error.error?.detail || 'Failed to update transaction');
+            this.savingTransaction.set(false);
+          }
+        });
     } else {
       // Create new transaction
-      this.transactionApi.createTransaction(formData).subscribe({
-        next: () => {
-          this.toast.success('Transaction created successfully');
-          this.showDialog.set(false);
-          this.savingTransaction.set(false);
-          this.loadTransactions();
-        },
-        error: (error) => {
-          this.toast.error(error.error?.detail || 'Failed to create transaction');
-          this.savingTransaction.set(false);
-        }
-      });
+      this.transactionApi.createTransaction(formData)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: () => {
+            this.toast.success('Transaction created successfully');
+            this.showDialog.set(false);
+            this.savingTransaction.set(false);
+            this.loadTransactions();
+          },
+          error: (error) => {
+            this.toast.error(error.error?.detail || 'Failed to create transaction');
+            this.savingTransaction.set(false);
+          }
+        });
     }
   }
 
@@ -578,16 +603,18 @@ export class TransactionsComponent implements OnInit {
       rejectLabel: 'Cancel',
       acceptButtonStyleClass: 'p-button-danger',
       accept: () => {
-        this.transactionApi.deleteTransaction(transaction.id).subscribe({
-          next: () => {
-            this.toast.success('Transaction deleted successfully');
-            this.loadTransactions();
-          },
-          error: (error) => {
-            const message = error.error?.detail || 'Failed to delete transaction';
-            this.toast.error(message);
-          }
-        });
+        this.transactionApi.deleteTransaction(transaction.id)
+          .pipe(takeUntilDestroyed(this.destroyRef))
+          .subscribe({
+            next: () => {
+              this.toast.success('Transaction deleted successfully');
+              this.loadTransactions();
+            },
+            error: (error) => {
+              const message = error.error?.detail || 'Failed to delete transaction';
+              this.toast.error(message);
+            }
+          });
       }
     });
   }
@@ -603,15 +630,17 @@ export class TransactionsComponent implements OnInit {
       acceptButtonStyleClass: 'p-button-danger',
       accept: () => {
         const ids = this.selectedTransactions().map(t => t.id);
-        this.transactionApi.bulkDeleteTransactions(ids).subscribe({
-          next: () => {
-            this.toast.success(`${count} transaction${count > 1 ? 's' : ''} deleted successfully`);
-            this.loadTransactions();
-          },
-          error: () => {
-            this.toast.error('Failed to delete transactions');
-          }
-        });
+        this.transactionApi.bulkDeleteTransactions(ids)
+          .pipe(takeUntilDestroyed(this.destroyRef))
+          .subscribe({
+            next: () => {
+              this.toast.success(`${count} transaction${count > 1 ? 's' : ''} deleted successfully`);
+              this.loadTransactions();
+            },
+            error: () => {
+              this.toast.error('Failed to delete transactions');
+            }
+          });
       }
     });
   }
@@ -635,18 +664,20 @@ export class TransactionsComponent implements OnInit {
       categoryName: data.updateCategory ? data.categoryName : (txn.categoryName || undefined)
     }));
 
-    this.transactionApi.bulkUpdateTransactions(updates).subscribe({
-      next: (updated) => {
-        this.toast.success(`${updated.length} transaction${updated.length > 1 ? 's' : ''} updated successfully`);
-        this.showBulkEditDialog.set(false);
-        this.savingBulkEdit.set(false);
-        this.loadTransactions();
-      },
-      error: (error) => {
-        this.toast.error(error.error?.detail || 'Failed to update transactions');
-        this.savingBulkEdit.set(false);
-      }
-    });
+    this.transactionApi.bulkUpdateTransactions(updates)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (updated) => {
+          this.toast.success(`${updated.length} transaction${updated.length > 1 ? 's' : ''} updated successfully`);
+          this.showBulkEditDialog.set(false);
+          this.savingBulkEdit.set(false);
+          this.loadTransactions();
+        },
+        error: (error) => {
+          this.toast.error(error.error?.detail || 'Failed to update transactions');
+          this.savingBulkEdit.set(false);
+        }
+      });
   }
 
   getCategoryDisplay(categoryName: string | null): string {

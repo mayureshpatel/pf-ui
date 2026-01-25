@@ -1,11 +1,11 @@
-import {Component, computed, inject, OnInit, signal, WritableSignal} from '@angular/core';
+import {Component, computed, inject, OnInit, OnDestroy, signal, WritableSignal, DestroyRef} from '@angular/core';
+import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {CommonModule} from '@angular/common';
 import {Router} from '@angular/router';
 import {ButtonModule} from 'primeng/button';
 import {TableModule} from 'primeng/table';
 import {ProgressBarModule} from 'primeng/progressbar';
 import {CardModule} from 'primeng/card';
-import {ConfirmDialog} from 'primeng/confirmdialog';
 import {TooltipModule} from 'primeng/tooltip';
 import {ConfirmationService} from 'primeng/api';
 import {forkJoin} from 'rxjs';
@@ -35,21 +35,20 @@ export interface CategoryViewModel extends CategoryWithUsage {
     TableModule,
     ProgressBarModule,
     CardModule,
-    ConfirmDialog,
     TooltipModule,
     ScreenToolbarComponent,
     CategoryFormDialogComponent
   ],
-  providers: [ConfirmationService],
   templateUrl: './categories.component.html'
 })
-export class CategoriesComponent implements OnInit {
+export class CategoriesComponent implements OnInit, OnDestroy {
   private readonly categoryApi = inject(CategoryApiService);
   private readonly transactionApi = inject(TransactionApiService);
   private readonly budgetApi = inject(BudgetApiService);
   private readonly toast = inject(ToastService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
 
   categories: WritableSignal<CategoryViewModel[]> = signal([]);
   loading: WritableSignal<boolean> = signal(false);
@@ -64,51 +63,58 @@ export class CategoriesComponent implements OnInit {
     this.loadData();
   }
 
+  ngOnDestroy(): void {
+    // Clear signal holding enriched category data to allow garbage collection
+    this.categories.set([]);
+  }
+
   loadData(): void {
     this.loading.set(true);
     const now = new Date();
 
     forkJoin({
       categories: this.categoryApi.getCategories(),
-      transactions: this.transactionApi.getTransactions({}, {page: 0, size: 10000}),
+      transactions: this.transactionApi.getTransactions({}, {page: 0, size: 1000}),
       budgets: this.budgetApi.getBudgetStatus(now.getMonth() + 1, now.getFullYear())
-    }).subscribe({
-      next: ({categories, transactions, budgets}) => {
-        // Map budgets for quick lookup
-        const budgetMap = new Map(budgets.map(b => [b.categoryName, b]));
+    })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: ({categories, transactions, budgets}) => {
+          // Map budgets for quick lookup
+          const budgetMap = new Map(budgets.map(b => [b.categoryName, b]));
 
-        // Calculate usage and normalize parent names
-        const enriched = categories.map(cat => {
-          const count = transactions.content.filter(t => t.categoryName === cat.name).length;
-          const budget = budgetMap.get(cat.name);
+          // Calculate usage and normalize parent names
+          const enriched = categories.map(cat => {
+            const count = transactions.content.filter(t => t.categoryName === cat.name).length;
+            const budget = budgetMap.get(cat.name);
 
-          return {
-            ...cat,
-            transactionCount: count,
-            groupName: cat.parentName || cat.name,
-            budgetedAmount: budget?.budgetedAmount,
-            remainingAmount: budget?.remainingAmount,
-            percentageUsed: budget?.percentageUsed
-          } as CategoryViewModel;
-        });
+            return {
+              ...cat,
+              transactionCount: count,
+              groupName: cat.parentName || cat.name,
+              budgetedAmount: budget?.budgetedAmount,
+              remainingAmount: budget?.remainingAmount,
+              percentageUsed: budget?.percentageUsed
+            } as CategoryViewModel;
+          });
 
-        // Sort by Group Name, then by Category Name
-        enriched.sort((a, b) => {
-          const groupCompare = a.groupName.localeCompare(b.groupName);
-          if (groupCompare !== 0) return groupCompare;
-          if (a.name === a.groupName) return -1;
-          if (b.name === b.groupName) return 1;
-          return a.name.localeCompare(b.name);
-        });
+          // Sort by Group Name, then by Category Name
+          enriched.sort((a, b) => {
+            const groupCompare = a.groupName.localeCompare(b.groupName);
+            if (groupCompare !== 0) return groupCompare;
+            if (a.name === a.groupName) return -1;
+            if (b.name === b.groupName) return 1;
+            return a.name.localeCompare(b.name);
+          });
 
-        this.categories.set(enriched);
-        this.loading.set(false);
-      },
-      error: () => {
-        this.toast.error('Failed to load categories');
-        this.loading.set(false);
-      }
-    });
+          this.categories.set(enriched);
+          this.loading.set(false);
+        },
+        error: () => {
+          this.toast.error('Failed to load categories');
+          this.loading.set(false);
+        }
+      });
   }
 
   calculateGroupTotal(groupName: string): number {
@@ -156,15 +162,17 @@ export class CategoriesComponent implements OnInit {
       rejectLabel: 'Cancel',
       acceptButtonStyleClass: 'p-button-danger',
       accept: () => {
-        this.categoryApi.deleteCategory(category.id).subscribe({
-          next: () => {
-            this.toast.success('Category deleted successfully');
-            this.loadData();
-          },
-          error: (error) => {
-            this.toast.error(error.error?.detail || 'Failed to delete category');
-          }
-        });
+        this.categoryApi.deleteCategory(category.id)
+          .pipe(takeUntilDestroyed(this.destroyRef))
+          .subscribe({
+            next: () => {
+              this.toast.success('Category deleted successfully');
+              this.loadData();
+            },
+            error: (error) => {
+              this.toast.error(error.error?.detail || 'Failed to delete category');
+            }
+          });
       }
     });
   }
@@ -180,28 +188,32 @@ export class CategoriesComponent implements OnInit {
 
     if (category) {
       // Update existing category
-      this.categoryApi.updateCategory(category.id, formData).subscribe({
-        next: (updated) => {
-          this.toast.success('Category updated successfully');
-          this.showDialog.set(false);
-          this.loadData();
-        },
-        error: (error) => {
-          this.toast.error(error.error?.detail || 'Failed to update category');
-        }
-      });
+      this.categoryApi.updateCategory(category.id, formData)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: (updated) => {
+            this.toast.success('Category updated successfully');
+            this.showDialog.set(false);
+            this.loadData();
+          },
+          error: (error) => {
+            this.toast.error(error.error?.detail || 'Failed to update category');
+          }
+        });
     } else {
       // Create new category
-      this.categoryApi.createCategory(formData).subscribe({
-        next: (created) => {
-          this.toast.success('Category created successfully');
-          this.showDialog.set(false);
-          this.loadData();
-        },
-        error: (error) => {
-          this.toast.error(error.error?.detail || 'Failed to create category');
-        }
-      });
+      this.categoryApi.createCategory(formData)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: (created) => {
+            this.toast.success('Category created successfully');
+            this.showDialog.set(false);
+            this.loadData();
+          },
+          error: (error) => {
+            this.toast.error(error.error?.detail || 'Failed to create category');
+          }
+        });
     }
   }
 }

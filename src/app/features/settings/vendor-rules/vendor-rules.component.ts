@@ -1,9 +1,9 @@
-import {Component, inject, OnInit, signal, WritableSignal} from '@angular/core';
+import {Component, inject, OnInit, signal, WritableSignal, DestroyRef} from '@angular/core';
+import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {CommonModule} from '@angular/common';
 import {ButtonModule} from 'primeng/button';
 import {TableModule} from 'primeng/table';
 import {CardModule} from 'primeng/card';
-import {ConfirmDialogModule} from 'primeng/confirmdialog';
 import {ConfirmationService} from 'primeng/api';
 import {VendorRule} from '@models/vendor-rule.model';
 import {VendorRuleApiService} from './services/vendor-rule-api.service';
@@ -21,17 +21,16 @@ import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-t
     ButtonModule,
     TableModule,
     CardModule,
-    ConfirmDialogModule,
     ScreenToolbarComponent,
     VendorRuleFormDialogComponent
   ],
-  providers: [ConfirmationService],
   templateUrl: './vendor-rules.component.html'
 })
 export class VendorRulesComponent implements OnInit {
   private readonly api = inject(VendorRuleApiService);
   private readonly toast = inject(ToastService);
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly destroyRef = inject(DestroyRef);
 
   rules: WritableSignal<VendorRule[]> = signal([]);
   loading: WritableSignal<boolean> = signal(false);
@@ -43,16 +42,18 @@ export class VendorRulesComponent implements OnInit {
 
   loadRules(): void {
     this.loading.set(true);
-    this.api.getRules().subscribe({
-      next: (data) => {
-        this.rules.set(data);
-        this.loading.set(false);
-      },
-      error: () => {
-        this.toast.error('Failed to load rules');
-        this.loading.set(false);
-      }
-    });
+    this.api.getRules()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (data) => {
+          this.rules.set(data);
+          this.loading.set(false);
+        },
+        error: () => {
+          this.toast.error('Failed to load rules');
+          this.loading.set(false);
+        }
+      });
   }
 
   openCreateDialog(): void {
@@ -66,16 +67,18 @@ export class VendorRulesComponent implements OnInit {
 
   applyRules(): void {
     this.loading.set(true);
-    this.api.applyRules().subscribe({
-      next: () => {
-        this.toast.success('Rules applied to existing transactions');
-        this.loading.set(false);
-      },
-      error: (error) => {
-        this.toast.error(error.error?.detail || 'Failed to apply rules');
-        this.loading.set(false);
-      }
-    });
+    this.api.applyRules()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.toast.success('Rules applied to existing transactions');
+          this.loading.set(false);
+        },
+        error: (error) => {
+          this.toast.error(error.error?.detail || 'Failed to apply rules');
+          this.loading.set(false);
+        }
+      });
   }
 
   deleteRule(rule: VendorRule): void {
@@ -87,15 +90,17 @@ export class VendorRulesComponent implements OnInit {
       rejectLabel: 'Cancel',
       acceptButtonStyleClass: 'p-button-danger',
       accept: () => {
-        this.api.deleteRule(rule.id).subscribe({
-          next: () => {
-            this.toast.success('Rule deleted successfully');
-            this.rules.update(current => current.filter(r => r.id !== rule.id));
-          },
-          error: (error) => {
-            this.toast.error(error.error?.detail || 'Failed to delete rule');
-          }
-        });
+        this.api.deleteRule(rule.id)
+          .pipe(takeUntilDestroyed(this.destroyRef))
+          .subscribe({
+            next: () => {
+              this.toast.success('Rule deleted successfully');
+              this.rules.update(current => current.filter(r => r.id !== rule.id));
+            },
+            error: (error) => {
+              this.toast.error(error.error?.detail || 'Failed to delete rule');
+            }
+          });
       }
     });
   }

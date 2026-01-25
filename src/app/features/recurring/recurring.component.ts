@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { CardModule } from 'primeng/card';
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TagModule } from 'primeng/tag';
 import { ConfirmationService } from 'primeng/api';
 import { RecurringTransaction } from '@models/recurring.model';
@@ -25,13 +24,11 @@ import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen
     ButtonModule,
     TableModule,
     CardModule,
-    ConfirmDialogModule,
     TagModule,
     ScreenToolbarComponent,
     RecurringFormDialogComponent,
     RecurringScanDialogComponent
   ],
-  providers: [ConfirmationService],
   templateUrl: './recurring.component.html'
 })
 export class RecurringComponent implements OnInit {

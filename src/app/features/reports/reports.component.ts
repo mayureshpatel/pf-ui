@@ -1,5 +1,6 @@
-import { Component, OnInit, inject, signal, computed, WritableSignal } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, computed, WritableSignal, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TabsModule } from 'primeng/tabs';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { Transaction, TransactionFilter, PageRequest } from '@models/transaction.model';
@@ -27,9 +28,10 @@ import { DateRange } from './models/reports.model';
   ],
   templateUrl: './reports.component.html'
 })
-export class ReportsComponent implements OnInit {
+export class ReportsComponent implements OnInit, OnDestroy {
   private readonly transactionApi = inject(TransactionApiService);
   private readonly toast = inject(ToastService);
+  private readonly destroyRef = inject(DestroyRef);
 
   // State
   protected dateRange: WritableSignal<DateRange> = signal(this.getDefaultDateRange());
@@ -42,6 +44,11 @@ export class ReportsComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadTransactions();
+  }
+
+  ngOnDestroy(): void {
+    // Clear signal holding transaction data to allow garbage collection
+    this.transactions.set([]);
   }
 
   protected onDateRangeChange(newRange: DateRange): void {
@@ -58,14 +65,15 @@ export class ReportsComponent implements OnInit {
       endDate: range.endDate
     };
 
-    // Fetch transactions with large page size to get all data for aggregation
+    // Fetch transactions for aggregation (reduced from 10000 to prevent memory issues)
     const pageRequest: PageRequest = {
       page: 0,
-      size: 10000,
+      size: 1000,
       sort: 'date,desc'
     };
 
     this.transactionApi.getTransactions(filter, pageRequest)
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (page) => {
           this.transactions.set(page.content);

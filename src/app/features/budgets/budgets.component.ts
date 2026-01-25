@@ -9,7 +9,6 @@ import {ProgressBarModule} from 'primeng/progressbar';
 import {Select} from 'primeng/select';
 import {SelectButton} from 'primeng/selectbutton';
 import {CheckboxModule} from 'primeng/checkbox';
-import {ConfirmDialog} from 'primeng/confirmdialog';
 import {ProgressSpinnerModule} from 'primeng/progressspinner';
 import {Budget, BudgetStatus} from '@models/budget.model';
 import {MonthOption, YearOption} from '@models/dashboard.model';
@@ -41,12 +40,10 @@ export interface BudgetStatusViewModel extends BudgetStatus {
     Select,
     SelectButton,
     CheckboxModule,
-    ConfirmDialog,
     ProgressSpinnerModule,
     ScreenToolbarComponent,
     BudgetFormDialogComponent
   ],
-  providers: [ConfirmationService],
   templateUrl: './budgets.component.html'
 })
 export class BudgetsComponent implements OnInit {

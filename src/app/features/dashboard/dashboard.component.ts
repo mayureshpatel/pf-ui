@@ -1,4 +1,5 @@
-import { Component, inject, OnInit, signal, WritableSignal, computed } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, signal, WritableSignal, computed, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
@@ -45,11 +46,12 @@ import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen
   ],
   templateUrl: './dashboard.component.html'
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
   private readonly dashboardApi = inject(DashboardApiService);
   private readonly accountApi = inject(AccountApiService);
   private readonly categoryApi = inject(CategoryApiService);
   private readonly toast = inject(ToastService);
+  private readonly destroyRef = inject(DestroyRef);
 
   // State
   pulse: WritableSignal<DashboardPulse | null> = signal(null);
@@ -106,10 +108,12 @@ export class DashboardComponent implements OnInit {
   }
 
   private loadAccounts(): void {
-    this.accountApi.getAccounts().subscribe({
-      next: (accounts) => this.accounts.set(accounts),
-      error: () => this.toast.error('Failed to load accounts')
-    });
+    this.accountApi.getAccounts()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (accounts) => this.accounts.set(accounts),
+        error: () => this.toast.error('Failed to load accounts')
+      });
   }
 
   onFilterChange(): void {
@@ -131,28 +135,40 @@ export class DashboardComponent implements OnInit {
       actions: this.dashboardApi.getActionItems(),
       categories: this.dashboardApi.getCategoryBreakdown(this.selectedMonth(), this.selectedYear()),
       categoryMeta: this.categoryApi.getCategories()
-    }).subscribe({
-      next: (results) => {
-        this.pulse.set(results.pulse);
-        this.trends.set(results.trends);
-        this.ytd.set(results.ytd);
-        this.actions.set(results.actions);
-        
-        // Enrich top categories with metadata
-        const metaMap = new Map(results.categoryMeta.map(c => [c.name, c]));
-        const enrichedCategories = results.categories.map(c => ({
-          ...c,
-          icon: metaMap.get(c.categoryName)?.icon,
-          color: metaMap.get(c.categoryName)?.color || getCategoryColor(c.categoryName)
-        }));
-        this.topCategories.set(enrichedCategories);
-        
-        this.loading.set(false);
-      },
-      error: () => {
-        this.toast.error('Failed to load dashboard data');
-        this.loading.set(false);
-      }
-    });
+    })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (results) => {
+          this.pulse.set(results.pulse);
+          this.trends.set(results.trends);
+          this.ytd.set(results.ytd);
+          this.actions.set(results.actions);
+
+          // Enrich top categories with metadata
+          const metaMap = new Map(results.categoryMeta.map(c => [c.name, c]));
+          const enrichedCategories = results.categories.map(c => ({
+            ...c,
+            icon: metaMap.get(c.categoryName)?.icon,
+            color: metaMap.get(c.categoryName)?.color || getCategoryColor(c.categoryName)
+          }));
+          this.topCategories.set(enrichedCategories);
+
+          this.loading.set(false);
+        },
+        error: () => {
+          this.toast.error('Failed to load dashboard data');
+          this.loading.set(false);
+        }
+      });
+  }
+
+  ngOnDestroy(): void {
+    // Clear all signals holding dashboard data to allow garbage collection
+    this.pulse.set(null);
+    this.trends.set([]);
+    this.ytd.set(null);
+    this.actions.set([]);
+    this.topCategories.set([]);
+    this.accounts.set([]);
   }
 }
