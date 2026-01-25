@@ -10,7 +10,7 @@ import { RecurringTransaction } from '@models/recurring.model';
 import { RecurringApiService } from './services/recurring-api.service';
 import { AccountApiService } from '@features/accounts/services/account-api.service';
 import { Account } from '@models/account.model';
-import { RecurringFormDialogComponent } from './components/recurring-form-dialog/recurring-form-dialog.component';
+import { RecurringFormDialogComponent } from '@shared/components/recurring-form-dialog/recurring-form-dialog.component';
 import { RecurringScanDialogComponent } from './components/recurring-scan-dialog/recurring-scan-dialog.component';
 import { ToastService } from '@core/services/toast.service';
 import { formatCurrency } from '@shared/utils/account.utils';

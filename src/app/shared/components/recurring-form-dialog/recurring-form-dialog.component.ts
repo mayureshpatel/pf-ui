@@ -10,7 +10,7 @@ import { DatePicker } from 'primeng/datepicker';
 import { CheckboxModule } from 'primeng/checkbox';
 import { MessageModule } from 'primeng/message';
 import { RecurringTransaction, RecurringTransactionDto, Frequency } from '@models/recurring.model';
-import { RecurringApiService } from '../../services/recurring-api.service';
+import { RecurringApiService } from '@features/recurring/services/recurring-api.service';
 import { ToastService } from '@core/services/toast.service';
 import { Account } from '@models/account.model';
 
@@ -105,7 +105,7 @@ export class RecurringFormDialogComponent implements OnChanges {
       nextDate: this.toISODate(this.nextDate)
     };
 
-    if (this.transaction()) {
+    if (this.transaction() && this.transaction()!.id !== 0) {
       this.api.updateRecurringTransaction(this.transaction()!.id, dto).subscribe({
         next: () => this.handleSuccess('Updated successfully'),
         error: (err) => this.handleError(err)
@@ -150,6 +150,6 @@ export class RecurringFormDialogComponent implements OnChanges {
   }
 
   get isEditMode(): boolean {
-    return this.transaction() !== null;
+    return this.transaction() !== null && this.transaction()!.id !== 0;
   }
 }

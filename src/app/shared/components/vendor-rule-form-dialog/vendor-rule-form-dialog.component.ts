@@ -1,4 +1,4 @@
-import { Component, EventEmitter, inject, input, Output, signal, WritableSignal } from '@angular/core';
+import { Component, EventEmitter, inject, input, OnChanges, Output, signal, WritableSignal, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DialogModule } from 'primeng/dialog';
@@ -7,7 +7,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { MessageModule } from 'primeng/message';
 import { VendorRuleDto } from '@models/vendor-rule.model';
-import { VendorRuleApiService } from '../../services/vendor-rule-api.service';
+import { VendorRuleApiService } from '@features/settings/vendor-rules/services/vendor-rule-api.service';
 import { ToastService } from '@core/services/toast.service';
 
 @Component({
@@ -24,11 +24,13 @@ import { ToastService } from '@core/services/toast.service';
   ],
   templateUrl: './vendor-rule-form-dialog.component.html'
 })
-export class VendorRuleFormDialogComponent {
+export class VendorRuleFormDialogComponent implements OnChanges {
   private readonly api = inject(VendorRuleApiService);
   private readonly toast = inject(ToastService);
 
   visible = input.required<boolean>();
+  initialKeyword = input<string>('');
+  
   @Output() visibleChange = new EventEmitter<boolean>();
   @Output() save = new EventEmitter<void>();
 
@@ -40,6 +42,18 @@ export class VendorRuleFormDialogComponent {
 
   loading: WritableSignal<boolean> = signal(false);
   errorMessage: WritableSignal<string | null> = signal(null);
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['visible'] && this.visible() && this.initialKeyword()) {
+      this.formData.keyword = this.initialKeyword();
+      // Reset other fields if needed, or keep them if we want to retain previous edits (usually reset is safer)
+      this.formData.vendorName = '';
+      this.formData.priority = 0;
+    } else if (changes['visible'] && !this.visible()) {
+      // Optional: reset when closing
+      this.resetForm();
+    }
+  }
 
   onHide(): void {
     this.visibleChange.emit(false);

@@ -8,7 +8,7 @@ import { ConfirmationService } from 'primeng/api';
 import { VendorRule } from '@models/vendor-rule.model';
 import { VendorRuleApiService } from './services/vendor-rule-api.service';
 import { ToastService } from '@core/services/toast.service';
-import { VendorRuleFormDialogComponent } from './components/vendor-rule-form-dialog/vendor-rule-form-dialog.component';
+import { VendorRuleFormDialogComponent } from '@shared/components/vendor-rule-form-dialog/vendor-rule-form-dialog.component';
 
 @Component({
   selector: 'app-vendor-rules',

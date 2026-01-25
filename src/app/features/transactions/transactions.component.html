@@ -209,6 +209,8 @@
       <p-table
         [value]="transactions()"
         [(selection)]="selectedTransactions"
+        [(contextMenuSelection)]="selectedContextTransaction"
+        [contextMenu]="cm"
         [loading]="loading()"
         [paginator]="true"
         [rows]="pageSize()"
@@ -251,7 +253,7 @@
         </ng-template>
 
         <ng-template pTemplate="body" let-transaction>
-          <tr>
+          <tr [pContextMenuRow]="transaction">
             <!-- Checkbox -->
             <td>
               <p-checkbox
@@ -357,6 +359,9 @@
     </p-card>
   }
 
+  <!-- Context Menu -->
+  <p-contextMenu #cm [model]="contextMenuItems" (onShow)="selectedContextTransaction && prepareContextMenu(selectedContextTransaction)"></p-contextMenu>
+
   <!-- Empty State -->
   @if (isEmpty()) {
     <p-card styleClass="shadow-sm">
@@ -389,11 +394,28 @@
     (importComplete)="onImportComplete()"
   />
 
-  <!-- Transfer Matching Dialog -->
+  <!-- Scan Dialog -->
   <app-transfer-matching-dialog
     [visible]="showTransferDialog()"
     (visibleChange)="showTransferDialog.set($event)"
     (matchComplete)="onTransferMatchComplete()"
+  />
+
+  <!-- Vendor Rule Dialog -->
+  <app-vendor-rule-form-dialog
+    [visible]="showVendorRuleDialog()"
+    (visibleChange)="showVendorRuleDialog.set($event)"
+    [initialKeyword]="selectedTransactionKeyword()"
+    (save)="onVendorRuleSaved()"
+  />
+
+  <!-- Recurring Dialog -->
+  <app-recurring-form-dialog
+    [visible]="showRecurringDialog()"
+    (visibleChange)="showRecurringDialog.set($event)"
+    [transaction]="recurringPrefill()"
+    [accounts]="accounts()"
+    (save)="onRecurringSaved()"
   />
 
   <!-- Bulk Edit Dialog -->

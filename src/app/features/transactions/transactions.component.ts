@@ -14,7 +14,8 @@ import { DatePicker } from 'primeng/datepicker';
 import { AutoComplete, AutoCompleteCompleteEvent } from 'primeng/autocomplete';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
-import { ConfirmationService } from 'primeng/api';
+import { ConfirmationService, MenuItem } from 'primeng/api';
+import { ContextMenuModule } from 'primeng/contextmenu';
 import {
   Transaction,
   TransactionFormData,
@@ -23,11 +24,14 @@ import {
 } from '@models/transaction.model';
 import { Account } from '@models/account.model';
 import { Category } from '@models/category.model';
+import { RecurringTransaction, Frequency } from '@models/recurring.model';
 import { TransactionApiService } from './services/transaction-api.service';
 import { TransactionFormDialogComponent } from './components/transaction-form-dialog/transaction-form-dialog.component';
 import { CsvImportDialogComponent } from './components/csv-import-dialog/csv-import-dialog.component';
 import { BulkEditDialogComponent, BulkEditData } from './components/bulk-edit-dialog/bulk-edit-dialog.component';
 import { TransferMatchingDialogComponent } from './components/transfer-matching-dialog/transfer-matching-dialog.component';
+import { VendorRuleFormDialogComponent } from '@shared/components/vendor-rule-form-dialog/vendor-rule-form-dialog.component';
+import { RecurringFormDialogComponent } from '@shared/components/recurring-form-dialog/recurring-form-dialog.component';
 import { AccountApiService } from '@features/accounts/services/account-api.service';
 import { CategoryApiService } from '@features/categories/services/category-api.service';
 import { ToastService } from '@core/services/toast.service';
@@ -56,10 +60,13 @@ import {
     AutoComplete,
     InputNumberModule,
     InputTextModule,
+    ContextMenuModule,
     TransactionFormDialogComponent,
     CsvImportDialogComponent,
     BulkEditDialogComponent,
-    TransferMatchingDialogComponent
+    TransferMatchingDialogComponent,
+    VendorRuleFormDialogComponent,
+    RecurringFormDialogComponent
   ],
   providers: [ConfirmationService],
   templateUrl: './transactions.component.html'
@@ -80,8 +87,17 @@ export class TransactionsComponent implements OnInit {
   showImportDialog: WritableSignal<boolean> = signal(false);
   showBulkEditDialog: WritableSignal<boolean> = signal(false);
   showTransferDialog: WritableSignal<boolean> = signal(false);
+  showVendorRuleDialog: WritableSignal<boolean> = signal(false);
+  showRecurringDialog: WritableSignal<boolean> = signal(false);
+  
   selectedTransaction: WritableSignal<Transaction | null> = signal(null);
   selectedTransactions: WritableSignal<Transaction[]> = signal([]);
+  
+  // Context Menu State
+  contextMenuItems: MenuItem[] = [];
+  selectedContextTransaction: Transaction | null = null;
+  selectedTransactionKeyword: WritableSignal<string> = signal('');
+
   savingTransaction: WritableSignal<boolean> = signal(false);
   savingBulkEdit: WritableSignal<boolean> = signal(false);
 
@@ -397,6 +413,114 @@ export class TransactionsComponent implements OnInit {
 
   onTransferMatchComplete(): void {
     this.loadTransactions();
+  }
+
+  // Context Menu Actions
+  prepareContextMenu(transaction: Transaction): void {
+    this.selectedContextTransaction = transaction;
+    this.contextMenuItems = [
+      {
+        label: 'Edit',
+        icon: 'pi pi-pencil',
+        command: () => this.openEditDialog(transaction)
+      },
+      {
+        label: 'Delete',
+        icon: 'pi pi-trash',
+        styleClass: 'text-red-500',
+        command: () => this.deleteTransaction(transaction)
+      },
+      { separator: true },
+      {
+        label: 'Mark as Transfer',
+        icon: 'pi pi-arrow-right-arrow-left',
+        command: () => this.markAsTransfer(transaction)
+      },
+      {
+        label: 'Create Vendor Rule',
+        icon: 'pi pi-filter',
+        command: () => this.openVendorRuleDialog(transaction)
+      },
+      {
+        label: 'Create Recurring',
+        icon: 'pi pi-refresh',
+        command: () => this.openRecurringDialog(transaction)
+      },
+      { separator: true },
+      {
+        label: 'Filter by Vendor',
+        icon: 'pi pi-search',
+        command: () => this.filterByVendor(transaction.vendorName)
+      }
+    ];
+  }
+
+  markAsTransfer(transaction: Transaction): void {
+    this.confirmationService.confirm({
+      header: 'Mark as Transfer?',
+      message: 'This will remove this transaction from income/expense calculations.',
+      accept: () => {
+        this.transactionApi.markAsTransfer([transaction.id]).subscribe({
+          next: () => {
+            this.toast.success('Marked as transfer');
+            this.loadTransactions();
+          },
+          error: () => this.toast.error('Failed to update transaction')
+        });
+      }
+    });
+  }
+
+  openVendorRuleDialog(transaction: Transaction): void {
+    this.selectedContextTransaction = transaction;
+    // Use originalVendorName if available, otherwise description
+    // This is usually what we want to clean up
+    const keyword = transaction.originalVendorName || transaction.description || '';
+    this.selectedTransactionKeyword.set(keyword);
+    this.showVendorRuleDialog.set(true);
+  }
+
+  onVendorRuleSaved(): void {
+    this.showVendorRuleDialog.set(false);
+    this.loadTransactions(); // Reload to see if rule applied? (It won't apply to existing unless we re-run cleaning, but good practice)
+  }
+
+  // We need to map Transaction to RecurringTransaction shape for the dialog
+  // Since the dialog expects a full RecurringTransaction object for editing,
+  // we will pass a 'fake' one with ID 0 to indicate it's new but has data.
+  // We need to handle this in the dialog component or here.
+  // Actually, let's just update the dialog component to handle 'prefill' better.
+  // For now, let's map it to a partial object and see if we can adapt the dialog later.
+  // The dialog uses `transaction()` input.
+  
+  recurringPrefill: WritableSignal<RecurringTransaction | null> = signal(null);
+
+  openRecurringDialog(transaction: Transaction): void {
+    this.recurringPrefill.set({
+      id: 0, // Indicates new
+      merchantName: transaction.vendorName || transaction.originalVendorName || '',
+      amount: Math.abs(transaction.amount),
+      frequency: Frequency.MONTHLY, // Default
+      nextDate: transaction.date, // Use transaction date as start
+      active: true,
+      accountId: transaction.accountId,
+      accountName: transaction.accountName
+    });
+    this.showRecurringDialog.set(true);
+  }
+
+  onRecurringSaved(): void {
+    this.showRecurringDialog.set(false);
+  }
+
+  filterByVendor(vendorName: string | null): void {
+    if (vendorName) {
+      this.filterVendorName.set(vendorName);
+      this.showAdvancedFilters.set(true);
+      this.onFilterChange();
+    } else {
+      this.toast.info('No vendor name to filter by');
+    }
   }
 
   onSave(formData: TransactionFormData): void {
