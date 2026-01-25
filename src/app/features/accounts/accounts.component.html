@@ -18,7 +18,7 @@
 
   <!-- Summary Cards -->
   @if (!isEmpty()) {
-    <app-account-summary-cards [accounts]="accounts()" />
+    <app-account-summary-cards [accounts]="accounts()"/>
   }
 
   <!-- Accounts Table -->
@@ -50,7 +50,8 @@
             <!-- Account Type -->
             <td>
               <div class="flex items-center gap-2">
-                <i [class]="'pi ' + getAccountTypeInfo(account.type).icon + ' ' + getAccountTypeInfo(account.type).color"></i>
+                <i
+                  [class]="'pi ' + getAccountTypeInfo(account.type).icon + ' ' + getAccountTypeInfo(account.type).color"></i>
                 <span>{{ getAccountTypeInfo(account.type).label }}</span>
               </div>
             </td>
@@ -124,7 +125,4 @@
     (visibleChange)="showDialog.set($event)"
     (save)="onSave($event)"
   />
-
-  <!-- Confirmation Dialog -->
-  <p-confirmDialog />
 </div>
