@@ -1,14 +1,16 @@
-import { Component, inject, OnInit, signal, WritableSignal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { ButtonModule } from 'primeng/button';
-import { TableModule } from 'primeng/table';
-import { CardModule } from 'primeng/card';
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { ConfirmationService } from 'primeng/api';
-import { VendorRule } from '@models/vendor-rule.model';
-import { VendorRuleApiService } from './services/vendor-rule-api.service';
-import { ToastService } from '@core/services/toast.service';
-import { VendorRuleFormDialogComponent } from '@shared/components/vendor-rule-form-dialog/vendor-rule-form-dialog.component';
+import {Component, inject, OnInit, signal, WritableSignal} from '@angular/core';
+import {CommonModule} from '@angular/common';
+import {ButtonModule} from 'primeng/button';
+import {TableModule} from 'primeng/table';
+import {CardModule} from 'primeng/card';
+import {ConfirmDialogModule} from 'primeng/confirmdialog';
+import {ConfirmationService} from 'primeng/api';
+import {VendorRule} from '@models/vendor-rule.model';
+import {VendorRuleApiService} from './services/vendor-rule-api.service';
+import {ToastService} from '@core/services/toast.service';
+import {
+  VendorRuleFormDialogComponent
+} from '@shared/components/vendor-rule-form-dialog/vendor-rule-form-dialog.component';
 
 @Component({
   selector: 'app-vendor-rules',

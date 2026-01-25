@@ -1,45 +1,44 @@
-import { Component, computed, inject, OnInit, signal, WritableSignal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
-import { ButtonModule } from 'primeng/button';
-import { TableModule } from 'primeng/table';
-import { CardModule } from 'primeng/card';
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { TooltipModule } from 'primeng/tooltip';
-import { Select } from 'primeng/select';
-import { CheckboxModule } from 'primeng/checkbox';
-import { TagModule } from 'primeng/tag';
-import { DatePicker } from 'primeng/datepicker';
-import { AutoComplete, AutoCompleteCompleteEvent } from 'primeng/autocomplete';
-import { InputNumberModule } from 'primeng/inputnumber';
-import { InputTextModule } from 'primeng/inputtext';
-import { ConfirmationService, MenuItem } from 'primeng/api';
-import { ContextMenuModule } from 'primeng/contextmenu';
+import {Component, computed, inject, OnInit, signal, WritableSignal} from '@angular/core';
+import {CommonModule} from '@angular/common';
+import {FormsModule} from '@angular/forms';
+import {ActivatedRoute} from '@angular/router';
+import {ButtonModule} from 'primeng/button';
+import {TableModule} from 'primeng/table';
+import {CardModule} from 'primeng/card';
+import {ConfirmDialogModule} from 'primeng/confirmdialog';
+import {TooltipModule} from 'primeng/tooltip';
+import {Select} from 'primeng/select';
+import {CheckboxModule} from 'primeng/checkbox';
+import {TagModule} from 'primeng/tag';
+import {DatePicker} from 'primeng/datepicker';
+import {AutoComplete, AutoCompleteCompleteEvent} from 'primeng/autocomplete';
+import {InputNumberModule} from 'primeng/inputnumber';
+import {InputTextModule} from 'primeng/inputtext';
+import {ConfirmationService, MenuItem} from 'primeng/api';
+import {ContextMenuModule} from 'primeng/contextmenu';
+import {Transaction, TransactionFilter, TransactionFormData, TransactionType} from '@models/transaction.model';
+import {Account} from '@models/account.model';
+import {Category} from '@models/category.model';
+import {Frequency, RecurringTransaction} from '@models/recurring.model';
+import {TransactionApiService} from './services/transaction-api.service';
+import {TransactionFormDialogComponent} from './components/transaction-form-dialog/transaction-form-dialog.component';
+import {CsvImportDialogComponent} from './components/csv-import-dialog/csv-import-dialog.component';
+import {BulkEditData, BulkEditDialogComponent} from './components/bulk-edit-dialog/bulk-edit-dialog.component';
 import {
-  Transaction,
-  TransactionFormData,
-  TransactionFilter,
-  TransactionType
-} from '@models/transaction.model';
-import { Account } from '@models/account.model';
-import { Category } from '@models/category.model';
-import { RecurringTransaction, Frequency } from '@models/recurring.model';
-import { TransactionApiService } from './services/transaction-api.service';
-import { TransactionFormDialogComponent } from './components/transaction-form-dialog/transaction-form-dialog.component';
-import { CsvImportDialogComponent } from './components/csv-import-dialog/csv-import-dialog.component';
-import { BulkEditDialogComponent, BulkEditData } from './components/bulk-edit-dialog/bulk-edit-dialog.component';
-import { TransferMatchingDialogComponent } from './components/transfer-matching-dialog/transfer-matching-dialog.component';
-import { VendorRuleFormDialogComponent } from '@shared/components/vendor-rule-form-dialog/vendor-rule-form-dialog.component';
-import { RecurringFormDialogComponent } from '@shared/components/recurring-form-dialog/recurring-form-dialog.component';
-import { AccountApiService } from '@features/accounts/services/account-api.service';
-import { CategoryApiService } from '@features/categories/services/category-api.service';
-import { ToastService } from '@core/services/toast.service';
+  TransferMatchingDialogComponent
+} from './components/transfer-matching-dialog/transfer-matching-dialog.component';
 import {
+  VendorRuleFormDialogComponent
+} from '@shared/components/vendor-rule-form-dialog/vendor-rule-form-dialog.component';
+import {RecurringFormDialogComponent} from '@shared/components/recurring-form-dialog/recurring-form-dialog.component';
+import {AccountApiService} from '@features/accounts/services/account-api.service';
+import {CategoryApiService} from '@features/categories/services/category-api.service';
+import {ToastService} from '@core/services/toast.service';
+import {
+  formatDate,
   formatTransactionAmount,
-  getTransactionTypeInfo,
   getAmountClass,
-  formatDate
+  getTransactionTypeInfo
 } from '@shared/utils/transaction.utils';
 
 @Component({
@@ -89,10 +88,10 @@ export class TransactionsComponent implements OnInit {
   showTransferDialog: WritableSignal<boolean> = signal(false);
   showVendorRuleDialog: WritableSignal<boolean> = signal(false);
   showRecurringDialog: WritableSignal<boolean> = signal(false);
-  
+
   selectedTransaction: WritableSignal<Transaction | null> = signal(null);
   selectedTransactions: WritableSignal<Transaction[]> = signal([]);
-  
+
   // Context Menu State
   contextMenuItems: MenuItem[] = [];
   selectedContextTransaction: Transaction | null = null;
@@ -165,17 +164,17 @@ export class TransactionsComponent implements OnInit {
 
   // Dropdown options
   transactionTypes = [
-    { label: 'All Types', value: null },
-    { label: 'Income', value: TransactionType.INCOME },
-    { label: 'Expense', value: TransactionType.EXPENSE },
-    { label: 'Transfer', value: TransactionType.TRANSFER }
+    {label: 'All Types', value: null},
+    {label: 'Income', value: TransactionType.INCOME},
+    {label: 'Expense', value: TransactionType.EXPENSE},
+    {label: 'Transfer', value: TransactionType.TRANSFER}
   ];
 
   accountOptions = computed(() => {
     const accounts = this.accounts();
     return [
-      { label: 'All Accounts', value: null },
-      ...accounts.map(a => ({ label: a.name, value: a.id }))
+      {label: 'All Accounts', value: null},
+      ...accounts.map(a => ({label: a.name, value: a.id}))
     ];
   });
 
@@ -187,8 +186,8 @@ export class TransactionsComponent implements OnInit {
       if (params['category']) {
         this.filterCategoryName.set(params['category']);
         this.showAdvancedFilters.set(true);
-        // We don't need to call saveFilterState here strictly, 
-        // as loadTransactions will do it, but calling it ensures 
+        // We don't need to call saveFilterState here strictly,
+        // as loadTransactions will do it, but calling it ensures
         // the state is consistent immediately.
         this.saveFilterState();
       }
@@ -214,7 +213,8 @@ export class TransactionsComponent implements OnInit {
   loadCategories(): void {
     this.categoryApi.getCategories().subscribe({
       next: (categories) => this.categories.set(categories),
-      error: () => {} // Categories are optional for filtering
+      error: () => {
+      } // Categories are optional for filtering
     });
   }
 
@@ -437,7 +437,7 @@ export class TransactionsComponent implements OnInit {
         styleClass: 'text-red-500',
         command: () => this.deleteTransaction(transaction)
       },
-      { separator: true },
+      {separator: true},
       {
         label: 'Mark as Transfer',
         icon: 'pi pi-arrow-right-arrow-left',
@@ -453,7 +453,7 @@ export class TransactionsComponent implements OnInit {
         icon: 'pi pi-refresh',
         command: () => this.openRecurringDialog(transaction)
       },
-      { separator: true },
+      {separator: true},
       {
         label: 'Filter by Vendor',
         icon: 'pi pi-search',
@@ -499,7 +499,7 @@ export class TransactionsComponent implements OnInit {
   // Actually, let's just update the dialog component to handle 'prefill' better.
   // For now, let's map it to a partial object and see if we can adapt the dialog later.
   // The dialog uses `transaction()` input.
-  
+
   recurringPrefill: WritableSignal<RecurringTransaction | null> = signal(null);
 
   openRecurringDialog(transaction: Transaction): void {
