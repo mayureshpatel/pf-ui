@@ -182,24 +182,21 @@ export class TransactionsComponent implements OnInit, OnDestroy {
   });
 
   ngOnInit(): void {
-    this.loadFilterState(); // Load saved filters first
+    this.loadFilterState();
 
-    // Check for query params (e.g. from categories page)
     this.route.queryParams
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(params => {
         if (params['category']) {
           this.filterCategoryName.set(params['category']);
           this.showAdvancedFilters.set(true);
-          // We don't need to call saveFilterState here strictly,
-          // as loadTransactions will do it, but calling it ensures
-          // the state is consistent immediately.
           this.saveFilterState();
         }
       });
 
     this.loadCategories();
     this.loadAccounts();
+    this.loadTransactions();
   }
 
   ngOnDestroy(): void {
@@ -219,8 +216,6 @@ export class TransactionsComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (accounts) => {
           this.accounts.set(accounts);
-          // Load transactions after accounts are loaded (needed for account name enrichment)
-          this.loadTransactions();
         },
         error: () => {
           this.toast.error('Failed to load accounts');
@@ -234,7 +229,7 @@ export class TransactionsComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (categories) => this.categories.set(categories),
         error: () => {
-        } // Categories are optional for filtering
+        }
       });
   }
 
@@ -433,7 +428,7 @@ export class TransactionsComponent implements OnInit, OnDestroy {
 
   onImportComplete(): void {
     this.showImportDialog.set(false);
-    this.openTransferDialog(); // Check for transfers after import
+    this.openTransferDialog();
     this.loadTransactions();
   }
 
