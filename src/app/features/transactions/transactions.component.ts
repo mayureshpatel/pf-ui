@@ -40,6 +40,8 @@ import {
   getAmountClass,
   getTransactionTypeInfo
 } from '@shared/utils/transaction.utils';
+import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen-toolbar';
+import { TableToolbarComponent } from '@shared/components/table-toolbar/table-toolbar';
 
 @Component({
   selector: 'app-transactions',
@@ -60,6 +62,8 @@ import {
     InputNumberModule,
     InputTextModule,
     ContextMenuModule,
+    ScreenToolbarComponent,
+    TableToolbarComponent,
     TransactionFormDialogComponent,
     CsvImportDialogComponent,
     BulkEditDialogComponent,

@@ -1,0 +1,24 @@
+<div class="screen-toolbar flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+  <!-- Title Section -->
+  <div class="toolbar-title flex-shrink-0">
+    <ng-content select="[toolbarTitle]"></ng-content>
+  </div>
+
+  <!-- Filters Section (optional) -->
+  @if (hasFilters) {
+    <div class="toolbar-filters flex flex-wrap items-center gap-3">
+      @if (showDivider()) {
+        <div class="h-8 w-px bg-surface-300 dark:bg-surface-600 hidden lg:block mx-1"></div>
+      }
+      <ng-content select="[toolbarFilters]"></ng-content>
+    </div>
+  }
+
+  <!-- Actions Section -->
+  <div class="toolbar-actions flex flex-wrap items-center gap-3">
+    @if (hasFilters && showDivider()) {
+      <div class="h-8 w-px bg-surface-300 dark:bg-surface-600 hidden lg:block mx-1"></div>
+    }
+    <ng-content select="[toolbarActions]"></ng-content>
+  </div>
+</div>

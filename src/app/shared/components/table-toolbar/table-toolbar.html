@@ -1,0 +1,23 @@
+@if (selectedCount() > 0) {
+  <div class="table-toolbar flex items-center justify-between p-3 mb-4
+              bg-primary-50 dark:bg-primary-900/20
+              border border-primary-200 dark:border-primary-800 rounded-lg">
+
+    <!-- Selection Info -->
+    <div class="selection-info flex items-center gap-2">
+      <i class="pi pi-check-circle text-primary-500"></i>
+      <span class="font-semibold text-primary-700 dark:text-primary-300">
+        @if (totalCount(); as total) {
+          {{ selectedCount() }} of {{ total }} selected
+        } @else {
+          {{ selectedCount() }} selected
+        }
+      </span>
+    </div>
+
+    <!-- Bulk Actions -->
+    <div class="bulk-actions flex items-center gap-3">
+      <ng-content select="[bulkActions]"></ng-content>
+    </div>
+  </div>
+}

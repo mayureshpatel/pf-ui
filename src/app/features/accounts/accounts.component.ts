@@ -12,6 +12,7 @@ import { AccountSummaryCardsComponent } from './components/account-summary-cards
 import { AccountFormDialogComponent } from './components/account-form-dialog/account-form-dialog.component';
 import { ToastService } from '@core/services/toast.service';
 import { formatCurrency, getAccountTypeInfo } from '@shared/utils/account.utils';
+import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen-toolbar';
 
 @Component({
   selector: 'app-accounts',
@@ -23,6 +24,7 @@ import { formatCurrency, getAccountTypeInfo } from '@shared/utils/account.utils'
     CardModule,
     ConfirmDialogModule,
     TooltipModule,
+    ScreenToolbarComponent,
     AccountSummaryCardsComponent,
     AccountFormDialogComponent
   ],

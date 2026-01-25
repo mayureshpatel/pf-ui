@@ -1,12 +1,12 @@
 <div class="p-4">
   <!-- Page Header -->
-  <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
-    <div>
+  <app-screen-toolbar>
+    <div toolbarTitle>
       <h1 class="text-3xl font-bold text-color">Budgets</h1>
       <p class="text-muted-color mt-1">Set monthly spending limits and track progress</p>
     </div>
 
-    <div class="flex flex-wrap items-center gap-3">
+    <div toolbarFilters>
       <!-- Mode Selection (Segmented Toggle) -->
       <p-selectButton
         [(ngModel)]="viewMode"
@@ -48,9 +48,9 @@
           />
         </div>
       }
+    </div>
 
-      <div class="h-8 w-px bg-surface-300 dark:bg-surface-700 hidden lg:block mx-1"></div>
-
+    <div toolbarActions>
       <p-button
         label="Set Budget"
         icon="pi pi-plus"
@@ -59,7 +59,7 @@
         class="shadow-sm"
       />
     </div>
-  </div>
+  </app-screen-toolbar>
 
   @if (loading()) {
     <div class="flex justify-center items-center py-12">

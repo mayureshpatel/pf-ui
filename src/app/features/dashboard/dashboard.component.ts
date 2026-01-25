@@ -25,6 +25,7 @@ import { CashFlowTrendComponent } from './components/cash-flow-trend/cash-flow-t
 import { YtdSummaryComponent } from './components/ytd-summary/ytd-summary.component';
 import { ActionCenterComponent } from './components/action-center/action-center.component';
 import { CategoryChartComponent } from './components/category-chart/category-chart.component';
+import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen-toolbar';
 
 @Component({
   selector: 'app-dashboard',
@@ -35,6 +36,7 @@ import { CategoryChartComponent } from './components/category-chart/category-cha
     CardModule,
     Select,
     ProgressSpinnerModule,
+    ScreenToolbarComponent,
     PulseCardComponent,
     CashFlowTrendComponent,
     YtdSummaryComponent,

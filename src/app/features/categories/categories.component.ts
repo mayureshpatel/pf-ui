@@ -17,6 +17,7 @@ import {CategoryFormDialogComponent} from './components/category-form-dialog/cat
 import {ToastService} from '@core/services/toast.service';
 import {getCategoryColor} from '@shared/utils/category.utils';
 import {formatCurrency} from '@shared/utils/account.utils';
+import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-toolbar';
 
 export interface CategoryViewModel extends CategoryWithUsage {
   groupName: string;
@@ -36,6 +37,7 @@ export interface CategoryViewModel extends CategoryWithUsage {
     CardModule,
     ConfirmDialog,
     TooltipModule,
+    ScreenToolbarComponent,
     CategoryFormDialogComponent
   ],
   providers: [ConfirmationService],

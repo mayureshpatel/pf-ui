@@ -21,6 +21,7 @@ import {BudgetFormDialogComponent} from './components/budget-form-dialog/budget-
 import {CategoryApiService} from '@features/categories/services/category-api.service';
 import {Category} from '@models/category.model';
 import {getCategoryColor} from '@shared/utils/category.utils';
+import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-toolbar';
 
 export interface BudgetStatusViewModel extends BudgetStatus {
   icon?: string;
@@ -42,6 +43,7 @@ export interface BudgetStatusViewModel extends BudgetStatus {
     CheckboxModule,
     ConfirmDialog,
     ProgressSpinnerModule,
+    ScreenToolbarComponent,
     BudgetFormDialogComponent
   ],
   providers: [ConfirmationService],

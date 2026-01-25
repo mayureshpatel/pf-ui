@@ -1,11 +1,12 @@
 <div class="p-4">
   <!-- Page Header -->
-  <div class="flex items-center justify-between mb-6">
-    <div>
+  <app-screen-toolbar>
+    <div toolbarTitle>
       <h1 class="text-3xl font-bold text-color">Recurring Transactions</h1>
       <p class="text-muted-color mt-1">Track your subscriptions and bills</p>
     </div>
-    <div class="flex gap-3">
+
+    <div toolbarActions>
       <p-button
         label="Scan History"
         icon="pi pi-search"
@@ -20,7 +21,7 @@
         severity="primary"
       />
     </div>
-  </div>
+  </app-screen-toolbar>
 
   <!-- List -->
   <p-card styleClass="shadow-sm">

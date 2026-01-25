@@ -15,6 +15,7 @@ import { RecurringScanDialogComponent } from './components/recurring-scan-dialog
 import { ToastService } from '@core/services/toast.service';
 import { formatCurrency } from '@shared/utils/account.utils';
 import { formatDate } from '@shared/utils/transaction.utils';
+import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen-toolbar';
 
 @Component({
   selector: 'app-recurring',
@@ -26,6 +27,7 @@ import { formatDate } from '@shared/utils/transaction.utils';
     CardModule,
     ConfirmDialogModule,
     TagModule,
+    ScreenToolbarComponent,
     RecurringFormDialogComponent,
     RecurringScanDialogComponent
   ],

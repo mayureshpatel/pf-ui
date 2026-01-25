@@ -1,18 +1,18 @@
 <div class="p-4">
   <!-- Page Header -->
-  <div class="flex items-center justify-between mb-6">
-    <div>
+  <app-screen-toolbar>
+    <div toolbarTitle>
       <h1 class="text-3xl font-bold text-color">Vendor Rules</h1>
       <p class="text-muted-color mt-1">Automatically rename messy bank descriptions</p>
     </div>
-    <div class="flex flex-row gap-2">
+
+    <div toolbarActions>
       <p-button
         label="Apply Rules"
         icon="pi pi-refresh"
         (onClick)="applyRules()"
         severity="secondary"
         [outlined]="true"
-        class="ml-2"
       />
       <p-button
         label="New Rule"
@@ -21,7 +21,7 @@
         severity="primary"
       />
     </div>
-  </div>
+  </app-screen-toolbar>
 
   <!-- Rules Table -->
   <p-card styleClass="shadow-sm">

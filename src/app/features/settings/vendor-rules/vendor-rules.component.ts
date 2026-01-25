@@ -11,6 +11,7 @@ import {ToastService} from '@core/services/toast.service';
 import {
   VendorRuleFormDialogComponent
 } from '@shared/components/vendor-rule-form-dialog/vendor-rule-form-dialog.component';
+import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-toolbar';
 
 @Component({
   selector: 'app-vendor-rules',
@@ -21,6 +22,7 @@ import {
     TableModule,
     CardModule,
     ConfirmDialogModule,
+    ScreenToolbarComponent,
     VendorRuleFormDialogComponent
   ],
   providers: [ConfirmationService],

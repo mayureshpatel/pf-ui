@@ -1,11 +1,12 @@
 <div class="p-4">
   <!-- Page Header -->
-  <div class="flex items-center justify-between mb-6">
-    <div>
+  <app-screen-toolbar>
+    <div toolbarTitle>
       <h1 class="text-3xl font-bold text-color">Transactions</h1>
       <p class="text-muted-color mt-1">View and manage your financial transactions</p>
     </div>
-    <div class="flex gap-3">
+
+    <div toolbarActions>
       <p-button
         label="Review Transfers"
         icon="pi pi-arrow-right-arrow-left"
@@ -27,7 +28,7 @@
         severity="primary"
       />
     </div>
-  </div>
+  </app-screen-toolbar>
 
   <!-- Quick Filters -->
   <div class="mb-4 flex flex-wrap gap-3 items-end">
@@ -178,30 +179,26 @@
   }
 
   <!-- Bulk Actions Toolbar -->
-  @if (hasSelection()) {
-    <div
-      class="mb-4 p-3 bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-700 rounded-lg flex items-center justify-between">
-      <span class="text-color font-medium">
-        {{ selectedTransactions().length }} transaction(s) selected
-      </span>
-      <div class="flex gap-2">
-        <p-button
-          label="Bulk Edit"
-          icon="pi pi-pencil"
-          (onClick)="openBulkEditDialog()"
-          severity="secondary"
-          size="small"
-        />
-        <p-button
-          label="Delete Selected"
-          icon="pi pi-trash"
-          (onClick)="bulkDelete()"
-          severity="danger"
-          size="small"
-        />
-      </div>
+  <app-table-toolbar
+    [selectedCount]="selectedTransactions().length"
+    [totalCount]="totalRecords()">
+    <div bulkActions>
+      <p-button
+        label="Bulk Edit"
+        icon="pi pi-pencil"
+        (onClick)="openBulkEditDialog()"
+        severity="info"
+        [outlined]="true"
+      />
+      <p-button
+        label="Delete Selected"
+        icon="pi pi-trash"
+        (onClick)="bulkDelete()"
+        severity="danger"
+        [outlined]="true"
+      />
     </div>
-  }
+  </app-table-toolbar>
 
   <!-- Transactions Table -->
   @if (!isEmpty()) {
