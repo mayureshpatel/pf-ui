@@ -1,22 +1,22 @@
-import { Component, computed, inject, OnInit, signal, WritableSignal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
-import { ButtonModule } from 'primeng/button';
-import { TableModule } from 'primeng/table';
-import { ProgressBarModule } from 'primeng/progressbar';
-import { CardModule } from 'primeng/card';
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { TooltipModule } from 'primeng/tooltip';
-import { ConfirmationService } from 'primeng/api';
-import { forkJoin } from 'rxjs';
-import { Category, CategoryFormData, CategoryWithUsage } from '@models/category.model';
-import { CategoryApiService } from './services/category-api.service';
-import { TransactionApiService } from '@features/transactions/services/transaction-api.service';
-import { BudgetApiService } from '@features/budgets/services/budget-api.service';
-import { CategoryFormDialogComponent } from './components/category-form-dialog/category-form-dialog.component';
-import { ToastService } from '@core/services/toast.service';
-import { getCategoryColor } from '@shared/utils/category.utils';
-import { formatCurrency } from '@shared/utils/account.utils';
+import {Component, computed, inject, OnInit, signal, WritableSignal} from '@angular/core';
+import {CommonModule} from '@angular/common';
+import {Router} from '@angular/router';
+import {ButtonModule} from 'primeng/button';
+import {TableModule} from 'primeng/table';
+import {ProgressBarModule} from 'primeng/progressbar';
+import {CardModule} from 'primeng/card';
+import {ConfirmDialog} from 'primeng/confirmdialog';
+import {TooltipModule} from 'primeng/tooltip';
+import {ConfirmationService} from 'primeng/api';
+import {forkJoin} from 'rxjs';
+import {Category, CategoryFormData, CategoryWithUsage} from '@models/category.model';
+import {CategoryApiService} from './services/category-api.service';
+import {TransactionApiService} from '@features/transactions/services/transaction-api.service';
+import {BudgetApiService} from '@features/budgets/services/budget-api.service';
+import {CategoryFormDialogComponent} from './components/category-form-dialog/category-form-dialog.component';
+import {ToastService} from '@core/services/toast.service';
+import {getCategoryColor} from '@shared/utils/category.utils';
+import {formatCurrency} from '@shared/utils/account.utils';
 
 export interface CategoryViewModel extends CategoryWithUsage {
   groupName: string;
@@ -34,7 +34,7 @@ export interface CategoryViewModel extends CategoryWithUsage {
     TableModule,
     ProgressBarModule,
     CardModule,
-    ConfirmDialogModule,
+    ConfirmDialog,
     TooltipModule,
     CategoryFormDialogComponent
   ],
@@ -68,10 +68,10 @@ export class CategoriesComponent implements OnInit {
 
     forkJoin({
       categories: this.categoryApi.getCategories(),
-      transactions: this.transactionApi.getTransactions({}, { page: 0, size: 10000 }),
+      transactions: this.transactionApi.getTransactions({}, {page: 0, size: 10000}),
       budgets: this.budgetApi.getBudgetStatus(now.getMonth() + 1, now.getFullYear())
     }).subscribe({
-      next: ({ categories, transactions, budgets }) => {
+      next: ({categories, transactions, budgets}) => {
         // Map budgets for quick lookup
         const budgetMap = new Map(budgets.map(b => [b.categoryName, b]));
 
@@ -168,8 +168,8 @@ export class CategoriesComponent implements OnInit {
   }
 
   viewTransactions(category: Category): void {
-    this.router.navigate(['/transactions'], { 
-      queryParams: { category: category.name } 
+    this.router.navigate(['/transactions'], {
+      queryParams: {category: category.name}
     });
   }
 

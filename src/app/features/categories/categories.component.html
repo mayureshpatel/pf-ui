@@ -58,7 +58,7 @@
           <tr>
             <!-- Color Badge / Icon -->
             <td>
-              <div 
+              <div
                 [class]="getDisplayColor(category) + ' w-8 h-8 rounded-full ml-4 flex items-center justify-center text-white cursor-help'"
                 [pTooltip]="getIconLabel(category.icon)"
                 tooltipPosition="top">
@@ -80,7 +80,7 @@
 
             <!-- Usage Count -->
             <td class="text-center">
-              <span 
+              <span
                 class="text-primary hover:underline cursor-pointer"
                 (click)="viewTransactions(category)"
                 pTooltip="View transactions"
@@ -98,8 +98,8 @@
             <td>
               @if (category.budgetedAmount !== undefined) {
                 <div class="flex flex-col gap-1 pr-4">
-                  <p-progressBar 
-                    [value]="category.percentageUsed" 
+                  <p-progressBar
+                    [value]="category.percentageUsed"
                     [showValue]="false"
                     [styleClass]="'h-2 ' + getProgressBarTailwind(category.percentageUsed)">
                   </p-progressBar>
@@ -178,6 +178,5 @@
     (save)="onSave($event)"
   />
 
-  <!-- Confirmation Dialog -->
-  <p-confirmDialog />
+  <p-confirmDialog/>
 </div>
