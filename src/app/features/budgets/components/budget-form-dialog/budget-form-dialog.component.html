@@ -1,0 +1,69 @@
+<p-dialog
+  header="Set Category Budget"
+  [modal]="true"
+  [visible]="visible()"
+  (visibleChange)="onHide()"
+  [style]="{ width: '400px' }"
+  [draggable]="false"
+  [resizable]="false">
+
+  <form (ngSubmit)="onSubmit()" class="flex flex-col gap-4">
+    @if (errorMessage()) {
+      <p-message severity="error" [text]="errorMessage()!" styleClass="w-full" />
+    }
+
+    <!-- Category -->
+    <div class="flex flex-col gap-2">
+      <label for="category" class="font-medium text-color">Category</label>
+      <p-select
+        id="category"
+        [(ngModel)]="selectedCategoryId"
+        [options]="categoryOptions()"
+        optionLabel="label"
+        optionValue="value"
+        name="categoryId"
+        placeholder="Select a category"
+        class="w-full"
+        appendTo="body"
+      />
+    </div>
+
+    <!-- Amount -->
+    <div class="flex flex-col gap-2">
+      <label for="amount" class="font-medium text-color">Monthly Budget Amount</label>
+      <p-inputNumber
+        id="amount"
+        [(ngModel)]="amount"
+        name="amount"
+        mode="currency"
+        currency="USD"
+        [min]="0"
+        placeholder="$0.00"
+        class="w-full"
+        styleClass="w-full"
+      />
+    </div>
+
+    <p class="text-xs text-muted-color mt-2">
+      This budget will be set for <strong>{{ month() }}/{{ year() }}</strong>.
+      If a budget already exists for this category and period, it will be updated.
+    </p>
+  </form>
+
+  <ng-template pTemplate="footer">
+    <p-button
+      label="Cancel"
+      icon="pi pi-times"
+      (onClick)="onHide()"
+      [text]="true"
+      severity="secondary"
+    />
+    <p-button
+      label="Save Budget"
+      icon="pi pi-check"
+      (onClick)="onSubmit()"
+      [loading]="loading()"
+      severity="primary"
+    />
+  </ng-template>
+</p-dialog>

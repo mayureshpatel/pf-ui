@@ -42,13 +42,21 @@ export const routes: Routes = [
       },
       {
         path: 'categories',
-        loadComponent: () =>
-          import('./features/categories/categories.component').then((m) => m.CategoriesComponent)
+        loadComponent: () => import('./features/categories/categories.component').then(m => m.CategoriesComponent)
       },
       {
-        path: 'settings/vendor-rules',
-        loadComponent: () =>
-          import('./features/settings/vendor-rules/vendor-rules.component').then((m) => m.VendorRulesComponent)
+        path: 'budgets',
+        loadComponent: () => import('./features/budgets/budgets.component').then(m => m.BudgetsComponent)
+      },
+      {
+        path: 'settings',
+        children: [
+          {
+            path: 'vendor-rules',
+            loadComponent: () =>
+              import('./features/settings/vendor-rules/vendor-rules.component').then((m) => m.VendorRulesComponent)
+          }
+        ]
       },
       {
         path: 'reports',
