@@ -1,0 +1,46 @@
+<div class="p-4">
+  <!-- Header with Date Range Filter -->
+  <app-screen-toolbar [showDivider]="false">
+    <div toolbarTitle>
+      <h1 class="text-3xl font-bold text-color">Reports</h1>
+      <p class="text-muted-color mt-1">Analyze your spending patterns and trends</p>
+    </div>
+
+    <div toolbarFilters>
+      <app-date-range-filter
+        [dateRange]="dateRange()"
+        (rangeChange)="onDateRangeChange($event)"
+      />
+    </div>
+  </app-screen-toolbar>
+
+  <!-- Loading Spinner -->
+  @if (loading()) {
+    <div class="flex justify-center items-center py-12">
+      <p-progressSpinner styleClass="w-16 h-16" />
+    </div>
+  } @else {
+    <!-- Tabs with Report Components -->
+    <p-tabs [(value)]="activeTabIndex" styleClass="shadow-sm">
+      <p-tablist>
+        <p-tab [value]="0">Category Analysis</p-tab>
+        <p-tab [value]="1">Vendor Analysis</p-tab>
+        <p-tab [value]="2">Income vs Expense</p-tab>
+      </p-tablist>
+
+      <p-tabpanels>
+        <p-tabpanel [value]="0">
+          <app-category-report [transactions]="transactions()" />
+        </p-tabpanel>
+
+        <p-tabpanel [value]="1">
+          <app-vendor-report [transactions]="transactions()" />
+        </p-tabpanel>
+
+        <p-tabpanel [value]="2">
+          <app-income-expense-report [transactions]="transactions()" />
+        </p-tabpanel>
+      </p-tabpanels>
+    </p-tabs>
+  }
+</div>

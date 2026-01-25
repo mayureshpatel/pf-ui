@@ -1,0 +1,59 @@
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <!-- Top Vendors Bar Chart -->
+  <p-card header="Top Vendors by Spending" styleClass="shadow-sm">
+    @if (hasData()) {
+      <div class="h-96">
+        <p-chart type="bar" [data]="barChartData()" [options]="barChartOptions()" />
+      </div>
+    } @else {
+      <div class="flex flex-col items-center justify-center py-12 text-muted-color gap-3 h-96">
+        <i class="pi pi-chart-bar text-4xl"></i>
+        <span class="text-sm">No vendor data for this period</span>
+      </div>
+    }
+  </p-card>
+
+  <!-- Top 5 Vendors Doughnut Chart -->
+  <p-card header="Top 5 Vendor Distribution" styleClass="shadow-sm">
+    @if (hasData()) {
+      <div class="h-96 flex items-center justify-center">
+        <p-chart type="doughnut" [data]="doughnutChartData()" [options]="doughnutChartOptions()" />
+      </div>
+    } @else {
+      <div class="flex flex-col items-center justify-center py-12 text-muted-color gap-3 h-96">
+        <i class="pi pi-chart-pie text-4xl"></i>
+        <span class="text-sm">No vendor data for this period</span>
+      </div>
+    }
+  </p-card>
+</div>
+
+<!-- Vendor Details Table -->
+<div class="mt-6">
+  <p-card header="Vendor Details" styleClass="shadow-sm">
+    <p-table [value]="vendorData()" styleClass="p-datatable-sm">
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Vendor</th>
+          <th class="text-right">Total Spent</th>
+          <th class="text-right">Transactions</th>
+          <th>Categories</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-vendor>
+        <tr>
+          <td class="font-medium">{{ vendor.vendorName }}</td>
+          <td class="text-right">{{ formatCurrency(vendor.total) }}</td>
+          <td class="text-right">{{ vendor.count }}</td>
+          <td>
+            <div class="flex flex-wrap gap-1">
+              @for (category of vendor.categories; track category) {
+                <p-tag [value]="category" severity="secondary" />
+              }
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </p-card>
+</div>

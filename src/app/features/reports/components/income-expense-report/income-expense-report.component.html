@@ -1,0 +1,55 @@
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <!-- Stacked Bar Chart: Income vs Expense -->
+  <p-card header="Income vs Expenses by Month" styleClass="shadow-sm">
+    @if (hasData()) {
+      <div class="h-96">
+        <p-chart type="bar" [data]="stackedBarData()" [options]="stackedBarOptions()" />
+      </div>
+    } @else {
+      <div class="flex flex-col items-center justify-center py-12 text-muted-color gap-3 h-96">
+        <i class="pi pi-chart-bar text-4xl"></i>
+        <span class="text-sm">No income/expense data for this period</span>
+      </div>
+    }
+  </p-card>
+
+  <!-- Line Chart: Net Savings Trend -->
+  <p-card header="Net Savings Trend" styleClass="shadow-sm">
+    @if (hasData()) {
+      <div class="h-96">
+        <p-chart type="line" [data]="lineChartData()" [options]="lineChartOptions()" />
+      </div>
+    } @else {
+      <div class="flex flex-col items-center justify-center py-12 text-muted-color gap-3 h-96">
+        <i class="pi pi-chart-line text-4xl"></i>
+        <span class="text-sm">No savings data for this period</span>
+      </div>
+    }
+  </p-card>
+</div>
+
+<!-- Monthly Summary Table -->
+<div class="mt-6">
+  <p-card header="Monthly Summary" styleClass="shadow-sm">
+    <p-table [value]="monthlyData()" styleClass="p-datatable-sm">
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Month</th>
+          <th class="text-right">Income</th>
+          <th class="text-right">Expenses</th>
+          <th class="text-right">Net Savings</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-data>
+        <tr>
+          <td class="font-medium">{{ data.month }}</td>
+          <td class="text-right text-green-600">{{ formatCurrency(data.income) }}</td>
+          <td class="text-right text-red-600">{{ formatCurrency(data.expense) }}</td>
+          <td class="text-right font-semibold" [ngClass]="getSavingsClass(data.netSavings)">
+            {{ formatCurrency(data.netSavings) }}
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </p-card>
+</div>
