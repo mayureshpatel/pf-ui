@@ -59,6 +59,11 @@ export const routes: Routes = [
             path: 'vendor-rules',
             loadComponent: () =>
               import('./features/settings/vendor-rules/vendor-rules.component').then((m) => m.VendorRulesComponent)
+          },
+          {
+            path: 'category-rules',
+            loadComponent: () =>
+              import('./features/settings/category-rules/category-rules.component').then((m) => m.CategoryRulesComponent)
           }
         ]
       },

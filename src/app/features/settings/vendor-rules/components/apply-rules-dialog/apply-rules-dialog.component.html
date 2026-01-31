@@ -1,5 +1,5 @@
 <p-dialog
-  header="Apply Vendor Rules"
+  [header]="'Apply ' + fieldLabel() + ' Rules'"
   [visible]="visible()"
   (visibleChange)="visibleChange.emit($event)"
   [modal]="true"
@@ -14,10 +14,10 @@
         <i class="pi pi-info-circle text-primary text-xl"></i>
         <div>
           <h3 class="font-semibold text-color mb-1">
-            {{ totalCount() }} transaction{{ totalCount() === 1 ? '' : 's' }} will be updated
+            {{ totalCount }} transaction{{ totalCount === 1 ? '' : 's' }} will be updated
           </h3>
           <p class="text-sm text-color">
-            Vendor names will be assigned based on your current vendor rules.
+            {{ fieldLabel() }} values will be assigned based on your current rules.
           </p>
         </div>
       </div>
@@ -28,7 +28,7 @@
       <div class="bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-400 dark:border-yellow-600 rounded-lg p-3">
         <p class="text-sm text-yellow-900 dark:text-yellow-100">
           <i class="pi pi-exclamation-triangle mr-2"></i>
-          This is a large update that will affect {{ totalCount() }} transactions. This may take a moment to process.
+          This is a large update that will affect {{ totalCount }} transactions. This may take a moment to process.
         </p>
       </div>
     }
@@ -36,10 +36,10 @@
     <!-- Preview Table -->
     <div>
       <h4 class="font-semibold text-color mb-3">
-        Preview of Changes ({{ totalCount() }} transaction{{ totalCount() === 1 ? '' : 's' }})
+        Preview of Changes ({{ totalCount }} transaction{{ totalCount === 1 ? '' : 's' }})
       </h4>
       <p-table
-        [value]="affectedTransactions()"
+        [value]="previewItems()"
         [tableStyle]="{ 'min-width': '100%' }"
         styleClass="p-datatable-sm"
         [scrollable]="true"
@@ -60,14 +60,14 @@
               </span>
             </td>
             <td>
-              @if (txn.oldVendor) {
-                <span class="text-muted-color line-through">{{ txn.oldVendor }}</span>
+              @if (txn.oldValue) {
+                <span class="text-muted-color line-through">{{ txn.oldValue }}</span>
               } @else {
                 <span class="text-muted-color italic">None</span>
               }
             </td>
             <td>
-              <span class="font-medium text-green-600 dark:text-green-400">{{ txn.newVendor }}</span>
+              <span class="font-medium text-green-600 dark:text-green-400">{{ txn.newValue }}</span>
             </td>
           </tr>
         </ng-template>

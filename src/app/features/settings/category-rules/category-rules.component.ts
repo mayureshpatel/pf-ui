@@ -5,17 +5,15 @@ import {ButtonModule} from 'primeng/button';
 import {TableModule} from 'primeng/table';
 import {CardModule} from 'primeng/card';
 import {ConfirmationService} from 'primeng/api';
-import {VendorRule, UnmatchedVendor} from '@models/vendor-rule.model';
-import {VendorRuleApiService} from './services/vendor-rule-api.service';
+import {CategoryRule} from '@models/category-rule.model';
+import {CategoryRuleApiService} from './services/category-rule-api.service';
 import {ToastService} from '@core/services/toast.service';
-import {
-  VendorRuleFormDialogComponent
-} from '@shared/components/vendor-rule-form-dialog/vendor-rule-form-dialog.component';
-import {ApplyRulesDialogComponent, RuleChangePreview} from './components/apply-rules-dialog/apply-rules-dialog.component';
+import {CategoryRuleFormDialogComponent} from './components/category-rule-form-dialog/category-rule-form-dialog.component';
+import {ApplyRulesDialogComponent, RuleChangePreview} from '@features/settings/vendor-rules/components/apply-rules-dialog/apply-rules-dialog.component';
 import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-toolbar';
 
 @Component({
-  selector: 'app-vendor-rules',
+  selector: 'app-category-rules',
   standalone: true,
   imports: [
     CommonModule,
@@ -23,28 +21,25 @@ import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-t
     TableModule,
     CardModule,
     ScreenToolbarComponent,
-    VendorRuleFormDialogComponent,
+    CategoryRuleFormDialogComponent,
     ApplyRulesDialogComponent
   ],
-  templateUrl: './vendor-rules.component.html'
+  templateUrl: './category-rules.component.html'
 })
-export class VendorRulesComponent implements OnInit {
-  private readonly api = inject(VendorRuleApiService);
+export class CategoryRulesComponent implements OnInit {
+  private readonly api = inject(CategoryRuleApiService);
   private readonly toast = inject(ToastService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly destroyRef = inject(DestroyRef);
 
-  rules: WritableSignal<VendorRule[]> = signal([]);
+  rules: WritableSignal<CategoryRule[]> = signal([]);
   loading: WritableSignal<boolean> = signal(false);
   showDialog: WritableSignal<boolean> = signal(false);
   showApplyDialog: WritableSignal<boolean> = signal(false);
   previewItems: WritableSignal<RuleChangePreview[]> = signal([]);
-  unmatchedVendors: WritableSignal<UnmatchedVendor[]> = signal([]);
-  initialKeyword: WritableSignal<string> = signal('');
 
   ngOnInit(): void {
     this.loadRules();
-    this.loadUnmatchedVendors();
   }
 
   loadRules(): void {
@@ -63,24 +58,13 @@ export class VendorRulesComponent implements OnInit {
       });
   }
 
-  loadUnmatchedVendors(): void {
-    this.api.getUnmatchedVendors()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (data) => this.unmatchedVendors.set(data),
-        error: () => {}
-      });
-  }
-
   openCreateDialog(): void {
-    this.initialKeyword.set('');
     this.showDialog.set(true);
   }
 
   onRuleSaved(): void {
     this.showDialog.set(false);
     this.loadRules();
-    this.loadUnmatchedVendors();
   }
 
   openApplyPreview(): void {
@@ -107,9 +91,8 @@ export class VendorRulesComponent implements OnInit {
       .subscribe({
         next: () => {
           this.showApplyDialog.set(false);
-          this.toast.success('Rules applied to existing transactions');
+          this.toast.success('Rules applied to uncategorized transactions');
           this.loadRules();
-          this.loadUnmatchedVendors();
         },
         error: (error) => {
           this.toast.error(error.error?.detail || 'Failed to apply rules');
@@ -117,12 +100,7 @@ export class VendorRulesComponent implements OnInit {
       });
   }
 
-  createRuleFromUnmatched(vendor: UnmatchedVendor): void {
-    this.initialKeyword.set(vendor.originalName);
-    this.showDialog.set(true);
-  }
-
-  deleteRule(rule: VendorRule): void {
+  deleteRule(rule: CategoryRule): void {
     this.confirmationService.confirm({
       header: 'Delete Rule?',
       message: `Are you sure you want to delete the rule for "${rule.keyword}"?`,
@@ -137,7 +115,6 @@ export class VendorRulesComponent implements OnInit {
             next: () => {
               this.toast.success('Rule deleted successfully');
               this.rules.update(current => current.filter(r => r.id !== rule.id));
-              this.loadUnmatchedVendors();
             },
             error: (error) => {
               this.toast.error(error.error?.detail || 'Failed to delete rule');

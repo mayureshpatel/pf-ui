@@ -4,11 +4,10 @@ import { DialogModule } from 'primeng/dialog';
 import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 
-export interface AffectedTransaction {
-  id: number;
+export interface RuleChangePreview {
   description: string;
-  oldVendor: string | null;
-  newVendor: string;
+  oldValue: string | null;
+  newValue: string;
 }
 
 @Component({
@@ -23,18 +22,20 @@ export interface AffectedTransaction {
   templateUrl: './apply-rules-dialog.component.html'
 })
 export class ApplyRulesDialogComponent {
-  // Inputs
   visible = input.required<boolean>();
-  affectedTransactions = input.required<AffectedTransaction[]>();
-  totalCount = input.required<number>();
+  previewItems = input.required<RuleChangePreview[]>();
+  fieldLabel = input<string>('Value');
   loading = input<boolean>(false);
 
-  // Outputs
   visibleChange = output<boolean>();
   confirm = output<void>();
 
+  get totalCount(): number {
+    return this.previewItems().length;
+  }
+
   get isLargeUpdate(): boolean {
-    return this.totalCount() > 100;
+    return this.totalCount > 100;
   }
 
   onCancel(): void {

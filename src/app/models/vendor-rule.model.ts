@@ -10,3 +10,8 @@ export interface VendorRuleDto {
   vendorName: string;
   priority?: number;
 }
+
+export interface UnmatchedVendor {
+  originalName: string;
+  count: number;
+}

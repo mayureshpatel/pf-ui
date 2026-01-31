@@ -1,0 +1,80 @@
+<p-dialog
+  header="Add Category Rule"
+  [modal]="true"
+  [visible]="visible()"
+  (visibleChange)="onHide()"
+  [style]="{ width: '450px' }"
+  [draggable]="false"
+  [resizable]="false">
+
+  <form (ngSubmit)="onSubmit()" class="flex flex-col gap-4">
+    @if (errorMessage()) {
+      <p-message severity="error" [text]="errorMessage()!" styleClass="w-full" />
+    }
+
+    <div class="flex flex-col gap-2">
+      <label for="keyword" class="font-medium text-color">If description contains...</label>
+      <input
+        pInputText
+        id="keyword"
+        [(ngModel)]="formData.keyword"
+        name="keyword"
+        placeholder="e.g., WALMART"
+        class="w-full"
+        required
+      />
+      <small class="text-muted-color">Case-insensitive match</small>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <label for="categoryName" class="font-medium text-color">Assign category to...</label>
+      <p-select
+        id="categoryName"
+        [(ngModel)]="formData.categoryName"
+        name="categoryName"
+        [options]="categoryGroups()"
+        [group]="true"
+        [filter]="true"
+        [showClear]="true"
+        optionLabel="name"
+        optionValue="name"
+        groupLabel="groupLabel"
+        groupChildren="items"
+        placeholder="Select a category"
+        class="w-full"
+        styleClass="w-full"
+      />
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <label for="priority" class="font-medium text-color">Priority (Optional)</label>
+      <p-inputNumber
+        id="priority"
+        [(ngModel)]="formData.priority"
+        name="priority"
+        [min]="0"
+        placeholder="0"
+        class="w-full"
+        styleClass="w-full"
+      />
+      <small class="text-muted-color">Higher numbers run first. Useful for specific vs general rules.</small>
+    </div>
+  </form>
+
+  <ng-template pTemplate="footer">
+    <p-button
+      label="Cancel"
+      icon="pi pi-times"
+      (onClick)="onHide()"
+      [text]="true"
+      severity="secondary"
+    />
+    <p-button
+      label="Create Rule"
+      icon="pi pi-check"
+      (onClick)="onSubmit()"
+      [loading]="loading()"
+      severity="primary"
+    />
+  </ng-template>
+</p-dialog>
