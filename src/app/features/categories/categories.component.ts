@@ -102,8 +102,6 @@ export class CategoriesComponent implements OnInit, OnDestroy {
           enriched.sort((a, b) => {
             const groupCompare = a.groupName.localeCompare(b.groupName);
             if (groupCompare !== 0) return groupCompare;
-            if (a.name === a.groupName) return -1;
-            if (b.name === b.groupName) return 1;
             return a.name.localeCompare(b.name);
           });
 

@@ -12,28 +12,6 @@
       <p-message severity="error" [text]="errorMessage()!" styleClass="w-full" />
     }
 
-    <!-- Date -->
-    <div class="flex flex-col gap-2">
-      <label for="date" class="font-medium text-color">
-        Date <span class="text-red-500">*</span>
-      </label>
-      <p-datePicker
-        id="date"
-        [(ngModel)]="formDate"
-        name="date"
-        (onSelect)="onDateChange($event)"
-        [showButtonBar]="true"
-        [maxDate]="maxDate"
-        dateFormat="mm/dd/yy"
-        placeholder="Select date"
-        styleClass="w-full"
-        required
-      />
-      <small class="text-muted-color">
-        Transaction date cannot be in the future
-      </small>
-    </div>
-
     <!-- Transaction Type -->
     <div class="flex flex-col gap-2">
       <label class="font-medium text-color">
@@ -79,6 +57,28 @@
           </label>
         </div>
       </div>
+    </div>
+
+    <!-- Date -->
+    <div class="flex flex-col gap-2">
+      <label for="date" class="font-medium text-color">
+        Date <span class="text-red-500">*</span>
+      </label>
+      <p-datePicker
+        id="date"
+        [(ngModel)]="formDate"
+        name="date"
+        (onSelect)="onDateChange($event)"
+        [showButtonBar]="true"
+        [maxDate]="maxDate"
+        dateFormat="mm/dd/yy"
+        placeholder="Select date"
+        styleClass="w-full"
+        required
+      />
+      <small class="text-muted-color">
+        Transaction date cannot be in the future
+      </small>
     </div>
 
     <!-- Account -->
@@ -172,7 +172,8 @@
         styleClass="w-full"
         [filter]="true"
         filterPlaceholder="Search categories"
-        [showClear]="true">
+        [showClear]="true"
+        appendTo="body">
         <ng-template let-group pTemplate="group">
           <div class="flex items-center gap-2 px-3 py-2 font-semibold text-sm">
             <span>{{ group.label }}</span>

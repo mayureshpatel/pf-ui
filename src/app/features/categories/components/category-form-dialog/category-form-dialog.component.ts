@@ -68,7 +68,7 @@ export class CategoryFormDialogComponent implements OnChanges {
   parentOptions = computed(() => {
     const currentId = this.category()?.id;
     return this.allCategories()
-      .filter(c => c.id !== currentId) // Exclude self
+      .filter(c => c.id !== currentId && !c.parentId) // Only top-level categories
       .map(c => ({ label: c.name, value: c.id }));
   });
 
