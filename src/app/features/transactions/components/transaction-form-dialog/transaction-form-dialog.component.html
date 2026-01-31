@@ -160,27 +160,38 @@
       <label for="category" class="font-medium text-color">
         Category
       </label>
-      <p-autocomplete
+      <p-select
         id="category"
         [(ngModel)]="formData.categoryName"
-        [dropdown]="true"
         name="category"
-        [suggestions]="filteredCategories()"
-        (completeMethod)="onCategorySearch($event)"
-        [forceSelection]="false"
-        appendTo="body"
-        placeholder="e.g., Groceries"
+        [options]="filteredCategoryGroups()"
+        [group]="true"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="Select a subcategory"
         styleClass="w-full"
-        inputStyleClass="w-full">
-        <ng-template let-category pTemplate="item">
-          <div class="flex items-center gap-2">
-            <div [class]="getCategoryColor(category) + ' w-4 h-4 rounded-full'"></div>
-            <span>{{ category }}</span>
+        [filter]="true"
+        filterPlaceholder="Search categories"
+        [showClear]="true">
+        <ng-template let-group pTemplate="group">
+          <div class="flex items-center gap-2 px-3 py-2 font-semibold text-sm">
+            <span>{{ group.label }}</span>
           </div>
         </ng-template>
-      </p-autocomplete>
+        <ng-template let-category pTemplate="item">
+          <div class="flex items-center gap-2">
+            @if (category.icon) {
+              <i [class]="'pi ' + category.icon + ' text-muted-color'"></i>
+            }
+            @if (category.color) {
+              <div [class]="category.color + ' w-3 h-3 rounded-full'"></div>
+            }
+            <span>{{ category.label }}</span>
+          </div>
+        </ng-template>
+      </p-select>
       <small class="text-muted-color">
-        Select from existing categories or type a new one
+        Only subcategories can be assigned to transactions
       </small>
     </div>
   </form>

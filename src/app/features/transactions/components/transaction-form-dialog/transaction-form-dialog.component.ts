@@ -4,18 +4,18 @@ import { CommonModule } from '@angular/common';
 import { DialogModule } from 'primeng/dialog';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
-import { Select } from 'primeng/select';
+import { Select, SelectModule } from 'primeng/select';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { MessageModule } from 'primeng/message';
 import { DatePicker } from 'primeng/datepicker';
 import { RadioButtonModule } from 'primeng/radiobutton';
-import { AutoComplete } from 'primeng/autocomplete';
 import { Transaction, TransactionFormData, TransactionType } from '@models/transaction.model';
 import { Account } from '@models/account.model';
-import { Category, CategoryType } from '@models/category.model';
+import { CategoryGroup, CategoryType } from '@models/category.model';
 import { TRANSACTION_TYPE_INFO } from '@shared/utils/transaction.utils';
 import { CategoryApiService } from '@features/categories/services/category-api.service';
 import { getCategoryColor } from '@shared/utils/category.utils';
+import { MessageService } from 'primeng/api';
 
 interface AccountOption {
   label: string;
@@ -32,16 +32,17 @@ interface AccountOption {
     ButtonModule,
     InputTextModule,
     Select,
+    SelectModule,
     InputNumberModule,
     MessageModule,
     DatePicker,
-    RadioButtonModule,
-    AutoComplete
+    RadioButtonModule
   ],
   templateUrl: './transaction-form-dialog.component.html'
 })
 export class TransactionFormDialogComponent implements OnChanges, OnInit {
   private readonly categoryApi = inject(CategoryApiService);
+  private readonly messageService = inject(MessageService);
 
   visible = input.required<boolean>();
   transaction = input<Transaction | null>(null);
@@ -60,24 +61,35 @@ export class TransactionFormDialogComponent implements OnChanges, OnInit {
 
   formDate: Date = new Date();
   errorMessage: WritableSignal<string | null> = signal(null);
-  categories: WritableSignal<Category[]> = signal([]);
-  filteredCategories: WritableSignal<string[]> = signal([]);
+  categoryGroups: WritableSignal<CategoryGroup[]> = signal([]);
 
   TransactionType = TransactionType;
   transactionTypeInfo = TRANSACTION_TYPE_INFO;
   getCategoryColor = getCategoryColor;
 
-  categorySuggestions = computed(() => {
+  filteredCategoryGroups = computed(() => {
     const type = this.formData.type;
-    return this.categories()
-      .filter(c => {
-        // Filter logic: show if category type is BOTH or matches transaction type
-        if (!c.type || c.type === CategoryType.BOTH) return true;
-        if (type === TransactionType.INCOME) return c.type === CategoryType.INCOME;
-        if (type === TransactionType.EXPENSE) return c.type === CategoryType.EXPENSE;
-        return true; // Show all for TRANSFERS or others
-      })
-      .map(c => c.name);
+    const groups = this.categoryGroups();
+
+    return groups
+      .map(group => ({
+        label: group.groupLabel,
+        value: group.groupId,
+        items: group.items
+          .filter(cat => {
+            if (!cat.type || cat.type === CategoryType.BOTH) return true;
+            if (type === TransactionType.INCOME) return cat.type === CategoryType.INCOME;
+            if (type === TransactionType.EXPENSE) return cat.type === CategoryType.EXPENSE;
+            return true;
+          })
+          .map(cat => ({
+            label: cat.name,
+            value: cat.name,
+            icon: cat.icon,
+            color: cat.color
+          }))
+      }))
+      .filter(group => group.items.length > 0);
   });
 
   accountOptions = (): AccountOption[] => {
@@ -92,18 +104,16 @@ export class TransactionFormDialogComponent implements OnChanges, OnInit {
   }
 
   loadCategories(): void {
-    this.categoryApi.getCategories().subscribe({
-      next: (categories) => this.categories.set(categories),
-      error: () => {} // Ignore errors - categories are optional
+    this.categoryApi.getGroupedCategories().subscribe({
+      next: (groups) => this.categoryGroups.set(groups),
+      error: () => {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to load categories'
+        });
+      }
     });
-  }
-
-  onCategorySearch(event: any): void {
-    const query = event.query.toLowerCase();
-    const suggestions = this.categorySuggestions();
-    this.filteredCategories.set(
-      suggestions.filter(cat => cat.toLowerCase().includes(query))
-    );
   }
 
   ngOnChanges(): void {

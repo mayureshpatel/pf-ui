@@ -18,14 +18,22 @@
       <p-select
         id="category"
         [(ngModel)]="selectedCategoryId"
-        [options]="categoryOptions()"
+        name="category"
+        [options]="categoryGroups()"
+        [group]="true"
         optionLabel="label"
         optionValue="value"
-        name="categoryId"
         placeholder="Select a category"
-        class="w-full"
-        appendTo="body"
-      />
+        styleClass="w-full"
+        [filter]="true"
+        filterPlaceholder="Search categories"
+        required>
+        <ng-template let-group pTemplate="group">
+          <div class="flex items-center gap-2 px-3 py-2 font-semibold text-sm">
+            <span>{{ group.label }}</span>
+          </div>
+        </ng-template>
+      </p-select>
     </div>
 
     <!-- Amount -->

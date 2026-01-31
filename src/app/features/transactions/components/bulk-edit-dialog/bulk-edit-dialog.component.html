@@ -35,16 +35,25 @@
         <label for="category-input" class="block text-sm font-medium mb-2">
           Category
         </label>
-        <p-autoComplete
+        <p-select
           inputId="category-input"
           [(ngModel)]="categoryName"
-          [suggestions]="filteredCategories()"
-          (completeMethod)="filterCategories($event)"
+          [options]="categoryGroups()"
+          [group]="true"
+          optionLabel="label"
+          optionValue="value"
           [disabled]="!updateCategory()"
-          placeholder="Select category"
-          [dropdown]="true"
+          placeholder="Select subcategory"
           styleClass="w-full"
-          [inputStyleClass]="'w-full'" />
+          [filter]="true"
+          filterPlaceholder="Search categories"
+          [showClear]="true">
+          <ng-template let-group pTemplate="group">
+            <div class="flex items-center gap-2 px-3 py-2 font-semibold text-sm">
+              <span>{{ group.label }}</span>
+            </div>
+          </ng-template>
+        </p-select>
       </div>
     </div>
 

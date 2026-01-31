@@ -25,3 +25,9 @@ export interface CategoryFormData {
 export interface CategoryWithUsage extends Category {
   transactionCount: number;
 }
+
+export interface CategoryGroup {
+  groupLabel: string;
+  groupId: number;
+  items: Category[];
+}

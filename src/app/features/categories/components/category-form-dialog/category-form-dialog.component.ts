@@ -126,15 +126,19 @@ export class CategoryFormDialogComponent implements OnChanges {
       return;
     }
 
-    // Check for duplicate names (case-insensitive)
+    // Check for duplicate names within same parent only (case-insensitive)
     const currentCategory = this.category();
     const isDuplicate = this.allCategories().some(
       cat => cat.name.toLowerCase() === this.formData.name.trim().toLowerCase()
+        && cat.parentId === this.formData.parentId  // Check same parent
         && (!currentCategory || cat.id !== currentCategory.id)
     );
 
     if (isDuplicate) {
-      this.errorMessage.set('A category with this name already exists');
+      const parentContext = this.formData.parentId
+        ? 'under the same parent category'
+        : 'as a top-level category';
+      this.errorMessage.set(`A category with this name already exists ${parentContext}`);
       return;
     }
 

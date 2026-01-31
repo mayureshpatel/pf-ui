@@ -5,8 +5,8 @@ import { DialogModule } from 'primeng/dialog';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { CheckboxModule } from 'primeng/checkbox';
-import { AutoCompleteModule } from 'primeng/autocomplete';
-import { AutoCompleteCompleteEvent } from 'primeng/autocomplete';
+import { SelectModule } from 'primeng/select';
+import { SelectItemGroup } from 'primeng/api';
 import { Transaction } from '../../../../models/transaction.model';
 import { CategoryApiService } from '../../../categories/services/category-api.service';
 
@@ -29,7 +29,7 @@ export interface BulkEditData {
     ButtonModule,
     InputTextModule,
     CheckboxModule,
-    AutoCompleteModule
+    SelectModule
   ],
   templateUrl: './bulk-edit-dialog.component.html'
 })
@@ -51,9 +51,8 @@ export class BulkEditDialogComponent {
   updateDescription = signal(false);
   description = signal<string | undefined>(undefined);
 
-  // Category autocomplete
-  categories = signal<string[]>([]);
-  filteredCategories = signal<string[]>([]);
+  // Category groups for dropdown
+  categoryGroups = signal<SelectItemGroup[]>([]);
 
   constructor(private categoryApi: CategoryApiService) {
     // Load categories on init
@@ -68,19 +67,18 @@ export class BulkEditDialogComponent {
   }
 
   private loadCategories(): void {
-    this.categoryApi.getCategories().subscribe({
-      next: (categories) => {
-        this.categories.set(categories.map(c => c.name));
-        this.filteredCategories.set(categories.map(c => c.name));
+    this.categoryApi.getGroupedCategories().subscribe({
+      next: (groups) => {
+        const selectGroups: SelectItemGroup[] = groups.map(g => ({
+          label: g.groupLabel,
+          items: g.items.map(c => ({
+            label: c.name,
+            value: c.name
+          }))
+        }));
+        this.categoryGroups.set(selectGroups);
       }
     });
-  }
-
-  filterCategories(event: AutoCompleteCompleteEvent): void {
-    const query = event.query.toLowerCase();
-    this.filteredCategories.set(
-      this.categories().filter(cat => cat.toLowerCase().includes(query))
-    );
   }
 
   get transactionCount(): number {
