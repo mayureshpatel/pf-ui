@@ -130,7 +130,7 @@ export class CategoryFormDialogComponent implements OnChanges {
     const currentCategory = this.category();
     const isDuplicate = this.allCategories().some(
       cat => cat.name.toLowerCase() === this.formData.name.trim().toLowerCase()
-        && cat.parentId === this.formData.parentId  // Check same parent
+        && (cat.parentId ?? null) === (this.formData.parentId ?? null)  // Check same parent
         && (!currentCategory || cat.id !== currentCategory.id)
     );
 

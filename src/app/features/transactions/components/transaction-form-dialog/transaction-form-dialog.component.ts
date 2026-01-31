@@ -14,7 +14,6 @@ import { Account } from '@models/account.model';
 import { CategoryGroup, CategoryType } from '@models/category.model';
 import { TRANSACTION_TYPE_INFO } from '@shared/utils/transaction.utils';
 import { CategoryApiService } from '@features/categories/services/category-api.service';
-import { getCategoryColor } from '@shared/utils/category.utils';
 import { MessageService } from 'primeng/api';
 
 interface AccountOption {
@@ -65,7 +64,6 @@ export class TransactionFormDialogComponent implements OnChanges, OnInit {
 
   TransactionType = TransactionType;
   transactionTypeInfo = TRANSACTION_TYPE_INFO;
-  getCategoryColor = getCategoryColor;
 
   filteredCategoryGroups = computed(() => {
     const type = this.formData.type;
