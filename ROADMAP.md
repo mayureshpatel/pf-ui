@@ -1144,7 +1144,7 @@ export interface Pagination {
     "@angular/platform-browser": "^21.1.0",
     "@angular/router": "^21.1.0",
     "@primeuix/themes": "^2.0.3",
-    "primeng": "^21.0.4",
+    "primeng": "^21.1.0",
     "primeicons": "^7.0.0",
     "tailwindcss": "^4.1.18",
     "@tailwindcss/postcss": "^4.1.18",
