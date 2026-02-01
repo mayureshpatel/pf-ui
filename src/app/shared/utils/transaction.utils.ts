@@ -26,6 +26,11 @@ export const TRANSACTION_TYPE_INFO: Record<TransactionType, TransactionTypeInfo>
     icon: 'pi-arrow-right',
     color: 'text-blue-600',
     label: 'Transfer Out'
+  },
+  [TransactionType.ADJUSTMENT]: {
+    icon: 'pi-sliders-h',
+    color: 'text-gray-600',
+    label: 'Adjustment'
   }
 };
 
@@ -35,6 +40,10 @@ export function getTransactionTypeInfo(type: TransactionType): TransactionTypeIn
 
 export function formatTransactionAmount(amount: number, type: TransactionType): string {
   const formatted = formatCurrency(Math.abs(amount));
+
+  if (type === TransactionType.ADJUSTMENT) {
+    return amount >= 0 ? `+${formatted}` : `-${formatted}`;
+  }
 
   switch (type) {
     case TransactionType.INCOME:
@@ -46,6 +55,8 @@ export function formatTransactionAmount(amount: number, type: TransactionType): 
       return `-${formatted}`; // Visually negative for outgoing
     case TransactionType.TRANSFER_IN:
       return `+${formatted}`; // Visually positive for incoming
+    default:
+      return formatted;
   }
 }
 

@@ -22,6 +22,7 @@ import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-t
     ButtonModule,
     TableModule,
     CardModule,
+    TooltipModule,
     ScreenToolbarComponent,
     AccountSummaryCardsComponent,
     AccountFormDrawerComponent
@@ -79,7 +80,7 @@ export class AccountsComponent implements OnInit {
 
     if (account) {
       // Update existing account
-      this.accountApi.updateAccount(account.id, formData)
+      this.accountApi.update(account.id, formData)
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({
           next: (updated) => {
@@ -92,13 +93,13 @@ export class AccountsComponent implements OnInit {
             this.toast.success('Account updated successfully');
             this.showDialog.set(false);
           },
-          error: (error) => {
+          error: (error: any) => {
             this.toast.error(error.error?.detail || 'Failed to update account');
           }
         });
     } else {
       // Create new account
-      this.accountApi.createAccount(formData)
+      this.accountApi.create(formData)
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({
           next: (created) => {
@@ -106,7 +107,7 @@ export class AccountsComponent implements OnInit {
             this.toast.success('Account created successfully');
             this.showDialog.set(false);
           },
-          error: (error) => {
+          error: (error: any) => {
             this.toast.error(error.error?.detail || 'Failed to create account');
           }
         });
@@ -122,14 +123,14 @@ export class AccountsComponent implements OnInit {
       rejectLabel: 'Cancel',
       acceptButtonStyleClass: 'p-button-danger',
       accept: () => {
-        this.accountApi.deleteAccount(account.id)
+        this.accountApi.delete(account.id)
           .pipe(takeUntilDestroyed(this.destroyRef))
           .subscribe({
             next: () => {
               this.accounts.set(this.accounts().filter(a => a.id !== account.id));
               this.toast.success('Account deleted successfully');
             },
-            error: (error) => {
+            error: (error: any) => {
               const message = error.error?.detail || 'Failed to delete account';
               this.toast.error(message);
             }

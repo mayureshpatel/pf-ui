@@ -15,15 +15,19 @@ export class AccountApiService {
     return this.http.get<Account[]>(this.apiUrl);
   }
 
-  createAccount(data: AccountFormData): Observable<Account> {
-    return this.http.post<Account>(this.apiUrl, data);
+  create(account: AccountFormData): Observable<Account> {
+    return this.http.post<Account>(this.apiUrl, account);
   }
 
-  updateAccount(id: number, data: AccountFormData): Observable<Account> {
-    return this.http.put<Account>(`${this.apiUrl}/${id}`, data);
+  update(id: number, account: AccountFormData): Observable<Account> {
+    return this.http.put<Account>(`${this.apiUrl}/${id}`, account);
   }
 
-  deleteAccount(id: number): Observable<void> {
+  reconcile(id: number, targetBalance: number): Observable<Account> {
+    return this.http.post<Account>(`${this.apiUrl}/${id}/reconcile`, { targetBalance });
+  }
+
+  delete(id: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
 }

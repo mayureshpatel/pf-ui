@@ -84,26 +84,51 @@
     <!-- Current Balance (Only for creation or context) -->
     <div class="flex flex-col gap-2">
       <label for="balance" class="text-sm font-medium text-surface-700">
-        {{ isEditMode ? 'Current Balance' : 'Initial Balance' }} <span class="text-red-500">*</span>
+        Current Balance <span class="text-red-500">*</span>
       </label>
-      <p-inputNumber
-        id="balance"
-        [(ngModel)]="formData.currentBalance"
-        name="balance"
-        mode="currency"
-        currency="USD"
-        locale="en-US"
-        [minFractionDigits]="2"
-        [maxFractionDigits]="2"
-        styleClass="w-full"
-        inputStyleClass="w-full font-bold text-lg"
-        required
-      />
-      @if (isEditMode) {
+      
+      @if (!isEditMode) {
+        <p-inputNumber
+          id="balance"
+          [(ngModel)]="formData.currentBalance"
+          name="balance"
+          mode="currency"
+          currency="USD"
+          locale="en-US"
+          [minFractionDigits]="2"
+          [maxFractionDigits]="2"
+          styleClass="w-full"
+          inputStyleClass="w-full font-bold text-lg"
+          required
+        />
+        <small class="text-muted-color">
+          Initial balance for the new account.
+        </small>
+      } @else {
+        <div class="flex items-center gap-3">
+          <span class="text-2xl font-bold font-mono">
+            {{ formData.currentBalance | currency }}
+          </span>
+          <p-button 
+            label="Reconcile" 
+            icon="pi pi-check-circle" 
+            severity="secondary" 
+            size="small"
+            (onClick)="openReconcileDialog()"
+          />
+        </div>
         <small class="text-muted-color italic">
-          Note: Manually changing the balance may cause inconsistencies with transaction history.
+          Balance cannot be edited directly. Use 'Reconcile' to adjust.
         </small>
       }
     </div>
   </form>
+  
+  @if (isEditMode && account()) {
+    <app-reconcile-dialog
+      [(visible)]="showReconcileDialog"
+      [account]="account()!"
+      (reconciled)="onReconciled()"
+    />
+  }
 </app-drawer>

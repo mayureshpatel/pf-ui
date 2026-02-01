@@ -10,6 +10,7 @@ import {Account, AccountFormData, AccountType} from '@models/account.model';
 import {BankName, BankOption} from '@models/transaction.model';
 import {ACCOUNT_TYPE_INFO} from '@shared/utils/account.utils';
 import {DrawerComponent} from '@shared/components/drawer/drawer.component';
+import {ReconcileDialogComponent} from '../reconcile-dialog/reconcile-dialog.component';
 
 interface AccountTypeOption {
   label: string;
@@ -27,7 +28,8 @@ interface AccountTypeOption {
     Select,
     InputNumberModule,
     MessageModule,
-    DrawerComponent
+    DrawerComponent,
+    ReconcileDialogComponent
   ],
   templateUrl: './account-form-drawer.component.html'
 })
@@ -46,6 +48,7 @@ export class AccountFormDrawerComponent implements OnChanges {
   };
 
   errorMessage: WritableSignal<string | null> = signal(null);
+  showReconcileDialog: WritableSignal<boolean> = signal(false);
 
   accountTypes: AccountTypeOption[] = Object.values(AccountType).map(type => ({
     label: ACCOUNT_TYPE_INFO[type].label,
@@ -132,5 +135,16 @@ export class AccountFormDrawerComponent implements OnChanges {
 
   get drawerIcon(): string {
     return this.isEditMode ? 'pi-wallet' : 'pi-plus';
+  }
+
+  openReconcileDialog(): void {
+    this.showReconcileDialog.set(true);
+  }
+
+  onReconciled(): void {
+    // Emit save to trigger parent refresh (which usually re-fetches the list)
+    this.save.emit(this.formData);
+    // Also close the drawer
+    this.visible.set(false);
   }
 }

@@ -19,7 +19,8 @@ export enum TransactionType {
   EXPENSE = 'EXPENSE',
   TRANSFER = 'TRANSFER',
   TRANSFER_IN = 'TRANSFER_IN',
-  TRANSFER_OUT = 'TRANSFER_OUT'
+  TRANSFER_OUT = 'TRANSFER_OUT',
+  ADJUSTMENT = 'ADJUSTMENT'
 }
 
 export interface TransactionFormData {
