@@ -1,0 +1,34 @@
+<div class="h-full flex flex-col gap-4">
+  <app-screen-toolbar
+    title="Settings"
+    subtitle="Manage application configuration and automation rules"
+    icon="pi pi-cog"
+  />
+
+  <div class="flex-1 overflow-hidden card">
+    <p-tabs value="0">
+      <p-tablist>
+        <p-tab value="0">
+          <div class="flex items-center gap-2">
+            <i class="pi pi-shop"></i>
+            <span>Vendor Rules</span>
+          </div>
+        </p-tab>
+        <p-tab value="1">
+            <div class="flex items-center gap-2">
+              <i class="pi pi-tags"></i>
+              <span>Category Rules</span>
+            </div>
+        </p-tab>
+      </p-tablist>
+      <p-tabpanels>
+        <p-tabpanel value="0">
+          <app-vendor-rules />
+        </p-tabpanel>
+        <p-tabpanel value="1">
+          <app-category-rules />
+        </p-tabpanel>
+      </p-tabpanels>
+    </p-tabs>
+  </div>
+</div>

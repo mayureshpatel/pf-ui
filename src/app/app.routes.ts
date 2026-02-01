@@ -54,18 +54,7 @@ export const routes: Routes = [
       },
       {
         path: 'settings',
-        children: [
-          {
-            path: 'vendor-rules',
-            loadComponent: () =>
-              import('./features/settings/vendor-rules/vendor-rules.component').then((m) => m.VendorRulesComponent)
-          },
-          {
-            path: 'category-rules',
-            loadComponent: () =>
-              import('./features/settings/category-rules/category-rules.component').then((m) => m.CategoryRulesComponent)
-          }
-        ]
+        loadComponent: () => import('./features/settings/settings.component').then(m => m.SettingsComponent)
       },
       {
         path: 'reports',
