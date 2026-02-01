@@ -1,0 +1,44 @@
+<p-drawer
+  [(visible)]="visible"
+  position="right"
+  [styleClass]="width() + ' flex flex-col'"
+  [modal]="true"
+  [dismissible]="!saving()"
+  (onHide)="cancel.emit()">
+  
+  <ng-template pTemplate="header">
+    <div class="flex items-center gap-2">
+      @if (icon()) {
+        <i [class]="'pi ' + icon() + ' text-xl text-primary'"></i>
+      }
+      <h2 class="text-xl font-bold m-0 text-surface-900">{{ title() }}</h2>
+    </div>
+  </ng-template>
+
+  <div class="flex flex-col h-full overflow-hidden">
+    <!-- Body: Content goes here via ng-content -->
+    <div class="flex-grow overflow-y-auto p-6">
+      <ng-content></ng-content>
+    </div>
+
+    <!-- Footer: Sticky action buttons -->
+    <div class="p-4 border-t border-surface-200 bg-surface-50 flex justify-end gap-3">
+      <button
+        type="button"
+        class="p-button p-component p-button-secondary p-button-text"
+        (click)="onCancel($event)"
+        [disabled]="saving()">
+        <span class="p-button-icon p-button-icon-left pi pi-times" aria-hidden="true"></span>
+        <span class="p-button-label">{{ cancelLabel() }}</span>
+      </button>
+      <p-button
+        [label]="saveLabel()"
+        [icon]="saving() ? 'pi pi-spinner pi-spin' : 'pi pi-check'"
+        (onClick)="onSave()"
+        [loading]="saving()"
+        [disabled]="!valid() || saving()"
+        severity="primary"
+      />
+    </div>
+  </div>
+</p-drawer>
