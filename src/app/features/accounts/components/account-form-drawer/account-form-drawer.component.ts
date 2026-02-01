@@ -7,6 +7,7 @@ import {Select} from 'primeng/select';
 import {InputNumberModule} from 'primeng/inputnumber';
 import {MessageModule} from 'primeng/message';
 import {Account, AccountFormData, AccountType} from '@models/account.model';
+import {BankName, BankOption} from '@models/transaction.model';
 import {ACCOUNT_TYPE_INFO} from '@shared/utils/account.utils';
 import {DrawerComponent} from '@shared/components/drawer/drawer.component';
 
@@ -40,7 +41,8 @@ export class AccountFormDrawerComponent implements OnChanges {
   formData: AccountFormData = {
     name: '',
     type: AccountType.CHECKING,
-    currentBalance: 0
+    currentBalance: 0,
+    bankName: undefined
   };
 
   errorMessage: WritableSignal<string | null> = signal(null);
@@ -51,13 +53,37 @@ export class AccountFormDrawerComponent implements OnChanges {
     icon: ACCOUNT_TYPE_INFO[type].icon
   }));
 
+  bankOptions: BankOption[] = [
+    {
+      label: 'Standard CSV',
+      value: BankName.STANDARD,
+      description: 'Generic format (Date, Description, Amount, Type)'
+    },
+    {
+      label: 'Capital One',
+      value: BankName.CAPITAL_ONE,
+      description: 'Capital One bank export format'
+    },
+    {
+      label: 'Discover',
+      value: BankName.DISCOVER,
+      description: 'Discover credit card export format'
+    },
+    {
+      label: 'Synovus',
+      value: BankName.SYNOVUS,
+      description: 'Synovus bank export format'
+    }
+  ];
+
   ngOnChanges(): void {
     const acc = this.account();
     if (acc) {
       this.formData = {
         name: acc.name,
         type: acc.type,
-        currentBalance: acc.currentBalance
+        currentBalance: acc.currentBalance,
+        bankName: acc.bankName
       };
     } else {
       this.resetForm();
@@ -85,7 +111,8 @@ export class AccountFormDrawerComponent implements OnChanges {
     this.formData = {
       name: '',
       type: AccountType.CHECKING,
-      currentBalance: 0
+      currentBalance: 0,
+      bankName: undefined
     };
     this.errorMessage.set(null);
   }

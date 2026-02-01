@@ -1,9 +1,4 @@
-export interface Account {
-  id: number;
-  name: string;
-  type: AccountType;
-  currentBalance: number;
-}
+import { BankName } from './transaction.model';
 
 export enum AccountType {
   CHECKING = 'CHECKING',
@@ -13,10 +8,19 @@ export enum AccountType {
   CASH = 'CASH'
 }
 
+export interface Account {
+  id: number;
+  name: string;
+  type: AccountType;
+  currentBalance: number;
+  bankName?: BankName;
+}
+
 export interface AccountFormData {
   name: string;
   type: AccountType;
   currentBalance: number;
+  bankName?: BankName;
 }
 
 export interface AccountSummary {

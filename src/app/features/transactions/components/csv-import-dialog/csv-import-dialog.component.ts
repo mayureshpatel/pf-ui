@@ -150,13 +150,23 @@ export class CsvImportDialogComponent {
     if (files && files.length > 0) {
       const newItems: BatchImportItem[] = [];
       for (const file of files) {
-        // Avoid adding duplicates by name (simple check)
         if (!this.importItems().some(i => i.file.name === file.name)) {
+          const detectedBank = this.detectBankName(file.name);
+          let suggestedAccountId: number | null = null;
+
+          // If we detected a bank, see if we can find a unique account for it
+          if (detectedBank) {
+             const matchingAccounts = this.accounts().filter(a => a.bankName === detectedBank);
+             if (matchingAccounts.length === 1) {
+                 suggestedAccountId = matchingAccounts[0].id;
+             }
+          }
+
           newItems.push({
             id: crypto.randomUUID(),
             file: file,
-            accountId: null,
-            bankName: null,
+            accountId: suggestedAccountId,
+            bankName: detectedBank,
             previews: [],
             status: 'pending'
           });
@@ -166,7 +176,33 @@ export class CsvImportDialogComponent {
       this.generalMessage.set(null);
     }
   }
+
+  onAccountChange(index: number, accountId: number): void {
+      this.importItems.update(items => {
+          const updated = [...items];
+          const item = { ...updated[index] };
+          
+          item.accountId = accountId;
+
+          // Find the selected account
+          const account = this.accounts().find(a => a.id === accountId);
+          if (account && account.bankName) {
+              item.bankName = account.bankName;
+          }
+          
+          updated[index] = item;
+          return updated;
+      });
+  }
   
+  private detectBankName(fileName: string): BankName | null {
+    const lowerName = fileName.toLowerCase();
+    if (lowerName.includes('discover')) return BankName.DISCOVER;
+    if (lowerName.includes('capital') && lowerName.includes('one')) return BankName.CAPITAL_ONE;
+    if (lowerName.includes('synovus')) return BankName.SYNOVUS;
+    return null;
+  }
+
   removeItem(index: number): void {
     this.importItems.update(items => items.filter((_, i) => i !== index));
   }

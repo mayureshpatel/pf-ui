@@ -53,6 +53,34 @@
       </p-select>
     </div>
 
+    <!-- Bank Format (Optional) -->
+    <div class="flex flex-col gap-2">
+      <label for="bankName" class="text-sm font-medium text-surface-700">
+        Default Bank Format
+      </label>
+      <p-select
+        id="bankName"
+        [(ngModel)]="formData.bankName"
+        name="bankName"
+        [options]="bankOptions"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="Select bank format"
+        styleClass="w-full"
+        appendTo="body"
+        [showClear]="true">
+        <ng-template let-option pTemplate="item">
+          <div class="flex flex-col">
+            <span class="font-medium">{{ option.label }}</span>
+            <small class="text-muted-color">{{ option.description }}</small>
+          </div>
+        </ng-template>
+      </p-select>
+      <small class="text-muted-color">
+        Automatically selects the correct CSV parser for imports
+      </small>
+    </div>
+
     <!-- Current Balance (Only for creation or context) -->
     <div class="flex flex-col gap-2">
       <label for="balance" class="text-sm font-medium text-surface-700">

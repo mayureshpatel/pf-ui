@@ -139,6 +139,7 @@
                                <p-select 
                                    [options]="accountOptions()" 
                                    [(ngModel)]="item.accountId"
+                                   (onChange)="onAccountChange(i, $event.value)"
                                    optionLabel="label" 
                                    optionValue="value" 
                                    placeholder="Select Account"
