@@ -170,7 +170,9 @@ export class TransactionsComponent implements OnInit, OnDestroy {
     {label: 'All Types', value: null},
     {label: 'Income', value: TransactionType.INCOME},
     {label: 'Expense', value: TransactionType.EXPENSE},
-    {label: 'Transfer', value: TransactionType.TRANSFER}
+    {label: 'Transfer (All)', value: TransactionType.TRANSFER},
+    {label: 'Transfer In', value: TransactionType.TRANSFER_IN},
+    {label: 'Transfer Out', value: TransactionType.TRANSFER_OUT}
   ];
 
   accountOptions = computed(() => {
