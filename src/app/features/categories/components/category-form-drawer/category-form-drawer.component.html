@@ -1,0 +1,122 @@
+<app-drawer
+  [(visible)]="visible"
+  [title]="drawerTitle"
+  [icon]="drawerIcon"
+  [saving]="saving()"
+  [saveLabel]="isEditMode ? 'Update' : 'Create'"
+  (save)="onSubmit()"
+  (cancel)="onHide()">
+
+  <form class="flex flex-col gap-6">
+    @if (errorMessage()) {
+      <p-message severity="error" [text]="errorMessage()!" styleClass="w-full" />
+    }
+
+    <!-- Category Name -->
+    <div class="flex flex-col gap-2">
+      <label for="name" class="text-sm font-medium text-surface-700">
+        Category Name <span class="text-red-500">*</span>
+      </label>
+      <input
+        pInputText
+        id="name"
+        [(ngModel)]="formData.name"
+        name="name"
+        placeholder="e.g., Dining Out, Rent, Salary"
+        class="w-full"
+        maxlength="50"
+        required
+      />
+    </div>
+
+    <!-- Parent Category -->
+    <div class="flex flex-col gap-2">
+      <label for="parentId" class="text-sm font-medium text-surface-700">Parent Category</label>
+      <p-select
+        id="parentId"
+        [(ngModel)]="formData.parentId"
+        name="parentId"
+        [options]="parentOptions()"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="None (Top Level)"
+        styleClass="w-full"
+        [showClear]="true"
+      />
+      <small class="text-muted-color">Grouping categories makes them easier to manage in reports.</small>
+    </div>
+
+    <!-- Type -->
+    <div class="flex flex-col gap-2">
+      <label class="text-sm font-medium text-surface-700">Transaction Type</label>
+      <div class="flex gap-4">
+        @for (opt of typeOptions; track opt.value) {
+          <div class="flex items-center gap-2">
+            <p-radioButton
+              [(ngModel)]="formData.type"
+              name="type"
+              [value]="opt.value"
+              [inputId]="'type-' + opt.value"
+            />
+            <label [for]="'type-' + opt.value" class="cursor-pointer text-sm">{{ opt.label }}</label>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Color Selection -->
+    <div class="flex flex-col gap-3">
+      <label class="text-sm font-medium text-surface-700">Color</label>
+      <div class="flex flex-wrap gap-2">
+        @for (color of availableColors; track color) {
+          <div
+            (click)="selectColor(color)"
+            [class]="color + ' w-8 h-8 rounded-full cursor-pointer transition-transform hover:scale-110 flex items-center justify-center'"
+            [class.ring-2]="formData.color === color"
+            [class.ring-offset-2]="formData.color === color"
+            [class.ring-primary-500]="formData.color === color"
+            [pTooltip]="color"
+            tooltipPosition="top">
+            @if (formData.color === color) {
+              <i class="pi pi-check text-white text-xs"></i>
+            }
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Icon Selection -->
+    <div class="flex flex-col gap-3">
+      <label class="text-sm font-medium text-surface-700">Icon</label>
+      <div class="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-1 border border-surface-200 rounded-lg bg-surface-50">
+        @for (icon of iconOptions; track icon) {
+          <div
+            (click)="selectIcon(icon)"
+            class="w-10 h-10 flex items-center justify-center rounded-md cursor-pointer transition-all hover:bg-white hover:shadow-sm"
+            [class.bg-primary-500]="formData.icon === icon"
+            [class.text-white]="formData.icon === icon"
+            [class.text-surface-600]="formData.icon !== icon"
+            [pTooltip]="getIconLabel(icon)"
+            tooltipPosition="top">
+            <i [class]="'pi ' + icon + ' text-lg'"></i>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Preview -->
+    <div class="mt-4 p-4 rounded-xl border border-dashed border-surface-300 bg-surface-50 flex items-center justify-center gap-4">
+      <div class="flex flex-col items-center gap-2">
+        <span class="text-xs text-surface-400 font-medium uppercase tracking-widest">Preview</span>
+        <div class="flex items-center gap-3 px-4 py-2 bg-white rounded-full shadow-sm border border-surface-100">
+          <div [class]="previewColor + ' w-6 h-6 rounded-full flex items-center justify-center text-white'">
+            @if (formData.icon) {
+              <i [class]="'pi ' + formData.icon + ' text-[10px]'"></i>
+            }
+          </div>
+          <span class="font-medium text-surface-900">{{ formData.name || 'Category Name' }}</span>
+        </div>
+      </div>
+    </div>
+  </form>
+</app-drawer>

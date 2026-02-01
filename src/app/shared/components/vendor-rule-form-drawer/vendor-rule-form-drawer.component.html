@@ -1,0 +1,70 @@
+<app-drawer
+  [(visible)]="visible"
+  title="Create Vendor Rule"
+  icon="pi-filter"
+  [saving]="loading()"
+  saveLabel="Create Rule"
+  (save)="onSubmit()"
+  (cancel)="onHide()">
+
+  <form class="flex flex-col gap-6">
+    <div class="bg-blue-50 p-4 rounded-lg text-sm text-blue-700 mb-2">
+      <i class="pi pi-info-circle mr-2"></i>
+      Vendor rules automatically clean up transaction descriptions during import.
+    </div>
+
+    @if (errorMessage()) {
+      <p-message severity="error" [text]="errorMessage()!" styleClass="w-full" />
+    }
+
+    <!-- Keyword -->
+    <div class="flex flex-col gap-2">
+      <label for="keyword" class="text-sm font-medium text-surface-700">
+        If description contains <span class="text-red-500">*</span>
+      </label>
+      <input
+        pInputText
+        id="keyword"
+        [(ngModel)]="formData.keyword"
+        name="keyword"
+        placeholder="e.g., WALMART SUPERCENTER"
+        class="w-full"
+        required
+      />
+      <small class="text-muted-color">The text to look for (case-insensitive)</small>
+    </div>
+
+    <!-- Replacement -->
+    <div class="flex flex-col gap-2">
+      <label for="vendorName" class="text-sm font-medium text-surface-700">
+        Rename vendor to <span class="text-red-500">*</span>
+      </label>
+      <input
+        pInputText
+        id="vendorName"
+        [(ngModel)]="formData.vendorName"
+        name="vendorName"
+        placeholder="e.g., Walmart"
+        class="w-full"
+        required
+      />
+    </div>
+
+    <!-- Priority -->
+    <div class="flex flex-col gap-2">
+      <label for="priority" class="text-sm font-medium text-surface-700">
+        Priority
+      </label>
+      <p-inputNumber
+        id="priority"
+        [(ngModel)]="formData.priority"
+        name="priority"
+        [showButtons]="true"
+        [min]="0"
+        [max]="100"
+        styleClass="w-full"
+      />
+      <small class="text-muted-color">Higher priority rules run first (0-100)</small>
+    </div>
+  </form>
+</app-drawer>

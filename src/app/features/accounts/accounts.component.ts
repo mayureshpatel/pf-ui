@@ -9,7 +9,7 @@ import {ConfirmationService} from 'primeng/api';
 import {Account, AccountFormData} from '@models/account.model';
 import {AccountApiService} from './services/account-api.service';
 import {AccountSummaryCardsComponent} from './components/account-summary-cards/account-summary-cards.component';
-import {AccountFormDialogComponent} from './components/account-form-dialog/account-form-dialog.component';
+import {AccountFormDrawerComponent} from './components/account-form-drawer/account-form-drawer.component';
 import {ToastService} from '@core/services/toast.service';
 import {formatCurrency, getAccountTypeInfo} from '@shared/utils/account.utils';
 import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-toolbar';
@@ -22,10 +22,9 @@ import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-t
     ButtonModule,
     TableModule,
     CardModule,
-    TooltipModule,
     ScreenToolbarComponent,
     AccountSummaryCardsComponent,
-    AccountFormDialogComponent
+    AccountFormDrawerComponent
   ],
   templateUrl: './accounts.component.html'
 })

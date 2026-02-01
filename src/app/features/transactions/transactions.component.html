@@ -217,7 +217,9 @@
         [rowsPerPageOptions]="[20, 50, 100]"
         styleClass="p-datatable-sm"
         responsiveLayout="scroll"
-        dataKey="id">
+        dataKey="id"
+        editMode="cell"
+        (onEditComplete)="onCellEditComplete($event)">
 
         <ng-template pTemplate="header">
           <tr>
@@ -234,10 +236,10 @@
             <th pSortableColumn="description">
               Description <p-sortIcon field="description" />
             </th>
-            <th pSortableColumn="vendorName">
+            <th pSortableColumn="vendorName" style="width: 200px">
               Vendor <p-sortIcon field="vendorName" />
             </th>
-            <th pSortableColumn="categoryName">
+            <th pSortableColumn="categoryName" style="width: 200px">
               Category <p-sortIcon field="categoryName" />
             </th>
             <th>Account</th>
@@ -272,23 +274,54 @@
               </span>
             </td>
 
-            <!-- Vendor -->
-            <td>
-              <span class="text-color">{{ transaction.vendorName || '-' }}</span>
+            <!-- Vendor (Editable) -->
+            <td [pEditableColumn]="transaction" pEditableColumnField="vendorName">
+              <p-cellEditor>
+                <ng-template pTemplate="input">
+                  <input
+                    pInputText
+                    type="text"
+                    [(ngModel)]="transaction.vendorName"
+                    class="w-full p-1 text-sm"
+                    (keydown.enter)="$event.target.blur()"
+                  />
+                </ng-template>
+                <ng-template pTemplate="output">
+                  <span class="text-color cursor-pointer hover:underline decoration-dotted">
+                    {{ transaction.vendorName || '-' }}
+                  </span>
+                </ng-template>
+              </p-cellEditor>
             </td>
 
-            <!-- Category -->
-            <td>
-              <p-tag
-                [severity]="getCategorySeverity(transaction.categoryName)"
-                styleClass="text-xs">
-                <div class="flex items-center gap-1">
-                  @if (transaction.categoryIcon) {
-                    <i [class]="'pi ' + transaction.categoryIcon + ' text-[10px]'"></i>
-                  }
-                  <span>{{ getCategoryDisplay(transaction.categoryName) }}</span>
-                </div>
-              </p-tag>
+            <!-- Category (Editable) -->
+            <td [pEditableColumn]="transaction" pEditableColumnField="categoryName">
+              <p-cellEditor>
+                <ng-template pTemplate="input">
+                  <p-select
+                    [(ngModel)]="transaction.categoryName"
+                    [options]="categories()"
+                    optionLabel="name"
+                    optionValue="name"
+                    appendTo="body"
+                    styleClass="w-full p-0 text-sm"
+                    [filter]="true"
+                    (onChange)="blurInput($event)"
+                  />
+                </ng-template>
+                <ng-template pTemplate="output">
+                  <p-tag
+                    [severity]="getCategorySeverity(transaction.categoryName)"
+                    styleClass="text-xs cursor-pointer">
+                    <div class="flex items-center gap-1">
+                      @if (transaction.categoryIcon) {
+                        <i [class]="'pi ' + transaction.categoryIcon + ' text-[10px]'"></i>
+                      }
+                      <span>{{ getCategoryDisplay(transaction.categoryName) }}</span>
+                    </div>
+                  </p-tag>
+                </ng-template>
+              </p-cellEditor>
             </td>
 
             <!-- Account -->
@@ -378,13 +411,12 @@
     </p-card>
   }
 
-  <!-- Form Dialog -->
-  <app-transaction-form-dialog
-    [visible]="showDialog()"
+  <!-- Transaction Form Drawer -->
+  <app-transaction-form-drawer
+    [(visible)]="showDialog"
     [transaction]="selectedTransaction()"
     [accounts]="accounts()"
     [saving]="savingTransaction()"
-    (visibleChange)="showDialog.set($event)"
     (save)="onSave($event)"
   />
 
@@ -404,17 +436,15 @@
   />
 
   <!-- Vendor Rule Dialog -->
-  <app-vendor-rule-form-dialog
-    [visible]="showVendorRuleDialog()"
-    (visibleChange)="showVendorRuleDialog.set($event)"
+  <app-vendor-rule-form-drawer
+    [(visible)]="showVendorRuleDialog"
     [initialKeyword]="selectedTransactionKeyword()"
     (save)="onVendorRuleSaved()"
   />
 
   <!-- Recurring Dialog -->
-  <app-recurring-form-dialog
-    [visible]="showRecurringDialog()"
-    (visibleChange)="showRecurringDialog.set($event)"
+  <app-recurring-form-drawer
+    [(visible)]="showRecurringDialog"
     [transaction]="recurringPrefill()"
     [accounts]="accounts()"
     (save)="onRecurringSaved()"

@@ -119,11 +119,10 @@
     </p-card>
   }
 
-  <!-- Create Rule Dialog -->
-  <app-vendor-rule-form-dialog
-    [visible]="showDialog()"
+  <!-- Create Rule Drawer -->
+  <app-vendor-rule-form-drawer
+    [(visible)]="showDialog"
     [initialKeyword]="initialKeyword()"
-    (visibleChange)="showDialog.set($event)"
     (save)="onRuleSaved()"
   />
 

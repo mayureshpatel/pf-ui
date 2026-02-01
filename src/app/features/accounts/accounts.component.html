@@ -118,11 +118,11 @@
     </p-card>
   }
 
-  <!-- Form Dialog -->
-  <app-account-form-dialog
-    [visible]="showDialog()"
+  <!-- Form Drawer -->
+  <app-account-form-drawer
+    [(visible)]="showDialog"
     [account]="selectedAccount()"
-    (visibleChange)="showDialog.set($event)"
+    [saving]="loading()"
     (save)="onSave($event)"
   />
 </div>

@@ -1,0 +1,119 @@
+<app-drawer
+  [(visible)]="visible"
+  [title]="drawerTitle"
+  [icon]="drawerIcon"
+  [saving]="loading()"
+  [saveLabel]="isEditMode ? 'Update' : 'Create'"
+  (save)="onSubmit()"
+  (cancel)="onHide()">
+
+  <form class="flex flex-col gap-6">
+    @if (errorMessage()) {
+      <p-message severity="error" [text]="errorMessage()!" styleClass="w-full" />
+    }
+
+    <!-- Merchant Name -->
+    <div class="flex flex-col gap-2">
+      <label for="merchantName" class="text-sm font-medium text-surface-700">
+        Merchant Name <span class="text-red-500">*</span>
+      </label>
+      <input
+        pInputText
+        id="merchantName"
+        [(ngModel)]="formData.merchantName"
+        name="merchantName"
+        placeholder="e.g., Netflix, Rent, Gym"
+        class="w-full"
+        maxlength="100"
+        required
+      />
+    </div>
+
+    <!-- Amount -->
+    <div class="flex flex-col gap-2">
+      <label for="amount" class="text-sm font-medium text-surface-700">
+        Amount <span class="text-red-500">*</span>
+      </label>
+      <p-inputNumber
+        id="amount"
+        [(ngModel)]="formData.amount"
+        name="amount"
+        mode="currency"
+        currency="USD"
+        locale="en-US"
+        [minFractionDigits]="2"
+        [maxFractionDigits]="2"
+        [min]="0.01"
+        styleClass="w-full"
+        inputStyleClass="w-full font-bold text-lg"
+        required
+      />
+    </div>
+
+    <!-- Frequency & Next Date Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <!-- Frequency -->
+      <div class="flex flex-col gap-2">
+        <label for="frequency" class="text-sm font-medium text-surface-700">
+          Frequency <span class="text-red-500">*</span>
+        </label>
+        <p-select
+          id="frequency"
+          [(ngModel)]="formData.frequency"
+          name="frequency"
+          [options]="frequencyOptions"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Select frequency"
+          styleClass="w-full"
+          required
+        />
+      </div>
+
+      <!-- Next Due Date -->
+      <div class="flex flex-col gap-2">
+        <label for="nextDate" class="text-sm font-medium text-surface-700">
+          Next Due Date <span class="text-red-500">*</span>
+        </label>
+        <p-datePicker
+          id="nextDate"
+          [(ngModel)]="nextDate"
+          name="nextDate"
+          [showButtonBar]="true"
+          dateFormat="mm/dd/yy"
+          placeholder="Select next date"
+          styleClass="w-full"
+          required
+        />
+      </div>
+    </div>
+
+    <!-- Account -->
+    <div class="flex flex-col gap-2">
+      <label for="account" class="text-sm font-medium text-surface-700">Account (Optional)</label>
+      <p-select
+        id="account"
+        [(ngModel)]="formData.accountId"
+        name="account"
+        [options]="accountOptions()"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="Select default account"
+        styleClass="w-full"
+        [showClear]="true"
+      />
+      <small class="text-muted-color">If set, transactions will be automatically created under this account.</small>
+    </div>
+
+    <!-- Active Checkbox -->
+    <div class="flex items-center gap-2 mt-2">
+      <p-checkbox
+        [(ngModel)]="formData.active"
+        name="active"
+        [binary]="true"
+        inputId="active"
+      />
+      <label for="active" class="cursor-pointer text-surface-700">Active</label>
+    </div>
+  </form>
+</app-drawer>

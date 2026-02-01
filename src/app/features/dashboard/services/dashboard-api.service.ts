@@ -9,7 +9,8 @@ import {
   CashFlowTrend, 
   YtdSummary, 
   ActionItem,
-  CategoryTotal
+  CategoryTotal,
+  VendorTotal
 } from '@models/dashboard.model';
 
 @Injectable({
@@ -19,18 +20,35 @@ export class DashboardApiService {
   private readonly http: HttpClient = inject(HttpClient);
   private readonly apiUrl = `${environment.apiUrl}/dashboard`;
 
-  getCategoryBreakdown(month: number, year: number): Observable<CategoryTotal[]> {
-    const params = new HttpParams()
-      .set('month', month.toString())
-      .set('year', year.toString());
+  getCategoryBreakdown(month?: number, year?: number, startDate?: string, endDate?: string): Observable<CategoryTotal[]> {
+    let params = new HttpParams();
+    if (startDate && endDate) {
+      params = params.set('startDate', startDate).set('endDate', endDate);
+    } else if (month && year) {
+      params = params.set('month', month.toString()).set('year', year.toString());
+    }
 
     return this.http.get<CategoryTotal[]>(`${this.apiUrl}/categories`, { params });
   }
 
-  getPulse(month: number, year: number): Observable<DashboardPulse> {
-    const params = new HttpParams()
-      .set('month', month.toString())
-      .set('year', year.toString());
+  getVendorBreakdown(month?: number, year?: number, startDate?: string, endDate?: string): Observable<VendorTotal[]> {
+    let params = new HttpParams();
+    if (startDate && endDate) {
+      params = params.set('startDate', startDate).set('endDate', endDate);
+    } else if (month && year) {
+      params = params.set('month', month.toString()).set('year', year.toString());
+    }
+
+    return this.http.get<VendorTotal[]>(`${this.apiUrl}/vendors`, { params });
+  }
+
+  getPulse(month?: number, year?: number, startDate?: string, endDate?: string): Observable<DashboardPulse> {
+    let params = new HttpParams();
+    if (startDate && endDate) {
+      params = params.set('startDate', startDate).set('endDate', endDate);
+    } else if (month && year) {
+      params = params.set('month', month.toString()).set('year', year.toString());
+    }
     return this.http.get<DashboardPulse>(`${this.apiUrl}/pulse`, { params });
   }
 

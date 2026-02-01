@@ -49,6 +49,11 @@ export interface CategoryTotal {
   color?: string;
 }
 
+export interface VendorTotal {
+  vendorName: string;
+  total: number;
+}
+
 export interface DailyBalance {
   date: string; // LocalDate from backend
   balance: number;

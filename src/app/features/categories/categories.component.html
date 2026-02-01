@@ -176,11 +176,11 @@
     </p-card>
   }
 
-  <!-- Form Dialog -->
-  <app-category-form-dialog
-    [visible]="showDialog()"
+  <!-- Form Drawer -->
+  <app-category-form-drawer
+    [(visible)]="showDialog"
     [category]="selectedCategory()"
-    (visibleChange)="showDialog.set($event)"
+    [saving]="loading()"
     (save)="onSave($event)"
   />
 </div>

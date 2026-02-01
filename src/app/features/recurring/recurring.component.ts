@@ -9,7 +9,7 @@ import { RecurringTransaction } from '@models/recurring.model';
 import { RecurringApiService } from './services/recurring-api.service';
 import { AccountApiService } from '@features/accounts/services/account-api.service';
 import { Account } from '@models/account.model';
-import { RecurringFormDialogComponent } from '@shared/components/recurring-form-dialog/recurring-form-dialog.component';
+import { RecurringFormDrawerComponent } from '@shared/components/recurring-form-drawer/recurring-form-drawer.component';
 import { RecurringScanDialogComponent } from './components/recurring-scan-dialog/recurring-scan-dialog.component';
 import { ToastService } from '@core/services/toast.service';
 import { formatCurrency } from '@shared/utils/account.utils';
@@ -26,7 +26,7 @@ import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen
     CardModule,
     TagModule,
     ScreenToolbarComponent,
-    RecurringFormDialogComponent,
+    RecurringFormDrawerComponent,
     RecurringScanDialogComponent
   ],
   templateUrl: './recurring.component.html'

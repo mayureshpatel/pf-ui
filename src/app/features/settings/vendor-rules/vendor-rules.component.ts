@@ -9,8 +9,8 @@ import {VendorRule, UnmatchedVendor} from '@models/vendor-rule.model';
 import {VendorRuleApiService} from './services/vendor-rule-api.service';
 import {ToastService} from '@core/services/toast.service';
 import {
-  VendorRuleFormDialogComponent
-} from '@shared/components/vendor-rule-form-dialog/vendor-rule-form-dialog.component';
+  VendorRuleFormDrawerComponent
+} from '@shared/components/vendor-rule-form-drawer/vendor-rule-form-drawer.component';
 import {ApplyRulesDialogComponent, RuleChangePreview} from './components/apply-rules-dialog/apply-rules-dialog.component';
 import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-toolbar';
 
@@ -23,7 +23,7 @@ import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-t
     TableModule,
     CardModule,
     ScreenToolbarComponent,
-    VendorRuleFormDialogComponent,
+    VendorRuleFormDrawerComponent,
     ApplyRulesDialogComponent
   ],
   templateUrl: './vendor-rules.component.html'

@@ -1,0 +1,166 @@
+<app-drawer
+  [(visible)]="visible"
+  [title]="drawerTitle"
+  [icon]="drawerIcon"
+  [saving]="saving()"
+  [saveLabel]="isEditMode ? 'Update' : 'Create'"
+  (save)="onSubmit()"
+  (cancel)="onHide()">
+
+  <form class="flex flex-col gap-6">
+    @if (errorMessage()) {
+      <p-message severity="error" [text]="errorMessage()!" styleClass="w-full" />
+    }
+
+    <!-- Transaction Type -->
+    <div class="flex flex-col gap-2">
+      <label class="text-sm font-medium text-surface-700">
+        Type <span class="text-red-500">*</span>
+      </label>
+      <div class="flex flex-wrap gap-3">
+        @for (type of [TransactionType.INCOME, TransactionType.EXPENSE, TransactionType.TRANSFER_IN, TransactionType.TRANSFER_OUT]; track type) {
+          <div class="flex items-center gap-2 px-3 py-2 border border-surface-200 rounded-lg transition-colors hover:bg-surface-50"
+               [class.bg-primary-50]="formData.type === type"
+               [class.border-primary-500]="formData.type === type">
+            <p-radioButton
+              [(ngModel)]="formData.type"
+              name="type"
+              [value]="type"
+              [inputId]="'type-' + type"
+            />
+            <label [for]="'type-' + type" class="cursor-pointer flex items-center gap-2">
+              <i [class]="'pi ' + transactionTypeInfo[type].icon + ' ' + transactionTypeInfo[type].color"></i>
+              <span class="text-sm">{{ transactionTypeInfo[type].label }}</span>
+            </label>
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <!-- Date -->
+      <div class="flex flex-col gap-2">
+        <label for="date" class="text-sm font-medium text-surface-700">
+          Date <span class="text-red-500">*</span>
+        </label>
+        <p-datePicker
+          id="date"
+          [(ngModel)]="formDate"
+          name="date"
+          (onSelect)="onDateChange($event)"
+          [showButtonBar]="true"
+          [maxDate]="maxDate"
+          dateFormat="mm/dd/yy"
+          placeholder="Select date"
+          styleClass="w-full"
+          required
+        />
+      </div>
+
+      <!-- Account -->
+      <div class="flex flex-col gap-2">
+        <label for="account" class="text-sm font-medium text-surface-700">
+          Account <span class="text-red-500">*</span>
+        </label>
+        <p-select
+          id="account"
+          [(ngModel)]="formData.accountId"
+          name="account"
+          [options]="accountOptions()"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Select account"
+          styleClass="w-full"
+          required
+        />
+      </div>
+    </div>
+
+    <!-- Amount -->
+    <div class="flex flex-col gap-2">
+      <label for="amount" class="text-sm font-medium text-surface-700">
+        Amount <span class="text-red-500">*</span>
+      </label>
+      <p-inputNumber
+        id="amount"
+        [(ngModel)]="formData.amount"
+        name="amount"
+        mode="currency"
+        currency="USD"
+        locale="en-US"
+        [minFractionDigits]="2"
+        [maxFractionDigits]="2"
+        [min]="0.01"
+        styleClass="w-full"
+        inputStyleClass="w-full font-bold text-lg"
+        required
+      />
+    </div>
+
+    <p-divider />
+
+    <!-- Description -->
+    <div class="flex flex-col gap-2">
+      <label for="description" class="text-sm font-medium text-surface-700">Description</label>
+      <input
+        pInputText
+        id="description"
+        [(ngModel)]="formData.description"
+        name="description"
+        placeholder="What was this for?"
+        class="w-full"
+        maxlength="200"
+      />
+    </div>
+
+    <!-- Vendor Name -->
+    <div class="flex flex-col gap-2">
+      <label for="vendor" class="text-sm font-medium text-surface-700">Vendor Name</label>
+      <input
+        pInputText
+        id="vendor"
+        [(ngModel)]="formData.vendorName"
+        name="vendor"
+        placeholder="e.g., Walmart, Amazon"
+        class="w-full"
+        maxlength="100"
+      />
+    </div>
+
+    <!-- Category -->
+    <div class="flex flex-col gap-2">
+      <label for="category" class="text-sm font-medium text-surface-700">Category</label>
+      <p-select
+        id="category"
+        [(ngModel)]="formData.categoryName"
+        name="category"
+        [options]="filteredCategoryGroups()"
+        [group]="true"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="Select a subcategory"
+        styleClass="w-full"
+        [filter]="true"
+        filterPlaceholder="Search categories"
+        [showClear]="true"
+        appendTo="body">
+        <ng-template let-group pTemplate="group">
+          <div class="flex items-center gap-2 px-3 py-2 font-semibold text-xs text-surface-500 uppercase tracking-wider">
+            <span>{{ group.label }}</span>
+          </div>
+        </ng-template>
+        <ng-template let-category pTemplate="item">
+          <div class="flex items-center gap-2">
+            @if (category.icon) {
+              <i [class]="'pi ' + category.icon + ' text-surface-400'"></i>
+            }
+            @if (category.color) {
+              <div [class]="category.color + ' w-2 h-2 rounded-full'"></div>
+            }
+            <span>{{ category.label }}</span>
+          </div>
+        </ng-template>
+      </p-select>
+    </div>
+  </form>
+</app-drawer>

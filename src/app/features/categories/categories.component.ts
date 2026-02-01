@@ -13,7 +13,7 @@ import {Category, CategoryFormData, CategoryWithUsage} from '@models/category.mo
 import {CategoryApiService} from './services/category-api.service';
 import {TransactionApiService} from '@features/transactions/services/transaction-api.service';
 import {BudgetApiService} from '@features/budgets/services/budget-api.service';
-import {CategoryFormDialogComponent} from './components/category-form-dialog/category-form-dialog.component';
+import { CategoryFormDrawerComponent } from './components/category-form-drawer/category-form-drawer.component';
 import {ToastService} from '@core/services/toast.service';
 import {getCategoryColor} from '@shared/utils/category.utils';
 import {formatCurrency} from '@shared/utils/account.utils';
@@ -37,7 +37,7 @@ export interface CategoryViewModel extends CategoryWithUsage {
     CardModule,
     TooltipModule,
     ScreenToolbarComponent,
-    CategoryFormDialogComponent
+    CategoryFormDrawerComponent
   ],
   templateUrl: './categories.component.html'
 })

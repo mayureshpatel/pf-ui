@@ -21,16 +21,16 @@ import {Account} from '@models/account.model';
 import {Category} from '@models/category.model';
 import {Frequency, RecurringTransaction} from '@models/recurring.model';
 import {TransactionApiService} from './services/transaction-api.service';
-import {TransactionFormDialogComponent} from './components/transaction-form-dialog/transaction-form-dialog.component';
+import {TransactionFormDrawerComponent} from './components/transaction-form-drawer/transaction-form-drawer.component';
 import {CsvImportDialogComponent} from './components/csv-import-dialog/csv-import-dialog.component';
 import {BulkEditData, BulkEditDialogComponent} from './components/bulk-edit-dialog/bulk-edit-dialog.component';
 import {
   TransferMatchingDialogComponent
 } from './components/transfer-matching-dialog/transfer-matching-dialog.component';
 import {
-  VendorRuleFormDialogComponent
-} from '@shared/components/vendor-rule-form-dialog/vendor-rule-form-dialog.component';
-import {RecurringFormDialogComponent} from '@shared/components/recurring-form-dialog/recurring-form-dialog.component';
+  VendorRuleFormDrawerComponent
+} from '@shared/components/vendor-rule-form-drawer/vendor-rule-form-drawer.component';
+import {RecurringFormDrawerComponent} from '@shared/components/recurring-form-drawer/recurring-form-drawer.component';
 import {AccountApiService} from '@features/accounts/services/account-api.service';
 import {CategoryApiService} from '@features/categories/services/category-api.service';
 import {ToastService} from '@core/services/toast.service';
@@ -63,12 +63,12 @@ import { TableToolbarComponent } from '@shared/components/table-toolbar/table-to
     ContextMenuModule,
     ScreenToolbarComponent,
     TableToolbarComponent,
-    TransactionFormDialogComponent,
+    TransactionFormDrawerComponent,
     CsvImportDialogComponent,
     BulkEditDialogComponent,
     TransferMatchingDialogComponent,
-    VendorRuleFormDialogComponent,
-    RecurringFormDialogComponent
+    VendorRuleFormDrawerComponent,
+    RecurringFormDrawerComponent
   ],
   templateUrl: './transactions.component.html'
 })
@@ -695,5 +695,61 @@ export class TransactionsComponent implements OnInit, OnDestroy {
 
   private toISODate(date: Date): string {
     return date.toISOString().split('T')[0];
+  }
+
+  blurInput(event: any): void {
+    event?.originalEvent?.target?.blur();
+  }
+
+  onCellEditComplete(event: any): void {
+    const transaction = event.data as Transaction;
+    const field = event.field;
+    const newValue = event.newValue;
+
+    // Only update if value actually changed
+    if (transaction[field as keyof Transaction] === newValue) {
+      return;
+    }
+
+    const formData: TransactionFormData = {
+      id: transaction.id,
+      date: transaction.date,
+      type: transaction.type,
+      accountId: transaction.accountId,
+      amount: transaction.amount,
+      description: transaction.description || undefined,
+      vendorName: field === 'vendorName' ? newValue : (transaction.vendorName || undefined),
+      categoryName: field === 'categoryName' ? newValue : (transaction.categoryName || undefined)
+    };
+
+    this.transactionApi.updateTransaction(transaction.id, formData)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (updated) => {
+          this.toast.success('Transaction updated');
+          // Update local state if needed, although lazy load might handle it
+          // But to be smooth, we update the object in the list
+          const index = this.transactions().findIndex(t => t.id === updated.id);
+          if (index !== -1) {
+            const current = [...this.transactions()];
+            // Re-enrich with account and category info
+            const accountMap = new Map(this.accounts().map(a => [a.id, a.name]));
+            const categoryMap = new Map(this.categories().map(c => [c.name, c]));
+            const category = updated.categoryName ? categoryMap.get(updated.categoryName) : undefined;
+            
+            current[index] = {
+              ...updated,
+              accountName: accountMap.get(updated.accountId) || 'Unknown Account',
+              categoryIcon: category?.icon,
+              categoryColor: category?.color
+            };
+            this.transactions.set(current);
+          }
+        },
+        error: (error) => {
+          this.toast.error(error.error?.detail || 'Failed to update transaction');
+          this.loadTransactions(); // Revert on error
+        }
+      });
   }
 }

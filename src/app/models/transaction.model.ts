@@ -9,6 +9,8 @@ export interface Transaction {
   categoryName: string | null;
   accountId: number;
   accountName?: string; // Will be populated from account data
+  categoryIcon?: string; // UI Enrichment
+  categoryColor?: string; // UI Enrichment
 }
 
 export enum TransactionType {

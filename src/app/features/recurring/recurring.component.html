@@ -98,10 +98,9 @@
     </p-table>
   </p-card>
 
-  <!-- Form Dialog -->
-  <app-recurring-form-dialog
-    [visible]="showDialog()"
-    (visibleChange)="showDialog.set($event)"
+  <!-- Form Drawer -->
+  <app-recurring-form-drawer
+    [(visible)]="showDialog"
     [transaction]="selectedTransaction()"
     [accounts]="accounts()"
     (save)="onSave()"
