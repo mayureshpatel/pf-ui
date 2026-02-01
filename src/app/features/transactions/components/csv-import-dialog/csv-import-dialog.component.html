@@ -3,91 +3,174 @@
   [modal]="true"
   [visible]="visible()"
   (visibleChange)="onHide()"
-  [style]="{ width: '800px' }"
+  [style]="{ width: '1000px' }"
   [draggable]="false"
   [resizable]="false">
 
   <div class="flex flex-col gap-4">
-    @if (errorMessage()) {
-      <p-message severity="error" [text]="errorMessage()!" styleClass="w-full" />
+    @if (generalMessage()) {
+      <p-message [severity]="generalMessage()!.severity" [text]="generalMessage()!.text" styleClass="w-full" />
     }
 
     <!-- Step 1: Upload Configuration -->
     @if (currentStep() === 0) {
       <div class="flex flex-col gap-4">
-        <p class="text-muted-color">
-          Select an account, choose your bank's CSV format, and upload your transaction file.
-        </p>
-
-        <!-- Account Selection -->
-        <div class="flex flex-col gap-2">
-          <label for="account" class="font-medium text-color">
-            Account <span class="text-red-500">*</span>
-          </label>
-          <p-select
-            id="account"
-            [(ngModel)]="selectedAccountId"
-            [options]="accountOptions()"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="Select account"
-            styleClass="w-full"
-            appendTo="body"
-          />
-          <small class="text-muted-color">
-            Choose the account where these transactions belong
-          </small>
+        
+        <!-- Global Actions / Bulk Settings -->
+        <div class="p-4 border rounded-lg bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 flex flex-col gap-3">
+            <h3 class="font-medium text-color text-sm uppercase tracking-wide">Bulk Settings</h3>
+            <div class="flex gap-4 items-end">
+                <div class="flex flex-col gap-2 flex-1">
+                    <label class="text-sm font-medium text-color">Account</label>
+                    <p-select 
+                        [options]="accountOptions()" 
+                        [(ngModel)]="globalAccountId"
+                        optionLabel="label" 
+                        optionValue="value" 
+                        placeholder="Select Account"
+                        styleClass="w-full"
+                        appendTo="body"
+                    />
+                </div>
+                <div class="flex flex-col gap-2 flex-1">
+                    <label class="text-sm font-medium text-color">Bank Format</label>
+                    <p-select 
+                        [options]="bankOptions" 
+                        [(ngModel)]="globalBankName"
+                        optionLabel="label" 
+                        optionValue="value" 
+                        placeholder="Select Format"
+                        styleClass="w-full"
+                        appendTo="body"
+                    />
+                </div>
+                <div class="flex gap-2">
+                    <p-button 
+                        label="Apply to All" 
+                        icon="pi pi-check-circle" 
+                        (onClick)="applyGlobalAccount(); applyGlobalBank();"
+                        [disabled]="!hasItems() || (!globalAccountId() && !globalBankName())"
+                        severity="secondary" 
+                        styleClass="p-button-outlined"
+                    />
+                </div>
+            </div>
         </div>
 
-        <!-- Bank Format Selection -->
+        <!-- File Upload Area -->
         <div class="flex flex-col gap-2">
-          <label for="bank" class="font-medium text-color">
-            Bank Format <span class="text-red-500">*</span>
-          </label>
-          <p-select
-            id="bank"
-            [(ngModel)]="selectedBankName"
-            [options]="bankOptions"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="Select bank format"
-            styleClass="w-full"
-            appendTo="body">
-            <ng-template let-option pTemplate="item">
-              <div class="flex flex-col">
-                <span class="font-medium">{{ option.label }}</span>
-                <small class="text-muted-color">{{ option.description }}</small>
-              </div>
-            </ng-template>
-          </p-select>
-          <small class="text-muted-color">
-            Choose the format that matches your CSV file
-          </small>
-        </div>
+           <div class="flex justify-between items-center">
+              <label class="font-medium text-color">
+                Files <span class="text-muted-color text-sm font-normal">(Max 10 files)</span>
+              </label>
+              @if (hasItems()) {
+                  <p-button 
+                    label="Clear All" 
+                    icon="pi pi-trash" 
+                    (onClick)="clearAllFiles()" 
+                    [text]="true" 
+                    severity="danger" 
+                    size="small"
+                  />
+              }
+           </div>
 
-        <!-- File Upload -->
-        <div class="flex flex-col gap-2">
-          <label class="font-medium text-color">
-            CSV File <span class="text-red-500">*</span>
-          </label>
-          <p-fileupload
-            mode="basic"
-            accept=".csv"
-            [maxFileSize]="5000000"
-            [auto]="false"
-            (onSelect)="onFileSelect($event)"
-            (onClear)="onFileClear()"
-            chooseLabel="Choose CSV File"
-            styleClass="w-full"
-          />
-          @if (selectedFile()) {
-            <small class="text-color">
-              Selected: {{ selectedFile()!.name }} ({{ (selectedFile()!.size / 1024).toFixed(2) }} KB)
-            </small>
-          }
-          <small class="text-muted-color">
-            Maximum file size: 5MB
-          </small>
+           <!-- Helper text when empty -->
+           @if (!hasItems()) {
+               <div class="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-8 text-center bg-gray-50 dark:bg-gray-900/50">
+                   <div class="mb-4 text-muted-color">
+                       <i class="pi pi-upload text-4xl"></i>
+                   </div>
+                   <h3 class="font-medium text-lg mb-1">Drag and drop files here</h3>
+                   <p class="text-muted-color text-sm mb-4">or click below to browse</p>
+                   
+                   <p-fileupload
+                        mode="basic"
+                        [multiple]="true"
+                        accept=".csv"
+                        [maxFileSize]="5000000"
+                        [auto]="true"
+                        [customUpload]="true" 
+                        (uploadHandler)="onFilesSelect($event)"
+                        chooseLabel="Browse Files"
+                        styleClass="p-button-outlined"
+                    />
+               </div>
+           } @else {
+               <!-- Add more files button -->
+               <div class="flex justify-end mb-2">
+                    <p-fileupload
+                        mode="basic"
+                        [multiple]="true"
+                        accept=".csv"
+                        [maxFileSize]="5000000"
+                        [auto]="true"
+                        [customUpload]="true"
+                        (uploadHandler)="onFilesSelect($event)"
+                        chooseLabel="Add More Files"
+                        chooseIcon="pi pi-plus"
+                    />
+               </div>
+           }
+
+           <!-- Files Table -->
+           @if (hasItems()) {
+               <p-table [value]="importItems()" styleClass="p-datatable-sm border rounded-lg overflow-hidden">
+                   <ng-template pTemplate="header">
+                       <tr>
+                           <th style="width: 30%">File Name</th>
+                           <th style="width: 30%">Account</th>
+                           <th style="width: 30%">Bank Format</th>
+                           <th style="width: 10%"></th>
+                       </tr>
+                   </ng-template>
+                   <ng-template pTemplate="body" let-item let-i="rowIndex">
+                       <tr>
+                           <td>
+                               <div class="flex flex-col">
+                                   <span class="font-medium">{{ item.file.name }}</span>
+                                   <span class="text-xs text-muted-color">{{ (item.file.size / 1024).toFixed(1) }} KB</span>
+                                   @if (item.error) {
+                                       <span class="text-xs text-red-500 mt-1">{{ item.error }}</span>
+                                   }
+                               </div>
+                           </td>
+                           <td>
+                               <p-select 
+                                   [options]="accountOptions()" 
+                                   [(ngModel)]="item.accountId"
+                                   optionLabel="label" 
+                                   optionValue="value" 
+                                   placeholder="Select Account"
+                                   appendTo="body"
+                                   styleClass="w-full p-inputtext-sm"
+                               />
+                           </td>
+                           <td>
+                               <p-select 
+                                   [options]="bankOptions" 
+                                   [(ngModel)]="item.bankName"
+                                   optionLabel="label" 
+                                   optionValue="value" 
+                                   placeholder="Select Format"
+                                   appendTo="body"
+                                   styleClass="w-full p-inputtext-sm"
+                               />
+                           </td>
+                           <td class="text-right">
+                               <p-button 
+                                   icon="pi pi-times" 
+                                   (onClick)="removeItem(i)" 
+                                   [text]="true" 
+                                   severity="danger" 
+                                   [rounded]="true"
+                                   pTooltip="Remove file"
+                               />
+                           </td>
+                       </tr>
+                   </ng-template>
+               </p-table>
+           }
         </div>
       </div>
     }
@@ -98,20 +181,24 @@
         <div class="flex items-center justify-between">
           <div>
             <p class="text-lg font-semibold text-color">
-              {{ previews().length }} transaction(s) found
+              {{ allPreviews().length }} transactions from {{ importItems().length }} file(s)
             </p>
             <p class="text-sm text-muted-color">
-              Review the imported transactions before saving
+              Review imported data before saving.
             </p>
           </div>
         </div>
 
         <!-- Preview Table -->
         <p-table
-          [value]="previews()"
+          [value]="allPreviews()"
           [scrollable]="true"
-          scrollHeight="400px"
-          styleClass="p-datatable-sm">
+          scrollHeight="500px"
+          styleClass="p-datatable-sm p-datatable-striped"
+          rowGroupMode="subheader"
+          groupRowsBy="_sourceFile"
+          sortField="_sourceFile"
+        >
 
           <ng-template pTemplate="header">
             <tr>
@@ -122,6 +209,14 @@
               <th>Type</th>
               <th class="text-right">Amount</th>
             </tr>
+          </ng-template>
+
+          <ng-template pTemplate="groupheader" let-preview>
+                <tr pRowGroupHeader>
+                    <td colspan="6">
+                        <span class="font-bold ml-2">{{preview._sourceFile}}</span>
+                    </td>
+                </tr>
           </ng-template>
 
           <ng-template pTemplate="body" let-preview>
@@ -219,7 +314,7 @@
 
         @if (currentStep() === 1) {
           <p-button
-            label="Import Transactions"
+            label="Import All"
             icon="pi pi-check"
             (onClick)="saveTransactions()"
             [loading]="saving()"

@@ -9,6 +9,7 @@ import { TableModule } from 'primeng/table';
 import { MessageModule } from 'primeng/message';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { TagModule } from 'primeng/tag';
+import { TooltipModule } from 'primeng/tooltip';
 import {
   TransactionPreview,
   SaveTransactionRequest,
@@ -26,6 +27,18 @@ import {
   getAmountClass,
   formatDate
 } from '@shared/utils/transaction.utils';
+import { forkJoin, of } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
+
+interface BatchImportItem {
+  id: string;
+  file: File;
+  accountId: number | null;
+  bankName: BankName | null;
+  previews: TransactionPreview[];
+  status: 'pending' | 'uploading' | 'ready' | 'saving' | 'success' | 'error';
+  error?: string;
+}
 
 @Component({
   selector: 'app-csv-import-dialog',
@@ -40,7 +53,8 @@ import {
     TableModule,
     MessageModule,
     ProgressSpinnerModule,
-    TagModule
+    TagModule,
+    TooltipModule
   ],
   templateUrl: './csv-import-dialog.component.html'
 })
@@ -56,13 +70,17 @@ export class CsvImportDialogComponent {
 
   // State
   currentStep: WritableSignal<number> = signal(0);
-  selectedAccountId: WritableSignal<number | null> = signal(null);
-  selectedBankName: WritableSignal<BankName | null> = signal(null);
-  selectedFile: WritableSignal<File | null> = signal(null);
-  previews: WritableSignal<TransactionPreview[]> = signal([]);
+  importItems: WritableSignal<BatchImportItem[]> = signal([]);
+
+  // Global controls for bulk applying
+  globalAccountId: WritableSignal<number | null> = signal(null);
+  globalBankName: WritableSignal<BankName | null> = signal(null);
+
   uploading: WritableSignal<boolean> = signal(false);
   saving: WritableSignal<boolean> = signal(false);
-  errorMessage: WritableSignal<string | null> = signal(null);
+  
+  // Overall status message (e.g., "3 files processed, 1 failed")
+  generalMessage: WritableSignal<{ severity: 'success' | 'info' | 'warn' | 'error', text: string } | null> = signal(null);
 
   // Bank options
   bankOptions: BankOption[] = [
@@ -95,13 +113,26 @@ export class CsvImportDialogComponent {
     }));
   });
 
-  canProceedToPreview = computed(() =>
-    this.selectedAccountId() !== null &&
-    this.selectedBankName() !== null &&
-    this.selectedFile() !== null
-  );
+  // Computed properties
+  canProceedToPreview = computed(() => {
+    const items = this.importItems();
+    return items.length > 0 && items.every(item => item.accountId !== null && item.bankName !== null);
+  });
 
-  canSave = computed(() => this.previews().length > 0);
+  canSave = computed(() => {
+    const items = this.importItems();
+    // Can save if we have at least one 'ready' item
+    return items.some(item => item.status === 'ready' && item.previews.length > 0);
+  });
+
+  hasItems = computed(() => this.importItems().length > 0);
+
+  // Combined previews for Step 2
+  allPreviews = computed(() => {
+    return this.importItems().flatMap(item => 
+      item.previews.map(p => ({ ...p, _sourceFile: item.file.name }))
+    );
+  });
 
   // Utility functions
   formatTransactionAmount = formatTransactionAmount;
@@ -114,100 +145,183 @@ export class CsvImportDialogComponent {
     this.resetDialog();
   }
 
-  onFileSelect(event: any): void {
+  onFilesSelect(event: any): void {
     const files = event.files || event.currentFiles;
     if (files && files.length > 0) {
-      this.selectedFile.set(files[0]);
-      this.errorMessage.set(null);
+      const newItems: BatchImportItem[] = [];
+      for (const file of files) {
+        // Avoid adding duplicates by name (simple check)
+        if (!this.importItems().some(i => i.file.name === file.name)) {
+          newItems.push({
+            id: crypto.randomUUID(),
+            file: file,
+            accountId: null,
+            bankName: null,
+            previews: [],
+            status: 'pending'
+          });
+        }
+      }
+      this.importItems.update(current => [...current, ...newItems]);
+      this.generalMessage.set(null);
+    }
+  }
+  
+  removeItem(index: number): void {
+    this.importItems.update(items => items.filter((_, i) => i !== index));
+  }
+
+  clearAllFiles(): void {
+    this.importItems.set([]);
+    this.currentStep.set(0);
+  }
+
+  applyGlobalAccount(): void {
+    const accountId = this.globalAccountId();
+    if (accountId) {
+      this.importItems.update(items => items.map(item => ({ ...item, accountId })));
     }
   }
 
-  onFileClear(): void {
-    this.selectedFile.set(null);
+  applyGlobalBank(): void {
+    const bankName = this.globalBankName();
+    if (bankName) {
+      this.importItems.update(items => items.map(item => ({ ...item, bankName })));
+    }
   }
 
   async uploadAndPreview(): Promise<void> {
-    if (!this.canProceedToPreview()) {
-      return;
-    }
+    if (!this.canProceedToPreview()) return;
 
     this.uploading.set(true);
-    this.errorMessage.set(null);
+    this.generalMessage.set(null);
+    
+    // Update status to uploading
+    this.importItems.update(items => items.map(item => ({ ...item, status: 'uploading', error: undefined })));
 
-    const accountId = this.selectedAccountId()!;
-    const bankName = this.selectedBankName()!;
-    const file = this.selectedFile()!;
+    const tasks = this.importItems().map(item => {
+      return this.importService.uploadCsv(item.accountId!, item.file, item.bankName!).pipe(
+        map(previews => ({ id: item.id, status: 'ready' as const, previews, error: undefined })),
+        catchError(err => {
+            const errorMsg = err.error?.detail || err.error?.message || 'Failed to parse CSV';
+            return of({ id: item.id, status: 'error' as const, previews: [], error: errorMsg });
+        })
+      );
+    });
 
-    this.importService.uploadCsv(accountId, file, bankName).subscribe({
-      next: (previews) => {
-        this.previews.set(previews);
-        this.uploading.set(false);
-        this.currentStep.set(1);
-      },
-      error: (error) => {
-        this.errorMessage.set(
-          error.error?.detail || error.error?.message || 'Failed to parse CSV file. Please check the format and try again.'
+    forkJoin(tasks).subscribe({
+      next: (results) => {
+        this.importItems.update(items => 
+          items.map(item => {
+            const result = results.find(r => r.id === item.id);
+            return result ? { ...item, ...result } : item;
+          })
         );
+        
+        const failedCount = results.filter(r => r.status === 'error').length;
+        if (failedCount > 0) {
+          this.generalMessage.set({ 
+            severity: 'warn', 
+            text: `${failedCount} file(s) failed to parse. Review errors below.` 
+          });
+        }
+        
+        // If at least one file succeeded, move to next step to show previews
+        if (results.some(r => r.status === 'ready')) {
+            this.currentStep.set(1);
+        }
+        
+        this.uploading.set(false);
+      },
+      error: (err) => {
+        console.error('Unexpected error in forkJoin', err);
         this.uploading.set(false);
       }
     });
   }
 
   async saveTransactions(): Promise<void> {
-    if (!this.canSave()) {
-      return;
-    }
+    if (!this.canSave()) return;
 
     this.saving.set(true);
-    this.errorMessage.set(null);
+    this.generalMessage.set(null);
 
-    const accountId = this.selectedAccountId()!;
-    const file = this.selectedFile()!;
-    const previews = this.previews();
+    const itemsToSave = this.importItems().filter(item => item.status === 'ready');
+    
+    // Mark them as saving
+    this.importItems.update(all => all.map(item => 
+      itemsToSave.find(i => i.id === item.id) ? { ...item, status: 'saving' } : item
+    ));
 
-    try {
-      const fileHash = await this.importService.calculateFileHash(file);
+    // Process sequentially to avoid overwhelming the backend or UI (though parallel is possible)
+    // Using simple loop with async/await for clarity and sequential execution logic
+    let successCount = 0;
+    let failCount = 0;
 
-      // Convert previews to TransactionFormData
-      const transactions: TransactionFormData[] = previews.map(p => ({
-        date: p.date,
-        type: p.type,
-        accountId: accountId,
-        amount: Math.abs(p.amount),
-        description: p.description || undefined,
-        vendorName: p.vendorName || undefined,
-        categoryName: p.suggestedCategory || undefined
-      }));
+    for (const item of itemsToSave) {
+        try {
+            const fileHash = await this.importService.calculateFileHash(item.file);
+            
+            const transactions: TransactionFormData[] = item.previews.map(p => ({
+                date: p.date,
+                type: p.type,
+                accountId: item.accountId!,
+                amount: Math.abs(p.amount),
+                description: p.description || undefined,
+                vendorName: p.vendorName || undefined,
+                categoryName: p.suggestedCategory || undefined
+            }));
 
-      const request: SaveTransactionRequest = {
-        transactions,
-        fileName: file.name,
-        fileHash
-      };
+            const request: SaveTransactionRequest = {
+                transactions,
+                fileName: item.file.name,
+                fileHash
+            };
+            
+            // Convert Observable to Promise for sequential execution
+            await new Promise<void>((resolve, reject) => {
+                this.importService.saveTransactions(item.accountId!, request).subscribe({
+                    next: () => {
+                        this.importItems.update(all => all.map(i => i.id === item.id ? { ...i, status: 'success' } : i));
+                        successCount++;
+                        resolve();
+                    },
+                    error: (err) => {
+                        const msg = err.error?.detail || 'Save failed';
+                        this.importItems.update(all => all.map(i => i.id === item.id ? { ...i, status: 'error', error: msg } : i));
+                        failCount++;
+                        resolve(); // Resolve anyway to continue to next file
+                    }
+                });
+            });
 
-      this.importService.saveTransactions(accountId, request).subscribe({
-        next: (message) => {
-          this.toast.success(message);
-          this.importComplete.emit();
-          this.onHide();
-        },
-        error: (error) => {
-          this.errorMessage.set(
-            error.error?.detail || 'Failed to save transactions. Please try again.'
-          );
-          this.saving.set(false);
+        } catch (e) {
+            this.importItems.update(all => all.map(i => i.id === item.id ? { ...i, status: 'error', error: 'Pre-save processing failed' } : i));
+            failCount++;
         }
-      });
-    } catch (error) {
-      this.errorMessage.set('Failed to process file. Please try again.');
-      this.saving.set(false);
+    }
+
+    this.saving.set(false);
+    
+    if (failCount === 0) {
+        this.toast.success(`Successfully imported ${successCount} file(s).`);
+        this.importComplete.emit();
+        this.onHide();
+    } else {
+        this.generalMessage.set({
+            severity: 'error',
+            text: `Import completed with errors. ${successCount} succeeded, ${failCount} failed.`
+        });
+        // Stay on step 1 or 2? Ideally step 0 or stay here to see errors.
+        // Actually, successful ones are done. Failed ones are marked error.
+        // If we stay on step 1 (preview), user can see which ones failed.
     }
   }
 
   goBack(): void {
     if (this.currentStep() > 0) {
       this.currentStep.set(this.currentStep() - 1);
-      this.errorMessage.set(null);
+      this.generalMessage.set(null);
     }
   }
 
@@ -221,12 +335,11 @@ export class CsvImportDialogComponent {
 
   private resetDialog(): void {
     this.currentStep.set(0);
-    this.selectedAccountId.set(null);
-    this.selectedBankName.set(null);
-    this.selectedFile.set(null);
-    this.previews.set([]);
+    this.importItems.set([]);
+    this.globalAccountId.set(null);
+    this.globalBankName.set(null);
     this.uploading.set(false);
     this.saving.set(false);
-    this.errorMessage.set(null);
+    this.generalMessage.set(null);
   }
 }
