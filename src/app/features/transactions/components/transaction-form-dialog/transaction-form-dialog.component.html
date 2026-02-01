@@ -48,12 +48,25 @@
           <p-radioButton
             [(ngModel)]="formData.type"
             name="type"
-            [value]="TransactionType.TRANSFER"
-            inputId="type-transfer"
+            [value]="TransactionType.TRANSFER_IN"
+            inputId="type-transfer-in"
           />
-          <label for="type-transfer" class="cursor-pointer flex items-center gap-2">
-            <i [class]="'pi ' + transactionTypeInfo[TransactionType.TRANSFER].icon + ' ' + transactionTypeInfo[TransactionType.TRANSFER].color"></i>
-            <span>{{ transactionTypeInfo[TransactionType.TRANSFER].label }}</span>
+          <label for="type-transfer-in" class="cursor-pointer flex items-center gap-2">
+            <i [class]="'pi ' + transactionTypeInfo[TransactionType.TRANSFER_IN].icon + ' ' + transactionTypeInfo[TransactionType.TRANSFER_IN].color"></i>
+            <span>{{ transactionTypeInfo[TransactionType.TRANSFER_IN].label }}</span>
+          </label>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <p-radioButton
+            [(ngModel)]="formData.type"
+            name="type"
+            [value]="TransactionType.TRANSFER_OUT"
+            inputId="type-transfer-out"
+          />
+          <label for="type-transfer-out" class="cursor-pointer flex items-center gap-2">
+            <i [class]="'pi ' + transactionTypeInfo[TransactionType.TRANSFER_OUT].icon + ' ' + transactionTypeInfo[TransactionType.TRANSFER_OUT].color"></i>
+            <span>{{ transactionTypeInfo[TransactionType.TRANSFER_OUT].label }}</span>
           </label>
         </div>
       </div>

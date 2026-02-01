@@ -16,6 +16,16 @@ export const TRANSACTION_TYPE_INFO: Record<TransactionType, TransactionTypeInfo>
     icon: 'pi-arrows-h',
     color: 'text-blue-600',
     label: 'Transfer'
+  },
+  [TransactionType.TRANSFER_IN]: {
+    icon: 'pi-arrow-left',
+    color: 'text-blue-600',
+    label: 'Transfer In'
+  },
+  [TransactionType.TRANSFER_OUT]: {
+    icon: 'pi-arrow-right',
+    color: 'text-blue-600',
+    label: 'Transfer Out'
   }
 };
 
@@ -32,7 +42,10 @@ export function formatTransactionAmount(amount: number, type: TransactionType): 
     case TransactionType.EXPENSE:
       return `-${formatted}`;
     case TransactionType.TRANSFER:
-      return formatted;
+    case TransactionType.TRANSFER_OUT:
+      return `-${formatted}`; // Visually negative for outgoing
+    case TransactionType.TRANSFER_IN:
+      return `+${formatted}`; // Visually positive for incoming
   }
 }
 
