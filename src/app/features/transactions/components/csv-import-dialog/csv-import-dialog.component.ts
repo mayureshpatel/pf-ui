@@ -103,6 +103,11 @@ export class CsvImportDialogComponent {
       label: 'Synovus',
       value: BankName.SYNOVUS,
       description: 'Synovus bank export format'
+    },
+    {
+      label: 'Universal CSV',
+      value: BankName.UNIVERSAL,
+      description: 'Auto-detect columns (Date, Amount, Description)'
     }
   ];
 
@@ -300,6 +305,7 @@ export class CsvImportDialogComponent {
             
             const transactions: TransactionFormData[] = item.previews.map(p => ({
                 date: p.date,
+                postDate: p.postDate,
                 type: p.type,
                 accountId: item.accountId!,
                 amount: Math.abs(p.amount),

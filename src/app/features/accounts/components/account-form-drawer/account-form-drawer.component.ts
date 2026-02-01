@@ -73,6 +73,11 @@ export class AccountFormDrawerComponent implements OnChanges {
       label: 'Synovus',
       value: BankName.SYNOVUS,
       description: 'Synovus bank export format'
+    },
+    {
+      label: 'Universal CSV',
+      value: BankName.UNIVERSAL,
+      description: 'Auto-detect columns (Date, Amount, Description)'
     }
   ];
 

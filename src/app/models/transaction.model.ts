@@ -2,6 +2,7 @@ export interface Transaction {
   id: number;
   amount: number;
   date: string; // ISO date string
+  postDate?: string; // ISO date string
   description: string | null;
   originalVendorName: string | null;
   vendorName: string | null;
@@ -24,6 +25,7 @@ export enum TransactionType {
 export interface TransactionFormData {
   id?: number;
   date: string;
+  postDate?: string;
   type: TransactionType;
   accountId: number;
   amount: number;
@@ -75,6 +77,7 @@ export interface TransferSuggestion {
 // CSV Import Models
 export interface TransactionPreview {
   date: string; // LocalDate from backend
+  postDate?: string; // LocalDate from backend
   description: string;
   amount: number;
   type: TransactionType;
@@ -92,7 +95,8 @@ export enum BankName {
   CAPITAL_ONE = 'CAPITAL_ONE',
   DISCOVER = 'DISCOVER',
   SYNOVUS = 'SYNOVUS',
-  STANDARD = 'STANDARD'
+  STANDARD = 'STANDARD',
+  UNIVERSAL = 'UNIVERSAL'
 }
 
 export interface BankOption {
