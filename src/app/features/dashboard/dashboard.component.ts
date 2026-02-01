@@ -150,8 +150,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.loadAllData();
   }
 
-  calculateNetWorth(): number {
-    return this.accounts().reduce((sum, acc) => sum + acc.currentBalance, 0);
+  getSavingsRateColor(rate: number | undefined): string {
+    if (rate === undefined || rate === 0) return 'text-color';
+    return rate > 0 ? 'text-green-600' : 'text-red-600';
   }
 
   private calculateRange(): { start: string, end: string } | null {

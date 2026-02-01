@@ -15,6 +15,7 @@ export class PulseCardComponent {
   previousValue = input.required<number>();
   type = input<'currency' | 'percent'>('currency');
   inverseTrend = input<boolean>(false); // If true, decrease is good (e.g. Expenses)
+  color = input<string | null>(null); // Optional tailwind color class for the main value
 
   formattedValue = computed(() => {
     if (this.type() === 'percent') {

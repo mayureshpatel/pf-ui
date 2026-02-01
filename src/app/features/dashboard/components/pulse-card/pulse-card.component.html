@@ -2,14 +2,14 @@
   <div class="flex flex-col gap-2">
     <span class="text-sm font-medium text-muted-color uppercase tracking-wider">{{ title() }}</span>
     <div class="flex items-baseline justify-between">
-      <span class="text-3xl font-bold text-color">{{ formattedValue() }}</span>
+      <span class="text-3xl font-bold" [class]="color() || 'text-color'">{{ formattedValue() }}</span>
       <div [class]="trendClass() + ' flex items-center gap-1 text-sm font-semibold px-2 py-1 rounded-full'">
         <i [class]="trendIcon()"></i>
         <span>{{ Math.abs(trend()).toFixed(0) }}%</span>
       </div>
     </div>
     <span class="text-xs text-muted-color">
-      vs {{ type() === 'percent' ? previousValue().toFixed(1) + '%' : formatCurrency(previousValue()) }} last month
+      vs {{ type() === 'percent' ? previousValue().toFixed(1) + '%' : formatCurrency(previousValue()) }} previous period
     </span>
   </div>
 </p-card>
