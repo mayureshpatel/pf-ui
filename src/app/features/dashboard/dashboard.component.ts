@@ -14,7 +14,8 @@ import {
   ActionItem, 
   MonthOption, 
   YearOption,
-  CategoryTotal
+  CategoryTotal,
+  VendorTotal
 } from '@models/dashboard.model';
 import { Account } from '@models/account.model';
 import { DashboardApiService } from './services/dashboard-api.service';
