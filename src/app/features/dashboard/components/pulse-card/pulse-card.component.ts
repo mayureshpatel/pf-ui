@@ -1,12 +1,12 @@
-import { Component, computed, input } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { CardModule } from 'primeng/card';
-import { formatCurrency } from '@shared/utils/account.utils';
+import {Component, computed, input} from '@angular/core';
+import {CommonModule, formatCurrency} from '@angular/common';
+import {CardModule} from 'primeng/card';
+import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
 
 @Component({
   selector: 'app-pulse-card',
   standalone: true,
-  imports: [CommonModule, CardModule],
+  imports: [CommonModule, CardModule, FormatCurrencyPipe],
   templateUrl: './pulse-card.component.html'
 })
 export class PulseCardComponent {
@@ -21,7 +21,7 @@ export class PulseCardComponent {
     if (this.type() === 'percent') {
       return `${this.value().toFixed(1)}%`;
     }
-    return formatCurrency(this.value());
+    return formatCurrency(this.value(), 'en-US', '$', '1.2-2');
   });
 
   trend = computed(() => {
@@ -38,10 +38,10 @@ export class PulseCardComponent {
   trendClass = computed(() => {
     const t = this.trend();
     if (t === 0) return 'text-muted-color';
-    
+
     const isPositive = t > 0;
     const isGood = this.inverseTrend() ? !isPositive : isPositive;
-    
+
     return isGood ? 'text-green-500' : 'text-red-500';
   });
 
@@ -52,5 +52,4 @@ export class PulseCardComponent {
   });
 
   protected readonly Math = Math;
-  protected readonly formatCurrency = formatCurrency;
 }

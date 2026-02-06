@@ -1,4 +1,4 @@
-import {Component, computed, inject, OnInit, OnDestroy, signal, WritableSignal, DestroyRef} from '@angular/core';
+import {Component, computed, DestroyRef, inject, OnDestroy, OnInit, signal, WritableSignal} from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {CommonModule} from '@angular/common';
 import {Router} from '@angular/router';
@@ -13,11 +13,11 @@ import {Category, CategoryFormData, CategoryWithUsage} from '@models/category.mo
 import {CategoryApiService} from './services/category-api.service';
 import {TransactionApiService} from '@features/transactions/services/transaction-api.service';
 import {BudgetApiService} from '@features/budgets/services/budget-api.service';
-import { CategoryFormDrawerComponent } from './components/category-form-drawer/category-form-drawer.component';
+import {CategoryFormDrawerComponent} from './components/category-form-drawer/category-form-drawer.component';
 import {ToastService} from '@core/services/toast.service';
 import {getCategoryColor} from '@shared/utils/category.utils';
-import {formatCurrency} from '@shared/utils/account.utils';
 import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-toolbar';
+import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
 
 export interface CategoryViewModel extends CategoryWithUsage {
   groupName: string;
@@ -37,7 +37,8 @@ export interface CategoryViewModel extends CategoryWithUsage {
     CardModule,
     TooltipModule,
     ScreenToolbarComponent,
-    CategoryFormDrawerComponent
+    CategoryFormDrawerComponent,
+    FormatCurrencyPipe
   ],
   templateUrl: './categories.component.html'
 })
@@ -56,8 +57,6 @@ export class CategoriesComponent implements OnInit, OnDestroy {
   selectedCategory: WritableSignal<Category | null> = signal(null);
 
   isEmpty = computed(() => this.categories().length === 0 && !this.loading());
-
-  formatCurrency = formatCurrency;
 
   ngOnInit(): void {
     this.loadData();

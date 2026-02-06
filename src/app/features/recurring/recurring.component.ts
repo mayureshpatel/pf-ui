@@ -1,20 +1,20 @@
-import { Component, inject, OnInit, signal, WritableSignal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { ButtonModule } from 'primeng/button';
-import { TableModule } from 'primeng/table';
-import { CardModule } from 'primeng/card';
-import { TagModule } from 'primeng/tag';
-import { ConfirmationService } from 'primeng/api';
-import { RecurringTransaction } from '@models/recurring.model';
-import { RecurringApiService } from './services/recurring-api.service';
-import { AccountApiService } from '@features/accounts/services/account-api.service';
-import { Account } from '@models/account.model';
-import { RecurringFormDrawerComponent } from '@shared/components/recurring-form-drawer/recurring-form-drawer.component';
-import { RecurringScanDialogComponent } from './components/recurring-scan-dialog/recurring-scan-dialog.component';
-import { ToastService } from '@core/services/toast.service';
-import { formatCurrency } from '@shared/utils/account.utils';
-import { formatDate } from '@shared/utils/transaction.utils';
-import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen-toolbar';
+import {Component, inject, OnInit, signal, WritableSignal} from '@angular/core';
+import {CommonModule} from '@angular/common';
+import {ButtonModule} from 'primeng/button';
+import {TableModule} from 'primeng/table';
+import {CardModule} from 'primeng/card';
+import {TagModule} from 'primeng/tag';
+import {ConfirmationService} from 'primeng/api';
+import {RecurringTransaction} from '@models/recurring.model';
+import {RecurringApiService} from './services/recurring-api.service';
+import {AccountApiService} from '@features/accounts/services/account-api.service';
+import {Account} from '@models/account.model';
+import {RecurringFormDrawerComponent} from '@shared/components/recurring-form-drawer/recurring-form-drawer.component';
+import {RecurringScanDialogComponent} from './components/recurring-scan-dialog/recurring-scan-dialog.component';
+import {ToastService} from '@core/services/toast.service';
+import {formatDate} from '@shared/utils/transaction.utils';
+import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-toolbar';
+import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
 
 @Component({
   selector: 'app-recurring',
@@ -27,7 +27,8 @@ import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen
     TagModule,
     ScreenToolbarComponent,
     RecurringFormDrawerComponent,
-    RecurringScanDialogComponent
+    RecurringScanDialogComponent,
+    FormatCurrencyPipe
   ],
   templateUrl: './recurring.component.html'
 })
@@ -44,7 +45,6 @@ export class RecurringComponent implements OnInit {
   showScanDialog: WritableSignal<boolean> = signal(false);
   selectedTransaction: WritableSignal<RecurringTransaction | null> = signal(null);
 
-  formatCurrency = formatCurrency;
   formatDate = formatDate;
 
   ngOnInit(): void {
@@ -54,7 +54,7 @@ export class RecurringComponent implements OnInit {
   loadData(): void {
     this.loading.set(true);
     this.accountApi.getAccounts().subscribe(accs => this.accounts.set(accs));
-    
+
     this.recurringApi.getRecurringTransactions().subscribe({
       next: (data) => {
         const accMap = new Map(this.accounts().map(a => [a.id, a.name]));

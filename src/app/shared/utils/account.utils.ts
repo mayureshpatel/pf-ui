@@ -28,17 +28,6 @@ export const ACCOUNT_TYPE_INFO: Record<AccountType, AccountTypeInfo> = {
   }
 };
 
-export function getAccountTypeInfo(type: AccountType): AccountTypeInfo {
-  return ACCOUNT_TYPE_INFO[type];
-}
-
-export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD'
-  }).format(amount);
-}
-
 export function isLiabilityAccount(type: AccountType): boolean {
   return type === AccountType.CREDIT_CARD;
 }

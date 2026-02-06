@@ -7,8 +7,8 @@ import { TagModule } from 'primeng/tag';
 import { RecurringSuggestion, RecurringTransactionDto } from '@models/recurring.model';
 import { RecurringApiService } from '../../services/recurring-api.service';
 import { ToastService } from '@core/services/toast.service';
-import { formatCurrency } from '@shared/utils/account.utils';
 import { formatDate } from '@shared/utils/transaction.utils';
+import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
 
 @Component({
   selector: 'app-recurring-scan-dialog',
@@ -18,7 +18,8 @@ import { formatDate } from '@shared/utils/transaction.utils';
     ButtonModule,
     DialogModule,
     TableModule,
-    TagModule
+    TagModule,
+    FormatCurrencyPipe
   ],
   templateUrl: './recurring-scan-dialog.component.html'
 })
@@ -34,7 +35,6 @@ export class RecurringScanDialogComponent {
   loading: WritableSignal<boolean> = signal(false);
   processing: WritableSignal<boolean> = signal(false);
 
-  formatCurrency = formatCurrency;
   formatDate = formatDate;
 
   constructor() {
@@ -65,7 +65,7 @@ export class RecurringScanDialogComponent {
 
   confirm(suggestion: RecurringSuggestion): void {
     this.processing.set(true);
-    
+
     const dto: RecurringTransactionDto = {
       merchantName: suggestion.merchantName,
       amount: suggestion.amount,
@@ -78,12 +78,12 @@ export class RecurringScanDialogComponent {
     this.api.createRecurringTransaction(dto).subscribe({
       next: () => {
         this.toast.success('Added ' + suggestion.merchantName);
-        this.suggestions.update(current => 
+        this.suggestions.update(current =>
           current.filter(s => s.merchantName !== suggestion.merchantName)
         );
         this.save.emit();
         this.processing.set(false);
-        
+
         if (this.suggestions().length === 0) {
           this.onHide();
         }
@@ -96,7 +96,7 @@ export class RecurringScanDialogComponent {
   }
 
   ignore(suggestion: RecurringSuggestion): void {
-    this.suggestions.update(current => 
+    this.suggestions.update(current =>
       current.filter(s => s.merchantName !== suggestion.merchantName)
     );
   }

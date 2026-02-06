@@ -30,7 +30,7 @@
       [loading]="loading()"
       styleClass="p-datatable-sm"
       responsiveLayout="scroll">
-      
+
       <ng-template pTemplate="header">
         <tr>
           <th>Merchant</th>
@@ -50,12 +50,12 @@
           <td>
             <p-tag [value]="txn.frequency" severity="secondary" styleClass="text-xs"></p-tag>
           </td>
-          <td class="text-right font-semibold">{{ formatCurrency(txn.amount) }}</td>
+          <td class="text-right font-semibold">{{ txn.amount | formatCurrency }}</td>
           <td>{{ formatDate(txn.nextDate) }}</td>
           <td class="text-center">
             @if (txn.active) {
-              <p-tag 
-                [value]="getDueStatusLabel(getDaysUntilDue(txn.nextDate))" 
+              <p-tag
+                [value]="getDueStatusLabel(getDaysUntilDue(txn.nextDate))"
                 [severity]="getDueStatusSeverity(getDaysUntilDue(txn.nextDate))"
                 styleClass="text-xs">
               </p-tag>

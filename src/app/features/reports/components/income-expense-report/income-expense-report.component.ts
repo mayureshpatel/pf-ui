@@ -1,17 +1,17 @@
 import { Component, input, computed, signal, effect, inject, WritableSignal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import {CommonModule, formatCurrency} from '@angular/common';
 import { CardModule } from 'primeng/card';
 import { ChartModule } from 'primeng/chart';
 import { TableModule } from 'primeng/table';
 import { Transaction } from '@models/transaction.model';
 import { ReportsDataService } from '../../services/reports-data.service';
 import { MonthlyReportData } from '../../models/reports.model';
-import { formatCurrency } from '@shared/utils/account.utils';
+import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
 
 @Component({
   selector: 'app-income-expense-report',
   standalone: true,
-  imports: [CommonModule, CardModule, ChartModule, TableModule],
+  imports: [CommonModule, CardModule, ChartModule, TableModule, FormatCurrencyPipe],
   templateUrl: './income-expense-report.component.html'
 })
 export class IncomeExpenseReportComponent {
@@ -31,9 +31,6 @@ export class IncomeExpenseReportComponent {
   protected stackedBarOptions: WritableSignal<any> = signal({});
   protected lineChartData: WritableSignal<any> = signal({});
   protected lineChartOptions: WritableSignal<any> = signal({});
-
-  // Expose formatCurrency for template
-  protected readonly formatCurrency = formatCurrency;
 
   constructor() {
     effect(() => {
@@ -106,7 +103,7 @@ export class IncomeExpenseReportComponent {
           callbacks: {
             label: (context: any) => {
               const value = context.parsed.y || 0;
-              return `${context.dataset.label}: ${formatCurrency(value)}`;
+              return `${context.dataset.label}: ${formatCurrency(value, 'en-US', '$', '1.2-2')}`;
             }
           }
         }
@@ -119,7 +116,7 @@ export class IncomeExpenseReportComponent {
         y: {
           stacked: true,
           ticks: {
-            callback: (value: any) => formatCurrency(value)
+            callback: (value: any) => formatCurrency(value, 'en-US', '$', '1.2-2')
           }
         }
       }
@@ -140,7 +137,7 @@ export class IncomeExpenseReportComponent {
           callbacks: {
             label: (context: any) => {
               const value = context.parsed.y || 0;
-              return `Net Savings: ${formatCurrency(value)}`;
+              return `Net Savings: ${formatCurrency(value, 'en-US', '$', '1.2-2')}`;
             }
           }
         }
@@ -151,7 +148,7 @@ export class IncomeExpenseReportComponent {
         },
         y: {
           ticks: {
-            callback: (value: any) => formatCurrency(value)
+            callback: (value: any) => formatCurrency(value, 'en-US', '$', '1.2-2')
           }
         }
       }

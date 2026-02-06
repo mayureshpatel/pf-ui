@@ -5,7 +5,7 @@
       <div>
         <p class="text-muted-color text-sm mb-1">Total Income</p>
         <p class="text-2xl font-semibold text-green-600">
-          {{ data() ? formatCurrency(data()!.totalIncome) : '-' }}
+          {{ data()!.totalIncome | formatCurrency }}
         </p>
       </div>
       <div class="bg-green-100 dark:bg-green-900 p-3 rounded-full">
@@ -20,7 +20,7 @@
       <div>
         <p class="text-muted-color text-sm mb-1">Total Expenses</p>
         <p class="text-2xl font-semibold text-red-600">
-          {{ data() ? formatCurrency(data()!.totalExpense) : '-' }}
+          {{ data()!.totalExpense | formatCurrency }}
         </p>
       </div>
       <div class="bg-red-100 dark:bg-red-900 p-3 rounded-full">
@@ -39,7 +39,7 @@
              'text-green-600': data() && data()!.netSavings >= 0,
              'text-red-600': data() && data()!.netSavings < 0
            }">
-          {{ data() ? formatCurrency(data()!.netSavings) : '-' }}
+          {{ data()!.netSavings | formatCurrency }}
         </p>
       </div>
       <div class="bg-primary-100 dark:bg-primary-900 p-3 rounded-full">

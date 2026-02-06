@@ -15,12 +15,12 @@ import {MonthOption, YearOption} from '@models/dashboard.model';
 import {BudgetApiService} from './services/budget-api.service';
 import {ToastService} from '@core/services/toast.service';
 import {ConfirmationService} from 'primeng/api';
-import {formatCurrency} from '@shared/utils/account.utils';
 import {BudgetFormDialogComponent} from './components/budget-form-dialog/budget-form-dialog.component';
 import {CategoryApiService} from '@features/categories/services/category-api.service';
 import {Category} from '@models/category.model';
 import {getCategoryColor} from '@shared/utils/category.utils';
 import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-toolbar';
+import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
 
 export interface BudgetStatusViewModel extends BudgetStatus {
   icon?: string;
@@ -42,7 +42,8 @@ export interface BudgetStatusViewModel extends BudgetStatus {
     CheckboxModule,
     ProgressSpinnerModule,
     ScreenToolbarComponent,
-    BudgetFormDialogComponent
+    BudgetFormDialogComponent,
+    FormatCurrencyPipe
   ],
   templateUrl: './budgets.component.html'
 })
@@ -90,7 +91,6 @@ export class BudgetsComponent implements OnInit {
   totalSpent = computed(() => this.budgetStatuses().reduce((acc, curr) => acc + curr.spentAmount, 0));
   totalRemaining = computed(() => this.totalBudgeted() - this.totalSpent());
 
-  formatCurrency = formatCurrency;
   getCategoryColor = getCategoryColor;
 
   ngOnInit(): void {

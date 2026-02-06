@@ -1,18 +1,18 @@
-import { Component, input, computed, signal, effect, inject, WritableSignal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { CardModule } from 'primeng/card';
-import { ChartModule } from 'primeng/chart';
-import { TableModule } from 'primeng/table';
-import { TagModule } from 'primeng/tag';
-import { Transaction } from '@models/transaction.model';
-import { ReportsDataService } from '../../services/reports-data.service';
-import { VendorReportData } from '../../models/reports.model';
-import { formatCurrency } from '@shared/utils/account.utils';
+import {Component, computed, effect, inject, input, signal, WritableSignal} from '@angular/core';
+import {CommonModule, formatCurrency} from '@angular/common';
+import {CardModule} from 'primeng/card';
+import {ChartModule} from 'primeng/chart';
+import {TableModule} from 'primeng/table';
+import {TagModule} from 'primeng/tag';
+import {Transaction} from '@models/transaction.model';
+import {ReportsDataService} from '../../services/reports-data.service';
+import {VendorReportData} from '../../models/reports.model';
+import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
 
 @Component({
   selector: 'app-vendor-report',
   standalone: true,
-  imports: [CommonModule, CardModule, ChartModule, TableModule, TagModule],
+  imports: [CommonModule, CardModule, ChartModule, TableModule, TagModule, FormatCurrencyPipe],
   templateUrl: './vendor-report.component.html'
 })
 export class VendorReportComponent {
@@ -32,9 +32,6 @@ export class VendorReportComponent {
   protected barChartOptions: WritableSignal<any> = signal({});
   protected doughnutChartData: WritableSignal<any> = signal({});
   protected doughnutChartOptions: WritableSignal<any> = signal({});
-
-  // Expose formatCurrency for template
-  protected readonly formatCurrency = formatCurrency;
 
   constructor() {
     effect(() => {
@@ -102,12 +99,12 @@ export class VendorReportComponent {
       maintainAspectRatio: false,
       aspectRatio: 0.8,
       plugins: {
-        legend: { display: false },
+        legend: {display: false},
         tooltip: {
           callbacks: {
             label: (context: any) => {
               const value = context.parsed.x || 0;
-              return `Total: ${formatCurrency(value)}`;
+              return `Total: ${formatCurrency(value, 'en-US', '$', '1.2-2')}`;
             }
           }
         }
@@ -115,11 +112,11 @@ export class VendorReportComponent {
       scales: {
         x: {
           ticks: {
-            callback: (value: any) => formatCurrency(value)
+            callback: (value: any) => formatCurrency(value, 'en-US', '$', '1.2-2')
           },
-          grid: { display: false }
+          grid: {display: false}
         },
-        y: { grid: { display: false } }
+        y: {grid: {display: false}}
       }
     });
 
@@ -143,7 +140,7 @@ export class VendorReportComponent {
               const value = context.parsed || 0;
               const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
               const percentage = ((value / total) * 100).toFixed(1);
-              return `${context.label}: ${formatCurrency(value)} (${percentage}%)`;
+              return `${context.label}: ${formatCurrency(value, 'en-US', '$', '1.2-2')} (${percentage}%)`;
             }
           }
         }

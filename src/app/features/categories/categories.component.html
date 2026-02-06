@@ -96,7 +96,7 @@
 
               <!-- Budget -->
               <td class="text-right font-medium">
-                {{ category.budgetedAmount ? formatCurrency(category.budgetedAmount) : '-' }}
+                {{ category.budgetedAmount | formatCurrency }}
               </td>
 
               <!-- Monthly Progress -->

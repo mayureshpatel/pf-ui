@@ -43,10 +43,10 @@
       <ng-template pTemplate="body" let-data>
         <tr>
           <td class="font-medium">{{ data.month }}</td>
-          <td class="text-right text-green-600">{{ formatCurrency(data.income) }}</td>
-          <td class="text-right text-red-600">{{ formatCurrency(data.expense) }}</td>
+          <td class="text-right text-green-600">{{ data.income | formatCurrency }}</td>
+          <td class="text-right text-red-600">{{ data.expense | formatCurrency }}</td>
           <td class="text-right font-semibold" [ngClass]="getSavingsClass(data.netSavings)">
-            {{ formatCurrency(data.netSavings) }}
+            {{ data.netSavings | formatCurrency }}
           </td>
         </tr>
       </ng-template>

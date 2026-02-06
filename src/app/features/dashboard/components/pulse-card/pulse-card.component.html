@@ -9,7 +9,7 @@
       </div>
     </div>
     <span class="text-xs text-muted-color">
-      vs {{ type() === 'percent' ? previousValue().toFixed(1) + '%' : formatCurrency(previousValue()) }} previous period
+      vs {{ type() === 'percent' ? previousValue().toFixed(1) + '%' : previousValue() | formatCurrency }} previous period
     </span>
   </div>
 </p-card>

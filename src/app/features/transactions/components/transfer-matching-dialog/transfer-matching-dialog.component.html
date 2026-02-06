@@ -17,7 +17,7 @@
     [loading]="loading()"
     styleClass="p-datatable-sm"
     responsiveLayout="scroll">
-    
+
     <ng-template pTemplate="header">
       <tr>
         <th style="width: 35%">Outgoing (Expense)</th>
@@ -35,7 +35,7 @@
         <td class="align-top">
           <div class="flex flex-col gap-1">
             <span class="font-medium text-red-500">
-              {{ formatCurrency(suggestion.sourceTransaction.amount) }}
+              {{ suggestion.sourceTransaction.amount | formatCurrency }}
             </span>
             <div class="text-sm text-color">{{ suggestion.sourceTransaction.accountName }}</div>
             <div class="text-xs text-muted-color">{{ formatDate(suggestion.sourceTransaction.date) }}</div>
@@ -49,9 +49,9 @@
         <td class="text-center align-middle">
           <div class="flex flex-col items-center gap-1">
             <i class="pi pi-arrow-right text-primary"></i>
-            <p-tag 
-              [value]="Math.round(suggestion.confidenceScore * 100) + '% Match'" 
-              severity="info" 
+            <p-tag
+              [value]="Math.round(suggestion.confidenceScore * 100) + '% Match'"
+              severity="info"
               styleClass="text-xs">
             </p-tag>
           </div>
@@ -61,7 +61,7 @@
         <td class="align-top">
           <div class="flex flex-col gap-1">
             <span class="font-medium text-green-500">
-              +{{ formatCurrency(Math.abs(suggestion.targetTransaction.amount)) }}
+              +{{ Math.abs(suggestion.targetTransaction.amount) | formatCurrency }}
             </span>
             <div class="text-sm text-color">{{ suggestion.targetTransaction.accountName }}</div>
             <div class="text-xs text-muted-color">{{ formatDate(suggestion.targetTransaction.date) }}</div>
@@ -74,8 +74,8 @@
         <!-- Actions -->
         <td class="text-center align-middle">
           <div class="flex flex-col gap-2">
-            <p-button 
-              icon="pi pi-check" 
+            <p-button
+              icon="pi pi-check"
               (onClick)="confirmMatch(suggestion)"
               [rounded]="true"
               severity="success"
@@ -83,8 +83,8 @@
               tooltipPosition="left"
               size="small">
             </p-button>
-            <p-button 
-              icon="pi pi-times" 
+            <p-button
+              icon="pi pi-times"
               (onClick)="ignoreMatch(suggestion)"
               [rounded]="true"
               [text]="true"
@@ -113,16 +113,16 @@
         {{ suggestions().length }} suggestion(s) found
       </span>
       <div class="flex gap-2">
-        <p-button 
-          label="Close" 
-          (onClick)="onHide()" 
-          [text]="true" 
+        <p-button
+          label="Close"
+          (onClick)="onHide()"
+          [text]="true"
           severity="secondary">
         </p-button>
-        <p-button 
-          label="Confirm All" 
-          icon="pi pi-check-circle" 
-          (onClick)="confirmAll()" 
+        <p-button
+          label="Confirm All"
+          icon="pi pi-check-circle"
+          (onClick)="confirmAll()"
           [disabled]="suggestions().length === 0"
           [loading]="processing()"
           severity="primary">

@@ -7,14 +7,14 @@
 
     <div class="flex flex-col gap-1">
       <span class="text-xs text-muted-color uppercase font-medium">Total Income</span>
-      <span class="text-xl font-semibold text-green-500">{{ formatCurrency(totalIncome()) }}</span>
+      <span class="text-xl font-semibold text-green-500">{{ totalIncome() | formatCurrency }}</span>
     </div>
 
     <p-divider styleClass="m-0" />
 
     <div class="flex flex-col gap-1">
       <span class="text-xs text-muted-color uppercase font-medium">Total Expenses</span>
-      <span class="text-xl font-semibold text-red-500">{{ formatCurrency(totalExpense()) }}</span>
+      <span class="text-xl font-semibold text-red-500">{{ totalExpense() | formatCurrency }}</span>
     </div>
 
     <p-divider styleClass="m-0" />

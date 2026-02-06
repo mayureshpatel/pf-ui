@@ -72,20 +72,20 @@
         <p-card styleClass="shadow-sm border-l-4 border-primary">
           <div class="flex flex-col gap-1">
             <span class="text-xs font-semibold text-muted-color uppercase">Total Budgeted</span>
-            <span class="text-2xl font-bold text-color">{{ formatCurrency(totalBudgeted()) }}</span>
+            <span class="text-2xl font-bold text-color">{{ totalBudgeted() | formatCurrency }}</span>
           </div>
         </p-card>
         <p-card styleClass="shadow-sm border-l-4 border-red-500">
           <div class="flex flex-col gap-1">
             <span class="text-xs font-semibold text-muted-color uppercase">Total Spent</span>
-            <span class="text-2xl font-bold text-color">{{ formatCurrency(totalSpent()) }}</span>
+            <span class="text-2xl font-bold text-color">{{ totalSpent() | formatCurrency }}</span>
           </div>
         </p-card>
         <p-card [styleClass]="'shadow-sm border-l-4 ' + (totalRemaining() >= 0 ? 'border-green-500' : 'border-red-500')">
           <div class="flex flex-col gap-1">
             <span class="text-xs font-semibold text-muted-color uppercase">Remaining</span>
             <span [class]="'text-2xl font-bold ' + (totalRemaining() >= 0 ? 'text-green-500' : 'text-red-500')">
-              {{ formatCurrency(totalRemaining()) }}
+              {{ totalRemaining() | formatCurrency }}
             </span>
           </div>
         </p-card>
@@ -119,8 +119,8 @@
                 </div>
               </td>
               <td class="font-medium">{{ status.categoryName }}</td>
-              <td class="text-right">{{ formatCurrency(status.budgetedAmount) }}</td>
-              <td class="text-right text-red-500">{{ formatCurrency(status.spentAmount) }}</td>
+              <td class="text-right">{{ status.budgetedAmount | formatCurrency }}</td>
+              <td class="text-right text-red-500">{{ status.spentAmount | formatCurrency }}</td>
               <td>
                 <div class="flex flex-col gap-1">
                   <p-progressBar
@@ -134,7 +134,7 @@
                 </div>
               </td>
               <td [class]="'text-right font-semibold ' + (status.remainingAmount >= 0 ? 'text-green-500' : 'text-red-500')">
-                {{ formatCurrency(status.remainingAmount) }}
+                {{ status.remainingAmount | formatCurrency }}
               </td>
             </tr>
           </ng-template>
@@ -174,7 +174,7 @@
               </td>
               <td>{{ budget.categoryName }}</td>
               <td class="text-right font-semibold text-primary">
-                {{ formatCurrency(budget.amount) }}
+                {{ budget.amount | formatCurrency }}
               </td>
               <td class="text-center">
                 <p-button

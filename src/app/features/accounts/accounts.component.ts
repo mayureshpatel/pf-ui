@@ -1,4 +1,4 @@
-import {Component, computed, DestroyRef, inject, OnInit, signal, WritableSignal} from '@angular/core';
+import {Component, computed, DestroyRef, inject, OnInit, Signal, signal, WritableSignal} from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {CommonModule} from '@angular/common';
 import {ButtonModule} from 'primeng/button';
@@ -11,8 +11,10 @@ import {AccountApiService} from './services/account-api.service';
 import {AccountSummaryCardsComponent} from './components/account-summary-cards/account-summary-cards.component';
 import {AccountFormDrawerComponent} from './components/account-form-drawer/account-form-drawer.component';
 import {ToastService} from '@core/services/toast.service';
-import {formatCurrency, getAccountTypeInfo} from '@shared/utils/account.utils';
 import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-toolbar';
+import {finalize} from 'rxjs';
+import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
+import {AccountTypeInfoPipe} from '@shared/pipes/account-type-info.pipe';
 
 @Component({
   selector: 'app-accounts',
@@ -25,25 +27,27 @@ import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-t
     TooltipModule,
     ScreenToolbarComponent,
     AccountSummaryCardsComponent,
-    AccountFormDrawerComponent
+    AccountFormDrawerComponent,
+    FormatCurrencyPipe,
+    AccountTypeInfoPipe
   ],
   templateUrl: './accounts.component.html'
 })
 export class AccountsComponent implements OnInit {
-  private readonly accountApi = inject(AccountApiService);
-  private readonly toast = inject(ToastService);
-  private readonly confirmationService = inject(ConfirmationService);
-  private readonly destroyRef = inject(DestroyRef);
+  // injected services
+  private readonly accountApi: AccountApiService = inject(AccountApiService);
+  private readonly toast: ToastService = inject(ToastService);
+  private readonly confirmationService: ConfirmationService = inject(ConfirmationService);
+  private readonly destroyRef: DestroyRef = inject(DestroyRef);
 
+  // signals
   accounts: WritableSignal<Account[]> = signal([]);
   loading: WritableSignal<boolean> = signal(false);
   showDialog: WritableSignal<boolean> = signal(false);
   selectedAccount: WritableSignal<Account | null> = signal(null);
 
-  isEmpty = computed(() => this.accounts().length === 0 && !this.loading());
-
-  formatCurrency = formatCurrency;
-  getAccountTypeInfo = getAccountTypeInfo;
+  // computed signals
+  isEmpty: Signal<boolean> = computed((): boolean => this.accounts().length === 0 && !this.loading());
 
   ngOnInit(): void {
     this.loadAccounts();
@@ -52,15 +56,16 @@ export class AccountsComponent implements OnInit {
   loadAccounts(): void {
     this.loading.set(true);
     this.accountApi.getAccounts()
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize((): void => this.loading.set(false))
+      )
       .subscribe({
-        next: (accounts) => {
+        next: (accounts: Account[]): void => {
           this.accounts.set(accounts);
-          this.loading.set(false);
         },
-        error: () => {
+        error: (): void => {
           this.toast.error('Failed to load accounts');
-          this.loading.set(false);
         }
       });
   }
@@ -137,9 +142,5 @@ export class AccountsComponent implements OnInit {
           });
       }
     });
-  }
-
-  getBalanceClass(balance: number): string {
-    return balance >= 0 ? 'text-green-600' : 'text-red-600';
   }
 }

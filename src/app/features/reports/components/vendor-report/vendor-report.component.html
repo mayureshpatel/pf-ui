@@ -43,7 +43,7 @@
       <ng-template pTemplate="body" let-vendor>
         <tr>
           <td class="font-medium">{{ vendor.vendorName }}</td>
-          <td class="text-right">{{ formatCurrency(vendor.total) }}</td>
+          <td class="text-right">{{ vendor.total | formatCurrency }}</td>
           <td class="text-right">{{ vendor.count }}</td>
           <td>
             <div class="flex flex-wrap gap-1">

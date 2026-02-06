@@ -27,9 +27,9 @@
       <ng-template pTemplate="body" let-cat>
         <tr>
           <td class="font-medium">{{ cat.categoryName }}</td>
-          <td class="text-right">{{ formatCurrency(cat.total) }}</td>
+          <td class="text-right">{{ cat.total | formatCurrency }}</td>
           <td class="text-right">{{ cat.count }}</td>
-          <td class="text-right">{{ formatCurrency(cat.avgTransaction) }}</td>
+          <td class="text-right">{{ cat.avgTransaction | formatCurrency }}</td>
         </tr>
       </ng-template>
     </p-table>

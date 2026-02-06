@@ -2,12 +2,13 @@ import { Component, computed, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CardModule } from 'primeng/card';
 import { Account, AccountSummary } from '@models/account.model';
-import { formatCurrency, isAssetAccount, isLiabilityAccount } from '@shared/utils/account.utils';
+import { isAssetAccount, isLiabilityAccount } from '@shared/utils/account.utils';
+import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
 
 @Component({
   selector: 'app-account-summary-cards',
   standalone: true,
-  imports: [CommonModule, CardModule],
+  imports: [CommonModule, CardModule, FormatCurrencyPipe],
   templateUrl: './account-summary-cards.component.html'
 })
 export class AccountSummaryCardsComponent {
@@ -33,6 +34,4 @@ export class AccountSummaryCardsComponent {
       netWorth: totalAssets - totalLiabilities
     };
   });
-
-  formatCurrency = formatCurrency;
 }

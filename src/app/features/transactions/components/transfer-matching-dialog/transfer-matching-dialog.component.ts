@@ -8,8 +8,8 @@ import { TagModule } from 'primeng/tag';
 import { TransferSuggestion } from '@models/transaction.model';
 import { TransactionApiService } from '../../services/transaction-api.service';
 import { ToastService } from '@core/services/toast.service';
-import { formatCurrency } from '@shared/utils/account.utils';
 import { formatDate } from '@shared/utils/transaction.utils';
+import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
 
 @Component({
   selector: 'app-transfer-matching-dialog',
@@ -20,7 +20,8 @@ import { formatDate } from '@shared/utils/transaction.utils';
     DialogModule,
     TableModule,
     TooltipModule,
-    TagModule
+    TagModule,
+    FormatCurrencyPipe
   ],
   templateUrl: './transfer-matching-dialog.component.html'
 })
@@ -36,7 +37,6 @@ export class TransferMatchingDialogComponent {
   loading: WritableSignal<boolean> = signal(false);
   processing: WritableSignal<boolean> = signal(false);
 
-  formatCurrency = formatCurrency;
   formatDate = formatDate;
   Math = Math;
 
@@ -83,12 +83,12 @@ export class TransferMatchingDialogComponent {
     this.transactionApi.markAsTransfer(ids).subscribe({
       next: () => {
         this.toast.success(`Successfully matched ${items.length} transfer(s)`);
-        
+
         // Remove processed items from list
         const processedIds = new Set(ids);
-        this.suggestions.update(current => 
-          current.filter(s => 
-            !processedIds.has(s.sourceTransaction.id) && 
+        this.suggestions.update(current =>
+          current.filter(s =>
+            !processedIds.has(s.sourceTransaction.id) &&
             !processedIds.has(s.targetTransaction.id)
           )
         );

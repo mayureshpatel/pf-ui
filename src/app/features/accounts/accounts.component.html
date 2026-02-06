@@ -23,20 +23,19 @@
 
   <!-- Accounts Table -->
   @if (!isEmpty()) {
-    <p-card styleClass="shadow-sm">
+    <p-card class="shadow-sm">
       <p-table
         [value]="accounts()"
         [loading]="loading()"
         [paginator]="false"
-        styleClass="p-datatable-sm"
-        responsiveLayout="scroll">
+        class="p-datatable-sm">
 
         <ng-template pTemplate="header">
           <tr>
-            <th>Account Name</th>
-            <th>Type</th>
-            <th class="text-right">Current Balance</th>
-            <th class="text-center" style="width: 150px">Actions</th>
+            <th id="account-name">Account Name</th>
+            <th id="account-type">Type</th>
+            <th id="account-balance" class="text-right">Current Balance</th>
+            <th id="account-actions" class="text-center" style="width: 150px">Actions</th>
           </tr>
         </ng-template>
 
@@ -50,16 +49,20 @@
             <!-- Account Type -->
             <td>
               <div class="flex items-center gap-2">
-                <i
-                  [class]="'pi ' + getAccountTypeInfo(account.type).icon + ' ' + getAccountTypeInfo(account.type).color"></i>
-                <span>{{ getAccountTypeInfo(account.type).label }}</span>
+                <i [class]="'pi ' + (account.type | accountTypeInfo:'icon') + ' ' + (account.type | accountTypeInfo:'color')"></i>
+                <span>{{ (account.type | accountTypeInfo).label }}</span>
               </div>
             </td>
 
             <!-- Current Balance -->
             <td class="text-right">
-              <span class="font-semibold" [ngClass]="getBalanceClass(account.currentBalance)">
-                {{ formatCurrency(account.currentBalance) }}
+              <span
+                class="font-semibold"
+                [class.text-green-600]="account.currentBalance > 0"
+                [class.text-muted-color]="account.currentBalance == 0"
+                [class.text-red-600]="account.currentBalance < 0"
+              >
+                {{ account.currentBalance | formatCurrency }}
               </span>
             </td>
 
@@ -100,7 +103,7 @@
 
   <!-- Empty State -->
   @if (isEmpty()) {
-    <p-card styleClass="shadow-sm">
+    <p-card class="shadow-sm">
       <div class="flex flex-col items-center justify-center py-12">
         <i class="pi pi-wallet text-6xl text-muted-color mb-4"></i>
         <h2 class="text-2xl font-semibold text-color mb-2">No accounts yet</h2>

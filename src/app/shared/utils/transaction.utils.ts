@@ -1,5 +1,5 @@
 import { TransactionType, TransactionTypeInfo } from '@models/transaction.model';
-import { formatCurrency } from './account.utils';
+import {formatCurrency} from '@angular/common';
 
 export const TRANSACTION_TYPE_INFO: Record<TransactionType, TransactionTypeInfo> = {
   [TransactionType.INCOME]: {
@@ -39,7 +39,7 @@ export function getTransactionTypeInfo(type: TransactionType): TransactionTypeIn
 }
 
 export function formatTransactionAmount(amount: number, type: TransactionType): string {
-  const formatted = formatCurrency(Math.abs(amount));
+  const formatted = formatCurrency(Math.abs(amount), 'en-US', '$', '1.2-2');
 
   if (type === TransactionType.ADJUSTMENT) {
     return amount >= 0 ? `+${formatted}` : `-${formatted}`;
