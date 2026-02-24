@@ -1,4 +1,7 @@
 import { BankName } from './transaction.model';
+import {User} from '@models/auth.model';
+import {Currency} from '@models/currency.model';
+import {Iconography} from '@models/iconography.model';
 
 export enum AccountType {
   CHECKING = 'CHECKING',
@@ -10,10 +13,12 @@ export enum AccountType {
 
 export interface Account {
   id: number;
+  user: User;
   name: string;
   type: AccountType;
   currentBalance: number;
-  bankName?: BankName;
+  currency: Currency;
+  bank: BankName;
 }
 
 export interface AccountFormData {
@@ -30,7 +35,13 @@ export interface AccountSummary {
 }
 
 export interface AccountTypeInfo {
-  icon: string;
-  color: string;
   label: string;
+  iconography: Iconography;
+}
+
+export interface AccountSnapshot {
+  id: number;
+  account: Account;
+  snapshotDate: Date;
+  balance: number;
 }

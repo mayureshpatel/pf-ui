@@ -1,3 +1,6 @@
+import {Category} from '@models/category.model';
+import {Merchant} from '@models/merchant.model';
+
 export interface DashboardData {
   totalIncome: number;
   totalExpense: number;
@@ -43,25 +46,23 @@ export interface ActionItem {
 }
 
 export interface CategoryTotal {
-  categoryName: string;
+  category: Category;
   total: number;
-  icon?: string;
-  color?: string;
 }
 
-export interface VendorTotal {
-  vendorName: string;
+export interface MerchantBreakdown {
+  merchant: Merchant;
   total: number;
 }
 
 export interface DailyBalance {
-  date: string; // LocalDate from backend
+  date: string;
   balance: number;
 }
 
 export interface MonthOption {
   label: string;
-  value: number; // 1-12
+  value: number;
 }
 
 export interface YearOption {

@@ -2,29 +2,39 @@ import { AccountType, AccountTypeInfo } from '@models/account.model';
 
 export const ACCOUNT_TYPE_INFO: Record<AccountType, AccountTypeInfo> = {
   [AccountType.CHECKING]: {
-    icon: 'pi-building',
-    color: 'text-blue-500',
-    label: 'Checking'
+    label: 'Checking',
+    iconography: {
+      icon: 'pi-building',
+      color: 'text-blue-500'
+    }
   },
   [AccountType.SAVINGS]: {
-    icon: 'pi-money-bill',
-    color: 'text-green-500',
-    label: 'Savings'
+    label: 'Savings',
+    iconography: {
+      icon: 'pi-money-bill',
+      color: 'text-green-500'
+    }
   },
   [AccountType.CREDIT_CARD]: {
-    icon: 'pi-credit-card',
-    color: 'text-orange-500',
-    label: 'Credit Card'
+    label: 'Credit Card',
+    iconography: {
+      icon: 'pi-credit-card',
+      color: 'text-orange-500'
+    }
   },
   [AccountType.INVESTMENT]: {
-    icon: 'pi-chart-line',
-    color: 'text-purple-500',
-    label: 'Investment'
+    label: 'Investment',
+    iconography: {
+      icon: 'pi-chart-line',
+      color: 'text-purple-500'
+    }
   },
   [AccountType.CASH]: {
-    icon: 'pi-wallet',
-    color: 'text-gray-500',
-    label: 'Cash'
+    label: 'Cash',
+    iconography: {
+      icon: 'pi-wallet',
+      color: 'text-gray-500'
+    }
   }
 };
 

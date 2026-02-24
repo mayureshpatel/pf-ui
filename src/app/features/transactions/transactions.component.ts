@@ -16,7 +16,7 @@ import {InputNumberModule} from 'primeng/inputnumber';
 import {InputTextModule} from 'primeng/inputtext';
 import {ConfirmationService, MenuItem} from 'primeng/api';
 import {ContextMenuModule} from 'primeng/contextmenu';
-import {Transaction, TransactionFilter, TransactionFormData, TransactionType} from '@models/transaction.model';
+import {Transaction, TransactionFilter, TransactionType} from '@models/transaction.model';
 import {Account} from '@models/account.model';
 import {Category} from '@models/category.model';
 import {Frequency, RecurringTransaction} from '@models/recurring.model';
@@ -27,9 +27,6 @@ import {BulkEditData, BulkEditDialogComponent} from './components/bulk-edit-dial
 import {
   TransferMatchingDialogComponent
 } from './components/transfer-matching-dialog/transfer-matching-dialog.component';
-import {
-  VendorRuleFormDrawerComponent
-} from '@shared/components/vendor-rule-form-drawer/vendor-rule-form-drawer.component';
 import {RecurringFormDrawerComponent} from '@shared/components/recurring-form-drawer/recurring-form-drawer.component';
 import {AccountApiService} from '@features/accounts/services/account-api.service';
 import {CategoryApiService} from '@features/categories/services/category-api.service';
@@ -67,7 +64,6 @@ import { TableToolbarComponent } from '@shared/components/table-toolbar/table-to
     CsvImportDialogComponent,
     BulkEditDialogComponent,
     TransferMatchingDialogComponent,
-    VendorRuleFormDrawerComponent,
     RecurringFormDrawerComponent
   ],
   templateUrl: './transactions.component.html'
@@ -265,16 +261,15 @@ export class TransactionsComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (response) => {
           // Enrich transactions with account and category info
-          const accountMap = new Map(this.accounts().map(a => [a.id, a.name]));
-          const categoryMap = new Map(this.categories().map(c => [c.name, c]));
+          const accountMap = new Map(this.accounts().map(a => [a.id, a]));
+          const categoryMap = new Map(this.categories().map(c => [c.id, c]));
 
           const enrichedTransactions = response.content.map(t => {
-            const category = t.categoryName ? categoryMap.get(t.categoryName) : undefined;
+            const category = t.category ? categoryMap.get(t.category.id) : undefined;
             return {
               ...t,
-              accountName: accountMap.get(t.accountId) || 'Unknown Account',
-              categoryIcon: category?.icon,
-              categoryColor: category?.color
+              accountName: accountMap.get(t.account.id) || undefined,
+              iconography: category?.iconography
             };
           });
 
@@ -333,7 +328,7 @@ export class TransactionsComponent implements OnInit, OnDestroy {
   onVendorSearch(event: AutoCompleteCompleteEvent): void {
     const query = event.query.toLowerCase();
     const uniqueVendors = [...new Set([
-      ...this.transactions().map(t => t.vendorName).filter(Boolean) as string[],
+      ...this.transactions().map(t => t.merchant.cleanName).filter(Boolean),
       ...this.vendorSuggestions()
     ])];
     this.filteredVendors.set(
@@ -357,8 +352,8 @@ export class TransactionsComponent implements OnInit, OnDestroy {
   private updateVendorSuggestions(transactions: Transaction[]): void {
     // Only use current page vendors - don't accumulate across loads to prevent memory leak
     const vendors = transactions
-      .map(t => t.vendorName)
-      .filter(Boolean) as string[];
+      .map(t => t.merchant.cleanName)
+      .filter(Boolean);
     const unique = [...new Set(vendors)];
     this.vendorSuggestions.set(unique);
   }
@@ -477,7 +472,7 @@ export class TransactionsComponent implements OnInit, OnDestroy {
       {
         label: 'Filter by Vendor',
         icon: 'pi pi-search',
-        command: () => this.filterByVendor(transaction.vendorName)
+        command: () => this.filterByVendor(transaction.merchant.cleanName)
       }
     ];
   }
@@ -504,7 +499,7 @@ export class TransactionsComponent implements OnInit, OnDestroy {
     this.selectedContextTransaction = transaction;
     // Use originalVendorName if available, otherwise description
     // This is usually what we want to clean up
-    const keyword = transaction.originalVendorName || transaction.description || '';
+    const keyword = transaction.merchant.originalName || transaction.description || '';
     this.selectedTransactionKeyword.set(keyword);
     this.showVendorRuleDialog.set(true);
   }
@@ -527,13 +522,13 @@ export class TransactionsComponent implements OnInit, OnDestroy {
   openRecurringDialog(transaction: Transaction): void {
     this.recurringPrefill.set({
       id: 0, // Indicates new
-      merchantName: transaction.vendorName || transaction.originalVendorName || '',
+      user: transaction.account.user,
+      merchant: transaction.merchant || undefined,
       amount: Math.abs(transaction.amount),
       frequency: Frequency.MONTHLY, // Default
       nextDate: transaction.date, // Use transaction date as start
       active: true,
-      accountId: transaction.accountId,
-      accountName: transaction.accountName
+      account: transaction.account
     });
     this.showRecurringDialog.set(true);
   }
@@ -552,7 +547,7 @@ export class TransactionsComponent implements OnInit, OnDestroy {
     }
   }
 
-  onSave(formData: TransactionFormData): void {
+  onSave(formData: Transaction): void {
     const transaction = this.selectedTransaction();
     this.savingTransaction.set(true);
 
@@ -650,16 +645,7 @@ export class TransactionsComponent implements OnInit, OnDestroy {
     this.savingBulkEdit.set(true);
 
     // Build update DTOs by merging selected transactions with bulk edit data
-    const updates: TransactionFormData[] = this.selectedTransactions().map(txn => ({
-      id: txn.id,
-      date: txn.date,
-      type: txn.type,
-      accountId: txn.accountId,
-      amount: txn.amount,
-      description: data.updateDescription ? data.description! : (txn.description || undefined),
-      vendorName: data.updateVendor ? data.vendorName : (txn.vendorName || undefined),
-      categoryName: data.updateCategory ? data.categoryName : (txn.categoryName || undefined)
-    }));
+    const updates: Transaction[] = this.selectedTransactions();
 
     this.transactionApi.bulkUpdateTransactions(updates)
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -699,57 +685,5 @@ export class TransactionsComponent implements OnInit, OnDestroy {
 
   blurInput(event: any): void {
     event?.originalEvent?.target?.blur();
-  }
-
-  onCellEditComplete(event: any): void {
-    const transaction = event.data as Transaction;
-    const field = event.field;
-    const newValue = event.newValue;
-
-    // Only update if value actually changed
-    if (transaction[field as keyof Transaction] === newValue) {
-      return;
-    }
-
-    const formData: TransactionFormData = {
-      id: transaction.id,
-      date: transaction.date,
-      type: transaction.type,
-      accountId: transaction.accountId,
-      amount: transaction.amount,
-      description: transaction.description || undefined,
-      vendorName: field === 'vendorName' ? newValue : (transaction.vendorName || undefined),
-      categoryName: field === 'categoryName' ? newValue : (transaction.categoryName || undefined)
-    };
-
-    this.transactionApi.updateTransaction(transaction.id, formData)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (updated) => {
-          this.toast.success('Transaction updated');
-          // Update local state if needed, although lazy load might handle it
-          // But to be smooth, we update the object in the list
-          const index = this.transactions().findIndex(t => t.id === updated.id);
-          if (index !== -1) {
-            const current = [...this.transactions()];
-            // Re-enrich with account and category info
-            const accountMap = new Map(this.accounts().map(a => [a.id, a.name]));
-            const categoryMap = new Map(this.categories().map(c => [c.name, c]));
-            const category = updated.categoryName ? categoryMap.get(updated.categoryName) : undefined;
-            
-            current[index] = {
-              ...updated,
-              accountName: accountMap.get(updated.accountId) || 'Unknown Account',
-              categoryIcon: category?.icon,
-              categoryColor: category?.color
-            };
-            this.transactions.set(current);
-          }
-        },
-        error: (error) => {
-          this.toast.error(error.error?.detail || 'Failed to update transaction');
-          this.loadTransactions(); // Revert on error
-        }
-      });
   }
 }

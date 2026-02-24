@@ -1,22 +1,17 @@
+import {User} from '@models/auth.model';
+import {Category} from '@models/category.model';
+
 export interface Budget {
   id: number;
-  categoryId: number;
-  categoryName: string;
-  amount: number;
-  month: number;
-  year: number;
-}
-
-export interface BudgetDto {
-  categoryId: number;
+  user: User;
+  category: Category;
   amount: number;
   month: number;
   year: number;
 }
 
 export interface BudgetStatus {
-  categoryId?: number;
-  categoryName: string;
+  category: Category;
   budgetedAmount: number;
   spentAmount: number;
   remainingAmount: number;

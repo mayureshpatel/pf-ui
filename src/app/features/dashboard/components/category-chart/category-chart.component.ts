@@ -37,9 +37,9 @@ export class CategoryChartComponent {
       .sort((a, b) => b.total - a.total)
       .slice(0, 5);
 
-    const labels = top5.map(c => c.categoryName || 'Uncategorized');
+    const labels = top5.map(c => c.category || 'Uncategorized');
     const data = top5.map(c => Math.abs(c.total));
-    const colors = top5.map(c => getCategoryColorHex(c.categoryName || 'Uncategorized'));
+    const colors = top5.map(c => getCategoryColorHex(c.category || 'Uncategorized'));
 
     this.chartData.set({
       labels,

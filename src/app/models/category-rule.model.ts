@@ -1,12 +1,10 @@
+import {User} from '@models/auth.model';
+import {Category} from '@models/category.model';
+
 export interface CategoryRule {
   id: number;
+  user: User;
   keyword: string;
-  categoryName: string;
   priority: number;
-}
-
-export interface CategoryRuleDto {
-  keyword: string;
-  categoryName: string;
-  priority?: number;
+  category: Category;
 }

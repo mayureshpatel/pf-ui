@@ -66,7 +66,7 @@ export class CategoryFormDrawerComponent implements OnChanges {
   parentOptions = computed(() => {
     const currentId = this.category()?.id;
     return this.allCategories()
-      .filter(c => c.id !== currentId && !c.parentId) // Only top-level categories
+      .filter(c => c.id !== currentId && !c.parent) // Only top-level categories
       .map(c => ({ label: c.name, value: c.id }));
   });
 
@@ -78,7 +78,7 @@ export class CategoryFormDrawerComponent implements OnChanges {
         color: cat.color || getCategoryColor(cat.name),
         icon: cat.icon || '',
         type: cat.type || CategoryType.EXPENSE,
-        parentId: cat.parentId
+        parentId: cat.parent
       };
     } else {
       this.resetForm();
@@ -129,7 +129,7 @@ export class CategoryFormDrawerComponent implements OnChanges {
     const currentCategory = this.category();
     const isDuplicate = this.allCategories().some(
       cat => cat.name.toLowerCase() === this.formData.name.trim().toLowerCase()
-        && (cat.parentId ?? null) === (this.formData.parentId ?? null)  // Check same parent
+        && (cat.parent ?? null) === (this.formData.parentId ?? null)  // Check same parent
         && (!currentCategory || cat.id !== currentCategory.id)
     );
 
@@ -147,7 +147,7 @@ export class CategoryFormDrawerComponent implements OnChanges {
       colorToSave = getCategoryColor(this.formData.name);
     }
 
-    this.save.emit({ 
+    this.save.emit({
       name: this.formData.name.trim(),
       color: colorToSave,
       icon: this.formData.icon,

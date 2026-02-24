@@ -7,15 +7,15 @@ import { CardModule } from 'primeng/card';
 import { Select } from 'primeng/select';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { SelectButtonModule } from 'primeng/selectbutton';
-import { 
-  DashboardPulse, 
-  CashFlowTrend, 
-  YtdSummary, 
-  ActionItem, 
-  MonthOption, 
+import {
+  DashboardPulse,
+  CashFlowTrend,
+  YtdSummary,
+  ActionItem,
+  MonthOption,
   YearOption,
   CategoryTotal,
-  VendorTotal
+  MerchantBreakdown
 } from '@models/dashboard.model';
 import { Account } from '@models/account.model';
 import { DashboardApiService } from './services/dashboard-api.service';
@@ -64,8 +64,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   ytd: WritableSignal<YtdSummary | null> = signal(null);
   actions: WritableSignal<ActionItem[]> = signal([]);
   topCategories: WritableSignal<CategoryTotal[]> = signal([]);
-  topVendors: WritableSignal<VendorTotal[]> = signal([]);
-  
+  topVendors: WritableSignal<MerchantBreakdown[]> = signal([]);
+
   accounts: WritableSignal<Account[]> = signal([]);
   loading: WritableSignal<boolean> = signal(false);
 
@@ -193,9 +193,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private loadAllData(): void {
     this.loading.set(true);
     const range = this.calculateRange();
-    
+
     forkJoin({
-      pulse: range 
+      pulse: range
         ? this.dashboardApi.getPulse(undefined, undefined, range.start, range.end)
         : this.dashboardApi.getPulse(this.selectedMonth(), this.selectedYear()),
       trends: this.dashboardApi.getCashFlowTrend(),
@@ -222,8 +222,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
           const metaMap = new Map(results.categoryMeta.map(c => [c.name, c]));
           const enrichedCategories = results.categories.map(c => ({
             ...c,
-            icon: metaMap.get(c.categoryName)?.icon,
-            color: metaMap.get(c.categoryName)?.color || getCategoryColor(c.categoryName)
+            icon: metaMap.get(c.category)?.icon,
+            color: metaMap.get(c.category)?.color || getCategoryColor(c.category)
           }));
           this.topCategories.set(enrichedCategories);
 

@@ -1,17 +1,17 @@
+import {Merchant} from '@models/merchant.model';
+import {Category} from '@models/category.model';
+import { Account } from "./account.model";
+
 export interface Transaction {
   id: number;
-  amount: number;
-  date: string; // ISO date string
-  postDate?: string; // ISO date string
+  date: string;
+  postDate?: string;
   description: string | null;
-  originalVendorName: string | null;
-  vendorName: string | null;
+  merchant: Merchant;
+  amount: number;
   type: TransactionType;
-  categoryName: string | null;
-  accountId: number;
-  accountName?: string; // Will be populated from account data
-  categoryIcon?: string; // UI Enrichment
-  categoryColor?: string; // UI Enrichment
+  category: Category;
+  account: Account;
 }
 
 export enum TransactionType {
@@ -21,18 +21,6 @@ export enum TransactionType {
   TRANSFER_IN = 'TRANSFER_IN',
   TRANSFER_OUT = 'TRANSFER_OUT',
   ADJUSTMENT = 'ADJUSTMENT'
-}
-
-export interface TransactionFormData {
-  id?: number;
-  date: string;
-  postDate?: string;
-  type: TransactionType;
-  accountId: number;
-  amount: number;
-  description?: string;
-  vendorName?: string;
-  categoryName?: string;
 }
 
 export interface TransactionFilter {
@@ -87,7 +75,7 @@ export interface TransactionPreview {
 }
 
 export interface SaveTransactionRequest {
-  transactions: TransactionFormData[];
+  transactions: Transaction[];
   fileName: string;
   fileHash: string;
 }

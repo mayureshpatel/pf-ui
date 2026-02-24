@@ -67,7 +67,7 @@ export class RecurringScanDialogComponent {
     this.processing.set(true);
 
     const dto: RecurringTransactionDto = {
-      merchantName: suggestion.merchantName,
+      merchant: suggestion.merchant,
       amount: suggestion.amount,
       frequency: suggestion.frequency,
       lastDate: suggestion.lastDate,
@@ -77,9 +77,9 @@ export class RecurringScanDialogComponent {
 
     this.api.createRecurringTransaction(dto).subscribe({
       next: () => {
-        this.toast.success('Added ' + suggestion.merchantName);
+        this.toast.success('Added ' + suggestion.merchant);
         this.suggestions.update(current =>
-          current.filter(s => s.merchantName !== suggestion.merchantName)
+          current.filter(s => s.merchant !== suggestion.merchant)
         );
         this.save.emit();
         this.processing.set(false);
@@ -97,7 +97,7 @@ export class RecurringScanDialogComponent {
 
   ignore(suggestion: RecurringSuggestion): void {
     this.suggestions.update(current =>
-      current.filter(s => s.merchantName !== suggestion.merchantName)
+      current.filter(s => s.merchant !== suggestion.merchant)
     );
   }
 }

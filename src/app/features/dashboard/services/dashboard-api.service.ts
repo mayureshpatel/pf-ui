@@ -2,15 +2,15 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '@env';
-import { 
-  DashboardData, 
-  DailyBalance, 
-  DashboardPulse, 
-  CashFlowTrend, 
-  YtdSummary, 
+import {
+  DashboardData,
+  DailyBalance,
+  DashboardPulse,
+  CashFlowTrend,
+  YtdSummary,
   ActionItem,
   CategoryTotal,
-  VendorTotal
+  MerchantBreakdown
 } from '@models/dashboard.model';
 
 @Injectable({
@@ -31,7 +31,7 @@ export class DashboardApiService {
     return this.http.get<CategoryTotal[]>(`${this.apiUrl}/categories`, { params });
   }
 
-  getVendorBreakdown(month?: number, year?: number, startDate?: string, endDate?: string): Observable<VendorTotal[]> {
+  getVendorBreakdown(month?: number, year?: number, startDate?: string, endDate?: string): Observable<MerchantBreakdown[]> {
     let params = new HttpParams();
     if (startDate && endDate) {
       params = params.set('startDate', startDate).set('endDate', endDate);
@@ -39,7 +39,7 @@ export class DashboardApiService {
       params = params.set('month', month.toString()).set('year', year.toString());
     }
 
-    return this.http.get<VendorTotal[]>(`${this.apiUrl}/vendors`, { params });
+    return this.http.get<MerchantBreakdown[]>(`${this.apiUrl}/vendors`, { params });
   }
 
   getPulse(month?: number, year?: number, startDate?: string, endDate?: string): Observable<DashboardPulse> {

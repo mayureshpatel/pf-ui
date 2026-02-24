@@ -9,7 +9,7 @@ import { MessageModule } from 'primeng/message';
 import { DatePicker } from 'primeng/datepicker';
 import { RadioButtonModule } from 'primeng/radiobutton';
 import { DividerModule } from 'primeng/divider';
-import { Transaction, TransactionFormData, TransactionType } from '@models/transaction.model';
+import { Transaction, TransactionType } from '@models/transaction.model';
 import { Account } from '@models/account.model';
 import { CategoryGroup, CategoryType } from '@models/category.model';
 import { TRANSACTION_TYPE_INFO } from '@shared/utils/transaction.utils';
@@ -49,12 +49,12 @@ export class TransactionFormDrawerComponent implements OnChanges, OnInit {
   accounts = input.required<Account[]>();
   saving = input<boolean>(false);
 
-  @Output() save = new EventEmitter<TransactionFormData>();
+  @Output() save = new EventEmitter<Transaction>();
 
-  formData: TransactionFormData = {
+  formData: Transaction = {
     date: this.getTodayISO(),
     type: TransactionType.EXPENSE,
-    accountId: 0,
+    account: undefined,
     amount: 0
   };
 
@@ -83,8 +83,7 @@ export class TransactionFormDrawerComponent implements OnChanges, OnInit {
           .map(cat => ({
             label: cat.name,
             value: cat.name,
-            icon: cat.icon,
-            color: cat.color
+            iconography: cat.iconography
           }))
       }))
       .filter(group => group.items.length > 0);
@@ -118,13 +117,14 @@ export class TransactionFormDrawerComponent implements OnChanges, OnInit {
     const txn = this.transaction();
     if (txn) {
       this.formData = {
+        id: txn.id,
         date: txn.date,
         type: txn.type,
-        accountId: txn.accountId,
+        account: txn.account,
         amount: Math.abs(txn.amount),
-        description: txn.description || undefined,
-        vendorName: txn.vendorName || undefined,
-        categoryName: txn.categoryName || undefined
+        description: txn.description || null,
+        merchant: txn.merchant || undefined,
+        category: txn.category || undefined
       };
       this.formDate = new Date(txn.date);
     } else {
@@ -142,7 +142,7 @@ export class TransactionFormDrawerComponent implements OnChanges, OnInit {
     this.errorMessage.set(null);
 
     // Validate required fields
-    if (!this.formData.date || !this.formData.type || !this.formData.accountId || this.formData.amount <= 0) {
+    if (!this.formData.date || !this.formData.type || !this.formData.account || this.formData.amount <= 0) {
       this.errorMessage.set('Please fill in all required fields');
       return;
     }
@@ -170,7 +170,7 @@ export class TransactionFormDrawerComponent implements OnChanges, OnInit {
     this.formData = {
       date: todayISO,
       type: TransactionType.EXPENSE,
-      accountId: this.accounts().length > 0 ? this.accounts()[0].id : 0,
+      account: this.accounts().length > 0 ? this.accounts()[0] : undefined,
       amount: 0
     };
     this.formDate = new Date();

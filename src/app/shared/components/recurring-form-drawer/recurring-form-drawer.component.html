@@ -20,7 +20,7 @@
       <input
         pInputText
         id="merchantName"
-        [(ngModel)]="formData.merchantName"
+        [(ngModel)]="formData.merchant"
         name="merchantName"
         placeholder="e.g., Netflix, Rent, Gym"
         class="w-full"
@@ -93,7 +93,7 @@
       <label for="account" class="text-sm font-medium text-surface-700">Account (Optional)</label>
       <p-select
         id="account"
-        [(ngModel)]="formData.accountId"
+        [(ngModel)]="formData.account"
         name="account"
         [options]="accountOptions()"
         optionLabel="label"

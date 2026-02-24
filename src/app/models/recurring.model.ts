@@ -1,3 +1,7 @@
+import {Merchant} from '@models/merchant.model';
+import {User} from '@models/auth.model';
+import {Account} from '@models/account.model';
+
 export enum Frequency {
   WEEKLY = 'WEEKLY',
   BI_WEEKLY = 'BI_WEEKLY',
@@ -8,28 +12,18 @@ export enum Frequency {
 
 export interface RecurringTransaction {
   id: number;
-  accountId?: number;
-  accountName?: string;
-  merchantName: string;
+  user: User;
+  merchant: Merchant;
   amount: number;
   frequency: Frequency;
-  lastDate?: string;
   nextDate: string;
   active: boolean;
-}
-
-export interface RecurringTransactionDto {
-  accountId?: number;
-  merchantName: string;
-  amount: number;
-  frequency: Frequency;
+  account?: Account;
   lastDate?: string;
-  nextDate: string;
-  active: boolean;
 }
 
 export interface RecurringSuggestion {
-  merchantName: string;
+  merchant: Merchant;
   amount: number;
   frequency: Frequency;
   lastDate: string;

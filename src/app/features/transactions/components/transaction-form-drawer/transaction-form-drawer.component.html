@@ -64,7 +64,7 @@
         </label>
         <p-select
           id="account"
-          [(ngModel)]="formData.accountId"
+          [(ngModel)]="formData.account"
           name="account"
           [options]="accountOptions()"
           optionLabel="label"
@@ -119,7 +119,7 @@
       <input
         pInputText
         id="vendor"
-        [(ngModel)]="formData.vendorName"
+        [(ngModel)]="formData.merchant"
         name="vendor"
         placeholder="e.g., Walmart, Amazon"
         class="w-full"
@@ -132,7 +132,7 @@
       <label for="category" class="text-sm font-medium text-surface-700">Category</label>
       <p-select
         id="category"
-        [(ngModel)]="formData.categoryName"
+        [(ngModel)]="formData.category"
         name="category"
         [options]="filteredCategoryGroups()"
         [group]="true"

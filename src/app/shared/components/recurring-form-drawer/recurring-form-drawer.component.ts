@@ -8,7 +8,7 @@ import { Select } from 'primeng/select';
 import { DatePicker } from 'primeng/datepicker';
 import { CheckboxModule } from 'primeng/checkbox';
 import { MessageModule } from 'primeng/message';
-import { RecurringTransaction, RecurringTransactionDto, Frequency } from '@models/recurring.model';
+import { RecurringTransaction, Frequency } from '@models/recurring.model';
 import { RecurringApiService } from '@features/recurring/services/recurring-api.service';
 import { ToastService } from '@core/services/toast.service';
 import { Account } from '@models/account.model';
@@ -40,8 +40,8 @@ export class RecurringFormDrawerComponent implements OnChanges {
 
   @Output() save = new EventEmitter<void>();
 
-  formData: Partial<RecurringTransactionDto> = {
-    merchantName: '',
+  formData: Partial<RecurringTransaction> = {
+    merchant: undefined,
     amount: 0,
     frequency: Frequency.MONTHLY,
     active: true
@@ -70,11 +70,11 @@ export class RecurringFormDrawerComponent implements OnChanges {
       const txn = this.transaction();
       if (txn) {
         this.formData = {
-          merchantName: txn.merchantName,
+          merchant: txn.merchant,
           amount: txn.amount,
           frequency: txn.frequency,
           active: txn.active,
-          accountId: txn.accountId
+          account: txn.account
         };
         this.nextDate = new Date(txn.nextDate);
       } else {
@@ -92,15 +92,15 @@ export class RecurringFormDrawerComponent implements OnChanges {
   onSubmit(): void {
     this.errorMessage.set(null);
 
-    if (!this.formData.merchantName || !this.formData.amount || !this.nextDate) {
+    if (!this.formData.merchant || !this.formData.amount || !this.nextDate) {
       this.errorMessage.set('Merchant Name, Amount, and Next Due Date are required');
       return;
     }
 
     this.loading.set(true);
 
-    const dto: RecurringTransactionDto = {
-      ...this.formData as RecurringTransactionDto,
+    const dto: RecurringTransaction = {
+      ...this.formData as RecurringTransaction,
       nextDate: this.toISODate(this.nextDate)
     };
 
@@ -131,11 +131,11 @@ export class RecurringFormDrawerComponent implements OnChanges {
 
   private resetForm(): void {
     this.formData = {
-      merchantName: '',
+      merchant: undefined,
       amount: 0,
       frequency: Frequency.MONTHLY,
       active: true,
-      accountId: undefined
+      account: undefined
     };
     this.nextDate = null;
     this.errorMessage.set(null);

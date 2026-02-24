@@ -4,7 +4,6 @@ import { Observable } from 'rxjs';
 import { environment } from '@env';
 import {
   Transaction,
-  TransactionFormData,
   TransactionFilter,
   PageRequest,
   PageResponse,
@@ -44,11 +43,11 @@ export class TransactionApiService {
     return this.http.get<PageResponse<Transaction>>(this.apiUrl, { params });
   }
 
-  createTransaction(data: TransactionFormData): Observable<Transaction> {
+  createTransaction(data: Transaction): Observable<Transaction> {
     return this.http.post<Transaction>(this.apiUrl, data);
   }
 
-  updateTransaction(id: number, data: TransactionFormData): Observable<Transaction> {
+  updateTransaction(id: number, data: Transaction): Observable<Transaction> {
     return this.http.put<Transaction>(`${this.apiUrl}/${id}`, data);
   }
 
@@ -60,7 +59,7 @@ export class TransactionApiService {
     return this.http.request<void>('delete', `${this.apiUrl}/bulk`, { body: ids });
   }
 
-  bulkUpdateTransactions(updates: TransactionFormData[]): Observable<Transaction[]> {
+  bulkUpdateTransactions(updates: Transaction[]): Observable<Transaction[]> {
     return this.http.patch<Transaction[]>(`${this.apiUrl}/bulk`, updates);
   }
 

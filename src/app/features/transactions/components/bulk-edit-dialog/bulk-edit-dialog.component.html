@@ -37,7 +37,7 @@
         </label>
         <p-select
           inputId="category-input"
-          [(ngModel)]="categoryName"
+          [(ngModel)]="category"
           [options]="categoryGroups()"
           [group]="true"
           optionLabel="label"
@@ -72,7 +72,7 @@
           pInputText
           id="vendor-input"
           type="text"
-          [(ngModel)]="vendorName"
+          [(ngModel)]="merchant"
           [disabled]="!updateVendor()"
           placeholder="Enter vendor name"
           class="w-full" />

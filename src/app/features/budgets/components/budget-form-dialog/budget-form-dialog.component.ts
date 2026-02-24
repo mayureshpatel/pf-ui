@@ -53,8 +53,8 @@ export class BudgetFormDialogComponent implements OnChanges {
 
   private groupCategories(categories: Category[]): SelectItemGroup[] {
     // Group by parent
-    const parents = categories.filter(c => !c.parentId);
-    const children = categories.filter(c => c.parentId);
+    const parents = categories.filter(c => !c.parent);
+    const children = categories.filter(c => c.parent);
 
     const groups: SelectItemGroup[] = [];
 
@@ -71,7 +71,7 @@ export class BudgetFormDialogComponent implements OnChanges {
 
     // Add children grouped by parent
     parents.forEach(parent => {
-      const parentChildren = children.filter(c => c.parentId === parent.id);
+      const parentChildren = children.filter(c => c.parent === parent.id);
       if (parentChildren.length > 0) {
         groups.push({
           label: parent.name,

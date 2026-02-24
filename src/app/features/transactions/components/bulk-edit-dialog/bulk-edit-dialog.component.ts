@@ -9,12 +9,14 @@ import { SelectModule } from 'primeng/select';
 import { SelectItemGroup } from 'primeng/api';
 import { Transaction } from '../../../../models/transaction.model';
 import { CategoryApiService } from '../../../categories/services/category-api.service';
+import {Category} from '@models/category.model';
+import {Merchant} from '@models/merchant.model';
 
 export interface BulkEditData {
   updateCategory: boolean;
-  categoryName?: string;
-  updateVendor: boolean;
-  vendorName?: string;
+  category?: Category;
+  updateMerchant: boolean;
+  merchant?: Merchant;
   updateDescription: boolean;
   description?: string;
 }
@@ -45,16 +47,16 @@ export class BulkEditDialogComponent {
 
   // Form state
   updateCategory = signal(false);
-  categoryName = signal<string | undefined>(undefined);
+  category = signal<Category | undefined>(undefined);
   updateVendor = signal(false);
-  vendorName = signal<string | undefined>(undefined);
+  merchant = signal<Merchant | undefined>(undefined);
   updateDescription = signal(false);
   description = signal<string | undefined>(undefined);
 
   // Category groups for dropdown
   categoryGroups = signal<SelectItemGroup[]>([]);
 
-  constructor(private categoryApi: CategoryApiService) {
+  constructor(private readonly categoryApi: CategoryApiService) {
     // Load categories on init
     this.loadCategories();
 
@@ -93,8 +95,8 @@ export class BulkEditDialogComponent {
     const hasAtLeastOneField = this.updateCategory() || this.updateVendor() || this.updateDescription();
     if (!hasAtLeastOneField) return false;
 
-    if (this.updateCategory() && !this.categoryName()) return false;
-    if (this.updateVendor() && !this.vendorName()?.trim()) return false;
+    if (this.updateCategory() && !this.category()) return false;
+    if (this.updateVendor() && !this.merchant()) return false;
     if (this.updateDescription() && !this.description()?.trim()) return false;
 
     return true;
@@ -109,9 +111,9 @@ export class BulkEditDialogComponent {
 
     const data: BulkEditData = {
       updateCategory: this.updateCategory(),
-      categoryName: this.categoryName(),
-      updateVendor: this.updateVendor(),
-      vendorName: this.vendorName()?.trim(),
+      category: this.category(),
+      updateMerchant: this.updateVendor(),
+      merchant: this.merchant(),
       updateDescription: this.updateDescription(),
       description: this.description()?.trim()
     };
@@ -121,9 +123,9 @@ export class BulkEditDialogComponent {
 
   private resetForm(): void {
     this.updateCategory.set(false);
-    this.categoryName.set(undefined);
+    this.category.set(undefined);
     this.updateVendor.set(false);
-    this.vendorName.set(undefined);
+    this.merchant.set(undefined);
     this.updateDescription.set(false);
     this.description.set(undefined);
   }
