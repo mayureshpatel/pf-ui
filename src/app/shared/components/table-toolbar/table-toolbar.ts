@@ -1,4 +1,4 @@
-import { Component, input } from '@angular/core';
+import {Component, input, InputSignal} from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 @Component({
@@ -13,17 +13,17 @@ export class TableToolbarComponent {
    * Number of selected items.
    * Required - toolbar is hidden when this is 0.
    */
-  selectedCount = input.required<number>();
+  selectedCount: InputSignal<number> = input.required<number>();
 
   /**
    * Total number of items in the table.
    * Optional - used for displaying "X of Y selected".
    */
-  totalCount = input<number>();
+  totalCount: InputSignal<number | undefined> = input<number>();
 
   /**
    * Color theme for the toolbar.
    * Default: 'primary'
    */
-  severity = input<'primary' | 'info' | 'success'>('primary');
+  severity: InputSignal<'primary' | 'info' | 'success'> = input<'primary' | 'info' | 'success'>('primary');
 }

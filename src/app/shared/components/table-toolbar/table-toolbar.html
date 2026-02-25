@@ -1,4 +1,4 @@
-@if (selectedCount() > 0) {
+@if (this.selectedCount() > 0) {
   <div class="table-toolbar flex items-center justify-between p-3 mb-4
               bg-primary-50 dark:bg-primary-900/20
               border border-primary-200 dark:border-primary-800 rounded-lg">
@@ -7,10 +7,10 @@
     <div class="selection-info flex items-center gap-2">
       <i class="pi pi-check-circle text-primary-500"></i>
       <span class="font-semibold text-primary-700 dark:text-primary-300">
-        @if (totalCount(); as total) {
-          {{ selectedCount() }} of {{ total }} selected
+        @if (this.totalCount(); as total) {
+          {{ this.selectedCount() }} of {{ total }} selected
         } @else {
-          {{ selectedCount() }} selected
+          {{ this.selectedCount() }} selected
         }
       </span>
     </div>
