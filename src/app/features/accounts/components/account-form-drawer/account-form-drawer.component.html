@@ -4,8 +4,8 @@
   [icon]="drawerIcon"
   [saving]="saving()"
   [saveLabel]="isEditMode ? 'Update' : 'Create'"
-  (save)="onSubmit()"
-  (cancel)="onHide()">
+  (saveEmitterRef)="onSubmit()"
+  (cancelEmitterRef)="onHide()">
 
   <form class="flex flex-col gap-6">
     @if (errorMessage()) {
@@ -86,7 +86,7 @@
       <label for="balance" class="text-sm font-medium text-surface-700">
         Current Balance <span class="text-red-500">*</span>
       </label>
-      
+
       @if (!isEditMode) {
         <p-inputNumber
           id="balance"
@@ -109,10 +109,10 @@
           <span class="text-2xl font-bold font-mono">
             {{ formData.currentBalance | currency }}
           </span>
-          <p-button 
-            label="Reconcile" 
-            icon="pi pi-check-circle" 
-            severity="secondary" 
+          <p-button
+            label="Reconcile"
+            icon="pi pi-check-circle"
+            severity="secondary"
             size="small"
             (onClick)="openReconcileDialog()"
           />
@@ -123,7 +123,7 @@
       }
     </div>
   </form>
-  
+
   @if (isEditMode && account()) {
     <app-reconcile-dialog
       [(visible)]="showReconcileDialog"

@@ -4,8 +4,8 @@
   [icon]="drawerIcon"
   [saving]="saving()"
   [saveLabel]="isEditMode ? 'Update' : 'Create'"
-  (save)="onSubmit()"
-  (cancel)="onHide()">
+  (saveEmitterRef)="onSubmit()"
+  (cancelEmitterRef)="onHide()">
 
   <form class="flex flex-col gap-6">
     @if (errorMessage()) {
