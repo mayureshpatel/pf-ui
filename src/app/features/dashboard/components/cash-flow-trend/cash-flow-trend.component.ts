@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import {Component, computed, input, InputSignal} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CardModule } from 'primeng/card';
 import { ChartModule } from 'primeng/chart';
@@ -11,11 +11,11 @@ import { CashFlowTrend } from '@models/dashboard.model';
   templateUrl: './cash-flow-trend.component.html'
 })
 export class CashFlowTrendComponent {
-  data = input.required<CashFlowTrend[]>();
+  data: InputSignal<CashFlowTrend[]> = input.required<CashFlowTrend[]>();
 
   chartData = computed(() => {
-    const trendData = this.data();
-    const labels = trendData.map((d: CashFlowTrend) => {
+    const trendData: CashFlowTrend[] = this.data();
+    const labels: string[] = trendData.map((d: CashFlowTrend): string => {
       const date = new Date(d.year, d.month - 1);
       return date.toLocaleString('default', { month: 'short', year: '2-digit' });
     });

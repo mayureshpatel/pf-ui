@@ -1,4 +1,4 @@
-<p-card styleClass="h-full shadow-sm">
+<p-card class="h-full shadow-sm">
   <div class="flex flex-col gap-4">
     <div class="flex items-center justify-between">
       <span class="text-lg font-bold text-color">{{ year() }} Year-to-Date</span>
@@ -10,14 +10,14 @@
       <span class="text-xl font-semibold text-green-500">{{ totalIncome() | formatCurrency }}</span>
     </div>
 
-    <p-divider styleClass="m-0" />
+    <p-divider class="m-0" />
 
     <div class="flex flex-col gap-1">
       <span class="text-xs text-muted-color uppercase font-medium">Total Expenses</span>
       <span class="text-xl font-semibold text-red-500">{{ totalExpense() | formatCurrency }}</span>
     </div>
 
-    <p-divider styleClass="m-0" />
+    <p-divider class="m-0" />
 
     <div class="flex flex-col gap-1">
       <span class="text-xs text-muted-color uppercase font-medium">Avg. Savings Rate</span>

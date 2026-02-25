@@ -1,4 +1,4 @@
-<p-card [header]="title()" styleClass="h-full shadow-sm">
+<p-card [header]="title()" class="h-full shadow-sm">
   @if (hasData()) {
     <div class="h-80">
       <p-chart type="bar" [data]="chartData()" [options]="chartOptions" class="h-full" />

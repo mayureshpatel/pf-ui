@@ -1,9 +1,10 @@
-import { Component, computed, effect, input, signal, WritableSignal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { CardModule } from 'primeng/card';
-import { ChartModule } from 'primeng/chart';
-import { CategoryTotal } from '@models/dashboard.model';
-import { getCategoryColorHex } from '@shared/utils/category.utils';
+import {Component, computed, effect, input, InputSignal, Signal, signal, WritableSignal} from '@angular/core';
+import {CommonModule} from '@angular/common';
+import {CardModule} from 'primeng/card';
+import {ChartModule} from 'primeng/chart';
+import {CategoryTotal} from '@models/dashboard.model';
+import {getCategoryColorHex} from '@shared/utils/category.utils';
+import {Category} from '@models/category.model';
 
 @Component({
   selector: 'app-category-chart',
@@ -12,34 +13,43 @@ import { getCategoryColorHex } from '@shared/utils/category.utils';
   templateUrl: './category-chart.component.html'
 })
 export class CategoryChartComponent {
-  title = input<string>('Spending by Category');
-  categories = input.required<CategoryTotal[]>();
+  title: InputSignal<string> = input<string>('Spending by Category');
+  categories: InputSignal<CategoryTotal[]> = input.required<CategoryTotal[]>();
+  topX: InputSignal<number> = input<number>(5);
 
   chartData: WritableSignal<any> = signal({});
   chartOptions: WritableSignal<any> = signal({});
 
-  hasData = computed(() => this.categories().length > 0);
+  hasData: Signal<boolean> = computed((): boolean => this.categories().length > 0);
 
   constructor() {
-    effect(() => {
-      const categories = this.categories();
+    effect((): void => {
+      const categories: CategoryTotal[] = this.categories();
       if (categories.length > 0) {
-        this.updateChartData(categories);
+        this.updateChartData(categories, this.topX());
       }
     });
 
     this.initChartOptions();
   }
 
-  private updateChartData(categories: CategoryTotal[]): void {
-    // Sort and take top 5
-    const top5 = [...categories]
-      .sort((a, b) => b.total - a.total)
-      .slice(0, 5);
+  /**
+   * Constructs the chart data based on the top X categories.
+   * <br><br>
+   * The data displayed will come from the parent component, which will have selected the period
+   * from which the data is pulled from.
+   *
+   * @param categories The category total data to use for the chart
+   * @param topX The number of categories to include in the chart. Defaults to 5.
+   */
+  private updateChartData(categories: CategoryTotal[], topX: number = 5): void {
+    const topXCategoryTotals: CategoryTotal[] = [...categories]
+      .sort((a: CategoryTotal, b: CategoryTotal): number => b.total - a.total)
+      .slice(0, topX);
 
-    const labels = top5.map(c => c.category || 'Uncategorized');
-    const data = top5.map(c => Math.abs(c.total));
-    const colors = top5.map(c => getCategoryColorHex(c.category || 'Uncategorized'));
+    const labels: Category[] = topXCategoryTotals.map((c: CategoryTotal): Category => c.category || 'Uncategorized');
+    const data: number[] = topXCategoryTotals.map((c: CategoryTotal): number => Math.abs(c.total));
+    const colors: string[] = topXCategoryTotals.map((c: CategoryTotal): string => getCategoryColorHex(c.category.iconography.color || 'Uncategorized'));
 
     this.chartData.set({
       labels,
@@ -55,12 +65,15 @@ export class CategoryChartComponent {
     });
   }
 
+  /**
+   * Initializes the chart options.
+   */
   private initChartOptions(): void {
-    const documentStyle = getComputedStyle(document.documentElement);
-    const textColor = documentStyle.getPropertyValue('--text-color-secondary');
+    const documentStyle: CSSStyleDeclaration = getComputedStyle(document.documentElement);
+    const textColor: string = documentStyle.getPropertyValue('--text-color-secondary');
 
     this.chartOptions.set({
-      indexAxis: 'y', // Makes it horizontal
+      indexAxis: 'y',
       maintainAspectRatio: false,
       aspectRatio: 0.8,
       plugins: {
@@ -69,8 +82,8 @@ export class CategoryChartComponent {
         },
         tooltip: {
           callbacks: {
-            label: (context: any) => {
-              const value = context.parsed.x || 0;
+            label: (context: any): string => {
+              const value: any = context.parsed.x || 0;
               return `Spent: $${value.toLocaleString()}`;
             }
           }
@@ -97,20 +110,5 @@ export class CategoryChartComponent {
         }
       }
     });
-  }
-
-  private lightenColor(color: string, percent: number): string {
-    const num = parseInt(color.replace('#', ''), 16);
-    const amt = Math.round(2.55 * percent);
-    const R = (num >> 16) + amt;
-    const G = ((num >> 8) & 0x00FF) + amt;
-    const B = (num & 0x0000FF) + amt;
-
-    return '#' + (
-      0x1000000 +
-      (R < 255 ? (R < 1 ? 0 : R) : 255) * 0x10000 +
-      (G < 255 ? (G < 1 ? 0 : G) : 255) * 0x100 +
-      (B < 255 ? (B < 1 ? 0 : B) : 255)
-    ).toString(16).slice(1);
   }
 }

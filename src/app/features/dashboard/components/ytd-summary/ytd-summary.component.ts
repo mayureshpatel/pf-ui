@@ -1,4 +1,4 @@
-import {Component, input} from '@angular/core';
+import {Component, input, InputSignal} from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {CardModule} from 'primeng/card';
 import {DividerModule} from 'primeng/divider';
@@ -11,10 +11,10 @@ import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
   templateUrl: './ytd-summary.component.html'
 })
 export class YtdSummaryComponent {
-  year = input.required<number>();
-  totalIncome = input.required<number>();
-  totalExpense = input.required<number>();
-  avgSavingsRate = input.required<number>();
+  year: InputSignal<number> = input.required<number>();
+  totalIncome: InputSignal<number> = input.required<number>();
+  totalExpense: InputSignal<number> = input.required<number>();
+  avgSavingsRate: InputSignal<number> = input.required<number>();
 
   protected readonly Math = Math;
 }

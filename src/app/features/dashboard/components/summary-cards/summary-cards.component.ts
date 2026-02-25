@@ -1,16 +1,15 @@
-import {Component, input} from '@angular/core';
-import {CommonModule, formatCurrency} from '@angular/common';
+import {Component, input, InputSignal} from '@angular/core';
 import {CardModule} from 'primeng/card';
 import {DashboardData} from '@models/dashboard.model';
 import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
+import {NgClass} from '@angular/common';
 
 @Component({
   selector: 'app-summary-cards',
   standalone: true,
-  imports: [CommonModule, CardModule, FormatCurrencyPipe],
+  imports: [CardModule, FormatCurrencyPipe, NgClass],
   templateUrl: './summary-cards.component.html'
 })
 export class SummaryCardsComponent {
-  data = input.required<DashboardData | null>();
-  protected readonly formatCurrency = formatCurrency;
+  data: InputSignal<DashboardData | null> = input.required<DashboardData | null>();
 }
