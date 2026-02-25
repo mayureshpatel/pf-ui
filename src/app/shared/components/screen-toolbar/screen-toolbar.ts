@@ -1,4 +1,4 @@
-import { Component, input } from '@angular/core';
+import {Component, input, InputSignal} from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 @Component({
@@ -13,5 +13,5 @@ export class ScreenToolbarComponent {
    * Whether to show a divider between filters and actions.
    * Default: true
    */
-  showDivider = input(true);
+  showDivider: InputSignal<boolean> = input(true);
 }
