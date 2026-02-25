@@ -1,6 +1,6 @@
 import {Merchant} from '@models/merchant.model';
 import {Category} from '@models/category.model';
-import { Account } from "./account.model";
+import {Account, BankName} from "./account.model";
 
 export interface Transaction {
   id: number;
@@ -63,10 +63,9 @@ export interface TransferSuggestion {
   confidenceScore: number;
 }
 
-// CSV Import Models
 export interface TransactionPreview {
-  date: string; // LocalDate from backend
-  postDate?: string; // LocalDate from backend
+  date: string;
+  postDate?: string;
   description: string;
   amount: number;
   type: TransactionType;
@@ -78,14 +77,6 @@ export interface SaveTransactionRequest {
   transactions: Transaction[];
   fileName: string;
   fileHash: string;
-}
-
-export enum BankName {
-  CAPITAL_ONE = 'CAPITAL_ONE',
-  DISCOVER = 'DISCOVER',
-  SYNOVUS = 'SYNOVUS',
-  STANDARD = 'STANDARD',
-  UNIVERSAL = 'UNIVERSAL'
 }
 
 export interface BankOption {

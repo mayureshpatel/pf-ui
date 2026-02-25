@@ -1,4 +1,4 @@
-export const CATEGORY_COLORS = [
+export const CATEGORY_COLORS: string[] = [
   'bg-blue-500',
   'bg-green-500',
   'bg-purple-500',
@@ -32,13 +32,13 @@ export function getCategoryColor(categoryName: string): string {
     return CATEGORY_COLORS[0];
   }
 
-  // Simple hash function
-  let hash = 0;
-  for (let i = 0; i < categoryName.length; i++) {
-    hash = categoryName.charCodeAt(i) + ((hash << 5) - hash);
+  let hash: number = 0;
+  for (let i: number = 0; i < categoryName.length; i++) {
+    // @ts-ignore
+    hash = categoryName.codePointAt(i) + ((hash << 5) - hash);
   }
 
-  const index = Math.abs(hash) % CATEGORY_COLORS.length;
+  const index: number = Math.abs(hash) % CATEGORY_COLORS.length;
   return CATEGORY_COLORS[index];
 }
 
@@ -46,7 +46,7 @@ export function getCategoryColor(categoryName: string): string {
  * Get hex color for a category (for charts)
  */
 export function getCategoryColorHex(categoryName: string): string {
-  const tailwindClass = getCategoryColor(categoryName);
+  const tailwindClass: string = getCategoryColor(categoryName);
   return CATEGORY_COLOR_HEX[tailwindClass] || CATEGORY_COLOR_HEX[CATEGORY_COLORS[0]];
 }
 
@@ -54,7 +54,7 @@ export function getCategoryColorHex(categoryName: string): string {
  * Get PrimeNG severity for tag styling based on category color
  */
 export function getCategorySeverity(categoryName: string): string {
-  const color = getCategoryColor(categoryName);
+  const color: string = getCategoryColor(categoryName);
 
   const severityMap: Record<string, string> = {
     'bg-blue-500': 'info',
