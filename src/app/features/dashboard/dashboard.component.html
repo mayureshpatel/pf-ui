@@ -26,7 +26,7 @@
               optionLabel="label"
               optionValue="value"
               (onChange)="onPeriodChange()"
-              styleClass="w-36 border-none bg-transparent"
+              class="w-36 border-none bg-transparent"
             />
             <p-select
               [(ngModel)]="selectedYear"
@@ -34,7 +34,7 @@
               optionLabel="label"
               optionValue="value"
               (onChange)="onPeriodChange()"
-              styleClass="w-24 border-none bg-transparent"
+              class="w-24 border-none bg-transparent"
             />
           </div>
         }
@@ -44,10 +44,10 @@
 
   @if (loading()) {
     <div class="flex justify-center items-center py-12">
-      <p-progressSpinner styleClass="w-16 h-16" />
+      <p-progressSpinner class="w-16 h-16" />
     </div>
   } @else {
-    <!-- Row 1: The Pulse -->
+    <!-- Pulse Cards -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
       <app-pulse-card
         title="Total Income"
@@ -71,7 +71,7 @@
       />
     </div>
 
-    <!-- Row 2: The Big Picture -->
+    <!-- Cash Flow Trend -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
       <div class="lg:col-span-2">
         <app-cash-flow-trend [data]="trends()" />
@@ -86,7 +86,7 @@
       </div>
     </div>
 
-    <!-- Row 3: Analysis & Action -->
+    <!-- Category/Merchant Charts + Action Center -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
       <!-- Top Categories -->
       <div class="lg:col-span-1">
@@ -98,7 +98,7 @@
 
       <!-- Top Merchants -->
       <div class="lg:col-span-1">
-        <p-card styleClass="h-full shadow-sm">
+        <p-card class="h-full shadow-sm">
           <ng-template pTemplate="title">
             <div class="flex items-center gap-2">
               <i class="pi pi-shop text-primary"></i>
@@ -106,11 +106,12 @@
             </div>
           </ng-template>
 
+          <!-- todo: merchant information should probably show how many transactions total and total money spent -->
           <div class="flex flex-col gap-4">
-            @for (merchant of topVendors(); track merchant.merchant) {
+            @for (merchant of topMerchants(); track merchant.merchant) {
               <div class="flex justify-between items-center p-3 rounded-lg border border-surface-100 dark:border-surface-800 transition-hover hover:shadow-xs">
                 <div class="flex flex-col">
-                  <span class="font-semibold text-surface-900">{{ merchant.merchant }}</span>
+                  <span class="font-semibold text-surface-900">{{ merchant.merchant.cleanName }}</span>
                   <span class="text-xs text-muted-color">High Frequency</span>
                 </div>
                 <div class="flex flex-col items-end">
