@@ -7,6 +7,7 @@ import {MenuModule} from 'primeng/menu';
 import {RippleModule} from 'primeng/ripple';
 import {MenuItem} from 'primeng/api';
 import {AuthService} from '@core/auth/auth.service';
+import {Tooltip} from 'primeng/tooltip';
 
 @Component({
   selector: 'app-shell',
@@ -19,7 +20,8 @@ import {AuthService} from '@core/auth/auth.service';
     ButtonModule,
     DrawerModule,
     MenuModule,
-    RippleModule
+    RippleModule,
+    Tooltip
   ],
   templateUrl: './shell.component.html'
 })
