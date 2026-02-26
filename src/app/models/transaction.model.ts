@@ -84,3 +84,8 @@ export interface BankOption {
   value: BankName;
   description: string;
 }
+
+export interface CategoryTransactionCount {
+  category: Category;
+  transactionCount: number;
+}

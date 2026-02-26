@@ -18,12 +18,12 @@
 
   <!-- Categories Table with Row Grouping -->
   @if (!isEmpty()) {
-    <p-card styleClass="shadow-sm">
+    <p-card class="shadow-sm">
       <p-table
-        [value]="categories()"
+        [value]="categoryViewModels()"
         [loading]="loading()"
         [paginator]="false"
-        styleClass="p-datatable-sm"
+        class="p-datatable-sm"
         rowGroupMode="subheader"
         groupRowsBy="groupName"
         sortField="groupName"
@@ -43,13 +43,14 @@
         </ng-template>
 
         <!-- Group Header -->
-        <ng-template pTemplate="groupheader" let-category>
+        <ng-template pTemplate="groupheader" let-categoryViewModel>
           <tr pRowGroupHeader>
             <td colspan="6">
               <div class="flex items-center gap-2 py-1">
-                <span class="font-bold text-lg text-primary uppercase tracking-wide">{{ category.groupName }}</span>
+                <span
+                  class="font-bold text-lg text-primary uppercase tracking-wide">{{ categoryViewModel.groupName }}</span>
                 <span class="text-sm text-muted-color font-normal">
-                  ({{ calculateGroupTotal(category.groupName) }} transactions)
+                  ({{ calculateGroupTotal(categoryViewModel.groupName) }} transactions)
                 </span>
               </div>
             </td>
@@ -58,17 +59,17 @@
 
         <!-- Data Rows — parent categories are kept in the data so PrimeNG renders their group header,
              but their body row is suppressed; only child categories render as visible rows. -->
-        <ng-template pTemplate="body" let-category let-rowIndex="rowIndex">
-          @if (category.parentId != null) {
+        <ng-template pTemplate="body" let-categoryViewModel let-rowIndex="rowIndex">
+          @if (categoryViewModel.parent.id != null) {
             <tr>
               <!-- Color Badge / Icon -->
               <td>
                 <div
-                  [class]="getDisplayColor(category) + ' w-8 h-8 rounded-full ml-4 flex items-center justify-center text-white cursor-help'"
-                  [pTooltip]="getIconLabel(category.icon)"
+                  [class]="getDisplayColor(categoryViewModel) + ' w-8 h-8 rounded-full ml-4 flex items-center justify-center text-white cursor-help'"
+                  [pTooltip]="getIconLabel(categoryViewModel.iconography.icon)"
                   tooltipPosition="top">
-                  @if (category.icon) {
-                    <i [class]="'pi ' + category.icon + ' text-sm'"></i>
+                  @if (categoryViewModel.iconography.icon) {
+                    <i [class]="'pi ' + categoryViewModel.iconography.icon + ' text-sm'"></i>
                   }
                 </div>
               </td>
@@ -76,9 +77,9 @@
               <!-- Category Name -->
               <td>
                 <div class="flex flex-col">
-                  <span class="font-medium">{{ category.name }}</span>
-                  @if (category.type) {
-                    <span class="text-xs text-muted-color capitalize">{{ category.type.toLowerCase() }}</span>
+                  <span class="font-medium">{{ categoryViewModel.name }}</span>
+                  @if (categoryViewModel.type) {
+                    <span class="text-xs text-muted-color capitalize">{{ categoryViewModel.type.toLowerCase() }}</span>
                   }
                 </div>
               </td>
@@ -87,29 +88,30 @@
               <td class="text-center">
                 <span
                   class="text-primary hover:underline cursor-pointer"
-                  (click)="viewTransactions(category)"
+                  (click)="viewTransactions(categoryViewModel)"
                   pTooltip="View transactions"
                   tooltipPosition="top">
-                  {{ category.transactionCount }} transaction{{ category.transactionCount !== 1 ? 's' : '' }}
+                  {{ categoryViewModel.transactionCount }}
+                  transaction{{ categoryViewModel.transactionCount !== 1 ? 's' : '' }}
                 </span>
               </td>
 
               <!-- Budget -->
               <td class="text-right font-medium">
-                {{ category.budgetedAmount | formatCurrency }}
+                {{ categoryViewModel.budgetedAmount | formatCurrency }}
               </td>
 
               <!-- Monthly Progress -->
               <td>
-                @if (category.budgetedAmount !== undefined) {
+                @if (categoryViewModel.budgetedAmount !== undefined) {
                   <div class="flex flex-col gap-1 pr-4">
                     <p-progressBar
-                      [value]="category.percentageUsed"
+                      [value]="categoryViewModel.percentageUsed"
                       [showValue]="false"
-                      [styleClass]="'h-2 ' + getProgressBarTailwind(category.percentageUsed)">
+                      [class]="'h-2 ' + getProgressBarTailwind(categoryViewModel.percentageUsed)">
                     </p-progressBar>
                     <span class="text-xs text-muted-color text-right">
-                      {{ category.percentageUsed?.toFixed(0) }}% used
+                      {{ categoryViewModel.percentageUsed?.toFixed(0) }}% used
                     </span>
                   </div>
                 } @else {
@@ -125,7 +127,7 @@
                     [text]="true"
                     [rounded]="true"
                     severity="info"
-                    (onClick)="openEditDialog(category)"
+                    (onClick)="openEditDialog(categoryViewModel)"
                     pTooltip="Edit"
                     tooltipPosition="top"
                   />
@@ -134,9 +136,9 @@
                     [text]="true"
                     [rounded]="true"
                     severity="danger"
-                    (onClick)="deleteCategory(category)"
-                    [disabled]="category.transactionCount > 0"
-                    [pTooltip]="category.transactionCount > 0 ? 'Cannot delete category with transactions' : 'Delete'"
+                    (onClick)="deleteCategory(categoryViewModel)"
+                    [disabled]="categoryViewModel.transactionCount > 0"
+                    [pTooltip]="categoryViewModel.transactionCount > 0 ? 'Cannot delete category with transactions' : 'Delete'"
                     tooltipPosition="top"
                   />
                 </div>
@@ -158,7 +160,7 @@
 
   <!-- Empty State -->
   @if (isEmpty()) {
-    <p-card styleClass="shadow-sm">
+    <p-card class="shadow-sm">
       <div class="flex flex-col items-center justify-center py-12">
         <i class="pi pi-tags text-6xl text-muted-color mb-4"></i>
         <h2 class="text-2xl font-semibold text-color mb-2">No categories yet</h2>

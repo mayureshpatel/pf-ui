@@ -1,16 +1,29 @@
-import { Component, EventEmitter, input, OnChanges, Output, signal, WritableSignal, inject, computed, model } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { CommonModule } from '@angular/common';
-import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
-import { Select } from 'primeng/select';
-import { RadioButtonModule } from 'primeng/radiobutton';
-import { TooltipModule } from 'primeng/tooltip';
-import { MessageModule } from 'primeng/message';
-import { Category, CategoryFormData, CategoryType } from '@models/category.model';
-import { getCategoryColor, CATEGORY_COLORS } from '@shared/utils/category.utils';
-import { CategoryApiService } from '../../services/category-api.service';
-import { DrawerComponent } from '@shared/components/drawer/drawer.component';
+import {
+  Component,
+  computed,
+  inject,
+  input,
+  InputSignal,
+  model,
+  ModelSignal,
+  OnChanges,
+  output,
+  OutputEmitterRef,
+  signal,
+  WritableSignal
+} from '@angular/core';
+import {FormsModule} from '@angular/forms';
+import {CommonModule} from '@angular/common';
+import {ButtonModule} from 'primeng/button';
+import {InputTextModule} from 'primeng/inputtext';
+import {Select} from 'primeng/select';
+import {RadioButtonModule} from 'primeng/radiobutton';
+import {TooltipModule} from 'primeng/tooltip';
+import {MessageModule} from 'primeng/message';
+import {Category, CategoryType} from '@models/category.model';
+import {CATEGORY_COLORS, getCategoryColor} from '@shared/utils/category.utils';
+import {CategoryApiService} from '../../services/category-api.service';
+import {DrawerComponent} from '@shared/components/drawer/drawer.component';
 
 @Component({
   selector: 'app-category-form-drawer',
@@ -28,29 +41,32 @@ import { DrawerComponent } from '@shared/components/drawer/drawer.component';
   templateUrl: './category-form-drawer.component.html'
 })
 export class CategoryFormDrawerComponent implements OnChanges {
-  private readonly categoryApi = inject(CategoryApiService);
+  // injected services
+  private readonly categoryApi: CategoryApiService = inject(CategoryApiService);
 
-  visible = model.required<boolean>();
-  category = input<Category | null>(null);
-  saving = input<boolean>(false);
+  // input signals
+  visible: ModelSignal<boolean> = model.required<boolean>();
+  category: InputSignal<Category | null> = input<Category | null>(null);
+  saving: InputSignal<boolean> = input<boolean>(false);
 
-  @Output() save = new EventEmitter<CategoryFormData>();
+  // output signals
+  save: OutputEmitterRef<any> = output<any>();
 
-  formData: CategoryFormData = {
+  formData = {
     name: '',
     color: '',
     icon: '',
-    type: CategoryType.EXPENSE,
-    parentId: undefined
+    type: undefined as CategoryType | undefined,
+    parentId: undefined as number | undefined
   };
 
+  // signals
   errorMessage: WritableSignal<string | null> = signal(null);
   allCategories: WritableSignal<Category[]> = signal([]);
 
-  availableColors = CATEGORY_COLORS;
-  getCategoryColor = getCategoryColor;
+  availableColors: string[] = CATEGORY_COLORS;
 
-  iconOptions = [
+  iconOptions: string[] = [
     'pi-shopping-cart', 'pi-home', 'pi-car', 'pi-money-bill', 'pi-briefcase',
     'pi-heart', 'pi-bolt', 'pi-globe', 'pi-gift', 'pi-users',
     'pi-book', 'pi-desktop', 'pi-phone', 'pi-wrench', 'pi-shield',
@@ -58,33 +74,35 @@ export class CategoryFormDrawerComponent implements OnChanges {
   ];
 
   typeOptions = [
-    { label: 'Expense', value: CategoryType.EXPENSE },
-    { label: 'Income', value: CategoryType.INCOME },
-    { label: 'Both', value: CategoryType.BOTH }
+    {label: 'Expense', value: CategoryType.EXPENSE},
+    {label: 'Income', value: CategoryType.INCOME},
+    {label: 'Both', value: CategoryType.BOTH}
   ];
 
   parentOptions = computed(() => {
-    const currentId = this.category()?.id;
+    const currentId: number | undefined = this.category()?.id;
+
     return this.allCategories()
-      .filter(c => c.id !== currentId && !c.parent) // Only top-level categories
-      .map(c => ({ label: c.name, value: c.id }));
+      .filter((category: Category): boolean => category.id !== currentId && !category.parent)
+      .map((category: Category) => ({label: category.name, value: category.id}));
   });
 
   ngOnChanges(): void {
-    const cat = this.category();
-    if (cat) {
+    const category: Category | null = this.category();
+
+    if (category) {
       this.formData = {
-        name: cat.name,
-        color: cat.color || getCategoryColor(cat.name),
-        icon: cat.icon || '',
-        type: cat.type || CategoryType.EXPENSE,
-        parentId: cat.parent
+        name: category.name,
+        color: category.iconography.color || getCategoryColor(category.name),
+        icon: category.iconography.icon || '',
+        type: category.type || CategoryType.EXPENSE,
+        parentId: category.parent.id
       };
     } else {
       this.resetForm();
     }
 
-    // Load all categories for duplicate check & parent dropdown
+    // load all categories for duplicate check & parent dropdown
     if (this.visible()) {
       this.loadCategories();
     }
@@ -92,13 +110,14 @@ export class CategoryFormDrawerComponent implements OnChanges {
 
   loadCategories(): void {
     this.categoryApi.getCategories().subscribe({
-      next: (categories) => this.allCategories.set(categories),
-      error: () => {} // Ignore errors for duplicate check
+      next: (categories: Category[]): void => this.allCategories.set(categories),
+      error: (): void => {
+      }
     });
   }
 
   onHide(): void {
-    setTimeout(() => {
+    setTimeout((): void => {
       this.resetForm();
     }, 300);
   }
@@ -108,7 +127,7 @@ export class CategoryFormDrawerComponent implements OnChanges {
     return iconCode
       .replace('pi-', '')
       .split('-')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .map((word: string): string => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
   }
 
@@ -125,12 +144,13 @@ export class CategoryFormDrawerComponent implements OnChanges {
       return;
     }
 
-    // Check for duplicate names within same parent only (case-insensitive)
-    const currentCategory = this.category();
-    const isDuplicate = this.allCategories().some(
-      cat => cat.name.toLowerCase() === this.formData.name.trim().toLowerCase()
-        && (cat.parent ?? null) === (this.formData.parentId ?? null)  // Check same parent
-        && (!currentCategory || cat.id !== currentCategory.id)
+    // check for duplicate names within the same parent only
+    const currentCategory: Category | null = this.category();
+
+    const isDuplicate: boolean = this.allCategories().some(
+      (category: Category): boolean => category.name.toLowerCase() === this.formData.name.trim().toLowerCase()
+        && (category.parent.id ?? null) === (this.formData.parentId ?? null)
+        && (category.id !== currentCategory?.id)
     );
 
     if (isDuplicate) {
@@ -141,8 +161,8 @@ export class CategoryFormDrawerComponent implements OnChanges {
       return;
     }
 
-    // If no color selected (and not editing), use hash logic
-    let colorToSave = this.formData.color;
+    // if no color selected, use hash logic
+    let colorToSave: string = this.formData.color;
     if (!colorToSave) {
       colorToSave = getCategoryColor(this.formData.name);
     }
@@ -161,7 +181,7 @@ export class CategoryFormDrawerComponent implements OnChanges {
       name: '',
       color: '',
       icon: '',
-      type: CategoryType.EXPENSE,
+      type: undefined,
       parentId: undefined
     };
     this.errorMessage.set(null);

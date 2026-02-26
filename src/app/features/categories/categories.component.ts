@@ -1,4 +1,14 @@
-import {Component, computed, DestroyRef, inject, OnDestroy, OnInit, signal, WritableSignal} from '@angular/core';
+import {
+  Component,
+  computed,
+  DestroyRef,
+  inject,
+  OnDestroy,
+  OnInit,
+  Signal,
+  signal,
+  WritableSignal
+} from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {CommonModule} from '@angular/common';
 import {Router} from '@angular/router';
@@ -18,6 +28,8 @@ import {ToastService} from '@core/services/toast.service';
 import {getCategoryColor} from '@shared/utils/category.utils';
 import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-toolbar';
 import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
+import {BudgetStatus} from '@models/budget.model';
+import {CategoryTransactionCount} from '@models/transaction.model';
 
 export interface CategoryViewModel extends CategoryWithUsage {
   groupName: string;
@@ -43,28 +55,30 @@ export interface CategoryViewModel extends CategoryWithUsage {
   templateUrl: './categories.component.html'
 })
 export class CategoriesComponent implements OnInit, OnDestroy {
-  private readonly categoryApi = inject(CategoryApiService);
-  private readonly transactionApi = inject(TransactionApiService);
-  private readonly budgetApi = inject(BudgetApiService);
-  private readonly toast = inject(ToastService);
-  private readonly confirmationService = inject(ConfirmationService);
-  private readonly router = inject(Router);
-  private readonly destroyRef = inject(DestroyRef);
+  // injected services
+  private readonly categoryApi: CategoryApiService = inject(CategoryApiService);
+  private readonly transactionApi: TransactionApiService = inject(TransactionApiService);
+  private readonly budgetApi: BudgetApiService = inject(BudgetApiService);
+  private readonly toast: ToastService = inject(ToastService);
+  private readonly confirmationService: ConfirmationService = inject(ConfirmationService);
+  private readonly router: Router = inject(Router);
+  private readonly destroyRef: DestroyRef = inject(DestroyRef);
 
-  categories: WritableSignal<CategoryViewModel[]> = signal([]);
+  // signals
+  categoryViewModels: WritableSignal<CategoryViewModel[]> = signal([]);
   loading: WritableSignal<boolean> = signal(false);
   showDialog: WritableSignal<boolean> = signal(false);
   selectedCategory: WritableSignal<Category | null> = signal(null);
 
-  isEmpty = computed(() => this.categories().length === 0 && !this.loading());
+  // computed signals
+  isEmpty: Signal<boolean> = computed((): boolean => this.categoryViewModels().length === 0 && !this.loading());
 
   ngOnInit(): void {
     this.loadData();
   }
 
   ngOnDestroy(): void {
-    // Clear signal holding enriched category data to allow garbage collection
-    this.categories.set([]);
+    this.categoryViewModels.set([]);
   }
 
   loadData(): void {
@@ -73,38 +87,42 @@ export class CategoriesComponent implements OnInit, OnDestroy {
 
     forkJoin({
       categories: this.categoryApi.getCategories(),
-      transactions: this.transactionApi.getTransactions({}, {page: 0, size: 1000}),
+      transactionCategoryCount: this.transactionApi.getCountsByCategory(),
       budgets: this.budgetApi.getBudgetStatus(now.getMonth() + 1, now.getFullYear())
     })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: ({categories, transactions, budgets}) => {
-          // Map budgets for quick lookup
-          const budgetMap = new Map(budgets.map(b => [b.categoryName, b]));
+        next: ({categories, transactionCategoryCount, budgets}) => {
+          const budgetMap = new Map(budgets.map((budgetStatus: BudgetStatus) => [budgetStatus.category.name, budgetStatus]));
 
-          // Calculate usage and normalize parent names
-          const enriched = categories.map(cat => {
-            const count = transactions.content.filter(t => t.categoryName === cat.name).length;
-            const budget = budgetMap.get(cat.name);
+          // calculate usage and normalize parent names
+          const enriched: CategoryViewModel[] = categories.map((category: Category): CategoryViewModel => {
+            const transactionCount: number = transactionCategoryCount
+              .find((transactionCategoryCount: CategoryTransactionCount): boolean => transactionCategoryCount.category.id === category.id)
+              ?.transactionCount ?? 0;
+            const budget: BudgetStatus | undefined = budgetMap.get(category.name);
 
             return {
-              ...cat,
-              transactionCount: count,
-              groupName: cat.parentName || cat.name,
+              ...category,
+              transactionCount: transactionCount,
+              groupName: category.parent.name || category.name,
               budgetedAmount: budget?.budgetedAmount,
               remainingAmount: budget?.remainingAmount,
               percentageUsed: budget?.percentageUsed
             } as CategoryViewModel;
           });
 
-          // Sort by Group Name, then by Category Name
-          enriched.sort((a, b) => {
-            const groupCompare = a.groupName.localeCompare(b.groupName);
-            if (groupCompare !== 0) return groupCompare;
+          // sort by Group Name, then by category Name
+          enriched.sort((a: CategoryViewModel, b: CategoryViewModel): number => {
+            const groupCompare: number = a.groupName.localeCompare(b.groupName);
+            if (groupCompare !== 0) {
+              return groupCompare;
+            }
+
             return a.name.localeCompare(b.name);
           });
 
-          this.categories.set(enriched);
+          this.categoryViewModels.set(enriched);
           this.loading.set(false);
         },
         error: () => {
@@ -115,13 +133,13 @@ export class CategoriesComponent implements OnInit, OnDestroy {
   }
 
   calculateGroupTotal(groupName: string): number {
-    return this.categories()
-      .filter(c => c.parentName === groupName || c.name === groupName)
-      .reduce((sum, c) => sum + c.transactionCount, 0);
+    return this.categoryViewModels()
+      .filter((c: CategoryViewModel): boolean => c.parent.name === groupName || c.name === groupName)
+      .reduce((sum: number, c: CategoryViewModel): number => sum + c.transactionCount, 0);
   }
 
   getDisplayColor(category: Category): string {
-    return category.color || getCategoryColor(category.name);
+    return category.iconography.color || getCategoryColor(category.name);
   }
 
   getIconLabel(iconCode: string | undefined): string {
@@ -184,30 +202,32 @@ export class CategoriesComponent implements OnInit, OnDestroy {
     const category = this.selectedCategory();
 
     if (category) {
-      // Update existing category
+      // Update the existing category
       this.categoryApi.updateCategory(category.id, formData)
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({
-          next: (updated) => {
+          next: (): void => {
             this.toast.success('Category updated successfully');
             this.showDialog.set(false);
             this.loadData();
           },
-          error: (error) => {
+          error: (error: any): void => {
+            console.error('Error updating category:', error);
             this.toast.error(error.error?.detail || 'Failed to update category');
           }
         });
     } else {
-      // Create new category
+      // Create a new category
       this.categoryApi.createCategory(formData)
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({
-          next: (created) => {
+          next: (): void => {
             this.toast.success('Category created successfully');
             this.showDialog.set(false);
             this.loadData();
           },
-          error: (error) => {
+          error: (error: any): void => {
+            console.error('Error creating category:', error);
             this.toast.error(error.error?.detail || 'Failed to create category');
           }
         });

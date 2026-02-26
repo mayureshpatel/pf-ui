@@ -9,7 +9,9 @@
 
   <form class="flex flex-col gap-6">
     @if (errorMessage()) {
-      <p-message severity="error" [text]="errorMessage()!" styleClass="w-full" />
+      <p-message severity="error" styleClass="w-full">
+        {{ errorMessage() }}
+      </p-message>
     }
 
     <!-- Category Name -->
@@ -40,7 +42,7 @@
         optionLabel="label"
         optionValue="value"
         placeholder="None (Top Level)"
-        styleClass="w-full"
+        class="w-full"
         [showClear]="true"
       />
       <small class="text-muted-color">Grouping categories makes them easier to manage in reports.</small>
@@ -48,8 +50,8 @@
 
     <!-- Type -->
     <div class="flex flex-col gap-2">
-      <label class="text-sm font-medium text-surface-700">Transaction Type</label>
-      <div class="flex gap-4">
+      <label for="transaction-type" class="text-sm font-medium text-surface-700">Transaction Type</label>
+      <div id="transaction-type" class="flex gap-4">
         @for (opt of typeOptions; track opt.value) {
           <div class="flex items-center gap-2">
             <p-radioButton
@@ -66,8 +68,8 @@
 
     <!-- Color Selection -->
     <div class="flex flex-col gap-3">
-      <label class="text-sm font-medium text-surface-700">Color</label>
-      <div class="flex flex-wrap gap-2">
+      <label for="color-selection" class="text-sm font-medium text-surface-700">Color</label>
+      <div id="color-selection" class="flex flex-wrap gap-2">
         @for (color of availableColors; track color) {
           <div
             (click)="selectColor(color)"
@@ -87,8 +89,9 @@
 
     <!-- Icon Selection -->
     <div class="flex flex-col gap-3">
-      <label class="text-sm font-medium text-surface-700">Icon</label>
-      <div class="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-1 border border-surface-200 rounded-lg bg-surface-50">
+      <label for="icon-selection" class="text-sm font-medium text-surface-700">Icon</label>
+      <div id="icon-selection"
+           class="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-1 border border-surface-200 rounded-lg bg-surface-50">
         @for (icon of iconOptions; track icon) {
           <div
             (click)="selectIcon(icon)"
@@ -105,7 +108,8 @@
     </div>
 
     <!-- Preview -->
-    <div class="mt-4 p-4 rounded-xl border border-dashed border-surface-300 bg-surface-50 flex items-center justify-center gap-4">
+    <div
+      class="mt-4 p-4 rounded-xl border border-dashed border-surface-300 bg-surface-50 flex items-center justify-center gap-4">
       <div class="flex flex-col items-center gap-2">
         <span class="text-xs text-surface-400 font-medium uppercase tracking-widest">Preview</span>
         <div class="flex items-center gap-3 px-4 py-2 bg-white rounded-full shadow-sm border border-surface-100">
