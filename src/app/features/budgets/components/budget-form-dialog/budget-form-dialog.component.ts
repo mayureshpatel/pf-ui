@@ -76,10 +76,10 @@ export class BudgetFormDialogComponent implements OnChanges {
     let children: Category[] = [];
 
     categories.forEach((category: Category): void => {
-      if (!category.parent) {
-        parents.push(category);
-      } else {
+      if (category.parent) {
         children.push(category);
+      } else {
+        parents.push(category);
       }
     })
 
