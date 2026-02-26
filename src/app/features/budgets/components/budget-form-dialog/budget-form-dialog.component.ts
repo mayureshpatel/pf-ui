@@ -1,15 +1,27 @@
-import { Component, EventEmitter, inject, input, OnChanges, Output, signal, WritableSignal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { DialogModule } from 'primeng/dialog';
-import { ButtonModule } from 'primeng/button';
-import { Select, SelectModule } from 'primeng/select';
-import { InputNumberModule } from 'primeng/inputnumber';
-import { MessageModule } from 'primeng/message';
-import { SelectItemGroup } from 'primeng/api';
-import { Category } from '@models/category.model';
-import { BudgetApiService } from '../../services/budget-api.service';
-import { ToastService } from '@core/services/toast.service';
+import {
+  Component,
+  inject,
+  input,
+  InputSignal,
+  OnChanges,
+  output,
+  OutputEmitterRef,
+  signal,
+  WritableSignal
+} from '@angular/core';
+import {CommonModule} from '@angular/common';
+import {FormsModule} from '@angular/forms';
+import {DialogModule} from 'primeng/dialog';
+import {ButtonModule} from 'primeng/button';
+import {Select, SelectModule} from 'primeng/select';
+import {InputNumberModule} from 'primeng/inputnumber';
+import {MessageModule} from 'primeng/message';
+import {SelectItemGroup} from 'primeng/api';
+import {Category} from '@models/category.model';
+import {BudgetApiService} from '../../services/budget-api.service';
+import {ToastService} from '@core/services/toast.service';
+import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
+import {finalize} from 'rxjs';
 
 @Component({
   selector: 'app-budget-form-dialog',
@@ -27,23 +39,27 @@ import { ToastService } from '@core/services/toast.service';
   templateUrl: './budget-form-dialog.component.html'
 })
 export class BudgetFormDialogComponent implements OnChanges {
+  // injected services
   private readonly budgetApi = inject(BudgetApiService);
   private readonly toast = inject(ToastService);
 
-  visible = input.required<boolean>();
-  categories = input.required<Category[]>();
-  month = input.required<number>();
-  year = input.required<number>();
+  // input signals
+  visible: InputSignal<boolean> = input.required<boolean>();
+  categories: InputSignal<Category[]> = input.required<Category[]>();
+  month: InputSignal<number> = input.required<number>();
+  year: InputSignal<number> = input.required<number>();
 
-  @Output() visibleChange = new EventEmitter<boolean>();
-  @Output() save = new EventEmitter<void>();
+  // output signals
+  visibleChange: OutputEmitterRef<boolean> = output<boolean>();
+  save: OutputEmitterRef<void> = output<void>();
+
+  // signals
+  loading: WritableSignal<boolean> = signal(false);
+  errorMessage: WritableSignal<string | null> = signal(null);
+  categoryGroups: WritableSignal<SelectItemGroup[]> = signal<SelectItemGroup[]>([]);
 
   selectedCategoryId: number | null = null;
   amount: number | null = null;
-  loading: WritableSignal<boolean> = signal(false);
-  errorMessage: WritableSignal<string | null> = signal(null);
-
-  categoryGroups = signal<SelectItemGroup[]>([]);
 
   ngOnChanges(): void {
     if (this.visible()) {
@@ -52,9 +68,17 @@ export class BudgetFormDialogComponent implements OnChanges {
   }
 
   private groupCategories(categories: Category[]): SelectItemGroup[] {
-    // Group by parent
-    const parents = categories.filter(c => !c.parent);
-    const children = categories.filter(c => c.parent);
+    // group categories by parent
+    let parents: Category[] = [];
+    let children: Category[] = [];
+
+    categories.forEach((category: Category): void => {
+      if (category.parent === null) {
+        parents.push(category);
+      } else {
+        children.push(category);
+      }
+    })
 
     const groups: SelectItemGroup[] = [];
 
@@ -62,22 +86,23 @@ export class BudgetFormDialogComponent implements OnChanges {
     if (parents.length > 0) {
       groups.push({
         label: 'Parent Categories',
-        items: parents.map(p => ({
-          label: p.name,
-          value: p.id
+        items: parents.map((parentCategory: Category) => ({
+          label: parentCategory.name,
+          value: parentCategory.id
         }))
       });
     }
 
-    // Add children grouped by parent
-    parents.forEach(parent => {
-      const parentChildren = children.filter(c => c.parent === parent.id);
-      if (parentChildren.length > 0) {
+    // add children grouped by parent
+    parents.forEach((parentCategory: Category): void => {
+      const childrenCategories: Category[] = children.filter((childCategory: Category): boolean => childCategory.parent.id === parentCategory.id);
+
+      if (childrenCategories.length > 0) {
         groups.push({
-          label: parent.name,
-          items: parentChildren.map(c => ({
-            label: c.name,
-            value: c.id
+          label: parentCategory.name,
+          items: childrenCategories.map((childCategory: Category) => ({
+            label: childCategory.name,
+            value: childCategory.id
           }))
         });
       }
@@ -103,17 +128,24 @@ export class BudgetFormDialogComponent implements OnChanges {
       amount: this.amount,
       month: this.month(),
       year: this.year()
-    }).subscribe({
-      next: () => {
-        this.toast.success('Budget updated successfully');
-        this.save.emit();
-        this.onHide();
-      },
-      error: (error) => {
-        this.errorMessage.set(error.error?.detail || 'Failed to update budget');
-        this.loading.set(false);
-      }
-    });
+    })
+      .pipe(
+        takeUntilDestroyed(),
+        finalize((): void => {
+          this.loading.set(false);
+        })
+      )
+      .subscribe({
+        next: (): void => {
+          this.toast.success('Budget updated successfully');
+          this.save.emit();
+          this.onHide();
+        },
+        error: (error: any): void => {
+          console.error('Error updating budget:', error);
+          this.errorMessage.set(error.error?.detail || 'Failed to update budget');
+        }
+      });
   }
 
   resetForm(): void {

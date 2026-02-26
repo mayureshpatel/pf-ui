@@ -9,7 +9,9 @@
 
   <form (ngSubmit)="onSubmit()" class="flex flex-col gap-4">
     @if (errorMessage()) {
-      <p-message severity="error" [text]="errorMessage()!" styleClass="w-full" />
+      <p-message severity="error" styleClass="w-full">
+        {{ errorMessage() }}
+      </p-message>
     }
 
     <!-- Category -->
@@ -24,7 +26,7 @@
         optionLabel="label"
         optionValue="value"
         placeholder="Select a category"
-        styleClass="w-full"
+        class="w-full"
         [filter]="true"
         filterPlaceholder="Search categories"
         appendTo="body"
@@ -49,7 +51,6 @@
         [min]="0"
         placeholder="$0.00"
         class="w-full"
-        styleClass="w-full"
       />
     </div>
 

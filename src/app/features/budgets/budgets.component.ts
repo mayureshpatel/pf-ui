@@ -1,7 +1,6 @@
-import {Component, computed, inject, OnInit, signal, WritableSignal} from '@angular/core';
+import {Component, computed, inject, OnInit, Signal, signal, WritableSignal} from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {FormsModule} from '@angular/forms';
-import {forkJoin} from 'rxjs';
 import {CardModule} from 'primeng/card';
 import {ButtonModule} from 'primeng/button';
 import {TableModule} from 'primeng/table';
@@ -21,11 +20,7 @@ import {Category} from '@models/category.model';
 import {getCategoryColor} from '@shared/utils/category.utils';
 import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-toolbar';
 import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
-
-export interface BudgetStatusViewModel extends BudgetStatus {
-  icon?: string;
-  color?: string;
-}
+import {Tooltip} from 'primeng/tooltip';
 
 @Component({
   selector: 'app-budgets',
@@ -43,18 +38,20 @@ export interface BudgetStatusViewModel extends BudgetStatus {
     ProgressSpinnerModule,
     ScreenToolbarComponent,
     BudgetFormDialogComponent,
-    FormatCurrencyPipe
+    FormatCurrencyPipe,
+    Tooltip
   ],
   templateUrl: './budgets.component.html'
 })
 export class BudgetsComponent implements OnInit {
-  private readonly budgetApi = inject(BudgetApiService);
-  private readonly categoryApi = inject(CategoryApiService);
-  private readonly toast = inject(ToastService);
-  private readonly confirmationService = inject(ConfirmationService);
+  // injected services
+  private readonly budgetApi: BudgetApiService = inject(BudgetApiService);
+  private readonly categoryApi: CategoryApiService = inject(CategoryApiService);
+  private readonly toast: ToastService = inject(ToastService);
+  private readonly confirmationService: ConfirmationService = inject(ConfirmationService);
 
-  // State
-  budgetStatuses: WritableSignal<BudgetStatusViewModel[]> = signal([]);
+  // signals
+  budgetStatuses: WritableSignal<BudgetStatus[]> = signal([]);
   allBudgets: WritableSignal<Budget[]> = signal([]);
   categories: WritableSignal<Category[]> = signal([]);
   loading: WritableSignal<boolean> = signal(false);
@@ -64,7 +61,6 @@ export class BudgetsComponent implements OnInit {
   selectedMonth: WritableSignal<number> = signal(new Date().getMonth() + 1);
   selectedYear: WritableSignal<number> = signal(new Date().getFullYear());
 
-  // Options
   viewOptions = [
     {label: 'Monthly Status', value: 'monthly', icon: 'pi pi-calendar'},
     {label: 'Manage All', value: 'all', icon: 'pi pi-list'}
@@ -86,10 +82,14 @@ export class BudgetsComponent implements OnInit {
   ];
   yearOptions: YearOption[] = [];
 
-  // Summary signals
-  totalBudgeted = computed(() => this.budgetStatuses().reduce((acc, curr) => acc + curr.budgetedAmount, 0));
-  totalSpent = computed(() => this.budgetStatuses().reduce((acc, curr) => acc + curr.spentAmount, 0));
-  totalRemaining = computed(() => this.totalBudgeted() - this.totalSpent());
+  // computed signals
+  totalBudgeted: Signal<number> = computed((): number => this.budgetStatuses()
+    .reduce((acc: number, curr: BudgetStatus): number => acc + curr.budgetedAmount, 0));
+
+  totalSpent: Signal<number> = computed((): number => this.budgetStatuses()
+    .reduce((acc: number, curr: BudgetStatus): number => acc + curr.spentAmount, 0));
+
+  totalRemaining: Signal<number> = computed((): number => this.totalBudgeted() - this.totalSpent());
 
   getCategoryColor = getCategoryColor;
 
@@ -100,9 +100,10 @@ export class BudgetsComponent implements OnInit {
   }
 
   private initializeYearOptions(): void {
-    const currentYear = new Date().getFullYear();
+    const currentYear: number = new Date().getFullYear();
     const years: YearOption[] = [];
-    for (let year = 2020; year <= currentYear + 1; year++) {
+
+    for (let year: number = 2020; year <= currentYear + 1; year++) {
       years.push({label: year.toString(), value: year});
     }
     this.yearOptions = years;
@@ -110,8 +111,13 @@ export class BudgetsComponent implements OnInit {
 
   private loadCategories(): void {
     this.categoryApi.getCategories().subscribe({
-      next: (cats) => this.categories.set(cats),
-      error: () => this.toast.error('Failed to load categories')
+      next: (categories: Category[]): void => {
+        this.categories.set(categories)
+      },
+      error: (error: any): void => {
+        console.error('Failed to load categories:', error);
+        this.toast.error('Failed to load categories')
+      }
     });
   }
 
@@ -126,40 +132,30 @@ export class BudgetsComponent implements OnInit {
   loadBudgetStatus(): void {
     this.loading.set(true);
 
-    forkJoin({
-      status: this.budgetApi.getBudgetStatus(this.selectedMonth(), this.selectedYear()),
-      categories: this.categoryApi.getCategories()
-    }).subscribe({
-      next: ({status, categories}) => {
-        const catMap = new Map(categories.map(c => [c.name, c]));
-
-        const enriched = status.map(s => {
-          const cat = catMap.get(s.categoryName);
-          return {
-            ...s,
-            icon: cat?.icon,
-            color: cat?.color || getCategoryColor(s.categoryName)
-          };
-        });
-
-        this.budgetStatuses.set(enriched);
-        this.loading.set(false);
-      },
-      error: () => {
-        this.toast.error('Failed to load budget status');
-        this.loading.set(false);
-      }
-    });
+    this.budgetApi.getBudgetStatus(this.selectedMonth(), this.selectedYear())
+      .subscribe({
+        next: (status: BudgetStatus[]): void => {
+          this.budgetStatuses.set(status);
+          this.loading.set(false);
+        },
+        error: (error: any): void => {
+          console.error('Failed to load budget status:', error);
+          this.toast.error('Failed to load budget status');
+          this.loading.set(false);
+        }
+      });
   }
 
   loadAllBudgets(): void {
     this.loading.set(true);
+
     this.budgetApi.getAllBudgets().subscribe({
-      next: (budgets) => {
+      next: (budgets: Budget[]): void => {
         this.allBudgets.set(budgets);
         this.loading.set(false);
       },
-      error: () => {
+      error: (error: any): void => {
+        console.error('Failed to load all budgets:', error);
         this.toast.error('Failed to load all budgets');
         this.loading.set(false);
       }
@@ -186,18 +182,21 @@ export class BudgetsComponent implements OnInit {
   deleteBudget(budget: Budget): void {
     this.confirmationService.confirm({
       header: 'Delete Budget?',
-      message: `Are you sure you want to delete the budget for ${budget.categoryName} in ${budget.month}/${budget.year}?`,
+      message: `Are you sure you want to delete the budget for ${budget.category.name} in ${budget.month}/${budget.year}?`,
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Delete',
       rejectLabel: 'Cancel',
       acceptButtonStyleClass: 'p-button-danger',
-      accept: () => {
+      accept: (): void => {
         this.budgetApi.deleteBudget(budget.id).subscribe({
-          next: () => {
+          next: (): void => {
             this.toast.success('Budget deleted successfully');
             this.refreshData();
           },
-          error: () => this.toast.error('Failed to delete budget')
+          error: (error: any): void => {
+            console.error('Failed to delete budget:', error);
+            this.toast.error('Failed to delete budget')
+          }
         });
       }
     });
