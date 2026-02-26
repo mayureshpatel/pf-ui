@@ -1,5 +1,6 @@
 import {
   Component,
+  DestroyRef,
   inject,
   input,
   InputSignal,
@@ -18,6 +19,7 @@ import {InputNumberModule} from 'primeng/inputnumber';
 import {MessageModule} from 'primeng/message';
 import {SelectItemGroup} from 'primeng/api';
 import {Category} from '@models/category.model';
+import {Budget} from '@models/budget.model';
 import {BudgetApiService} from '../../services/budget-api.service';
 import {ToastService} from '@core/services/toast.service';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
@@ -42,6 +44,7 @@ export class BudgetFormDialogComponent implements OnChanges {
   // injected services
   private readonly budgetApi = inject(BudgetApiService);
   private readonly toast = inject(ToastService);
+  private readonly destroyRef: DestroyRef = inject(DestroyRef);
 
   // input signals
   visible: InputSignal<boolean> = input.required<boolean>();
@@ -73,7 +76,7 @@ export class BudgetFormDialogComponent implements OnChanges {
     let children: Category[] = [];
 
     categories.forEach((category: Category): void => {
-      if (category.parent === null) {
+      if (!category.parent) {
         parents.push(category);
       } else {
         children.push(category);
@@ -122,15 +125,21 @@ export class BudgetFormDialogComponent implements OnChanges {
       return;
     }
 
+    let selectedCategory: Category | undefined = this.categories().find((category: Category): boolean => category.id === this.selectedCategoryId);
+    if (!selectedCategory) {
+      this.errorMessage.set('Selected category does not exist');
+      return;
+    }
+
     this.loading.set(true);
     this.budgetApi.setBudget({
-      categoryId: this.selectedCategoryId,
+      category: selectedCategory,
       amount: this.amount,
       month: this.month(),
       year: this.year()
-    })
+    } as Budget)
       .pipe(
-        takeUntilDestroyed(),
+        takeUntilDestroyed(this.destroyRef),
         finalize((): void => {
           this.loading.set(false);
         })
