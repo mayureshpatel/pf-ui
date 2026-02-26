@@ -1,4 +1,15 @@
-import {Component, EventEmitter, input, OnChanges, Output, signal, WritableSignal, model} from '@angular/core';
+import {
+  Component,
+  input,
+  InputSignal,
+  model,
+  ModelSignal,
+  OnChanges,
+  output,
+  OutputEmitterRef,
+  signal,
+  WritableSignal
+} from '@angular/core';
 import {FormsModule} from '@angular/forms';
 import {CommonModule} from '@angular/common';
 import {ButtonModule} from 'primeng/button';
@@ -6,17 +17,10 @@ import {InputTextModule} from 'primeng/inputtext';
 import {Select} from 'primeng/select';
 import {InputNumberModule} from 'primeng/inputnumber';
 import {MessageModule} from 'primeng/message';
-import {Account, AccountFormData, AccountType} from '@models/account.model';
-import {BankName, BankOption} from '@models/transaction.model';
-import {ACCOUNT_TYPE_INFO} from '@shared/utils/account.utils';
+import {Account, AccountType, BankName} from '@models/account.model';
 import {DrawerComponent} from '@shared/components/drawer/drawer.component';
 import {ReconcileDialogComponent} from '../reconcile-dialog/reconcile-dialog.component';
-
-interface AccountTypeOption {
-  label: string;
-  value: AccountType;
-  icon: string;
-}
+import {BankOption} from '@models/transaction.model';
 
 @Component({
   selector: 'app-account-form-drawer',
@@ -34,27 +38,19 @@ interface AccountTypeOption {
   templateUrl: './account-form-drawer.component.html'
 })
 export class AccountFormDrawerComponent implements OnChanges {
-  visible = model.required<boolean>();
-  account = input<Account | null>(null);
-  saving = input<boolean>(false);
+  // input signals
+  visible: ModelSignal<boolean> = model.required<boolean>();
+  account: InputSignal<Account | null> = input<Account | null>(null);
+  accountTypes: InputSignal<AccountType[]> = input.required<AccountType[]>();
+  saving: InputSignal<boolean> = input<boolean>(false);
 
-  @Output() save = new EventEmitter<AccountFormData>();
+  // output signals
+  save: OutputEmitterRef<any> = output<any>();
 
-  formData: AccountFormData = {
-    name: '',
-    type: AccountType.CHECKING,
-    currentBalance: 0,
-    bankName: undefined
-  };
-
+  // signals
   errorMessage: WritableSignal<string | null> = signal(null);
   showReconcileDialog: WritableSignal<boolean> = signal(false);
-
-  accountTypes: AccountTypeOption[] = Object.values(AccountType).map(type => ({
-    label: ACCOUNT_TYPE_INFO[type].label,
-    value: type,
-    icon: ACCOUNT_TYPE_INFO[type].icon
-  }));
+  selectedBank: WritableSignal<BankOption | undefined> = signal(undefined);
 
   bankOptions: BankOption[] = [
     {
@@ -84,14 +80,22 @@ export class AccountFormDrawerComponent implements OnChanges {
     }
   ];
 
+  formData = {
+    accountName: '',
+    accountType: undefined as AccountType | undefined,
+    currentBalance: 0,
+    bankName: undefined as BankName | undefined
+  };
+
   ngOnChanges(): void {
-    const acc = this.account();
-    if (acc) {
+    const selectedAccount: Account | null = this.account();
+
+    if (selectedAccount) {
       this.formData = {
-        name: acc.name,
-        type: acc.type,
-        currentBalance: acc.currentBalance,
-        bankName: acc.bankName
+        accountName: selectedAccount.name,
+        accountType: selectedAccount.type,
+        currentBalance: selectedAccount.currentBalance,
+        bankName: this.selectedBank()?.value
       };
     } else {
       this.resetForm();
@@ -99,7 +103,7 @@ export class AccountFormDrawerComponent implements OnChanges {
   }
 
   onHide(): void {
-    setTimeout(() => {
+    setTimeout((): void => {
       this.resetForm();
     }, 300);
   }
@@ -107,7 +111,7 @@ export class AccountFormDrawerComponent implements OnChanges {
   onSubmit(): void {
     this.errorMessage.set(null);
 
-    if (!this.formData.name || !this.formData.type || this.formData.currentBalance === null) {
+    if (!this.formData.accountName || !this.formData.accountType || this.formData.currentBalance === null) {
       this.errorMessage.set('Please fill in all required fields');
       return;
     }
@@ -117,11 +121,12 @@ export class AccountFormDrawerComponent implements OnChanges {
 
   resetForm(): void {
     this.formData = {
-      name: '',
-      type: AccountType.CHECKING,
+      accountName: '',
+      accountType: undefined,
       currentBalance: 0,
       bankName: undefined
     };
+
     this.errorMessage.set(null);
   }
 
@@ -142,9 +147,7 @@ export class AccountFormDrawerComponent implements OnChanges {
   }
 
   onReconciled(): void {
-    // Emit save to trigger parent refresh (which usually re-fetches the list)
     this.save.emit(this.formData);
-    // Also close the drawer
     this.visible.set(false);
   }
 }

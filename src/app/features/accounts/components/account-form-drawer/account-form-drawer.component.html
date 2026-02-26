@@ -9,7 +9,9 @@
 
   <form class="flex flex-col gap-6">
     @if (errorMessage()) {
-      <p-message severity="error" [text]="errorMessage()!" styleClass="w-full" />
+      <p-message severity="error" styleClass="w-full">
+        {{ errorMessage() }}
+      </p-message>
     }
 
     <!-- Account Name -->
@@ -20,7 +22,7 @@
       <input
         pInputText
         id="name"
-        [(ngModel)]="formData.name"
+        [(ngModel)]="formData.accountName"
         name="name"
         placeholder="e.g., Main Checking, Travel Savings"
         class="w-full"
@@ -36,13 +38,13 @@
       </label>
       <p-select
         id="type"
-        [(ngModel)]="formData.type"
+        [(ngModel)]="formData.accountType"
         name="type"
-        [options]="accountTypes"
+        [options]="accountTypes()"
         optionLabel="label"
-        optionValue="value"
+        optionValue="code"
         placeholder="Select account type"
-        styleClass="w-full"
+        class="w-full"
         required>
         <ng-template let-option pTemplate="item">
           <div class="flex items-center gap-2">
@@ -66,7 +68,7 @@
         optionLabel="label"
         optionValue="value"
         placeholder="Select bank format"
-        styleClass="w-full"
+        class="w-full"
         appendTo="body"
         [showClear]="true">
         <ng-template let-option pTemplate="item">
@@ -97,7 +99,7 @@
           locale="en-US"
           [minFractionDigits]="2"
           [maxFractionDigits]="2"
-          styleClass="w-full"
+          class="w-full"
           inputStyleClass="w-full font-bold text-lg"
           required
         />

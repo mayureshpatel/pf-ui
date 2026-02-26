@@ -49,8 +49,8 @@
             <!-- Account Type -->
             <td>
               <div class="flex items-center gap-2">
-                <i [class]="'pi ' + (account.type | accountTypeInfo:'icon') + ' ' + (account.type | accountTypeInfo:'color')"></i>
-                <span>{{ (account.type | accountTypeInfo).label }}</span>
+                <i [class]="'pi ' + account.type.iconography.icon + ' ' + account.type.iconography.color"></i>
+                <span>{{ account.type.label }}</span>
               </div>
             </td>
 
@@ -86,14 +86,6 @@
                 pTooltip="Delete"
                 tooltipPosition="top"
               />
-            </td>
-          </tr>
-        </ng-template>
-
-        <ng-template pTemplate="emptymessage">
-          <tr>
-            <td colspan="4" class="text-center py-8 text-muted-color">
-              No accounts found
             </td>
           </tr>
         </ng-template>

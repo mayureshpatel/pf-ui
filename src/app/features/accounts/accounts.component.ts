@@ -6,7 +6,7 @@ import {TableModule} from 'primeng/table';
 import {CardModule} from 'primeng/card';
 import {TooltipModule} from 'primeng/tooltip';
 import {ConfirmationService} from 'primeng/api';
-import {Account, AccountFormData} from '@models/account.model';
+import {Account} from '@models/account.model';
 import {AccountApiService} from './services/account-api.service';
 import {AccountSummaryCardsComponent} from './components/account-summary-cards/account-summary-cards.component';
 import {AccountFormDrawerComponent} from './components/account-form-drawer/account-form-drawer.component';
@@ -14,7 +14,6 @@ import {ToastService} from '@core/services/toast.service';
 import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-toolbar';
 import {finalize} from 'rxjs';
 import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
-import {AccountTypeInfoPipe} from '@shared/pipes/account-type-info.pipe';
 
 @Component({
   selector: 'app-accounts',
@@ -28,8 +27,7 @@ import {AccountTypeInfoPipe} from '@shared/pipes/account-type-info.pipe';
     ScreenToolbarComponent,
     AccountSummaryCardsComponent,
     AccountFormDrawerComponent,
-    FormatCurrencyPipe,
-    AccountTypeInfoPipe
+    FormatCurrencyPipe
   ],
   templateUrl: './accounts.component.html'
 })
@@ -53,6 +51,9 @@ export class AccountsComponent implements OnInit {
     this.loadAccounts();
   }
 
+  /**
+   * Loads accounts from the API and updates the accounts signal.
+   */
   loadAccounts(): void {
     this.loading.set(true);
     this.accountApi.getAccounts()
@@ -64,61 +65,97 @@ export class AccountsComponent implements OnInit {
         next: (accounts: Account[]): void => {
           this.accounts.set(accounts);
         },
-        error: (): void => {
+        error: (error: any): void => {
+          console.error('Error loading accounts:', error);
           this.toast.error('Failed to load accounts');
         }
       });
   }
 
+  /**
+   * Opens the account creation dialog.
+   */
   openCreateDialog(): void {
     this.selectedAccount.set(null);
     this.showDialog.set(true);
   }
 
+  /**
+   * Opens the account edit dialog for the selected account.
+   * @param account The account to edit.
+   */
   openEditDialog(account: Account): void {
     this.selectedAccount.set(account);
     this.showDialog.set(true);
   }
 
-  onSave(formData: AccountFormData): void {
-    const account = this.selectedAccount();
+  /**
+   * Handles the save event for the account form.
+   * If an account is selected, it updates the existing account; otherwise, it creates a new account.
+   * @param formData The form data containing the account details.
+   */
+  onSave(formData: Account): void {
+    const account: Account | null = this.selectedAccount();
 
     if (account) {
-      // Update existing account
-      this.accountApi.update(account.id, formData)
-        .pipe(takeUntilDestroyed(this.destroyRef))
-        .subscribe({
-          next: (updated) => {
-            const accounts = this.accounts();
-            const index = accounts.findIndex(a => a.id === account.id);
-            if (index !== -1) {
-              accounts[index] = updated;
-              this.accounts.set([...accounts]);
-            }
-            this.toast.success('Account updated successfully');
-            this.showDialog.set(false);
-          },
-          error: (error: any) => {
-            this.toast.error(error.error?.detail || 'Failed to update account');
-          }
-        });
+      this.editAccount(account, formData);
     } else {
-      // Create new account
-      this.accountApi.create(formData)
-        .pipe(takeUntilDestroyed(this.destroyRef))
-        .subscribe({
-          next: (created) => {
-            this.accounts.set([...this.accounts(), created]);
-            this.toast.success('Account created successfully');
-            this.showDialog.set(false);
-          },
-          error: (error: any) => {
-            this.toast.error(error.error?.detail || 'Failed to create account');
-          }
-        });
+      this.createAccount(formData);
     }
   }
 
+  /**
+   * Creates a new account using the provided account data.
+   * @param newAccount The account data to create.
+   */
+  private createAccount(newAccount: Account): void {
+    this.accountApi.create(newAccount)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (created: Account): void => {
+          this.accounts.set([...this.accounts(), created]);
+
+          this.toast.success('Account created successfully');
+          this.showDialog.set(false);
+        },
+        error: (error: any): void => {
+          console.error('Error creating account:', error);
+          this.toast.error(error.error?.detail || 'Failed to create account');
+        }
+      });
+  }
+
+  /**
+   * Edits an existing account using the provided account data.
+   * @param existingAccount The account to edit.
+   * @param updateFormDate The updated account data.
+   */
+  private editAccount(existingAccount: Account, updateFormDate: Account): void {
+    this.accountApi.update(existingAccount.id, updateFormDate)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (updated: Account): void => {
+          const accounts: Account[] = this.accounts();
+          const index: number = accounts.findIndex((a: Account): boolean => a.id === existingAccount.id);
+
+          if (index !== -1) {
+            accounts[index] = updated;
+            this.accounts.set([...accounts]);
+          }
+          this.toast.success('Account updated successfully');
+          this.showDialog.set(false);
+        },
+        error: (error: any): void => {
+          console.error('Error updating account:', error);
+          this.toast.error(error.error?.detail || 'Failed to update account');
+        }
+      });
+  }
+
+  /**
+   * Deletes an account.
+   * @param account the account to delete
+   */
   deleteAccount(account: Account): void {
     this.confirmationService.confirm({
       header: `Delete ${account.name}?`,
@@ -127,15 +164,16 @@ export class AccountsComponent implements OnInit {
       acceptLabel: 'Delete',
       rejectLabel: 'Cancel',
       acceptButtonStyleClass: 'p-button-danger',
-      accept: () => {
+      accept: (): void => {
         this.accountApi.delete(account.id)
           .pipe(takeUntilDestroyed(this.destroyRef))
           .subscribe({
-            next: () => {
-              this.accounts.set(this.accounts().filter(a => a.id !== account.id));
+            next: (): void => {
+              this.accounts.set(this.accounts().filter((a: Account): boolean => a.id !== account.id));
               this.toast.success('Account deleted successfully');
             },
-            error: (error: any) => {
+            error: (error: any): void => {
+              console.error('Error deleting account:', error);
               const message = error.error?.detail || 'Failed to delete account';
               this.toast.error(message);
             }

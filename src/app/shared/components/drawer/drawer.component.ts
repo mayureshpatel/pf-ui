@@ -1,14 +1,4 @@
-import {
-  Component,
-  input,
-  InputSignal,
-  model,
-  ModelSignal,
-  output,
-  OutputEmitterRef,
-  signal,
-  WritableSignal
-} from '@angular/core';
+import {Component, input, InputSignal, model, ModelSignal, output, OutputEmitterRef} from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {DrawerModule} from 'primeng/drawer';
 import {ButtonModule} from 'primeng/button';
@@ -19,17 +9,17 @@ import {ButtonModule} from 'primeng/button';
   templateUrl: './drawer.component.html'
 })
 export class DrawerComponent {
+  // input signals
   visible: ModelSignal<boolean> = model.required<boolean>();
   title: InputSignal<string> = input.required<string>();
   icon: InputSignal<string | null> = input<string | null>(null);
   saveLabel: InputSignal<string> = input<string>('Save');
   cancelLabel: InputSignal<string> = input<string>('Cancel');
-
   width: InputSignal<string> = input<string>('w-full md:w-[500px]');
+  saving: InputSignal<boolean> = input<boolean>(false);
+  valid: InputSignal<boolean> = input<boolean>(true);
 
-  saving: WritableSignal<boolean> = signal<boolean>(false);
-  valid: WritableSignal<boolean> = signal<boolean>(true);
-
+  // output signals
   saveEmitterRef: OutputEmitterRef<void> = output<void>();
   cancelEmitterRef: OutputEmitterRef<void> = output<void>();
 
