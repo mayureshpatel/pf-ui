@@ -1,22 +1,24 @@
-import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
-import { environment } from '@env';
-import { CategoryRule, CategoryRuleDto } from '@models/category-rule.model';
-import { RuleChangePreview } from '@features/settings/vendor-rules/components/apply-rules-dialog/apply-rules-dialog.component';
+import {inject, Injectable} from '@angular/core';
+import {HttpClient} from '@angular/common/http';
+import {Observable} from 'rxjs';
+import {environment} from '@env';
+import {CategoryRule, CategoryRuleRequest} from '@models/category-rule.model';
+import {
+  RuleChangePreview
+} from '@features/settings/vendor-rules/components/apply-rules-dialog/apply-rules-dialog.component';
 
 @Injectable({
   providedIn: 'root'
 })
 export class CategoryRuleApiService {
   private readonly http: HttpClient = inject(HttpClient);
-  private readonly apiUrl = `${environment.apiUrl}/category-rules`;
+  private readonly apiUrl: string = `${environment.apiUrl}/category-rules`;
 
   getRules(): Observable<CategoryRule[]> {
     return this.http.get<CategoryRule[]>(this.apiUrl);
   }
 
-  createRule(data: CategoryRuleDto): Observable<CategoryRule> {
+  createRule(data: CategoryRuleRequest): Observable<CategoryRule> {
     return this.http.post<CategoryRule>(this.apiUrl, data);
   }
 

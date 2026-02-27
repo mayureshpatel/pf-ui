@@ -1,17 +1,28 @@
-import { Component, inject, input, OnChanges, output, signal, WritableSignal, SimpleChanges } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { DialogModule } from 'primeng/dialog';
-import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
-import { InputNumberModule } from 'primeng/inputnumber';
-import { SelectModule } from 'primeng/select';
-import { MessageModule } from 'primeng/message';
-import { CategoryRuleDto } from '@models/category-rule.model';
-import { CategoryRuleApiService } from '../../services/category-rule-api.service';
-import { CategoryApiService } from '@features/categories/services/category-api.service';
-import { ToastService } from '@core/services/toast.service';
-import { CategoryGroup } from '@models/category.model';
+import {
+  Component,
+  inject,
+  input,
+  InputSignal,
+  OnChanges,
+  output,
+  OutputEmitterRef,
+  signal,
+  SimpleChanges,
+  WritableSignal
+} from '@angular/core';
+import {CommonModule} from '@angular/common';
+import {FormsModule} from '@angular/forms';
+import {DialogModule} from 'primeng/dialog';
+import {ButtonModule} from 'primeng/button';
+import {InputTextModule} from 'primeng/inputtext';
+import {InputNumberModule} from 'primeng/inputnumber';
+import {SelectModule} from 'primeng/select';
+import {MessageModule} from 'primeng/message';
+import {CategoryRuleApiService} from '../../services/category-rule-api.service';
+import {CategoryApiService} from '@features/categories/services/category-api.service';
+import {ToastService} from '@core/services/toast.service';
+import {CategoryGroup} from '@models/category.model';
+import {CategoryRuleRequest} from '@models/category-rule.model';
 
 @Component({
   selector: 'app-category-rule-form-dialog',
@@ -29,24 +40,28 @@ import { CategoryGroup } from '@models/category.model';
   templateUrl: './category-rule-form-dialog.component.html'
 })
 export class CategoryRuleFormDialogComponent implements OnChanges {
-  private readonly api = inject(CategoryRuleApiService);
-  private readonly categoryApi = inject(CategoryApiService);
-  private readonly toast = inject(ToastService);
+  // injected services
+  private readonly api: CategoryRuleApiService = inject(CategoryRuleApiService);
+  private readonly categoryApi: CategoryApiService = inject(CategoryApiService);
+  private readonly toast: ToastService = inject(ToastService);
 
-  visible = input.required<boolean>();
+  // input signals
+  visible: InputSignal<boolean> = input.required<boolean>();
 
-  visibleChange = output<boolean>();
-  save = output<void>();
+  // output signals
+  visibleChange: OutputEmitterRef<boolean> = output<boolean>();
+  save: OutputEmitterRef<void> = output<void>();
 
-  formData: CategoryRuleDto = {
-    keyword: '',
-    categoryName: '',
-    priority: 0
-  };
-
+  // signals
   categoryGroups: WritableSignal<CategoryGroup[]> = signal([]);
   loading: WritableSignal<boolean> = signal(false);
   errorMessage: WritableSignal<string | null> = signal(null);
+
+  formData: CategoryRuleRequest = {
+    keyword: '',
+    category: undefined,
+    priority: 0
+  };
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['visible'] && this.visible()) {
@@ -57,8 +72,11 @@ export class CategoryRuleFormDialogComponent implements OnChanges {
 
   loadCategories(): void {
     this.categoryApi.getGroupedCategories().subscribe({
-      next: (groups) => this.categoryGroups.set(groups),
-      error: () => this.toast.error('Failed to load categories')
+      next: (groups: CategoryGroup[]): void => this.categoryGroups.set(groups),
+      error: (error: any): void => {
+        console.error('Error loading categories:', error);
+        this.toast.error('Failed to load categories')
+      }
     });
   }
 
@@ -68,19 +86,21 @@ export class CategoryRuleFormDialogComponent implements OnChanges {
   }
 
   onSubmit(): void {
-    if (!this.formData.keyword || !this.formData.categoryName) {
+    if (!this.formData.keyword || !this.formData.category) {
       this.errorMessage.set('Keyword and Category are required');
       return;
     }
 
     this.loading.set(true);
     this.api.createRule(this.formData).subscribe({
-      next: () => {
+      next: (): void => {
         this.toast.success('Rule created successfully');
         this.save.emit();
         this.onHide();
       },
-      error: (error) => {
+      error: (error: any): void => {
+        console.error('Error creating rule:', error);
+
         this.errorMessage.set(error.error?.detail || 'Failed to create rule');
         this.loading.set(false);
       }
@@ -88,7 +108,7 @@ export class CategoryRuleFormDialogComponent implements OnChanges {
   }
 
   resetForm(): void {
-    this.formData = { keyword: '', categoryName: '', priority: 0 };
+    this.formData = {keyword: '', category: undefined, priority: 0};
     this.errorMessage.set(null);
     this.loading.set(false);
   }

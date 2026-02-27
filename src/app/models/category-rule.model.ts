@@ -8,3 +8,9 @@ export interface CategoryRule {
   priority: number;
   category: Category;
 }
+
+export interface CategoryRuleRequest {
+  keyword: string;
+  priority: number;
+  category: Category | undefined;
+}

@@ -24,12 +24,11 @@
   </app-screen-toolbar>
 
   <!-- Rules Table -->
-  <p-card styleClass="shadow-sm">
+  <p-card class="shadow-sm">
     <p-table
       [value]="rules()"
       [loading]="loading()"
-      styleClass="p-datatable-sm"
-      responsiveLayout="scroll">
+      class="p-datatable-sm">
 
       <ng-template pTemplate="header">
         <tr>
