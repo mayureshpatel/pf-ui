@@ -93,6 +93,9 @@ export class CategoriesComponent implements OnInit, OnDestroy {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: ({categories, transactionCategoryCount, budgets}) => {
+          console.log('categories: ', categories);
+          console.log('transactionCategoryCount: ', transactionCategoryCount);
+          console.log('budgets: ', budgets);
           const budgetMap = new Map(budgets.map((budgetStatus: BudgetStatus) => [budgetStatus.category.name, budgetStatus]));
 
           // calculate usage and normalize parent names
@@ -105,7 +108,7 @@ export class CategoriesComponent implements OnInit, OnDestroy {
             return {
               ...category,
               transactionCount: transactionCount,
-              groupName: category.parent.name || category.name,
+              groupName: category.parent?.name || category.name,
               budgetedAmount: budget?.budgetedAmount,
               remainingAmount: budget?.remainingAmount,
               percentageUsed: budget?.percentageUsed
@@ -134,7 +137,7 @@ export class CategoriesComponent implements OnInit, OnDestroy {
 
   calculateGroupTotal(groupName: string): number {
     return this.categoryViewModels()
-      .filter((c: CategoryViewModel): boolean => c.parent.name === groupName || c.name === groupName)
+      .filter((c: CategoryViewModel): boolean => c.parent?.name === groupName || c.name === groupName)
       .reduce((sum: number, c: CategoryViewModel): number => sum + c.transactionCount, 0);
   }
 

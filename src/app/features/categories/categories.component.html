@@ -60,7 +60,7 @@
         <!-- Data Rows — parent categories are kept in the data so PrimeNG renders their group header,
              but their body row is suppressed; only child categories render as visible rows. -->
         <ng-template pTemplate="body" let-categoryViewModel let-rowIndex="rowIndex">
-          @if (categoryViewModel.parent.id != null) {
+          @if (categoryViewModel.parent != null && categoryViewModel.parent.id != null) {
             <tr>
               <!-- Color Badge / Icon -->
               <td>

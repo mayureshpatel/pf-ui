@@ -12,7 +12,7 @@ export class CategoryApiService {
   private readonly apiUrl = `${environment.apiUrl}/categories`;
 
   getCategories(): Observable<Category[]> {
-    return this.http.get<Category[]>(this.apiUrl);
+    return this.http.get<Category[]>(`${this.apiUrl}/grouped`);
   }
 
   getGroupedCategories(): Observable<CategoryGroup[]> {
