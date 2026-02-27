@@ -10,6 +10,7 @@ import { Category, CategoryFormData, CategoryGroup } from '@models/category.mode
 export class CategoryApiService {
   private readonly http: HttpClient = inject(HttpClient);
   private readonly apiUrl = `${environment.apiUrl}/categories`;
+  private readonly apiUrlWithTransactions = `${environment.apiUrl}/transactions/existing-categories`;
 
   getCategories(): Observable<Category[]> {
     return this.http.get<Category[]>(`${this.apiUrl}/grouped`);
@@ -32,6 +33,10 @@ export class CategoryApiService {
 
   getChildCategories(): Observable<Category[]> {
     return this.http.get<Category[]>(`${this.apiUrl}/children`);
+  }
+
+  getCategoriesWithTransactions(): Observable<Category[]> {
+    return this.http.get<Category[]>(`${this.apiUrlWithTransactions}`);
   }
 
   createCategory(data: CategoryFormData): Observable<Category> {

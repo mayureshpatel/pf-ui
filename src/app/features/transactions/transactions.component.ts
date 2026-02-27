@@ -236,7 +236,7 @@ export class TransactionsComponent implements OnInit, OnDestroy {
   }
 
   loadCategories(): void {
-    this.categoryApi.getChildCategories()
+    this.categoryApi.getCategoriesWithTransactions()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (categories: Category[]): void => this.categories.set(categories),
