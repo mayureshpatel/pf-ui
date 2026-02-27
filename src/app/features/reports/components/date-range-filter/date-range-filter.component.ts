@@ -1,9 +1,9 @@
-import { Component, input, output, signal, WritableSignal, effect } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { DatePicker } from 'primeng/datepicker';
-import { Button } from 'primeng/button';
-import { DateRange, DateRangePreset } from '../../models/reports.model';
+import {Component, effect, input, InputSignal, output, OutputEmitterRef, signal, WritableSignal} from '@angular/core';
+import {CommonModule} from '@angular/common';
+import {FormsModule} from '@angular/forms';
+import {DatePicker} from 'primeng/datepicker';
+import {Button} from 'primeng/button';
+import {DateRange, DateRangePreset} from '../../models/reports.model';
 
 @Component({
   selector: 'app-date-range-filter',
@@ -12,23 +12,28 @@ import { DateRange, DateRangePreset } from '../../models/reports.model';
   templateUrl: './date-range-filter.component.html'
 })
 export class DateRangeFilterComponent {
-  dateRange = input.required<DateRange>();
-  rangeChange = output<DateRange>();
+  // input signals
+  dateRange: InputSignal<DateRange> = input.required<DateRange>();
 
+  // output signals
+  rangeChange: OutputEmitterRef<DateRange> = output<DateRange>();
+
+  // signals
   protected selectedRange: WritableSignal<Date[] | null> = signal(null);
 
   protected presets: DateRangePreset[] = [
-    { label: 'This Month', getValue: () => this.getThisMonth() },
-    { label: 'Last Month', getValue: () => this.getLastMonth() },
-    { label: 'Last 3 Months', getValue: () => this.getLast3Months() },
-    { label: 'YTD', getValue: () => this.getYTD() },
-    { label: 'Last Year', getValue: () => this.getLastYear() }
+    {label: 'This Month', getValue: (): DateRange => this.getThisMonth()},
+    {label: 'Last Month', getValue: (): DateRange => this.getLastMonth()},
+    {label: 'Last 3 Months', getValue: (): DateRange => this.getLast3Months()},
+    {label: 'YTD', getValue: (): DateRange => this.getYTD()},
+    {label: 'Last Year', getValue: (): DateRange => this.getLastYear()}
   ];
 
   constructor() {
     // Sync selectedRange when dateRange input changes
-    effect(() => {
-      const range = this.dateRange();
+    effect((): void => {
+      const range: DateRange = this.dateRange();
+
       if (range) {
         const startDate = new Date(range.startDate);
         const endDate = new Date(range.endDate);
@@ -38,16 +43,17 @@ export class DateRangeFilterComponent {
   }
 
   protected onPresetClick(preset: DateRangePreset): void {
-    const range = preset.getValue();
+    const range: DateRange = preset.getValue();
+
     this.rangeChange.emit(range);
   }
 
   protected onDateSelect(): void {
-    const dates = this.selectedRange();
+    const dates: Date[] | null = this.selectedRange();
 
-    if (dates && dates.length === 2 && dates[0] && dates[1]) {
-      const startDate = this.formatDateToISO(dates[0]);
-      const endDate = this.formatDateToISO(dates[1]);
+    if (dates?.length === 2 && dates[0] && dates[1]) {
+      const startDate: string = this.formatDateToISO(dates[0]);
+      const endDate: string = this.formatDateToISO(dates[1]);
 
       this.rangeChange.emit({
         startDate,
@@ -58,20 +64,20 @@ export class DateRangeFilterComponent {
   }
 
   private formatDateToISO(date: Date): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
+    const year: number = date.getFullYear();
+    const month: string = String(date.getMonth() + 1).padStart(2, '0');
+    const day: string = String(date.getDate()).padStart(2, '0');
+
     return `${year}-${month}-${day}`;
   }
 
   private getThisMonth(): DateRange {
     const now = new Date();
     const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endDate = now;
 
     return {
       startDate: this.formatDateToISO(startDate),
-      endDate: this.formatDateToISO(endDate),
+      endDate: this.formatDateToISO(now),
       label: 'This Month'
     };
   }
@@ -79,7 +85,7 @@ export class DateRangeFilterComponent {
   private getLastMonth(): DateRange {
     const now = new Date();
     const startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const endDate = new Date(now.getFullYear(), now.getMonth(), 0); // Last day of previous month
+    const endDate = new Date(now.getFullYear(), now.getMonth(), 0);
 
     return {
       startDate: this.formatDateToISO(startDate),
@@ -91,23 +97,21 @@ export class DateRangeFilterComponent {
   private getLast3Months(): DateRange {
     const now = new Date();
     const startDate = new Date(now.getFullYear(), now.getMonth() - 3, 1);
-    const endDate = now;
 
     return {
       startDate: this.formatDateToISO(startDate),
-      endDate: this.formatDateToISO(endDate),
+      endDate: this.formatDateToISO(now),
       label: 'Last 3 Months'
     };
   }
 
   private getYTD(): DateRange {
     const now = new Date();
-    const startDate = new Date(now.getFullYear(), 0, 1); // Jan 1 of current year
-    const endDate = now;
+    const startDate = new Date(now.getFullYear(), 0, 1);
 
     return {
       startDate: this.formatDateToISO(startDate),
-      endDate: this.formatDateToISO(endDate),
+      endDate: this.formatDateToISO(now),
       label: 'Year to Date'
     };
   }

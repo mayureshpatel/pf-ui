@@ -1,9 +1,9 @@
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
   <!-- Top Categories Chart -->
-  <p-card header="Top Spending Categories" styleClass="shadow-sm">
+  <p-card header="Top Spending Categories" class="shadow-sm">
     @if (hasData()) {
       <div class="h-96">
-        <p-chart type="bar" [data]="chartData()" [options]="chartOptions()" />
+        <p-chart type="bar" [data]="chartData()" [options]="chartOptions()"/>
       </div>
     } @else {
       <div class="flex flex-col items-center justify-center py-12 text-muted-color gap-3 h-96">
@@ -14,8 +14,8 @@
   </p-card>
 
   <!-- Category Summary Table -->
-  <p-card header="Category Details" styleClass="shadow-sm">
-    <p-table [value]="categoryData()" styleClass="p-datatable-sm">
+  <p-card header="Category Details" class="shadow-sm">
+    <p-table [value]="categoryData()" class="p-datatable-sm">
       <ng-template pTemplate="header">
         <tr>
           <th>Category</th>

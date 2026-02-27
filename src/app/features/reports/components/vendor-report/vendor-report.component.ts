@@ -1,4 +1,4 @@
-import {Component, computed, effect, inject, input, signal, WritableSignal} from '@angular/core';
+import {Component, computed, effect, inject, input, InputSignal, Signal, signal, WritableSignal} from '@angular/core';
 import {CommonModule, formatCurrency} from '@angular/common';
 import {CardModule} from 'primeng/card';
 import {ChartModule} from 'primeng/chart';
@@ -16,26 +16,28 @@ import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
   templateUrl: './vendor-report.component.html'
 })
 export class VendorReportComponent {
-  private readonly dataService = inject(ReportsDataService);
+  // injected services
+  private readonly dataService: ReportsDataService = inject(ReportsDataService);
 
-  transactions = input.required<Transaction[]>();
+  // input signals
+  transactions: InputSignal<Transaction[]> = input.required<Transaction[]>();
 
-  // Aggregated data
-  protected vendorData = computed(() => {
+  // computed signals
+  protected vendorData: Signal<VendorReportData[]> = computed((): VendorReportData[] => {
     return this.dataService.aggregateByVendor(this.transactions());
   });
 
-  protected hasData = computed(() => this.vendorData().length > 0);
+  protected hasData: Signal<boolean> = computed(() => this.vendorData().length > 0);
 
-  // Chart data
+  // signals
   protected barChartData: WritableSignal<any> = signal({});
   protected barChartOptions: WritableSignal<any> = signal({});
   protected doughnutChartData: WritableSignal<any> = signal({});
   protected doughnutChartOptions: WritableSignal<any> = signal({});
 
   constructor() {
-    effect(() => {
-      const vendors = this.vendorData();
+    effect((): void => {
+      const vendors: VendorReportData[] = this.vendorData();
       if (vendors.length > 0) {
         this.updateBarChart(vendors);
         this.updateDoughnutChart(vendors);
@@ -45,14 +47,14 @@ export class VendorReportComponent {
   }
 
   private updateBarChart(vendors: VendorReportData[]): void {
-    const top10 = vendors.slice(0, 10);
+    const top10: VendorReportData[] = vendors.slice(0, 10);
 
-    const labels = top10.map(v => v.vendorName);
-    const data = top10.map(v => v.total);
+    const labels: string[] = top10.map((v: VendorReportData): string => v.merchant.cleanName || 'Uknown Merchant');
+    const data: number[] = top10.map((v: VendorReportData): number => v.total);
 
-    // Generate colors based on vendor index
-    const colors = top10.map((_, index) => {
-      const hue = (index * 360 / 10) % 360;
+    // Generate colors based on the vendor index
+    const colors: string[] = top10.map((_: VendorReportData, index: number): string => {
+      const hue: number = (index * 360 / 10) % 360;
       return `hsl(${hue}, 70%, 60%)`;
     });
 
@@ -69,13 +71,13 @@ export class VendorReportComponent {
   }
 
   private updateDoughnutChart(vendors: VendorReportData[]): void {
-    const top5 = vendors.slice(0, 5);
+    const top5: VendorReportData[] = vendors.slice(0, 5);
 
-    const labels = top5.map(v => v.vendorName);
-    const data = top5.map(v => v.total);
+    const labels: string[] = top5.map((v: VendorReportData): string => v.merchant.cleanName || 'Unknown Merchant');
+    const data: number[] = top5.map((v: VendorReportData): number => v.total);
 
     // Generate colors
-    const colors = [
+    const colors: string[] = [
       '#3B82F6', // blue
       '#10B981', // green
       '#F97316', // orange
@@ -102,7 +104,7 @@ export class VendorReportComponent {
         legend: {display: false},
         tooltip: {
           callbacks: {
-            label: (context: any) => {
+            label: (context: any): string => {
               const value = context.parsed.x || 0;
               return `Total: ${formatCurrency(value, 'en-US', '$', '1.2-2')}`;
             }
@@ -112,7 +114,7 @@ export class VendorReportComponent {
       scales: {
         x: {
           ticks: {
-            callback: (value: any) => formatCurrency(value, 'en-US', '$', '1.2-2')
+            callback: (value: any): string => formatCurrency(value, 'en-US', '$', '1.2-2')
           },
           grid: {display: false}
         },
@@ -136,10 +138,10 @@ export class VendorReportComponent {
         },
         tooltip: {
           callbacks: {
-            label: (context: any) => {
+            label: (context: any): string => {
               const value = context.parsed || 0;
-              const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
-              const percentage = ((value / total) * 100).toFixed(1);
+              const total = context.dataset.data.reduce((a: number, b: number): number => a + b, 0);
+              const percentage: string = ((value / total) * 100).toFixed(1);
               return `${context.label}: ${formatCurrency(value, 'en-US', '$', '1.2-2')} (${percentage}%)`;
             }
           }

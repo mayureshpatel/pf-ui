@@ -1,11 +1,11 @@
-import { Component, input, computed, signal, effect, inject, WritableSignal } from '@angular/core';
+import {Component, computed, effect, inject, input, InputSignal, signal, Signal, WritableSignal} from '@angular/core';
 import {CommonModule, formatCurrency} from '@angular/common';
-import { CardModule } from 'primeng/card';
-import { ChartModule } from 'primeng/chart';
-import { TableModule } from 'primeng/table';
-import { Transaction } from '@models/transaction.model';
-import { ReportsDataService } from '../../services/reports-data.service';
-import { MonthlyReportData } from '../../models/reports.model';
+import {CardModule} from 'primeng/card';
+import {ChartModule} from 'primeng/chart';
+import {TableModule} from 'primeng/table';
+import {Transaction} from '@models/transaction.model';
+import {ReportsDataService} from '../../services/reports-data.service';
+import {MonthlyReportData} from '../../models/reports.model';
 import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
 
 @Component({
@@ -15,26 +15,29 @@ import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
   templateUrl: './income-expense-report.component.html'
 })
 export class IncomeExpenseReportComponent {
-  private readonly dataService = inject(ReportsDataService);
+  // injected services
+  private readonly dataService: ReportsDataService = inject(ReportsDataService);
 
-  transactions = input.required<Transaction[]>();
+  // input signals
+  transactions: InputSignal<Transaction[]> = input.required<Transaction[]>();
 
-  // Aggregated data
-  protected monthlyData = computed(() => {
+  // computed signals
+  protected monthlyData: Signal<MonthlyReportData[]> = computed((): MonthlyReportData[] => {
     return this.dataService.aggregateByMonth(this.transactions());
   });
 
-  protected hasData = computed(() => this.monthlyData().length > 0);
+  protected hasData: Signal<boolean> = computed((): boolean => this.monthlyData().length > 0);
 
-  // Chart data
+  // signals
   protected stackedBarData: WritableSignal<any> = signal({});
   protected stackedBarOptions: WritableSignal<any> = signal({});
   protected lineChartData: WritableSignal<any> = signal({});
   protected lineChartOptions: WritableSignal<any> = signal({});
 
   constructor() {
-    effect(() => {
-      const monthly = this.monthlyData();
+    effect((): void => {
+      const monthly: MonthlyReportData[] = this.monthlyData();
+
       if (monthly.length > 0) {
         this.updateStackedBarChart(monthly);
         this.updateLineChart(monthly);
@@ -44,10 +47,11 @@ export class IncomeExpenseReportComponent {
   }
 
   private updateStackedBarChart(monthlyData: MonthlyReportData[]): void {
-    const labels = monthlyData.map(m => {
+    const labels: string[] = monthlyData.map((m: MonthlyReportData): string => {
       const [year, month] = m.month.split('-');
-      const date = new Date(parseInt(year), parseInt(month) - 1);
-      return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+      const date = new Date(Number.parseInt(year), Number.parseInt(month) - 1);
+
+      return date.toLocaleDateString('en-US', {month: 'short', year: '2-digit'});
     });
 
     this.stackedBarData.set({
@@ -56,29 +60,30 @@ export class IncomeExpenseReportComponent {
         {
           label: 'Income',
           backgroundColor: '#10B981',
-          data: monthlyData.map(m => m.income)
+          data: monthlyData.map((m: MonthlyReportData): number => m.income)
         },
         {
           label: 'Expenses',
           backgroundColor: '#EF4444',
-          data: monthlyData.map(m => Math.abs(m.expense))
+          data: monthlyData.map((m: MonthlyReportData): number => Math.abs(m.expense))
         }
       ]
     });
   }
 
   private updateLineChart(monthlyData: MonthlyReportData[]): void {
-    const labels = monthlyData.map(m => {
+    const labels: string[] = monthlyData.map((m: MonthlyReportData): string => {
       const [year, month] = m.month.split('-');
-      const date = new Date(parseInt(year), parseInt(month) - 1);
-      return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+      const date = new Date(Number.parseInt(year), Number.parseInt(month) - 1);
+
+      return date.toLocaleDateString('en-US', {month: 'short', year: '2-digit'});
     });
 
     this.lineChartData.set({
       labels,
       datasets: [{
         label: 'Net Savings',
-        data: monthlyData.map(m => m.netSavings),
+        data: monthlyData.map((m: MonthlyReportData): number => m.netSavings),
         borderColor: '#3B82F6',
         backgroundColor: '#3B82F620',
         fill: true,
@@ -101,8 +106,9 @@ export class IncomeExpenseReportComponent {
         },
         tooltip: {
           callbacks: {
-            label: (context: any) => {
-              const value = context.parsed.y || 0;
+            label: (context: any): string => {
+              const value: any = context.parsed.y || 0;
+
               return `${context.dataset.label}: ${formatCurrency(value, 'en-US', '$', '1.2-2')}`;
             }
           }
@@ -111,12 +117,12 @@ export class IncomeExpenseReportComponent {
       scales: {
         x: {
           stacked: true,
-          grid: { display: false }
+          grid: {display: false}
         },
         y: {
           stacked: true,
           ticks: {
-            callback: (value: any) => formatCurrency(value, 'en-US', '$', '1.2-2')
+            callback: (value: any): string => formatCurrency(value, 'en-US', '$', '1.2-2')
           }
         }
       }
@@ -135,7 +141,7 @@ export class IncomeExpenseReportComponent {
         },
         tooltip: {
           callbacks: {
-            label: (context: any) => {
+            label: (context: any): string => {
               const value = context.parsed.y || 0;
               return `Net Savings: ${formatCurrency(value, 'en-US', '$', '1.2-2')}`;
             }
@@ -144,11 +150,11 @@ export class IncomeExpenseReportComponent {
       },
       scales: {
         x: {
-          grid: { display: false }
+          grid: {display: false}
         },
         y: {
           ticks: {
-            callback: (value: any) => formatCurrency(value, 'en-US', '$', '1.2-2')
+            callback: (value: any): string => formatCurrency(value, 'en-US', '$', '1.2-2')
           }
         }
       }

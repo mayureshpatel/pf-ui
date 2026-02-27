@@ -1,3 +1,6 @@
+import {Category} from '@models/category.model';
+import {Merchant} from '@models/merchant.model';
+
 export interface DateRange {
   startDate: string; // ISO date (YYYY-MM-DD)
   endDate: string;
@@ -5,18 +8,17 @@ export interface DateRange {
 }
 
 export interface CategoryReportData {
-  categoryName: string;
+  category: Category;
   total: number;
   count: number;
   avgTransaction: number;
-  color?: string;
 }
 
 export interface VendorReportData {
-  vendorName: string;
+  merchant: Merchant;
   total: number;
   count: number;
-  categories: string[];
+  categories: Category[];
 }
 
 export interface MonthlyReportData {

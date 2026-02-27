@@ -1,10 +1,8 @@
-import { Injectable } from '@angular/core';
-import { Transaction, TransactionType } from '@models/transaction.model';
-import {
-  CategoryReportData,
-  VendorReportData,
-  MonthlyReportData
-} from '../models/reports.model';
+import {Injectable} from '@angular/core';
+import {Transaction, TransactionType} from '@models/transaction.model';
+import {CategoryReportData, MonthlyReportData, VendorReportData} from '../models/reports.model';
+import {Category} from '@models/category.model';
+import {Merchant} from '@models/merchant.model';
 
 @Injectable({
   providedIn: 'root'
@@ -16,48 +14,47 @@ export class ReportsDataService {
    * Filters out TRANSFER transactions and groups by categoryName
    */
   aggregateByCategory(transactions: Transaction[]): CategoryReportData[] {
-    // Filter out transfers, keep only INCOME and EXPENSE
-    const relevantTransactions = transactions.filter(
-      t => t.type !== TransactionType.TRANSFER
+    // filter out transfers, keep only INCOME and EXPENSE
+    const relevantTransactions: Transaction[] = transactions.filter(
+      (transaction: Transaction): boolean => transaction.type !== TransactionType.TRANSFER
     );
 
-    // Group by category
-    const categoryMap = new Map<string, { total: number; count: number }>();
+    // group by category
+    const categoryMap = new Map<Category, { total: number; count: number }>();
 
     for (const txn of relevantTransactions) {
-      const categoryName = txn.categoryName || 'Uncategorized';
+      const category: Category | undefined = txn.category || undefined;
 
-      if (!categoryMap.has(categoryName)) {
-        categoryMap.set(categoryName, { total: 0, count: 0 });
+      if (category) {
+        if (!categoryMap.has(category)) {
+          categoryMap.set(category, {total: 0, count: 0});
+        }
+
+        const entry = categoryMap.get(category)!;
+        if (txn.type === TransactionType.EXPENSE) {
+          entry.total += Math.abs(txn.amount);
+        } else {
+          entry.total += txn.amount;
+        }
+
+        entry.count += 1;
       }
-
-      const entry = categoryMap.get(categoryName)!;
-
-      // For expenses, amount should be negative; for income, positive
-      // We want to sum the absolute values for spending analysis
-      if (txn.type === TransactionType.EXPENSE) {
-        entry.total += Math.abs(txn.amount);
-      } else {
-        entry.total += txn.amount;
-      }
-
-      entry.count += 1;
     }
 
-    // Convert map to array and calculate averages
+    // convert map to array and calculate averages
     const results: CategoryReportData[] = [];
 
-    for (const [categoryName, data] of categoryMap.entries()) {
+    for (const [category, data] of categoryMap.entries()) {
       results.push({
-        categoryName,
+        category: category,
         total: data.total,
         count: data.count,
         avgTransaction: data.total / data.count
       });
     }
 
-    // Sort by total (descending)
-    results.sort((a, b) => b.total - a.total);
+    // cort by total (descending)
+    results.sort((a: CategoryReportData, b: CategoryReportData): number => b.total - a.total);
 
     return results;
   }
@@ -67,55 +64,55 @@ export class ReportsDataService {
    * Filters out TRANSFER transactions and groups by vendorName
    */
   aggregateByVendor(transactions: Transaction[]): VendorReportData[] {
-    // Filter out transfers
-    const relevantTransactions = transactions.filter(
-      t => t.type !== TransactionType.TRANSFER
+    // filter out transfers
+    const relevantTransactions: Transaction[] = transactions.filter(
+      (t: Transaction): boolean => t.type !== TransactionType.TRANSFER
     );
 
-    // Group by vendor
-    const vendorMap = new Map<string, {
+    // group by vendor
+    const vendorMap = new Map<Merchant, {
       total: number;
       count: number;
-      categories: Set<string>
+      categories: Set<Category>
     }>();
 
     for (const txn of relevantTransactions) {
-      const vendorName = txn.vendorName || 'Unknown Vendor';
+      const merchant: Merchant | undefined = txn.merchant || undefined;
 
-      if (!vendorMap.has(vendorName)) {
-        vendorMap.set(vendorName, {
+      if (!vendorMap.has(merchant)) {
+        vendorMap.set(merchant, {
           total: 0,
           count: 0,
-          categories: new Set<string>()
+          categories: new Set<Category>()
         });
       }
 
-      const entry = vendorMap.get(vendorName)!;
+      const entry = vendorMap.get(merchant)!;
 
-      // Sum absolute amounts
+      // sum absolute amounts
       entry.total += Math.abs(txn.amount);
       entry.count += 1;
 
-      // Track unique categories
-      if (txn.categoryName) {
-        entry.categories.add(txn.categoryName);
+      // track unique categories
+      if (txn.category) {
+        entry.categories.add(txn.category);
       }
     }
 
-    // Convert map to array
+    // convert map to array
     const results: VendorReportData[] = [];
 
-    for (const [vendorName, data] of vendorMap.entries()) {
+    for (const [merchant, data] of vendorMap.entries()) {
       results.push({
-        vendorName,
+        merchant: merchant,
         total: data.total,
         count: data.count,
         categories: Array.from(data.categories)
       });
     }
 
-    // Sort by total (descending)
-    results.sort((a, b) => b.total - a.total);
+    // sort by total (descending)
+    results.sort((a: VendorReportData, b: VendorReportData): number => b.total - a.total);
 
     return results;
   }
@@ -126,8 +123,8 @@ export class ReportsDataService {
    */
   aggregateByMonth(transactions: Transaction[]): MonthlyReportData[] {
     // Filter out transfers
-    const relevantTransactions = transactions.filter(
-      t => t.type !== TransactionType.TRANSFER
+    const relevantTransactions: Transaction[] = transactions.filter(
+      (t: Transaction): boolean => t.type !== TransactionType.TRANSFER
     );
 
     // Group by month (YYYY-MM format)
@@ -135,10 +132,10 @@ export class ReportsDataService {
 
     for (const txn of relevantTransactions) {
       // Extract YYYY-MM from ISO date string
-      const month = txn.date.substring(0, 7); // "2024-01-15" -> "2024-01"
+      const month: string = txn.date.substring(0, 7); // "2024-01-15" -> "2024-01"
 
       if (!monthMap.has(month)) {
-        monthMap.set(month, { income: 0, expense: 0 });
+        monthMap.set(month, {income: 0, expense: 0});
       }
 
       const entry = monthMap.get(month)!;
@@ -164,7 +161,7 @@ export class ReportsDataService {
     }
 
     // Sort chronologically
-    results.sort((a, b) => a.month.localeCompare(b.month));
+    results.sort((a: MonthlyReportData, b: MonthlyReportData): number => a.month.localeCompare(b.month));
 
     return results;
   }

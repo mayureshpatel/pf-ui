@@ -1,9 +1,9 @@
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
   <!-- Stacked Bar Chart: Income vs Expense -->
-  <p-card header="Income vs Expenses by Month" styleClass="shadow-sm">
+  <p-card header="Income vs Expenses by Month" class="shadow-sm">
     @if (hasData()) {
       <div class="h-96">
-        <p-chart type="bar" [data]="stackedBarData()" [options]="stackedBarOptions()" />
+        <p-chart type="bar" [data]="stackedBarData()" [options]="stackedBarOptions()"/>
       </div>
     } @else {
       <div class="flex flex-col items-center justify-center py-12 text-muted-color gap-3 h-96">
@@ -14,10 +14,10 @@
   </p-card>
 
   <!-- Line Chart: Net Savings Trend -->
-  <p-card header="Net Savings Trend" styleClass="shadow-sm">
+  <p-card header="Net Savings Trend" class="shadow-sm">
     @if (hasData()) {
       <div class="h-96">
-        <p-chart type="line" [data]="lineChartData()" [options]="lineChartOptions()" />
+        <p-chart type="line" [data]="lineChartData()" [options]="lineChartOptions()"/>
       </div>
     } @else {
       <div class="flex flex-col items-center justify-center py-12 text-muted-color gap-3 h-96">
@@ -30,8 +30,8 @@
 
 <!-- Monthly Summary Table -->
 <div class="mt-6">
-  <p-card header="Monthly Summary" styleClass="shadow-sm">
-    <p-table [value]="monthlyData()" styleClass="p-datatable-sm">
+  <p-card header="Monthly Summary" class="shadow-sm">
+    <p-table [value]="monthlyData()" class="p-datatable-sm">
       <ng-template pTemplate="header">
         <tr>
           <th>Month</th>

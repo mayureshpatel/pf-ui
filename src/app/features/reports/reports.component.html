@@ -17,11 +17,11 @@
   <!-- Loading Spinner -->
   @if (loading()) {
     <div class="flex justify-center items-center py-12">
-      <p-progressSpinner styleClass="w-16 h-16" />
+      <p-progressSpinner class="w-16 h-16"/>
     </div>
   } @else {
     <!-- Tabs with Report Components -->
-    <p-tabs [(value)]="activeTabIndex" styleClass="shadow-sm">
+    <p-tabs [(value)]="activeTabIndex" class="shadow-sm">
       <p-tablist>
         <p-tab [value]="0">Category Analysis</p-tab>
         <p-tab [value]="1">Vendor Analysis</p-tab>
@@ -30,15 +30,15 @@
 
       <p-tabpanels>
         <p-tabpanel [value]="0">
-          <app-category-report [transactions]="transactions()" />
+          <app-category-report [transactions]="transactions()"/>
         </p-tabpanel>
 
         <p-tabpanel [value]="1">
-          <app-vendor-report [transactions]="transactions()" />
+          <app-vendor-report [transactions]="transactions()"/>
         </p-tabpanel>
 
         <p-tabpanel [value]="2">
-          <app-income-expense-report [transactions]="transactions()" />
+          <app-income-expense-report [transactions]="transactions()"/>
         </p-tabpanel>
       </p-tabpanels>
     </p-tabs>

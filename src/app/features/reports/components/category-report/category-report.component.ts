@@ -1,4 +1,4 @@
-import {Component, computed, effect, inject, input, signal, WritableSignal} from '@angular/core';
+import {Component, computed, effect, inject, input, InputSignal, Signal, signal, WritableSignal} from '@angular/core';
 import {CommonModule, formatCurrency} from '@angular/common';
 import {CardModule} from 'primeng/card';
 import {ChartModule} from 'primeng/chart';
@@ -16,24 +16,27 @@ import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
   templateUrl: './category-report.component.html'
 })
 export class CategoryReportComponent {
-  private readonly dataService = inject(ReportsDataService);
+  // injected services
+  private readonly dataService: ReportsDataService = inject(ReportsDataService);
 
-  transactions = input.required<Transaction[]>();
+  // input signals
+  transactions: InputSignal<Transaction[]> = input.required<Transaction[]>();
 
-  // Aggregated data
-  protected categoryData = computed(() => {
+  // computed signals
+  protected categoryData: Signal<CategoryReportData[]> = computed((): CategoryReportData[] => {
     return this.dataService.aggregateByCategory(this.transactions());
   });
 
-  protected hasData = computed(() => this.categoryData().length > 0);
+  protected hasData: Signal<boolean> = computed((): boolean => this.categoryData().length > 0);
 
-  // Chart data
+  // signals
   protected chartData: WritableSignal<any> = signal({});
   protected chartOptions: WritableSignal<any> = signal({});
 
   constructor() {
-    effect(() => {
-      const categories = this.categoryData();
+    effect((): void => {
+      const categories: CategoryReportData[] = this.categoryData();
+
       if (categories.length > 0) {
         this.updateChartData(categories);
       }
@@ -42,11 +45,11 @@ export class CategoryReportComponent {
   }
 
   private updateChartData(categories: CategoryReportData[]): void {
-    const top10 = categories.slice(0, 10);
+    const top10: CategoryReportData[] = categories.slice(0, 10);
 
-    const labels = top10.map(c => c.categoryName);
-    const data = top10.map(c => Math.abs(c.total));
-    const colors = top10.map(c => getCategoryColorHex(c.categoryName));
+    const labels: string[] = top10.map((c: CategoryReportData): string => c.category.name || 'Uncategorized');
+    const data: number[] = top10.map((c: CategoryReportData): number => Math.abs(c.total));
+    const colors: string[] = top10.map((c: CategoryReportData): string => getCategoryColorHex(c.category.iconography.color));
 
     this.chartData.set({
       labels,
@@ -69,8 +72,8 @@ export class CategoryReportComponent {
         legend: {display: false},
         tooltip: {
           callbacks: {
-            label: (context: any) => {
-              const value = context.parsed.x || 0;
+            label: (context: any): string => {
+              const value: any = context.parsed.x || 0;
               return `Spent: ${formatCurrency(value, 'en-US', '$', '1.2-2')}`;
             }
           }
@@ -79,7 +82,7 @@ export class CategoryReportComponent {
       scales: {
         x: {
           ticks: {
-            callback: (value: any) => formatCurrency(value, 'en-US', '$', '1.2-2')
+            callback: (value: any): string => formatCurrency(value, 'en-US', '$', '1.2-2')
           },
           grid: {display: false}
         },
