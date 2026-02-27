@@ -53,7 +53,8 @@ export class ReportsDataService {
     );
 
     // group by vendor
-    const vendorMap = new Map<Merchant, {
+    const vendorMap = new Map<number, {
+      merchant: Merchant;
       total: number;
       count: number;
       categories: Set<Category>
@@ -66,15 +67,16 @@ export class ReportsDataService {
         continue;
       }
 
-      if (!vendorMap.has(merchant)) {
-        vendorMap.set(merchant, {
+      if (!vendorMap.has(merchant.id)) {
+        vendorMap.set(merchant.id, {
+          merchant,
           total: 0,
           count: 0,
           categories: new Set<Category>()
         });
       }
 
-      const entry = vendorMap.get(merchant)!;
+      const entry = vendorMap.get(merchant.id)!;
 
       // sum absolute amounts
       entry.total += Math.abs(txn.amount);
@@ -89,9 +91,9 @@ export class ReportsDataService {
     // convert map to array
     const results: VendorReportData[] = [];
 
-    for (const [merchant, data] of vendorMap.entries()) {
+    for (const [, data] of vendorMap.entries()) {
       results.push({
-        merchant: merchant,
+        merchant: data.merchant,
         total: data.total,
         count: data.count,
         categories: Array.from(data.categories)
