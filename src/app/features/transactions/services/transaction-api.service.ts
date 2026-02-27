@@ -34,7 +34,7 @@ export class TransactionApiService {
     if (filter.type) params = params.set('type', filter.type);
     if (filter.description) params = params.set('description', filter.description);
     if (filter.categoryName) params = params.set('categoryName', filter.categoryName);
-    if (filter.vendorName) params = params.set('vendorName', filter.vendorName);
+    if (filter.merchant) params = params.set('vendorName', filter.merchant);
     if (filter.minAmount) params = params.set('minAmount', filter.minAmount.toString());
     if (filter.maxAmount) params = params.set('maxAmount', filter.maxAmount.toString());
     if (filter.startDate) params = params.set('startDate', filter.startDate);

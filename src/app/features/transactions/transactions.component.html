@@ -129,9 +129,9 @@
           <label for="merchant-select" class="text-sm font-medium text-color">Vendor</label>
           <p-autoComplete
             id="merchant-select"
-            [(ngModel)]="filterVendorName"
+            [(ngModel)]="filterMerchant"
             [suggestions]="filteredVendors()"
-            optionValue="id"
+            optionValue="cleanName"
             optionLabel="cleanName"
             (completeMethod)="onVendorSearch($event)"
             (ngModelChange)="onFilterChange()"

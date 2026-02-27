@@ -28,7 +28,7 @@ export interface TransactionFilter {
   type?: TransactionType;
   description?: string;
   categoryName?: string;
-  vendorName?: string;
+  merchant?: string;
   minAmount?: number;
   maxAmount?: number;
   startDate?: string;

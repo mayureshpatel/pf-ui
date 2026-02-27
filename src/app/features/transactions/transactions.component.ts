@@ -125,7 +125,7 @@ export class TransactionsComponent implements OnInit, OnDestroy {
   // advanced filters
   showAdvancedFilters: WritableSignal<boolean> = signal(false);
   filterDescription: WritableSignal<string> = signal('');
-  filterVendorName: WritableSignal<string> = signal('');
+  filterMerchant: WritableSignal<string> = signal('');
   filterCategoryName: WritableSignal<string> = signal('');
   filterMinAmount: WritableSignal<number | null> = signal(null);
   filterMaxAmount: WritableSignal<number | null> = signal(null);
@@ -136,7 +136,7 @@ export class TransactionsComponent implements OnInit, OnDestroy {
   // autocomplete data
   categories: WritableSignal<Category[]> = signal([]);
   filteredCategories: WritableSignal<string[]> = signal([]);
-  vendorSuggestions: WritableSignal<Merchant[]> = signal([]);
+  merchants: WritableSignal<Merchant[]> = signal([]);
   filteredVendors: WritableSignal<Merchant[]> = signal([]);
 
   // computed signals
@@ -152,7 +152,7 @@ export class TransactionsComponent implements OnInit, OnDestroy {
     if (this.filterType()) count++;
     if (this.filterDateRange()) count++;
     if (this.filterDescription()) count++;
-    if (this.filterVendorName()) count++;
+    if (this.filterMerchant()) count++;
     if (this.filterCategoryName()) count++;
     if (this.filterMinAmount() !== null) count++;
     if (this.filterMaxAmount() !== null) count++;
@@ -161,7 +161,7 @@ export class TransactionsComponent implements OnInit, OnDestroy {
 
   hasAdvancedFilters: Signal<boolean> = computed((): boolean =>
     !!this.filterDescription() ||
-    !!this.filterVendorName() ||
+    !!this.filterMerchant() ||
     !!this.filterCategoryName() ||
     this.filterMinAmount() !== null ||
     this.filterMaxAmount() !== null
@@ -206,6 +206,7 @@ export class TransactionsComponent implements OnInit, OnDestroy {
       });
 
     this.loadCategories();
+    this.loadMerchants();
     this.loadAccounts();
     this.loadTransactions();
   }
@@ -216,7 +217,6 @@ export class TransactionsComponent implements OnInit, OnDestroy {
     this.selectedTransactions.set([]);
     this.categories.set([]);
     this.accounts.set([]);
-    this.vendorSuggestions.set([]);
     this.filteredCategories.set([]);
     this.filteredVendors.set([]);
   }
@@ -239,10 +239,24 @@ export class TransactionsComponent implements OnInit, OnDestroy {
     this.categoryApi.getCategoriesWithTransactions()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (categories: Category[]): void => this.categories.set(categories),
+        next: (categories: Category[]): void => {
+          this.categories.set(categories);
+        },
         error: (error: any): void => {
           console.error('Failed to load categories', error);
           this.toast.error('Failed to load categories');
+        }
+      });
+  }
+
+  loadMerchants(): void {
+    this.categoryApi.getMerchantsWithTransactions()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (merchants: Merchant[]): void => this.merchants.set(merchants),
+        error: (error: any): void => {
+          console.error('Failed to load merchants', error);
+          this.toast.error('Failed to load merchants');
         }
       });
   }
@@ -254,7 +268,7 @@ export class TransactionsComponent implements OnInit, OnDestroy {
     if (this.filterAccountId()) filter.accountId = this.filterAccountId()!;
     if (this.filterType()) filter.type = this.filterType()!;
     if (this.filterDescription()) filter.description = this.filterDescription();
-    if (this.filterVendorName()) filter.vendorName = this.filterVendorName();
+    if (this.filterMerchant()) filter.merchant = this.filterMerchant();
     if (this.filterCategoryName()) filter.categoryName = this.filterCategoryName();
     if (this.filterMinAmount() !== null) filter.minAmount = this.filterMinAmount()!;
     if (this.filterMaxAmount() !== null) filter.maxAmount = this.filterMaxAmount()!;
@@ -294,10 +308,6 @@ export class TransactionsComponent implements OnInit, OnDestroy {
           this.totalRecords.set(response.totalElements);
           this.loading.set(false);
           this.selectedTransactions.set([]);
-
-          // Update vendor suggestions for autocomplete
-          this.updateVendorSuggestions(enrichedTransactions);
-          console.log(this.vendorSuggestions());
         },
         error: (error: any): void => {
           console.error('Failed to load transactions', error);
@@ -346,12 +356,9 @@ export class TransactionsComponent implements OnInit, OnDestroy {
 
   onVendorSearch(event: AutoCompleteCompleteEvent): void {
     const query: string = event.query.toLowerCase();
-    const uniqueVendors: Merchant[] = [...new Set([
-      ...this.transactions().map(t => t.merchant).filter(Boolean),
-      ...this.vendorSuggestions()
-    ])];
+
     this.filteredVendors.set(
-      uniqueVendors.filter((v: Merchant): boolean => v.cleanName.toLowerCase().includes(query))
+      this.merchants().filter((v: Merchant): boolean => v.cleanName?.toLowerCase().includes(query))
     );
   }
 
@@ -360,21 +367,12 @@ export class TransactionsComponent implements OnInit, OnDestroy {
     this.filterType.set(null);
     this.filterDateRange.set(null);
     this.filterDescription.set('');
-    this.filterVendorName.set('');
+    this.filterMerchant.set('');
     this.filterCategoryName.set('');
     this.filterMinAmount.set(null);
     this.filterMaxAmount.set(null);
     localStorage.removeItem('pf_transaction_filters');
     this.onFilterChange();
-  }
-
-  private updateVendorSuggestions(transactions: Transaction[]): void {
-    // Only use current page vendors - don't accumulate across loads to prevent memory leak
-    const vendors: Merchant[] = transactions
-      .map((t: Transaction): Merchant => t.merchant)
-      .filter(Boolean);
-    const unique: Merchant[] = [...new Set(vendors)];
-    this.vendorSuggestions.set(unique);
   }
 
   private saveFilterState(): void {
@@ -383,7 +381,7 @@ export class TransactionsComponent implements OnInit, OnDestroy {
       type: this.filterType(),
       dateRange: this.filterDateRange(),
       description: this.filterDescription(),
-      vendorName: this.filterVendorName(),
+      vendorName: this.filterMerchant(),
       categoryName: this.filterCategoryName(),
       minAmount: this.filterMinAmount(),
       maxAmount: this.filterMaxAmount(),
@@ -402,7 +400,7 @@ export class TransactionsComponent implements OnInit, OnDestroy {
         if (state.type) this.filterType.set(state.type);
         if (state.dateRange) this.filterDateRange.set(state.dateRange.map((d: string): Date => new Date(d)));
         if (state.description) this.filterDescription.set(state.description);
-        if (state.vendorName) this.filterVendorName.set(state.vendorName);
+        if (state.vendorName) this.filterMerchant.set(state.vendorName);
         if (state.categoryName) this.filterCategoryName.set(state.categoryName);
         if (state.minAmount !== null) this.filterMinAmount.set(state.minAmount);
         if (state.maxAmount !== null) this.filterMaxAmount.set(state.maxAmount);
@@ -508,9 +506,9 @@ export class TransactionsComponent implements OnInit, OnDestroy {
     });
   }
 
-  filterByVendor(vendorName: string | null): void {
-    if (vendorName) {
-      this.filterVendorName.set(vendorName);
+  filterByVendor(merchantName: string | null): void {
+    if (merchantName) {
+      this.filterMerchant.set(merchantName);
       this.showAdvancedFilters.set(true);
       this.onFilterChange();
     } else {

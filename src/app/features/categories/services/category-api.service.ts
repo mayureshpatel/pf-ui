@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { map, Observable } from 'rxjs';
 import { environment } from '@env';
 import { Category, CategoryFormData, CategoryGroup } from '@models/category.model';
+import {Merchant} from '@models/merchant.model';
 
 @Injectable({
   providedIn: 'root'
@@ -10,7 +11,7 @@ import { Category, CategoryFormData, CategoryGroup } from '@models/category.mode
 export class CategoryApiService {
   private readonly http: HttpClient = inject(HttpClient);
   private readonly apiUrl = `${environment.apiUrl}/categories`;
-  private readonly apiUrlWithTransactions = `${environment.apiUrl}/transactions/existing-categories`;
+  private readonly transactionApiUrl = `${environment.apiUrl}/transactions`;
 
   getCategories(): Observable<Category[]> {
     return this.http.get<Category[]>(`${this.apiUrl}/grouped`);
@@ -36,7 +37,11 @@ export class CategoryApiService {
   }
 
   getCategoriesWithTransactions(): Observable<Category[]> {
-    return this.http.get<Category[]>(`${this.apiUrlWithTransactions}`);
+    return this.http.get<Category[]>(`${this.transactionApiUrl}/existing-categories`);
+  }
+
+  getMerchantsWithTransactions(): Observable<Merchant[]> {
+    return this.http.get<Merchant[]>(`${this.transactionApiUrl}/existing-merchants`);
   }
 
   createCategory(data: CategoryFormData): Observable<Category> {
