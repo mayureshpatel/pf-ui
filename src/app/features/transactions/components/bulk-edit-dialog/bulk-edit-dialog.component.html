@@ -30,7 +30,7 @@
         [(ngModel)]="updateCategory"
         [binary]="true"
         inputId="update-category"
-        class="mt-2" />
+        class="mt-2"/>
       <div class="flex-1">
         <label for="category-input" class="block text-sm font-medium mb-2">
           Category
@@ -44,7 +44,7 @@
           optionValue="value"
           [disabled]="!updateCategory()"
           placeholder="Select subcategory"
-          styleClass="w-full"
+          class="w-full"
           [filter]="true"
           filterPlaceholder="Search categories"
           [showClear]="true">
@@ -63,7 +63,7 @@
         [(ngModel)]="updateVendor"
         [binary]="true"
         inputId="update-vendor"
-        class="mt-2" />
+        class="mt-2"/>
       <div class="flex-1">
         <label for="vendor-input" class="block text-sm font-medium mb-2">
           Vendor Name
@@ -75,7 +75,7 @@
           [(ngModel)]="merchant"
           [disabled]="!updateVendor()"
           placeholder="Enter vendor name"
-          class="w-full" />
+          class="w-full"/>
       </div>
     </div>
 
@@ -85,7 +85,7 @@
         [(ngModel)]="updateDescription"
         [binary]="true"
         inputId="update-description"
-        class="mt-2" />
+        class="mt-2"/>
       <div class="flex-1">
         <label for="description-input" class="block text-sm font-medium mb-2">
           Description
@@ -97,7 +97,7 @@
           [(ngModel)]="description"
           [disabled]="!updateDescription()"
           placeholder="Enter description"
-          class="w-full" />
+          class="w-full"/>
       </div>
     </div>
 
@@ -117,11 +117,11 @@
       label="Cancel"
       severity="secondary"
       (onClick)="onCancel()"
-      [disabled]="saving()" />
+      [disabled]="saving()"/>
     <p-button
       label="Apply Changes"
       (onClick)="onSave()"
       [disabled]="!isValid || saving()"
-      [loading]="saving()" />
+      [loading]="saving()"/>
   </ng-template>
 </p-dialog>

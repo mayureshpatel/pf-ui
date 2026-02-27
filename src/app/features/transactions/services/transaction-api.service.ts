@@ -15,13 +15,13 @@ import {
 })
 export class TransactionApiService {
   private readonly http: HttpClient = inject(HttpClient);
-  private readonly apiUrl = `${environment.apiUrl}/transactions`;
+  private readonly apiUrl: string = `${environment.apiUrl}/transactions`;
 
   getTransactions(
     filter: TransactionFilter,
     pageRequest: PageRequest
   ): Observable<PageResponse<Transaction>> {
-    let params = new HttpParams()
+    let params: HttpParams = new HttpParams()
       .set('page', pageRequest.page.toString())
       .set('size', pageRequest.size.toString());
 

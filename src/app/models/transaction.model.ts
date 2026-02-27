@@ -57,6 +57,17 @@ export interface TransactionTypeInfo {
   label: string;
 }
 
+export interface TransactionFormData {
+  id?: number;
+  date: string;
+  type: TransactionType;
+  account: number;
+  amount: number;
+  description?: string;
+  merchant?: Merchant;
+  category?: Category;
+}
+
 export interface TransferSuggestion {
   sourceTransaction: Transaction;
   targetTransaction: Transaction;
@@ -74,7 +85,7 @@ export interface TransactionPreview {
 }
 
 export interface SaveTransactionRequest {
-  transactions: Transaction[];
+  transactions: TransactionFormData[];
   fileName: string;
   fileHash: string;
 }

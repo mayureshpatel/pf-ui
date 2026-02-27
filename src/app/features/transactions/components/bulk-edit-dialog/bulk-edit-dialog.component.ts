@@ -1,15 +1,15 @@
-import { Component, input, output, signal, effect } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { DialogModule } from 'primeng/dialog';
-import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
-import { CheckboxModule } from 'primeng/checkbox';
-import { SelectModule } from 'primeng/select';
-import { SelectItemGroup } from 'primeng/api';
-import { Transaction } from '../../../../models/transaction.model';
-import { CategoryApiService } from '../../../categories/services/category-api.service';
-import {Category} from '@models/category.model';
+import {Component, effect, input, InputSignal, output, OutputEmitterRef, signal, WritableSignal} from '@angular/core';
+import {CommonModule} from '@angular/common';
+import {FormsModule} from '@angular/forms';
+import {DialogModule} from 'primeng/dialog';
+import {ButtonModule} from 'primeng/button';
+import {InputTextModule} from 'primeng/inputtext';
+import {CheckboxModule} from 'primeng/checkbox';
+import {SelectModule} from 'primeng/select';
+import {SelectItemGroup} from 'primeng/api';
+import {Transaction} from '@models/transaction.model';
+import {CategoryApiService} from '../../../categories/services/category-api.service';
+import {Category, CategoryGroup} from '@models/category.model';
 import {Merchant} from '@models/merchant.model';
 
 export interface BulkEditData {
@@ -36,32 +36,31 @@ export interface BulkEditData {
   templateUrl: './bulk-edit-dialog.component.html'
 })
 export class BulkEditDialogComponent {
-  // Inputs
-  visible = input.required<boolean>();
-  transactions = input.required<Transaction[]>();
-  saving = input<boolean>(false);
+  // input signals
+  visible: InputSignal<boolean> = input.required<boolean>();
+  transactions: InputSignal<Transaction[]> = input.required<Transaction[]>();
+  saving: InputSignal<boolean> = input<boolean>(false);
 
-  // Outputs
-  visibleChange = output<boolean>();
-  save = output<BulkEditData>();
+  // output signals
+  visibleChange: OutputEmitterRef<boolean> = output<boolean>();
+  save: OutputEmitterRef<BulkEditData> = output<BulkEditData>();
 
-  // Form state
-  updateCategory = signal(false);
-  category = signal<Category | undefined>(undefined);
-  updateVendor = signal(false);
-  merchant = signal<Merchant | undefined>(undefined);
-  updateDescription = signal(false);
-  description = signal<string | undefined>(undefined);
+  // state
+  updateCategory: WritableSignal<boolean> = signal(false);
+  category: WritableSignal<Category | undefined> = signal<Category | undefined>(undefined);
+  updateVendor: WritableSignal<boolean> = signal(false);
+  merchant: WritableSignal<Merchant | undefined> = signal<Merchant | undefined>(undefined);
+  updateDescription: WritableSignal<boolean> = signal(false);
+  description: WritableSignal<string | undefined> = signal<string | undefined>(undefined);
 
-  // Category groups for dropdown
-  categoryGroups = signal<SelectItemGroup[]>([]);
+  categoryGroups: WritableSignal<SelectItemGroup[]> = signal<SelectItemGroup[]>([]);
 
   constructor(private readonly categoryApi: CategoryApiService) {
     // Load categories on init
     this.loadCategories();
 
     // Reset form when dialog visibility changes
-    effect(() => {
+    effect((): void => {
       if (!this.visible()) {
         this.resetForm();
       }
@@ -70,10 +69,10 @@ export class BulkEditDialogComponent {
 
   private loadCategories(): void {
     this.categoryApi.getGroupedCategories().subscribe({
-      next: (groups) => {
-        const selectGroups: SelectItemGroup[] = groups.map(g => ({
+      next: (groups: CategoryGroup[]): void => {
+        const selectGroups: SelectItemGroup[] = groups.map((g: CategoryGroup) => ({
           label: g.groupLabel,
-          items: g.items.map(c => ({
+          items: g.items.map((c: Category) => ({
             label: c.name,
             value: c.name
           }))
@@ -92,7 +91,7 @@ export class BulkEditDialogComponent {
   }
 
   get isValid(): boolean {
-    const hasAtLeastOneField = this.updateCategory() || this.updateVendor() || this.updateDescription();
+    const hasAtLeastOneField: boolean = this.updateCategory() || this.updateVendor() || this.updateDescription();
     if (!hasAtLeastOneField) return false;
 
     if (this.updateCategory() && !this.category()) return false;

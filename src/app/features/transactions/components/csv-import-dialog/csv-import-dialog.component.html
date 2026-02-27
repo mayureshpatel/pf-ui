@@ -9,169 +9,176 @@
 
   <div class="flex flex-col gap-4">
     @if (generalMessage()) {
-      <p-message [severity]="generalMessage()!.severity" [text]="generalMessage()!.text" styleClass="w-full" />
+      <p-message [severity]="generalMessage()!.severity" styleClass="w-full">
+        {{ generalMessage()!.text }}
+      </p-message>
     }
 
     <!-- Step 1: Upload Configuration -->
     @if (currentStep() === 0) {
       <div class="flex flex-col gap-4">
-        
+
         <!-- Global Actions / Bulk Settings -->
-        <div class="p-4 border rounded-lg bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 flex flex-col gap-3">
-            <h3 class="font-medium text-color text-sm uppercase tracking-wide">Bulk Settings</h3>
-            <div class="flex gap-4 items-end">
-                <div class="flex flex-col gap-2 flex-1">
-                    <label class="text-sm font-medium text-color">Account</label>
-                    <p-select 
-                        [options]="accountOptions()" 
-                        [(ngModel)]="globalAccountId"
-                        optionLabel="label" 
-                        optionValue="value" 
-                        placeholder="Select Account"
-                        styleClass="w-full"
-                        appendTo="body"
-                    />
-                </div>
-                <div class="flex flex-col gap-2 flex-1">
-                    <label class="text-sm font-medium text-color">Bank Format</label>
-                    <p-select 
-                        [options]="bankOptions" 
-                        [(ngModel)]="globalBankName"
-                        optionLabel="label" 
-                        optionValue="value" 
-                        placeholder="Select Format"
-                        styleClass="w-full"
-                        appendTo="body"
-                    />
-                </div>
-                <div class="flex gap-2">
-                    <p-button 
-                        label="Apply to All" 
-                        icon="pi pi-check-circle" 
-                        (onClick)="applyGlobalAccount(); applyGlobalBank();"
-                        [disabled]="!hasItems() || (!globalAccountId() && !globalBankName())"
-                        severity="secondary" 
-                        styleClass="p-button-outlined"
-                    />
-                </div>
+        <div
+          class="p-4 border rounded-lg bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 flex flex-col gap-3">
+          <h3 class="font-medium text-color text-sm uppercase tracking-wide">Bulk Settings</h3>
+          <div class="flex gap-4 items-end">
+            <div class="flex flex-col gap-2 flex-1">
+              <label for="account-select" class="text-sm font-medium text-color">Account</label>
+              <p-select
+                id="account-select"
+                [options]="accountOptions()"
+                [(ngModel)]="globalAccountId"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Select Account"
+                class="w-full"
+                appendTo="body"
+              />
             </div>
+            <div class="flex flex-col gap-2 flex-1">
+              <label for="bank-select" class="text-sm font-medium text-color">Bank Format</label>
+              <p-select
+                id="bank-select"
+                [options]="bankOptions"
+                [(ngModel)]="globalBankName"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Select Format"
+                class="w-full"
+                appendTo="body"
+              />
+            </div>
+            <div class="flex gap-2">
+              <p-button
+                label="Apply to All"
+                icon="pi pi-check-circle"
+                (onClick)="applyGlobalAccount(); applyGlobalBank();"
+                [disabled]="!hasItems() || (!globalAccountId() && !globalBankName())"
+                severity="secondary"
+                styleClass="p-button-outlined"
+              />
+            </div>
+          </div>
         </div>
 
         <!-- File Upload Area -->
         <div class="flex flex-col gap-2">
-           <div class="flex justify-between items-center">
-              <label class="font-medium text-color">
-                Files <span class="text-muted-color text-sm font-normal">(Max 10 files)</span>
-              </label>
-              @if (hasItems()) {
-                  <p-button 
-                    label="Clear All" 
-                    icon="pi pi-trash" 
-                    (onClick)="clearAllFiles()" 
-                    [text]="true" 
-                    severity="danger" 
-                    size="small"
-                  />
-              }
-           </div>
+          <div class="flex justify-between items-center">
+            <label for="clear-all-button" class="font-medium text-color">
+              Files <span class="text-muted-color text-sm font-normal">(Max 10 files)</span>
+            </label>
+            @if (hasItems()) {
+              <p-button
+                id="clear-all-button"
+                label="Clear All"
+                icon="pi pi-trash"
+                (onClick)="clearAllFiles()"
+                [text]="true"
+                severity="danger"
+                size="small"
+              />
+            }
+          </div>
 
-           <!-- Helper text when empty -->
-           @if (!hasItems()) {
-               <div class="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-8 text-center bg-gray-50 dark:bg-gray-900/50">
-                   <div class="mb-4 text-muted-color">
-                       <i class="pi pi-upload text-4xl"></i>
-                   </div>
-                   <h3 class="font-medium text-lg mb-1">Drag and drop files here</h3>
-                   <p class="text-muted-color text-sm mb-4">or click below to browse</p>
-                   
-                   <p-fileupload
-                        mode="basic"
-                        [multiple]="true"
-                        accept=".csv"
-                        [maxFileSize]="5000000"
-                        [auto]="true"
-                        [customUpload]="true" 
-                        (uploadHandler)="onFilesSelect($event)"
-                        chooseLabel="Browse Files"
-                        styleClass="p-button-outlined"
-                    />
-               </div>
-           } @else {
-               <!-- Add more files button -->
-               <div class="flex justify-end mb-2">
-                    <p-fileupload
-                        mode="basic"
-                        [multiple]="true"
-                        accept=".csv"
-                        [maxFileSize]="5000000"
-                        [auto]="true"
-                        [customUpload]="true"
-                        (uploadHandler)="onFilesSelect($event)"
-                        chooseLabel="Add More Files"
-                        chooseIcon="pi pi-plus"
-                    />
-               </div>
-           }
+          <!-- Helper text when empty -->
+          @if (!hasItems()) {
+            <div
+              class="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-8 text-center bg-gray-50 dark:bg-gray-900/50">
+              <div class="mb-4 text-muted-color">
+                <i class="pi pi-upload text-4xl"></i>
+              </div>
+              <h3 class="font-medium text-lg mb-1">Drag and drop files here</h3>
+              <p class="text-muted-color text-sm mb-4">or click below to browse</p>
 
-           <!-- Files Table -->
-           @if (hasItems()) {
-               <p-table [value]="importItems()" styleClass="p-datatable-sm border rounded-lg overflow-hidden">
-                   <ng-template pTemplate="header">
-                       <tr>
-                           <th style="width: 30%">File Name</th>
-                           <th style="width: 30%">Account</th>
-                           <th style="width: 30%">Bank Format</th>
-                           <th style="width: 10%"></th>
-                       </tr>
-                   </ng-template>
-                   <ng-template pTemplate="body" let-item let-i="rowIndex">
-                       <tr>
-                           <td>
-                               <div class="flex flex-col">
-                                   <span class="font-medium">{{ item.file.name }}</span>
-                                   <span class="text-xs text-muted-color">{{ (item.file.size / 1024).toFixed(1) }} KB</span>
-                                   @if (item.error) {
-                                       <span class="text-xs text-red-500 mt-1">{{ item.error }}</span>
-                                   }
-                               </div>
-                           </td>
-                           <td>
-                               <p-select 
-                                   [options]="accountOptions()" 
-                                   [(ngModel)]="item.accountId"
-                                   (onChange)="onAccountChange(i, $event.value)"
-                                   optionLabel="label" 
-                                   optionValue="value" 
-                                   placeholder="Select Account"
-                                   appendTo="body"
-                                   styleClass="w-full p-inputtext-sm"
-                               />
-                           </td>
-                           <td>
-                               <p-select 
-                                   [options]="bankOptions" 
-                                   [(ngModel)]="item.bankName"
-                                   optionLabel="label" 
-                                   optionValue="value" 
-                                   placeholder="Select Format"
-                                   appendTo="body"
-                                   styleClass="w-full p-inputtext-sm"
-                               />
-                           </td>
-                           <td class="text-right">
-                               <p-button 
-                                   icon="pi pi-times" 
-                                   (onClick)="removeItem(i)" 
-                                   [text]="true" 
-                                   severity="danger" 
-                                   [rounded]="true"
-                                   pTooltip="Remove file"
-                               />
-                           </td>
-                       </tr>
-                   </ng-template>
-               </p-table>
-           }
+              <p-fileupload
+                mode="basic"
+                [multiple]="true"
+                accept=".csv"
+                [maxFileSize]="5000000"
+                [auto]="true"
+                [customUpload]="true"
+                (uploadHandler)="onFilesSelect($event)"
+                chooseLabel="Browse Files"
+                styleClass="p-button-outlined"
+              />
+            </div>
+          } @else {
+            <!-- Add more files button -->
+            <div class="flex justify-end mb-2">
+              <p-fileupload
+                mode="basic"
+                [multiple]="true"
+                accept=".csv"
+                [maxFileSize]="5000000"
+                [auto]="true"
+                [customUpload]="true"
+                (uploadHandler)="onFilesSelect($event)"
+                chooseLabel="Add More Files"
+                chooseIcon="pi pi-plus"
+              />
+            </div>
+          }
+
+          <!-- Files Table -->
+          @if (hasItems()) {
+            <p-table [value]="importItems()" class="p-datatable-sm border rounded-lg overflow-hidden">
+              <ng-template pTemplate="header">
+                <tr>
+                  <th style="width: 30%">File Name</th>
+                  <th style="width: 30%">Account</th>
+                  <th style="width: 30%">Bank Format</th>
+                  <th style="width: 10%"></th>
+                </tr>
+              </ng-template>
+              <ng-template pTemplate="body" let-item let-i="rowIndex">
+                <tr>
+                  <td>
+                    <div class="flex flex-col">
+                      <span class="font-medium">{{ item.file.name }}</span>
+                      <span class="text-xs text-muted-color">{{ (item.file.size / 1024).toFixed(1) }} KB</span>
+                      @if (item.error) {
+                        <span class="text-xs text-red-500 mt-1">{{ item.error }}</span>
+                      }
+                    </div>
+                  </td>
+                  <td>
+                    <p-select
+                      [options]="accountOptions()"
+                      [(ngModel)]="item.accountId"
+                      (onChange)="onAccountChange(i, $event.value)"
+                      optionLabel="label"
+                      optionValue="value"
+                      placeholder="Select Account"
+                      appendTo="body"
+                      class="w-full p-inputtext-sm"
+                    />
+                  </td>
+                  <td>
+                    <p-select
+                      [options]="bankOptions"
+                      [(ngModel)]="item.bankName"
+                      optionLabel="label"
+                      optionValue="value"
+                      placeholder="Select Format"
+                      appendTo="body"
+                      class="w-full p-inputtext-sm"
+                    />
+                  </td>
+                  <td class="text-right">
+                    <p-button
+                      icon="pi pi-times"
+                      (onClick)="removeItem(i)"
+                      [text]="true"
+                      severity="danger"
+                      [rounded]="true"
+                      pTooltip="Remove file"
+                    />
+                  </td>
+                </tr>
+              </ng-template>
+            </p-table>
+          }
         </div>
       </div>
     }
@@ -195,7 +202,7 @@
           [value]="allPreviews()"
           [scrollable]="true"
           scrollHeight="500px"
-          styleClass="p-datatable-sm p-datatable-striped"
+          class="p-datatable-sm p-datatable-striped"
           rowGroupMode="subheader"
           groupRowsBy="_sourceFile"
           sortField="_sourceFile"
@@ -213,11 +220,11 @@
           </ng-template>
 
           <ng-template pTemplate="groupheader" let-preview>
-                <tr pRowGroupHeader>
-                    <td colspan="6">
-                        <span class="font-bold ml-2">{{preview._sourceFile}}</span>
-                    </td>
-                </tr>
+            <tr pRowGroupHeader>
+              <td colspan="6">
+                <span class="font-bold ml-2">{{ preview._sourceFile }}</span>
+              </td>
+            </tr>
           </ng-template>
 
           <ng-template pTemplate="body" let-preview>
@@ -242,14 +249,15 @@
                 <p-tag
                   [value]="getCategoryDisplay(preview.suggestedCategory)"
                   [severity]="getCategorySeverity(preview.suggestedCategory)"
-                  styleClass="text-xs"
+                  class="text-xs"
                 />
               </td>
 
               <!-- Type -->
               <td>
                 <div class="flex items-center gap-2">
-                  <i [class]="'pi ' + getTransactionTypeInfo(preview.type).icon + ' ' + getTransactionTypeInfo(preview.type).color"></i>
+                  <i
+                    [class]="'pi ' + getTransactionTypeInfo(preview.type).icon + ' ' + getTransactionTypeInfo(preview.type).color"></i>
                   <span>{{ getTransactionTypeInfo(preview.type).label }}</span>
                 </div>
               </td>

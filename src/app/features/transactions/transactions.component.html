@@ -34,36 +34,39 @@
   <div class="mb-4 flex flex-wrap gap-3 items-end">
     <!-- Account Filter -->
     <div class="flex flex-col gap-2">
-      <label class="text-sm font-medium text-color">Account</label>
+      <label for="account-select" class="text-sm font-medium text-color">Account</label>
       <p-select
+        id="account-select"
         [(ngModel)]="filterAccountId"
         [options]="accountOptions()"
         optionLabel="label"
         optionValue="value"
         (onChange)="onFilterChange()"
         placeholder="All Accounts"
-        styleClass="w-56"
+        class="w-56"
       />
     </div>
 
     <!-- Type Filter -->
     <div class="flex flex-col gap-2">
-      <label class="text-sm font-medium text-color">Type</label>
+      <label for="type-select" class="text-sm font-medium text-color">Type</label>
       <p-select
+        id="type-select"
         [(ngModel)]="filterType"
         [options]="transactionTypes"
         optionLabel="label"
         optionValue="value"
         (onChange)="onFilterChange()"
         placeholder="All Types"
-        styleClass="w-48"
+        class="w-48"
       />
     </div>
 
     <!-- Date Range Filter -->
     <div class="flex flex-col gap-2">
-      <label class="text-sm font-medium text-color">Date Range</label>
+      <label for="date-picker" class="text-sm font-medium text-color">Date Range</label>
       <p-datePicker
+        id="date-picker"
         [(ngModel)]="filterDateRange"
         selectionMode="range"
         (onSelect)="onFilterChange()"
@@ -72,7 +75,7 @@
         [readonlyInput]="true"
         placeholder="Select date range"
         dateFormat="mm/dd/yy"
-        styleClass="w-64"
+        class="w-64"
       />
     </div>
 
@@ -106,10 +109,11 @@
 
         <!-- Description Filter -->
         <div class="flex flex-col gap-2">
-          <label class="text-sm font-medium text-color">Description</label>
+          <label for="description-input" class="text-sm font-medium text-color">Description</label>
           <span class="p-input-icon-left w-64">
-            <i class="pi pi-search" ></i>
+            <i class="pi pi-search"></i>
             <input
+              id="description-input"
               pInputText
               type="text"
               [(ngModel)]="filterDescription"
@@ -122,55 +126,59 @@
 
         <!-- Vendor Filter (AutoComplete) -->
         <div class="flex flex-col gap-2">
-          <label class="text-sm font-medium text-color">Vendor</label>
+          <label for="merchant-select" class="text-sm font-medium text-color">Vendor</label>
           <p-autoComplete
+            id="merchant-select"
             [(ngModel)]="filterVendorName"
             [suggestions]="filteredVendors()"
             (completeMethod)="onVendorSearch($event)"
             (ngModelChange)="onFilterChange()"
             placeholder="Search vendor..."
-            styleClass="w-64"
+            class="w-64"
             [dropdown]="true"
           />
         </div>
 
         <!-- Category Filter (AutoComplete) -->
         <div class="flex flex-col gap-2">
-          <label class="text-sm font-medium text-color">Category</label>
+          <label for="category-select" class="text-sm font-medium text-color">Category</label>
           <p-autoComplete
+            id="category-select"
             [(ngModel)]="filterCategoryName"
             [suggestions]="filteredCategories()"
             (completeMethod)="onCategorySearch($event)"
             (ngModelChange)="onFilterChange()"
             placeholder="Search category..."
-            styleClass="w-64"
+            class="w-64"
             [dropdown]="true"
           />
         </div>
 
         <!-- Min Amount Filter -->
         <div class="flex flex-col gap-2">
-          <label class="text-sm font-medium text-color">Min Amount</label>
+          <label for="min-amount-input" class="text-sm font-medium text-color">Min Amount</label>
           <p-inputNumber
+            id="min-amount-input"
             [(ngModel)]="filterMinAmount"
             (ngModelChange)="onFilterChange()"
             mode="currency"
             currency="USD"
             placeholder="Min"
-            styleClass="w-40"
+            class="w-40"
           />
         </div>
 
         <!-- Max Amount Filter -->
         <div class="flex flex-col gap-2">
-          <label class="text-sm font-medium text-color">Max Amount</label>
+          <label for="max-amount-input" class="text-sm font-medium text-color">Max Amount</label>
           <p-inputNumber
+            id="max-amount-input"
             [(ngModel)]="filterMaxAmount"
             (ngModelChange)="onFilterChange()"
             mode="currency"
             currency="USD"
             placeholder="Max"
-            styleClass="w-40"
+            class="w-40"
           />
         </div>
 
@@ -202,7 +210,7 @@
 
   <!-- Transactions Table -->
   @if (!isEmpty()) {
-    <p-card styleClass="shadow-sm">
+    <p-card class="shadow-sm">
       <p-table
         [value]="transactions()"
         [(selection)]="selectedTransactions"
@@ -215,8 +223,7 @@
         [lazy]="true"
         (onLazyLoad)="onLazyLoad($event)"
         [rowsPerPageOptions]="[20, 50, 100]"
-        styleClass="p-datatable-sm"
-        responsiveLayout="scroll"
+        class="p-datatable-sm"
         dataKey="id">
 
         <ng-template pTemplate="header">
@@ -229,21 +236,26 @@
               />
             </th>
             <th pSortableColumn="date">
-              Date <p-sortIcon field="date" />
+              Date
+              <p-sortIcon field="date"/>
             </th>
             <th pSortableColumn="description">
-              Description <p-sortIcon field="description" />
+              Description
+              <p-sortIcon field="description"/>
             </th>
             <th pSortableColumn="vendorName" style="width: 200px">
-              Vendor <p-sortIcon field="vendorName" />
+              Vendor
+              <p-sortIcon field="vendorName"/>
             </th>
             <th pSortableColumn="categoryName" style="width: 200px">
-              Category <p-sortIcon field="categoryName" />
+              Category
+              <p-sortIcon field="categoryName"/>
             </th>
             <th>Account</th>
             <th>Type</th>
             <th class="text-right" pSortableColumn="amount">
-              Amount <p-sortIcon field="amount" />
+              Amount
+              <p-sortIcon field="amount"/>
             </th>
             <th class="text-center" style="width: 150px">Actions</th>
           </tr>
@@ -351,11 +363,12 @@
   }
 
   <!-- Context Menu -->
-  <p-contextMenu #cm [model]="contextMenuItems" (onShow)="selectedContextTransaction && prepareContextMenu(selectedContextTransaction)"></p-contextMenu>
+  <p-contextMenu #cm [model]="contextMenuItems"
+                 (onShow)="selectedContextTransaction && prepareContextMenu(selectedContextTransaction)"></p-contextMenu>
 
   <!-- Empty State -->
   @if (isEmpty()) {
-    <p-card styleClass="shadow-sm">
+    <p-card class="shadow-sm">
       <div class="flex flex-col items-center justify-center py-12">
         <i class="pi pi-receipt text-6xl text-muted-color mb-4"></i>
         <h2 class="text-2xl font-semibold text-color mb-2">No transactions yet</h2>
@@ -389,14 +402,6 @@
     [visible]="showTransferDialog()"
     (visibleChange)="showTransferDialog.set($event)"
     (matchComplete)="onTransferMatchComplete()"
-  />
-
-  <!-- Recurring Dialog -->
-  <app-recurring-form-drawer
-    [(visible)]="showRecurringDialog"
-    [transaction]="recurringPrefill()"
-    [accounts]="accounts()"
-    (save)="onRecurringSaved()"
   />
 
   <!-- Bulk Edit Dialog -->

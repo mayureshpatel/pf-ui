@@ -2,22 +2,21 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CsvImportDialogComponent } from './csv-import-dialog.component';
 import { TransactionImportService } from '@features/transactions/services/transaction-import.service';
 import { ToastService } from '@core/services/toast.service';
-import { Account, AccountType } from '@models/account.model';
-import { BankName } from '@models/transaction.model';
+import {Account, AccountType, BankName} from '@models/account.model';
 import { of } from 'rxjs';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
 describe('CsvImportDialogComponent', () => {
   let component: CsvImportDialogComponent;
   let fixture: ComponentFixture<CsvImportDialogComponent>;
-  
+
   // Mock services using Vitest
   const mockImportService = {
     uploadCsv: vi.fn(),
     saveTransactions: vi.fn(),
     calculateFileHash: vi.fn()
   };
-  
+
   const mockToastService = {
     success: vi.fn(),
     error: vi.fn()
@@ -67,11 +66,11 @@ describe('CsvImportDialogComponent', () => {
 
     fixture = TestBed.createComponent(CsvImportDialogComponent);
     component = fixture.componentInstance;
-    
+
     // Set inputs
     fixture.componentRef.setInput('visible', true);
     fixture.componentRef.setInput('accounts', mockAccounts);
-    
+
     fixture.detectChanges();
   });
 

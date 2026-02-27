@@ -1,8 +1,18 @@
-import {Component, computed, inject, OnInit, OnDestroy, signal, WritableSignal, DestroyRef} from '@angular/core';
+import {
+  Component,
+  computed,
+  DestroyRef,
+  inject,
+  OnDestroy,
+  OnInit,
+  Signal,
+  signal,
+  WritableSignal
+} from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {CommonModule} from '@angular/common';
 import {FormsModule} from '@angular/forms';
-import {ActivatedRoute} from '@angular/router';
+import {ActivatedRoute, Params} from '@angular/router';
 import {ButtonModule} from 'primeng/button';
 import {TableModule} from 'primeng/table';
 import {CardModule} from 'primeng/card';
@@ -16,18 +26,16 @@ import {InputNumberModule} from 'primeng/inputnumber';
 import {InputTextModule} from 'primeng/inputtext';
 import {ConfirmationService, MenuItem} from 'primeng/api';
 import {ContextMenuModule} from 'primeng/contextmenu';
-import {Transaction, TransactionFilter, TransactionType} from '@models/transaction.model';
+import {PageResponse, Transaction, TransactionFilter, TransactionType} from '@models/transaction.model';
 import {Account} from '@models/account.model';
 import {Category} from '@models/category.model';
-import {Frequency, RecurringTransaction} from '@models/recurring.model';
 import {TransactionApiService} from './services/transaction-api.service';
 import {TransactionFormDrawerComponent} from './components/transaction-form-drawer/transaction-form-drawer.component';
 import {CsvImportDialogComponent} from './components/csv-import-dialog/csv-import-dialog.component';
-import {BulkEditData, BulkEditDialogComponent} from './components/bulk-edit-dialog/bulk-edit-dialog.component';
+import {BulkEditDialogComponent} from './components/bulk-edit-dialog/bulk-edit-dialog.component';
 import {
   TransferMatchingDialogComponent
 } from './components/transfer-matching-dialog/transfer-matching-dialog.component';
-import {RecurringFormDrawerComponent} from '@shared/components/recurring-form-drawer/recurring-form-drawer.component';
 import {AccountApiService} from '@features/accounts/services/account-api.service';
 import {CategoryApiService} from '@features/categories/services/category-api.service';
 import {ToastService} from '@core/services/toast.service';
@@ -37,8 +45,8 @@ import {
   getAmountClass,
   getTransactionTypeInfo
 } from '@shared/utils/transaction.utils';
-import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen-toolbar';
-import { TableToolbarComponent } from '@shared/components/table-toolbar/table-toolbar';
+import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-toolbar';
+import {TableToolbarComponent} from '@shared/components/table-toolbar/table-toolbar';
 
 @Component({
   selector: 'app-transactions',
@@ -63,21 +71,21 @@ import { TableToolbarComponent } from '@shared/components/table-toolbar/table-to
     TransactionFormDrawerComponent,
     CsvImportDialogComponent,
     BulkEditDialogComponent,
-    TransferMatchingDialogComponent,
-    RecurringFormDrawerComponent
+    TransferMatchingDialogComponent
   ],
   templateUrl: './transactions.component.html'
 })
 export class TransactionsComponent implements OnInit, OnDestroy {
-  private readonly transactionApi = inject(TransactionApiService);
-  private readonly accountApi = inject(AccountApiService);
-  private readonly categoryApi = inject(CategoryApiService);
-  private readonly toast = inject(ToastService);
-  private readonly confirmationService = inject(ConfirmationService);
-  private readonly route = inject(ActivatedRoute);
-  private readonly destroyRef = inject(DestroyRef);
+  // injected services
+  private readonly transactionApi: TransactionApiService = inject(TransactionApiService);
+  private readonly accountApi: AccountApiService = inject(AccountApiService);
+  private readonly categoryApi: CategoryApiService = inject(CategoryApiService);
+  private readonly toast: ToastService = inject(ToastService);
+  private readonly confirmationService: ConfirmationService = inject(ConfirmationService);
+  private readonly route: ActivatedRoute = inject(ActivatedRoute);
+  private readonly destroyRef: DestroyRef = inject(DestroyRef);
 
-  // State
+  // state
   transactions: WritableSignal<Transaction[]> = signal([]);
   accounts: WritableSignal<Account[]> = signal([]);
   loading: WritableSignal<boolean> = signal(false);
@@ -85,31 +93,28 @@ export class TransactionsComponent implements OnInit, OnDestroy {
   showImportDialog: WritableSignal<boolean> = signal(false);
   showBulkEditDialog: WritableSignal<boolean> = signal(false);
   showTransferDialog: WritableSignal<boolean> = signal(false);
-  showVendorRuleDialog: WritableSignal<boolean> = signal(false);
-  showRecurringDialog: WritableSignal<boolean> = signal(false);
 
   selectedTransaction: WritableSignal<Transaction | null> = signal(null);
   selectedTransactions: WritableSignal<Transaction[]> = signal([]);
 
-  // Context Menu State
+  // context menu state
   contextMenuItems: MenuItem[] = [];
   selectedContextTransaction: Transaction | null = null;
-  selectedTransactionKeyword: WritableSignal<string> = signal('');
 
   savingTransaction: WritableSignal<boolean> = signal(false);
   savingBulkEdit: WritableSignal<boolean> = signal(false);
 
-  // Pagination
+  // pagination
   currentPage: WritableSignal<number> = signal(0);
   pageSize: WritableSignal<number> = signal(20);
   totalRecords: WritableSignal<number> = signal(0);
 
-  // Quick Filters
+  // quick filters
   filterAccountId: WritableSignal<number | null> = signal(null);
   filterType: WritableSignal<TransactionType | null> = signal(null);
   filterDateRange: WritableSignal<Date[] | null> = signal(null);
 
-  // Advanced Filters
+  // advanced filters
   showAdvancedFilters: WritableSignal<boolean> = signal(false);
   filterDescription: WritableSignal<string> = signal('');
   filterVendorName: WritableSignal<string> = signal('');
@@ -117,25 +122,24 @@ export class TransactionsComponent implements OnInit, OnDestroy {
   filterMinAmount: WritableSignal<number | null> = signal(null);
   filterMaxAmount: WritableSignal<number | null> = signal(null);
 
-  // Sorting
+  // sorting
   currentSort: WritableSignal<string> = signal('date,desc');
 
-  // Autocomplete data
+  // autocomplete data
   categories: WritableSignal<Category[]> = signal([]);
   filteredCategories: WritableSignal<string[]> = signal([]);
   vendorSuggestions: WritableSignal<string[]> = signal([]);
   filteredVendors: WritableSignal<string[]> = signal([]);
 
-  // Computed
-  isEmpty = computed(() => this.transactions().length === 0 && !this.loading());
-  hasSelection = computed(() => this.selectedTransactions().length > 0);
-  allSelected = computed(() =>
+  // computed signals
+  isEmpty: Signal<boolean> = computed((): boolean => this.transactions().length === 0 && !this.loading());
+  allSelected: Signal<boolean> = computed((): boolean =>
     this.selectedTransactions().length === this.transactions().length &&
     this.transactions().length > 0
   );
 
-  activeFilterCount = computed(() => {
-    let count = 0;
+  activeFilterCount: Signal<number> = computed((): number => {
+    let count: number = 0;
     if (this.filterAccountId()) count++;
     if (this.filterType()) count++;
     if (this.filterDateRange()) count++;
@@ -147,7 +151,7 @@ export class TransactionsComponent implements OnInit, OnDestroy {
     return count;
   });
 
-  hasAdvancedFilters = computed(() =>
+  hasAdvancedFilters: Signal<boolean> = computed((): boolean =>
     !!this.filterDescription() ||
     !!this.filterVendorName() ||
     !!this.filterCategoryName() ||
@@ -155,13 +159,13 @@ export class TransactionsComponent implements OnInit, OnDestroy {
     this.filterMaxAmount() !== null
   );
 
-  // Utility functions
+  // utility functions
   formatTransactionAmount = formatTransactionAmount;
   getTransactionTypeInfo = getTransactionTypeInfo;
   getAmountClass = getAmountClass;
   formatDate = formatDate;
 
-  // Dropdown options
+  // dropdown options
   transactionTypes = [
     {label: 'All Types', value: null},
     {label: 'Income', value: TransactionType.INCOME},
@@ -172,10 +176,11 @@ export class TransactionsComponent implements OnInit, OnDestroy {
   ];
 
   accountOptions = computed(() => {
-    const accounts = this.accounts();
+    const accounts: Account[] = this.accounts();
+
     return [
       {label: 'All Accounts', value: null},
-      ...accounts.map(a => ({label: a.name, value: a.id}))
+      ...accounts.map((a: Account) => ({label: a.name, value: a.id}))
     ];
   });
 
@@ -184,7 +189,7 @@ export class TransactionsComponent implements OnInit, OnDestroy {
 
     this.route.queryParams
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(params => {
+      .subscribe((params: Params): void => {
         if (params['category']) {
           this.filterCategoryName.set(params['category']);
           this.showAdvancedFilters.set(true);
@@ -212,10 +217,11 @@ export class TransactionsComponent implements OnInit, OnDestroy {
     this.accountApi.getAccounts()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (accounts) => {
+        next: (accounts: Account[]): void => {
           this.accounts.set(accounts);
         },
-        error: () => {
+        error: (error: any): void => {
+          console.error('Failed to load accounts', error);
           this.toast.error('Failed to load accounts');
         }
       });
@@ -225,8 +231,10 @@ export class TransactionsComponent implements OnInit, OnDestroy {
     this.categoryApi.getChildCategories()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (categories) => this.categories.set(categories),
-        error: () => {
+        next: (categories: Category[]): void => this.categories.set(categories),
+        error: (error: any): void => {
+          console.error('Failed to load categories', error);
+          this.toast.error('Failed to load categories');
         }
       });
   }
@@ -243,8 +251,8 @@ export class TransactionsComponent implements OnInit, OnDestroy {
     if (this.filterMinAmount() !== null) filter.minAmount = this.filterMinAmount()!;
     if (this.filterMaxAmount() !== null) filter.maxAmount = this.filterMaxAmount()!;
 
-    const dateRange = this.filterDateRange();
-    if (dateRange && dateRange.length === 2 && dateRange[0] && dateRange[1]) {
+    const dateRange: Date[] | null = this.filterDateRange();
+    if (dateRange?.length === 2 && dateRange[0] && dateRange[1]) {
       filter.startDate = this.toISODate(dateRange[0]);
       filter.endDate = this.toISODate(dateRange[1]);
     }
@@ -259,13 +267,14 @@ export class TransactionsComponent implements OnInit, OnDestroy {
     })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (response) => {
+        next: (response: PageResponse<Transaction>): void => {
           // Enrich transactions with account and category info
-          const accountMap = new Map(this.accounts().map(a => [a.id, a]));
-          const categoryMap = new Map(this.categories().map(c => [c.id, c]));
+          const accountMap = new Map(this.accounts().map((a: Account) => [a.id, a]));
+          const categoryMap = new Map(this.categories().map((c: Category) => [c.id, c]));
 
-          const enrichedTransactions = response.content.map(t => {
-            const category = t.category ? categoryMap.get(t.category.id) : undefined;
+          const enrichedTransactions = response.content.map((t: Transaction) => {
+            const category: Category | undefined = t.category ? categoryMap.get(t.category.id) : undefined;
+
             return {
               ...t,
               accountName: accountMap.get(t.account.id) || undefined,
@@ -281,7 +290,9 @@ export class TransactionsComponent implements OnInit, OnDestroy {
           // Update vendor suggestions for autocomplete
           this.updateVendorSuggestions(enrichedTransactions);
         },
-        error: () => {
+        error: (error: any): void => {
+          console.error('Failed to load transactions', error);
+
           this.toast.error('Failed to load transactions');
           this.loading.set(false);
         }
@@ -289,15 +300,13 @@ export class TransactionsComponent implements OnInit, OnDestroy {
   }
 
   onLazyLoad(event: any): void {
-    // PrimeNG lazy table sends event with 'first' and 'rows'
-    // 'first' is the index of the first record (0-based), not the page number
-    const page = event.first ? Math.floor(event.first / event.rows) : 0;
+    const page: number = event.first ? Math.floor(event.first / event.rows) : 0;
     this.currentPage.set(page);
     this.pageSize.set(event.rows || 20);
 
     // Handle sorting
     if (event.sortField) {
-      const direction = event.sortOrder === 1 ? 'asc' : 'desc';
+      const direction: "asc" | "desc" = event.sortOrder === 1 ? 'asc' : 'desc';
       this.currentSort.set(`${event.sortField},${direction}`);
     }
 
@@ -309,30 +318,31 @@ export class TransactionsComponent implements OnInit, OnDestroy {
     this.loadTransactions();
   }
 
-  debouncedFilterChange = this.debounce(() => {
+  debouncedFilterChange = this.debounce((): void => {
     this.onFilterChange();
   }, 300);
 
   toggleAdvancedFilters(): void {
-    this.showAdvancedFilters.update(v => !v);
+    this.showAdvancedFilters.update((v: boolean): boolean => !v);
   }
 
   onCategorySearch(event: AutoCompleteCompleteEvent): void {
-    const query = event.query.toLowerCase();
-    const suggestions = this.categories().map(c => c.name);
+    const query: string = event.query.toLowerCase();
+    const suggestions: string[] = this.categories().map((c: Category): string => c.name);
+
     this.filteredCategories.set(
       suggestions.filter(cat => cat.toLowerCase().includes(query))
     );
   }
 
   onVendorSearch(event: AutoCompleteCompleteEvent): void {
-    const query = event.query.toLowerCase();
-    const uniqueVendors = [...new Set([
+    const query: string = event.query.toLowerCase();
+    const uniqueVendors: string[] = [...new Set([
       ...this.transactions().map(t => t.merchant.cleanName).filter(Boolean),
       ...this.vendorSuggestions()
     ])];
     this.filteredVendors.set(
-      uniqueVendors.filter(v => v.toLowerCase().includes(query))
+      uniqueVendors.filter((v: string): boolean => v.toLowerCase().includes(query))
     );
   }
 
@@ -351,10 +361,10 @@ export class TransactionsComponent implements OnInit, OnDestroy {
 
   private updateVendorSuggestions(transactions: Transaction[]): void {
     // Only use current page vendors - don't accumulate across loads to prevent memory leak
-    const vendors = transactions
-      .map(t => t.merchant.cleanName)
+    const vendors: string[] = transactions
+      .map((t: Transaction): string => t.merchant.cleanName)
       .filter(Boolean);
-    const unique = [...new Set(vendors)];
+    const unique: string[] = [...new Set(vendors)];
     this.vendorSuggestions.set(unique);
   }
 
@@ -374,13 +384,14 @@ export class TransactionsComponent implements OnInit, OnDestroy {
   }
 
   private loadFilterState(): void {
-    const saved = localStorage.getItem('pf_transaction_filters');
+    const saved: string | null = localStorage.getItem('pf_transaction_filters');
+
     if (saved) {
       try {
         const state = JSON.parse(saved);
         if (state.accountId) this.filterAccountId.set(state.accountId);
         if (state.type) this.filterType.set(state.type);
-        if (state.dateRange) this.filterDateRange.set(state.dateRange.map((d: string) => new Date(d)));
+        if (state.dateRange) this.filterDateRange.set(state.dateRange.map((d: string): Date => new Date(d)));
         if (state.description) this.filterDescription.set(state.description);
         if (state.vendorName) this.filterVendorName.set(state.vendorName);
         if (state.categoryName) this.filterCategoryName.set(state.categoryName);
@@ -393,7 +404,7 @@ export class TransactionsComponent implements OnInit, OnDestroy {
           this.showAdvancedFilters.set(true);
         }
       } catch (e) {
-        // Ignore parse errors
+        console.error('Error parsing transaction filter state', e);
       }
     }
   }
@@ -403,9 +414,9 @@ export class TransactionsComponent implements OnInit, OnDestroy {
     wait: number
   ): (...args: Parameters<T>) => void {
     let timeout: ReturnType<typeof setTimeout> | null = null;
-    return (...args: Parameters<T>) => {
+    return (...args: Parameters<T>): void => {
       if (timeout) clearTimeout(timeout);
-      timeout = setTimeout(() => func(...args), wait);
+      timeout = setTimeout((): void => func(...args), wait);
     };
   }
 
@@ -458,16 +469,6 @@ export class TransactionsComponent implements OnInit, OnDestroy {
         icon: 'pi pi-arrow-right-arrow-left',
         command: () => this.markAsTransfer(transaction)
       },
-      {
-        label: 'Create Vendor Rule',
-        icon: 'pi pi-filter',
-        command: () => this.openVendorRuleDialog(transaction)
-      },
-      {
-        label: 'Create Recurring',
-        icon: 'pi pi-refresh',
-        command: () => this.openRecurringDialog(transaction)
-      },
       {separator: true},
       {
         label: 'Filter by Vendor',
@@ -481,60 +482,21 @@ export class TransactionsComponent implements OnInit, OnDestroy {
     this.confirmationService.confirm({
       header: 'Mark as Transfer?',
       message: 'This will remove this transaction from income/expense calculations.',
-      accept: () => {
+      accept: (): void => {
         this.transactionApi.markAsTransfer([transaction.id])
           .pipe(takeUntilDestroyed(this.destroyRef))
           .subscribe({
-            next: () => {
+            next: (): void => {
               this.toast.success('Marked as transfer');
               this.loadTransactions();
             },
-            error: () => this.toast.error('Failed to update transaction')
+            error: (error: any): void => {
+              console.error('Failed to mark as transfer', error);
+              this.toast.error('Failed to update transaction')
+            }
           });
       }
     });
-  }
-
-  openVendorRuleDialog(transaction: Transaction): void {
-    this.selectedContextTransaction = transaction;
-    // Use originalVendorName if available, otherwise description
-    // This is usually what we want to clean up
-    const keyword = transaction.merchant.originalName || transaction.description || '';
-    this.selectedTransactionKeyword.set(keyword);
-    this.showVendorRuleDialog.set(true);
-  }
-
-  onVendorRuleSaved(): void {
-    this.showVendorRuleDialog.set(false);
-    this.loadTransactions(); // Reload to see if rule applied? (It won't apply to existing unless we re-run cleaning, but good practice)
-  }
-
-  // We need to map Transaction to RecurringTransaction shape for the dialog
-  // Since the dialog expects a full RecurringTransaction object for editing,
-  // we will pass a 'fake' one with ID 0 to indicate it's new but has data.
-  // We need to handle this in the dialog component or here.
-  // Actually, let's just update the dialog component to handle 'prefill' better.
-  // For now, let's map it to a partial object and see if we can adapt the dialog later.
-  // The dialog uses `transaction()` input.
-
-  recurringPrefill: WritableSignal<RecurringTransaction | null> = signal(null);
-
-  openRecurringDialog(transaction: Transaction): void {
-    this.recurringPrefill.set({
-      id: 0, // Indicates new
-      user: transaction.account.user,
-      merchant: transaction.merchant || undefined,
-      amount: Math.abs(transaction.amount),
-      frequency: Frequency.MONTHLY, // Default
-      nextDate: transaction.date, // Use transaction date as start
-      active: true,
-      account: transaction.account
-    });
-    this.showRecurringDialog.set(true);
-  }
-
-  onRecurringSaved(): void {
-    this.showRecurringDialog.set(false);
   }
 
   filterByVendor(vendorName: string | null): void {
@@ -556,13 +518,15 @@ export class TransactionsComponent implements OnInit, OnDestroy {
       this.transactionApi.updateTransaction(transaction.id, formData)
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({
-          next: () => {
+          next: (): void => {
             this.toast.success('Transaction updated successfully');
             this.showDialog.set(false);
             this.savingTransaction.set(false);
             this.loadTransactions();
           },
-          error: (error) => {
+          error: (error: any): void => {
+            console.error('Failed to update transaction', error);
+
             this.toast.error(error.error?.detail || 'Failed to update transaction');
             this.savingTransaction.set(false);
           }
@@ -572,13 +536,15 @@ export class TransactionsComponent implements OnInit, OnDestroy {
       this.transactionApi.createTransaction(formData)
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({
-          next: () => {
+          next: (): void => {
             this.toast.success('Transaction created successfully');
             this.showDialog.set(false);
             this.savingTransaction.set(false);
             this.loadTransactions();
           },
-          error: (error) => {
+          error: (error: any): void => {
+            console.error('Failed to create transaction', error);
+
             this.toast.error(error.error?.detail || 'Failed to create transaction');
             this.savingTransaction.set(false);
           }
@@ -598,11 +564,13 @@ export class TransactionsComponent implements OnInit, OnDestroy {
         this.transactionApi.deleteTransaction(transaction.id)
           .pipe(takeUntilDestroyed(this.destroyRef))
           .subscribe({
-            next: () => {
+            next: (): void => {
               this.toast.success('Transaction deleted successfully');
               this.loadTransactions();
             },
-            error: (error) => {
+            error: (error: any): void => {
+              console.error('Failed to delete transaction', error);
+
               const message = error.error?.detail || 'Failed to delete transaction';
               this.toast.error(message);
             }
@@ -612,7 +580,8 @@ export class TransactionsComponent implements OnInit, OnDestroy {
   }
 
   bulkDelete(): void {
-    const count = this.selectedTransactions().length;
+    const count: number = this.selectedTransactions().length;
+
     this.confirmationService.confirm({
       header: `Delete ${count} Transaction${count > 1 ? 's' : ''}?`,
       message: `This will permanently delete ${count} transaction${count > 1 ? 's' : ''}. This action cannot be undone.`,
@@ -620,16 +589,17 @@ export class TransactionsComponent implements OnInit, OnDestroy {
       acceptLabel: 'Delete',
       rejectLabel: 'Cancel',
       acceptButtonStyleClass: 'p-button-danger',
-      accept: () => {
-        const ids = this.selectedTransactions().map(t => t.id);
+      accept: (): void => {
+        const ids: number[] = this.selectedTransactions().map((t: Transaction): number => t.id);
         this.transactionApi.bulkDeleteTransactions(ids)
           .pipe(takeUntilDestroyed(this.destroyRef))
           .subscribe({
-            next: () => {
+            next: (): void => {
               this.toast.success(`${count} transaction${count > 1 ? 's' : ''} deleted successfully`);
               this.loadTransactions();
             },
-            error: () => {
+            error: (error: any): void => {
+              console.error('Failed to delete transactions', error);
               this.toast.error('Failed to delete transactions');
             }
           });
@@ -641,7 +611,7 @@ export class TransactionsComponent implements OnInit, OnDestroy {
     this.showBulkEditDialog.set(true);
   }
 
-  onBulkSave(data: BulkEditData): void {
+  onBulkSave(): void {
     this.savingBulkEdit.set(true);
 
     // Build update DTOs by merging selected transactions with bulk edit data
@@ -650,25 +620,19 @@ export class TransactionsComponent implements OnInit, OnDestroy {
     this.transactionApi.bulkUpdateTransactions(updates)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (updated) => {
+        next: (updated: Transaction[]): void => {
           this.toast.success(`${updated.length} transaction${updated.length > 1 ? 's' : ''} updated successfully`);
           this.showBulkEditDialog.set(false);
           this.savingBulkEdit.set(false);
           this.loadTransactions();
         },
-        error: (error) => {
+        error: (error: any): void => {
+          console.error('Failed to update transactions', error);
+
           this.toast.error(error.error?.detail || 'Failed to update transactions');
           this.savingBulkEdit.set(false);
         }
       });
-  }
-
-  getCategoryDisplay(categoryName: string | null): string {
-    return categoryName || 'Uncategorized';
-  }
-
-  getCategorySeverity(categoryName: string | null): 'secondary' | 'contrast' {
-    return categoryName ? 'secondary' : 'contrast';
   }
 
   toggleSelectAll(): void {
@@ -681,9 +645,5 @@ export class TransactionsComponent implements OnInit, OnDestroy {
 
   private toISODate(date: Date): string {
     return date.toISOString().split('T')[0];
-  }
-
-  blurInput(event: any): void {
-    event?.originalEvent?.target?.blur();
   }
 }
