@@ -47,9 +47,9 @@ export class CategoryReportComponent {
   private updateChartData(categories: CategoryReportData[]): void {
     const top10: CategoryReportData[] = categories.slice(0, 10);
 
-    const labels: string[] = top10.map((c: CategoryReportData): string => c.category.name || 'Uncategorized');
+    const labels: string[] = top10.map((c: CategoryReportData): string => c.category?.name || 'Uncategorized');
     const data: number[] = top10.map((c: CategoryReportData): number => Math.abs(c.total));
-    const colors: string[] = top10.map((c: CategoryReportData): string => getCategoryColorHex(c.category.iconography.color));
+    const colors: string[] = top10.map((c: CategoryReportData): string => getCategoryColorHex(c.category?.iconography?.color ?? ''));
 
     this.chartData.set({
       labels,

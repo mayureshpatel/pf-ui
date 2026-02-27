@@ -55,7 +55,6 @@ export class ReportsDataService {
 
     // cort by total (descending)
     results.sort((a: CategoryReportData, b: CategoryReportData): number => b.total - a.total);
-
     return results;
   }
 
@@ -78,6 +77,10 @@ export class ReportsDataService {
 
     for (const txn of relevantTransactions) {
       const merchant: Merchant | undefined = txn.merchant || undefined;
+
+      if (!merchant) {
+        continue;
+      }
 
       if (!vendorMap.has(merchant)) {
         vendorMap.set(merchant, {
