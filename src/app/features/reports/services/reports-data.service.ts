@@ -14,48 +14,32 @@ export class ReportsDataService {
    * Filters out TRANSFER transactions and groups by categoryName
    */
   aggregateByCategory(transactions: Transaction[]): CategoryReportData[] {
-    // filter out transfers, keep only INCOME and EXPENSE
-    const relevantTransactions: Transaction[] = transactions.filter(
-      (transaction: Transaction): boolean => transaction.type !== TransactionType.TRANSFER
-    );
-
-    // group by category
-    const categoryMap = new Map<Category, { total: number; count: number }>();
+    const relevantTransactions: Transaction[] = transactions.filter((t: Transaction): boolean => t.type !== TransactionType.TRANSFER);
+    const categoryMap = new Map<number, { category: Category; total: number; count: number }>();
 
     for (const txn of relevantTransactions) {
-      const category: Category | undefined = txn.category || undefined;
+      if (txn.type === TransactionType.EXPENSE) {
+        const category: Category = txn.category;
+        if (!category) continue;
 
-      if (category) {
-        if (!categoryMap.has(category)) {
-          categoryMap.set(category, {total: 0, count: 0});
+        if (!categoryMap.has(category.id)) {
+          categoryMap.set(category.id, { category, total: 0, count: 0 });
         }
 
-        const entry = categoryMap.get(category)!;
-        if (txn.type === TransactionType.EXPENSE) {
-          entry.total += Math.abs(txn.amount);
-        } else {
-          entry.total += txn.amount;
-        }
-
+        const entry = categoryMap.get(category.id)!;
+        entry.total += Math.abs(txn.amount);
         entry.count += 1;
       }
     }
 
-    // convert map to array and calculate averages
-    const results: CategoryReportData[] = [];
-
-    for (const [category, data] of categoryMap.entries()) {
-      results.push({
-        category: category,
-        total: data.total,
-        count: data.count,
-        avgTransaction: data.total / data.count
-      });
-    }
-
-    // cort by total (descending)
-    results.sort((a: CategoryReportData, b: CategoryReportData): number => b.total - a.total);
-    return results;
+    return Array.from(categoryMap.values())
+      .map(({ category, total, count }) => ({
+        category,
+        total,
+        count,
+        avgTransaction: total / count
+      }))
+      .sort((a, b) => b.total - a.total);
   }
 
   /**
