@@ -6,7 +6,7 @@ import {TableModule} from 'primeng/table';
 import {CardModule} from 'primeng/card';
 import {TooltipModule} from 'primeng/tooltip';
 import {ConfirmationService} from 'primeng/api';
-import {Account} from '@models/account.model';
+import {Account, AccountType} from '@models/account.model';
 import {AccountApiService} from './services/account-api.service';
 import {AccountSummaryCardsComponent} from './components/account-summary-cards/account-summary-cards.component';
 import {AccountFormDrawerComponent} from './components/account-form-drawer/account-form-drawer.component';
@@ -34,12 +34,14 @@ import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
 export class AccountsComponent implements OnInit {
   // injected services
   private readonly accountApi: AccountApiService = inject(AccountApiService);
+  private readonly accountTypeApi: AccountApiService = inject(AccountApiService);
   private readonly toast: ToastService = inject(ToastService);
   private readonly confirmationService: ConfirmationService = inject(ConfirmationService);
   private readonly destroyRef: DestroyRef = inject(DestroyRef);
 
   // signals
   accounts: WritableSignal<Account[]> = signal([]);
+  accountTypes: WritableSignal<AccountType[]> = signal([]);
   loading: WritableSignal<boolean> = signal(false);
   showDialog: WritableSignal<boolean> = signal(false);
   selectedAccount: WritableSignal<Account | null> = signal(null);
@@ -56,6 +58,23 @@ export class AccountsComponent implements OnInit {
    */
   loadAccounts(): void {
     this.loading.set(true);
+
+    this.accountTypeApi.getAccountTypes()
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize((): void => this.loading.set(false))
+      )
+      .subscribe({
+        next: (accountTypes: AccountType[]): void => {
+          this.accountTypes.set(accountTypes);
+        },
+        error: (error: any): void => {
+          console.error("Error loading account types: ", error);
+          this.toast.error("Failed to load account types");
+        }
+      });
+
+
     this.accountApi.getAccounts()
       .pipe(
         takeUntilDestroyed(this.destroyRef),

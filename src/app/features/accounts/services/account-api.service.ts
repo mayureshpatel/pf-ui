@@ -2,7 +2,7 @@ import {inject, Injectable} from '@angular/core';
 import {HttpClient} from '@angular/common/http';
 import {Observable} from 'rxjs';
 import {environment} from '@env';
-import {Account} from '@models/account.model';
+import {Account, AccountType} from '@models/account.model';
 
 @Injectable({
   providedIn: 'root'
@@ -54,5 +54,13 @@ export class AccountApiService {
    */
   delete(id: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
+  }
+
+  /**
+   * Gets the account types.
+   * @returns the account types.
+   */
+  getAccountTypes(): Observable<AccountType[]> {
+    return this.http.get<AccountType[]>(`${this.apiUrl}/account-types`);
   }
 }

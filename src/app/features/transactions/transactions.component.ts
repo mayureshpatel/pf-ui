@@ -26,7 +26,13 @@ import {InputNumberModule} from 'primeng/inputnumber';
 import {InputTextModule} from 'primeng/inputtext';
 import {ConfirmationService, MenuItem} from 'primeng/api';
 import {ContextMenuModule} from 'primeng/contextmenu';
-import {PageResponse, Transaction, TransactionFilter, TransactionType} from '@models/transaction.model';
+import {
+  PageResponse,
+  Transaction,
+  TransactionFilter,
+  TransactionFormData,
+  TransactionType
+} from '@models/transaction.model';
 import {Account} from '@models/account.model';
 import {Category} from '@models/category.model';
 import {TransactionApiService} from './services/transaction-api.service';
@@ -509,8 +515,9 @@ export class TransactionsComponent implements OnInit, OnDestroy {
     }
   }
 
-  onSave(formData: Transaction): void {
+  onSave(formData: TransactionFormData): void {
     const transaction = this.selectedTransaction();
+
     this.savingTransaction.set(true);
 
     if (transaction) {

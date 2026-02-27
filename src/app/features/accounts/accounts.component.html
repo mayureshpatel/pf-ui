@@ -116,6 +116,7 @@
   <!-- Form Drawer -->
   <app-account-form-drawer
     [(visible)]="showDialog"
+    [accountTypes]="accountTypes()"
     [account]="selectedAccount()"
     [saving]="loading()"
     (save)="onSave($event)"
