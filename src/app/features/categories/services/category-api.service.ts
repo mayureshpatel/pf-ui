@@ -17,7 +17,8 @@ export class CategoryApiService {
 
   getGroupedCategories(): Observable<CategoryGroup[]> {
     return this.http.get<Category[]>(`${this.apiUrl}/grouped`).pipe(
-      map((categories: Category[]) => {
+      map((response: Category[]): CategoryGroup[] => {
+        const categories: Category[] = Array.isArray(response) ? response : [];
         const parents: Category[] = categories.filter((c: Category): boolean => !c.parent);
 
         return parents.map((parent: Category): CategoryGroup => ({
