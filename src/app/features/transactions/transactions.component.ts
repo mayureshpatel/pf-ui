@@ -517,12 +517,24 @@ export class TransactionsComponent implements OnInit, OnDestroy {
 
   onSave(formData: TransactionFormData): void {
     const transaction = this.selectedTransaction();
+    const account: Account = this.accounts().find((a: Account): boolean => a.id === formData.account)!;
 
     this.savingTransaction.set(true);
 
     if (transaction) {
-      // Update existing transaction
-      this.transactionApi.updateTransaction(transaction.id, formData)
+      // Update existing transaction — spread existing to preserve fields not in the form
+      const payload: Transaction = {
+        ...transaction,
+        date: formData.date,
+        type: formData.type,
+        amount: formData.amount,
+        description: formData.description ?? null,
+        account,
+        category: formData.category ?? transaction.category,
+        merchant: formData.merchant ?? transaction.merchant
+      };
+
+      this.transactionApi.updateTransaction(transaction.id, payload)
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({
           next: (): void => {
@@ -540,7 +552,18 @@ export class TransactionsComponent implements OnInit, OnDestroy {
         });
     } else {
       // Create new transaction
-      this.transactionApi.createTransaction(formData)
+      const payload: Transaction = {
+        id: 0,
+        date: formData.date,
+        type: formData.type,
+        amount: formData.amount,
+        description: formData.description ?? null,
+        account,
+        category: formData.category!,
+        merchant: formData.merchant!
+      };
+
+      this.transactionApi.createTransaction(payload)
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({
           next: (): void => {
