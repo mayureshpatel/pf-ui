@@ -21,7 +21,7 @@ import {MessageModule} from 'primeng/message';
 import {ProgressSpinnerModule} from 'primeng/progressspinner';
 import {TagModule} from 'primeng/tag';
 import {TooltipModule} from 'primeng/tooltip';
-import {BankOption, SaveTransactionRequest, TransactionFormData, TransactionPreview} from '@models/transaction.model';
+import {BankOption, CsvTransactionData, SaveTransactionRequest, TransactionPreview} from '@models/transaction.model';
 import {Account, BankName} from '@models/account.model';
 import {TransactionImportService} from '@features/transactions/services/transaction-import.service';
 import {ToastService} from '@core/services/toast.service';
@@ -264,7 +264,7 @@ export class CsvImportDialogComponent {
     })));
 
     const tasks = this.importItems().map((item: BatchImportItem) => {
-      return this.importService.uploadCsv(item.accountId!, item.file, item.bankName!).pipe(
+      return this.importService.uploadCsv(item.accountId, item.file, item.bankName!).pipe(
         map((previews: TransactionPreview[]) => ({id: item.id, status: 'ready' as const, previews, error: undefined})),
         catchError((err: any) => {
           const errorMsg: any = err.error?.detail || err.error?.message || 'Failed to parse CSV';
@@ -324,11 +324,11 @@ export class CsvImportDialogComponent {
       try {
         const fileHash: string = await this.importService.calculateFileHash(item.file);
 
-        const transactions: TransactionFormData[] = item.previews.map((p: TransactionPreview) => ({
+        const transactions: CsvTransactionData[] = item.previews.map((p: TransactionPreview) => ({
           date: p.date,
           postDate: p.postDate,
           type: p.type,
-          accountId: item.accountId,
+          account: item.accountId,
           amount: Math.abs(p.amount),
           description: p.description || undefined,
           vendorName: p.vendorName || undefined,
@@ -342,7 +342,7 @@ export class CsvImportDialogComponent {
         };
 
         // Convert Observable to Promise for sequential execution
-        await new Promise<void>((resolve, reject): void => {
+        await new Promise<void>((resolve): void => {
           this.importService.saveTransactions(item.accountId, request).subscribe({
             next: () => {
               this.importItems.update((all: BatchImportItem[]): BatchImportItem[] => all.map((i: BatchImportItem): BatchImportItem => i.id === item.id ? {

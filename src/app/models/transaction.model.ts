@@ -84,8 +84,19 @@ export interface TransactionPreview {
   vendorName: string | null;
 }
 
+export interface CsvTransactionData {
+  date: string;
+  postDate?: string;
+  type: TransactionType;
+  account: number;
+  amount: number;
+  description?: string;
+  vendorName?: string;
+  categoryName?: string;
+}
+
 export interface SaveTransactionRequest {
-  transactions: TransactionFormData[];
+  transactions: CsvTransactionData[];
   fileName: string;
   fileHash: string;
 }
