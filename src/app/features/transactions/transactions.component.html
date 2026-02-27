@@ -245,13 +245,13 @@
               Description
               <p-sortIcon field="description"/>
             </th>
-            <th pSortableColumn="vendorName" style="width: 200px">
+            <th pSortableColumn="merchant.cleanName" style="width: 200px">
               Vendor
-              <p-sortIcon field="vendorName"/>
+              <p-sortIcon field="merchant.cleanName"/>
             </th>
-            <th pSortableColumn="categoryName" style="width: 200px">
+            <th pSortableColumn="category.name" style="width: 200px">
               Category
-              <p-sortIcon field="categoryName"/>
+              <p-sortIcon field="category.name"/>
             </th>
             <th>Account</th>
             <th>Type</th>
@@ -289,9 +289,9 @@
             <!-- Vendor -->
             <td>
               @if (transaction.merchant && transaction.merchant.cleanName) {
-              <span class="text-color">{{ transaction.merchant.cleanName }}</span>
+                <span class="text-color">{{ transaction.merchant.cleanName }}</span>
               } @else {
-              <span class="text-color">-</span>
+                <span class="text-color">-</span>
               }
             </td>
 
@@ -301,11 +301,12 @@
                 [severity]="transaction.category ? 'secondary' : 'contrast'"
                 class="text-xs">
                 <div class="flex items-center gap-1">
-                  @if (transaction.category && transaction.category.icon) {
-                    <i [class]="'pi ' + transaction.category.icon + ' text-[10px]'"></i>
+                  @if (transaction.category) {
+                    @if (transaction.category.icon) {
+                      <i [class]="'pi ' + transaction.category.icon + ' text-[10px]'"></i>
+                    }
                     <span>{{ transaction.category.name }}</span>
                   } @else {
-
                     <span>Uncategorized</span>
                   }
                 </div>
