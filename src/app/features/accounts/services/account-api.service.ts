@@ -10,6 +10,7 @@ import {Account, AccountType} from '@models/account.model';
 export class AccountApiService {
   private readonly http: HttpClient = inject(HttpClient);
   private readonly apiUrl = `${environment.apiUrl}/accounts`;
+  private readonly accountTypeApiUrl = `${environment.apiUrl}/account-types`;
 
   /**
    * Gets all accounts from the api for the current user.
@@ -61,6 +62,6 @@ export class AccountApiService {
    * @returns the account types.
    */
   getAccountTypes(): Observable<AccountType[]> {
-    return this.http.get<AccountType[]>(`${this.apiUrl}/account-types`);
+    return this.http.get<AccountType[]>(`${this.accountTypeApiUrl}`);
   }
 }

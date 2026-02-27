@@ -82,6 +82,7 @@ export class AccountsComponent implements OnInit {
       )
       .subscribe({
         next: (accounts: Account[]): void => {
+          console.log("accounts: ", accounts);
           this.accounts.set(accounts);
         },
         error: (error: any): void => {
