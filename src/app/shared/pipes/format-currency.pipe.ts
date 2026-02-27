@@ -20,7 +20,6 @@ export class FormatCurrencyPipe implements PipeTransform {
    * @returns formatted currency string or '$0.00' if value is null or undefined
    */
   transform(value: number | null | undefined, showCents: boolean = true): string {
-    console.log(value);
     if (value === null || value === undefined) {
       return '$0.00';
     }

@@ -93,9 +93,6 @@ export class CategoriesComponent implements OnInit, OnDestroy {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: ({categories, transactionCategoryCount, budgets}) => {
-          console.log('categories: ', categories);
-          console.log('transactionCategoryCount: ', transactionCategoryCount);
-          console.log('budgets: ', budgets);
           const budgetMap = new Map(budgets.map((budgetStatus: BudgetStatus) => [budgetStatus.category.name, budgetStatus]));
 
           // calculate usage and normalize parent names
