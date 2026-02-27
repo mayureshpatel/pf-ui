@@ -72,7 +72,7 @@ export class TransactionFormDrawerComponent implements OnChanges, OnInit {
     date: this.getTodayISO(),
     type: TransactionType.EXPENSE,
     description: '',
-    account: undefined,
+    account: 0,
     amount: 0
   };
 
@@ -141,7 +141,7 @@ export class TransactionFormDrawerComponent implements OnChanges, OnInit {
         id: txn.id,
         date: txn.date,
         type: txn.type,
-        account: txn.account,
+        account: txn.account.id,
         amount: Math.abs(txn.amount),
         description: txn.description || undefined,
         merchant: txn.merchant || undefined,
@@ -192,7 +192,7 @@ export class TransactionFormDrawerComponent implements OnChanges, OnInit {
       date: todayISO,
       type: TransactionType.EXPENSE,
       description: '',
-      account: this.accounts().length > 0 ? this.accounts()[0] : undefined,
+      account: this.accounts().length > 0 ? this.accounts()[0].id : 0,
       amount: 0
     };
     this.formDate = new Date();
