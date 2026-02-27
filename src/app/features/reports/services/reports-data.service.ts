@@ -47,63 +47,41 @@ export class ReportsDataService {
    * Filters out TRANSFER transactions and groups by vendorName
    */
   aggregateByVendor(transactions: Transaction[]): VendorReportData[] {
-    // filter out transfers
-    const relevantTransactions: Transaction[] = transactions.filter(
-      (t: Transaction): boolean => t.type !== TransactionType.TRANSFER
-    );
-
-    // group by vendor
     const vendorMap = new Map<number, {
       merchant: Merchant;
       total: number;
       count: number;
-      categories: Set<Category>
+      categories: Set<Category>;
     }>();
 
-    for (const txn of relevantTransactions) {
-      const merchant: Merchant | undefined = txn.merchant || undefined;
-
-      if (!merchant) {
+    for (const txn of transactions) {
+      if (txn.type !== TransactionType.EXPENSE || !txn.merchant) {
         continue;
       }
 
+      const { merchant } = txn;
+
       if (!vendorMap.has(merchant.id)) {
-        vendorMap.set(merchant.id, {
-          merchant,
-          total: 0,
-          count: 0,
-          categories: new Set<Category>()
-        });
+        vendorMap.set(merchant.id, { merchant, total: 0, count: 0, categories: new Set<Category>() });
       }
 
       const entry = vendorMap.get(merchant.id)!;
-
-      // sum absolute amounts
       entry.total += Math.abs(txn.amount);
       entry.count += 1;
 
-      // track unique categories
       if (txn.category) {
         entry.categories.add(txn.category);
       }
     }
 
-    // convert map to array
-    const results: VendorReportData[] = [];
-
-    for (const [, data] of vendorMap.entries()) {
-      results.push({
-        merchant: data.merchant,
-        total: data.total,
-        count: data.count,
-        categories: Array.from(data.categories)
-      });
-    }
-
-    // sort by total (descending)
-    results.sort((a: VendorReportData, b: VendorReportData): number => b.total - a.total);
-
-    return results;
+    return Array.from(vendorMap.values())
+      .map(({ merchant, total, count, categories }) => ({
+        merchant,
+        total,
+        count,
+        categories: Array.from(categories)
+      }))
+      .sort((a, b) => b.total - a.total);
   }
 
   /**

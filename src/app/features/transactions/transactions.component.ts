@@ -53,6 +53,8 @@ import {
 } from '@shared/utils/transaction.utils';
 import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-toolbar';
 import {TableToolbarComponent} from '@shared/components/table-toolbar/table-toolbar';
+import {Merchant} from '@models/merchant.model';
+import {getCategorySeverity} from '@shared/utils/category.utils';
 
 @Component({
   selector: 'app-transactions',
@@ -134,8 +136,8 @@ export class TransactionsComponent implements OnInit, OnDestroy {
   // autocomplete data
   categories: WritableSignal<Category[]> = signal([]);
   filteredCategories: WritableSignal<string[]> = signal([]);
-  vendorSuggestions: WritableSignal<string[]> = signal([]);
-  filteredVendors: WritableSignal<string[]> = signal([]);
+  vendorSuggestions: WritableSignal<Merchant[]> = signal([]);
+  filteredVendors: WritableSignal<Merchant[]> = signal([]);
 
   // computed signals
   isEmpty: Signal<boolean> = computed((): boolean => this.transactions().length === 0 && !this.loading());
@@ -295,6 +297,7 @@ export class TransactionsComponent implements OnInit, OnDestroy {
 
           // Update vendor suggestions for autocomplete
           this.updateVendorSuggestions(enrichedTransactions);
+          console.log(this.vendorSuggestions());
         },
         error: (error: any): void => {
           console.error('Failed to load transactions', error);
@@ -343,12 +346,12 @@ export class TransactionsComponent implements OnInit, OnDestroy {
 
   onVendorSearch(event: AutoCompleteCompleteEvent): void {
     const query: string = event.query.toLowerCase();
-    const uniqueVendors: string[] = [...new Set([
-      ...this.transactions().map(t => t.merchant.cleanName).filter(Boolean),
+    const uniqueVendors: Merchant[] = [...new Set([
+      ...this.transactions().map(t => t.merchant).filter(Boolean),
       ...this.vendorSuggestions()
     ])];
     this.filteredVendors.set(
-      uniqueVendors.filter((v: string): boolean => v.toLowerCase().includes(query))
+      uniqueVendors.filter((v: Merchant): boolean => v.cleanName.toLowerCase().includes(query))
     );
   }
 
@@ -367,10 +370,10 @@ export class TransactionsComponent implements OnInit, OnDestroy {
 
   private updateVendorSuggestions(transactions: Transaction[]): void {
     // Only use current page vendors - don't accumulate across loads to prevent memory leak
-    const vendors: string[] = transactions
-      .map((t: Transaction): string => t.merchant.cleanName)
+    const vendors: Merchant[] = transactions
+      .map((t: Transaction): Merchant => t.merchant)
       .filter(Boolean);
-    const unique: string[] = [...new Set(vendors)];
+    const unique: Merchant[] = [...new Set(vendors)];
     this.vendorSuggestions.set(unique);
   }
 

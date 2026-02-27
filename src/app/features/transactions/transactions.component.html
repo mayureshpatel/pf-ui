@@ -131,6 +131,8 @@
             id="merchant-select"
             [(ngModel)]="filterVendorName"
             [suggestions]="filteredVendors()"
+            optionValue="id"
+            optionLabel="cleanName"
             (completeMethod)="onVendorSearch($event)"
             (ngModelChange)="onFilterChange()"
             placeholder="Search vendor..."
@@ -286,11 +288,29 @@
 
             <!-- Vendor -->
             <td>
-              <span class="text-color">{{ transaction.merchant.name }}</span>
+              @if (transaction.merchant && transaction.merchant.cleanName) {
+              <span class="text-color">{{ transaction.merchant.cleanName }}</span>
+              } @else {
+              <span class="text-color">-</span>
+              }
             </td>
 
             <!-- Category -->
-            <td></td>
+            <td>
+              <p-tag
+                [severity]="transaction.category ? 'secondary' : 'contrast'"
+                class="text-xs">
+                <div class="flex items-center gap-1">
+                  @if (transaction.category && transaction.category.icon) {
+                    <i [class]="'pi ' + transaction.category.icon + ' text-[10px]'"></i>
+                    <span>{{ transaction.category.name }}</span>
+                  } @else {
+
+                    <span>Uncategorized</span>
+                  }
+                </div>
+              </p-tag>
+            </td>
 
             <!-- Account -->
             <td>
