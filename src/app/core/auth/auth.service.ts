@@ -21,8 +21,14 @@ export class AuthService {
 
   readonly isAuthenticated: Signal<boolean> = this._isAuthenticated.asReadonly();
   readonly user: Signal<User | null> = this._user.asReadonly();
+
   readonly username: Signal<string> = computed(() => this._user()?.username ?? '');
 
+  /**
+   * Authenticates the user with the provided credentials.
+   * @param credentials the user credentials
+   * @param rememberMe whether to remember the user's login
+   */
   login(credentials: AuthRequest, rememberMe: boolean): Observable<AuthResponse> {
     return this.http
       .post<AuthResponse>(`${environment.apiUrl}/auth/authenticate`, credentials)
@@ -44,6 +50,11 @@ export class AuthService {
       );
   }
 
+  /**
+   * Registers a new user with the provided registration request.
+   * @param request the registration request
+   * @returns an observable that emits the authentication response
+   */
   register(request: RegistrationRequest): Observable<AuthResponse> {
     return this.http
       .post<AuthResponse>(`${environment.apiUrl}/auth/register`, request)
@@ -67,6 +78,9 @@ export class AuthService {
       );
   }
 
+  /**
+   * Logs out the current user.
+   */
   logout(): void {
     this.storage.clearToken();
     this._isAuthenticated.set(false);
@@ -75,6 +89,9 @@ export class AuthService {
     this.router.navigate(['/login']);
   }
 
+  /**
+   * Handles unauthorized requests by logging out the user.
+   */
   handleUnauthorized(): void {
     this.storage.clearToken();
     this._isAuthenticated.set(false);
@@ -82,19 +99,28 @@ export class AuthService {
     this.router.navigate(['/login']);
   }
 
+  /**
+   * Retrieves the current user's token.
+   * @returns the current user's token or null if not authenticated
+   */
   getToken(): string | null {
     return this.storage.getToken();
   }
 
+  /**
+   * Retrieves the current user from the stored token.
+   * @returns the current user or null if the token is invalid or expired
+   */
   private getUserFromToken(): User | null {
     const token: string | null = this.storage.getToken();
     if (!token) return null;
 
-    const payload = this.decodeToken(token);
+    const payload: JwtPayload | null = this.decodeToken(token);
     if (!payload || this.isTokenExpired(payload)) {
       this.storage.clearToken();
       return null;
     }
+
     return {
       id: payload.userId,
       username: payload.sub,
@@ -102,10 +128,18 @@ export class AuthService {
     };
   }
 
+  /**
+   * Decodes a JWT token and returns its payload.
+   * @param token the JWT token to decode
+   * @returns the decoded payload or null if the token is invalid
+   */
   private decodeToken(token: string): JwtPayload | null {
     try {
       const parts: string[] = token.split('.');
-      if (parts.length !== 3) return null;
+      if (parts.length !== 3) {
+        return null;
+      }
+
       const payload: string = parts[1];
       const decoded: string = atob(payload.replaceAll('-', '+').replaceAll('_', '/'));
       return JSON.parse(decoded);
@@ -114,6 +148,11 @@ export class AuthService {
     }
   }
 
+  /**
+   * Checks if a JWT token has expired.
+   * @param payload the decoded JWT payload
+   * @returns true if the token has expired, false otherwise
+   */
   private isTokenExpired(payload: JwtPayload): boolean {
     const now: number = Math.floor(Date.now() / 1000);
     return payload.exp < now;
