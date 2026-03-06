@@ -118,7 +118,7 @@ export interface AccountTypeCreateRequest {
 }
 
 /**
- * Represents the {@link BankName} enum as is defined in the backend.
+ * Represents a bank name enum as is defined in the backend.
  */
 export enum BankName {
   CAPITAL_ONE = 'CAPITAL_ONE',

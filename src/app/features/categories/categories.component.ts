@@ -31,13 +31,6 @@ import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
 import {BudgetStatus} from '@models/budget.model';
 import {CategoryTransactionCount} from '@models/transaction.model';
 
-export interface CategoryViewModel extends CategoryWithUsage {
-  groupName: string;
-  budgetedAmount?: number;
-  remainingAmount?: number;
-  percentageUsed?: number;
-}
-
 @Component({
   selector: 'app-categories',
   standalone: true,
