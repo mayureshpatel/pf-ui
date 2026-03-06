@@ -1,6 +1,17 @@
 import {Component, input, InputSignal} from '@angular/core';
 import { CommonModule } from '@angular/common';
 
+// todo: check if we can remove this
+/**
+ * Toolbar component for screen-level operations.
+ *
+ * @example
+ * <app-screen-toolbar
+ *    [showDivider]= true
+ * >
+ * </app-screen-toolbar>
+ </app-screen-toolbar>>
+ */
 @Component({
   selector: 'app-screen-toolbar',
   standalone: true,
