@@ -7,6 +7,9 @@ import {Pipe, PipeTransform} from '@angular/core';
  * <pre>
  *   {{ 1234567.89 | formatCurrency }}
  *   <!-- Results in: $1,234,567.89 -->
+ *
+ *   {{ 1234567.89 | formatCurrency: false }}
+ *   <!-- Results in: $1,234,567 -->
  * </pre>
  */
 @Pipe({
