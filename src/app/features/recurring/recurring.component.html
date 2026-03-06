@@ -1,0 +1,137 @@
+<div class="p-4">
+  <!-- Page Header -->
+  <app-screen-toolbar>
+    <div toolbarTitle>
+      <h1 class="text-3xl font-bold text-color">Recurring Transactions</h1>
+      <p class="text-muted-color mt-1">Manage your recurring income and expenses</p>
+    </div>
+
+    <div toolbarActions>
+      <p-button
+        label="View Suggestions"
+        icon="pi pi-lightbulb"
+        severity="info"
+        [outlined]="true"
+        (onClick)="showSuggestionsDialog.set(true)"
+      />
+      <p-button
+        label="New Recurring"
+        icon="pi pi-plus"
+        severity="primary"
+        (onClick)="openCreateDialog()"
+      />
+    </div>
+  </app-screen-toolbar>
+
+  <!-- Table -->
+  @if (!isEmpty()) {
+    <p-card class="shadow-sm">
+      <p-table
+        [value]="recurringTransactions()"
+        [loading]="loading()"
+        [rowHover]="true"
+        styleClass="p-datatable-sm"
+        dataKey="id">
+
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Merchant</th>
+            <th>Account</th>
+            <th>Amount</th>
+            <th>Frequency</th>
+            <th>Next Date</th>
+            <th>Last Date</th>
+            <th>Status</th>
+            <th class="text-center" style="width: 120px">Actions</th>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="body" let-rec>
+          <tr>
+            <td class="font-medium">{{ rec.merchant.cleanName }}</td>
+            <td>{{ rec.account.name }}</td>
+            <td class="font-mono font-semibold">{{ rec.amount | currency }}</td>
+            <td>
+              <p-tag [value]="frequencyLabels[rec.frequency]" severity="info" />
+            </td>
+            <td>{{ rec.nextDate }}</td>
+            <td class="text-muted-color">{{ rec.lastDate || '—' }}</td>
+            <td>
+              @if (rec.active) {
+                <p-tag value="Active" severity="success" />
+              } @else {
+                <p-tag value="Inactive" severity="secondary" />
+              }
+            </td>
+            <td class="text-center">
+              <p-button
+                icon="pi pi-pencil"
+                [text]="true"
+                [rounded]="true"
+                severity="info"
+                (onClick)="openEditDialog(rec)"
+                pTooltip="Edit"
+                tooltipPosition="top"
+              />
+              <p-button
+                icon="pi pi-trash"
+                [text]="true"
+                [rounded]="true"
+                severity="danger"
+                (onClick)="deleteRecurring(rec)"
+                pTooltip="Delete"
+                tooltipPosition="top"
+              />
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </p-card>
+  }
+
+  <!-- Empty State -->
+  @if (isEmpty()) {
+    <p-card class="shadow-sm">
+      <div class="flex flex-col items-center justify-center py-12">
+        <i class="pi pi-refresh text-6xl text-muted-color mb-4"></i>
+        <h2 class="text-2xl font-semibold text-color mb-2">No recurring transactions</h2>
+        <p class="text-muted-color text-center max-w-md">
+          Track subscriptions, rent, and other repeating charges. Use "View Suggestions" to detect
+          recurring patterns from your transaction history.
+        </p>
+        <div class="flex gap-3 mt-6">
+          <p-button
+            label="View Suggestions"
+            icon="pi pi-lightbulb"
+            severity="info"
+            [outlined]="true"
+            (onClick)="showSuggestionsDialog.set(true)"
+          />
+          <p-button
+            label="Add Recurring"
+            icon="pi pi-plus"
+            severity="primary"
+            (onClick)="openCreateDialog()"
+          />
+        </div>
+      </div>
+    </p-card>
+  }
+
+  <!-- Form Dialog -->
+  <app-recurring-form-dialog
+    [visible]="showFormDialog()"
+    [accounts]="accounts()"
+    [merchants]="merchants()"
+    [recurring]="selectedRecurring()"
+    (visibleChange)="showFormDialog.set($event)"
+    (saved)="onSaved()"
+  />
+
+  <!-- Suggestions Dialog -->
+  <app-recurring-suggestions-dialog
+    [visible]="showSuggestionsDialog()"
+    (visibleChange)="showSuggestionsDialog.set($event)"
+    (suggestionAccepted)="onSuggestionAccepted($event)"
+  />
+</div>

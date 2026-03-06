@@ -1,6 +1,3 @@
-import {User} from '@models/auth.model';
-import {Iconography} from '@models/iconography.model';
-
 export enum CategoryType {
   INCOME = 'INCOME',
   EXPENSE = 'EXPENSE',
@@ -10,17 +7,19 @@ export enum CategoryType {
 
 export interface Category {
   id: number;
-  user: User;
+  userId: number;
   name: string;
-  iconography: Iconography;
-  type: CategoryType;
-  parent: Category;
+  categoryType: CategoryType;
+  parent: Category | null;
+  icon: string | null;
+  color: string | null;
 }
 
 export interface CategoryFormData {
   name: string;
-  iconography?: Iconography;
-  type?: CategoryType;
+  type?: string;
+  color?: string;
+  icon?: string;
   parentId?: number;
 }
 
@@ -32,4 +31,9 @@ export interface CategoryGroup {
   groupLabel: string;
   groupId: number;
   items: Category[];
+}
+
+/** Convenience: extract a display color from a Category */
+export function getCategoryDisplayColor(category: Category | null | undefined, fallback: string = 'bg-gray-300'): string {
+  return category?.color ?? fallback;
 }

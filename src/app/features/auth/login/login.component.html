@@ -8,7 +8,7 @@
       </div>
     </ng-template>
 
-    <form (ngSubmit)="onSubmit()" class="flex flex-col gap-4">
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-4">
       @if (errorMessage()) {
         <p-message severity="error" [text]="errorMessage()!" styleClass="w-full" />
       }
@@ -18,20 +18,21 @@
         <input
           pInputText
           id="username"
-          [(ngModel)]="username"
-          name="username"
+          formControlName="username"
           placeholder="Enter your username"
           class="w-full"
           autocomplete="username"
         />
+        @if (form.controls.username.invalid && form.controls.username.touched) {
+          <small class="text-red-500">Username is required</small>
+        }
       </div>
 
       <div class="flex flex-col gap-2">
         <label for="password" class="font-medium text-color">Password</label>
         <p-password
           id="password"
-          [(ngModel)]="password"
-          name="password"
+          formControlName="password"
           placeholder="Enter your password"
           [feedback]="false"
           [toggleMask]="true"
@@ -39,12 +40,14 @@
           inputStyleClass="w-full"
           autocomplete="current-password"
         />
+        @if (form.controls.password.invalid && form.controls.password.touched) {
+          <small class="text-red-500">Password is required</small>
+        }
       </div>
 
       <div class="flex items-center gap-2">
         <p-checkbox
-          [(ngModel)]="rememberMe"
-          name="rememberMe"
+          formControlName="rememberMe"
           [binary]="true"
           inputId="rememberMe"
         />
@@ -54,7 +57,8 @@
       <p-button
         type="submit"
         label="Sign In"
-        [loading]="loading()"
+        [loading]="isSubmitting()"
+        [disabled]="isSubmitting()"
         styleClass="w-full"
         severity="primary"
       />

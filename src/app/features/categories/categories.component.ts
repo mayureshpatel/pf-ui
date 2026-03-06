@@ -139,7 +139,7 @@ export class CategoriesComponent implements OnInit, OnDestroy {
   }
 
   getDisplayColor(category: Category): string {
-    return category.iconography.color || getCategoryColor(category.name);
+    return category.color || getCategoryColor(category.name);
   }
 
   getIconLabel(iconCode: string | undefined): string {
@@ -206,7 +206,7 @@ export class CategoriesComponent implements OnInit, OnDestroy {
       this.categoryApi.updateCategory(category.id, formData)
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({
-          next: (): void => {
+          next: (_: number): void => {
             this.toast.success('Category updated successfully');
             this.showDialog.set(false);
             this.loadData();
@@ -221,7 +221,7 @@ export class CategoriesComponent implements OnInit, OnDestroy {
       this.categoryApi.createCategory(formData)
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({
-          next: (): void => {
+          next: (_: number): void => {
             this.toast.success('Category created successfully');
             this.showDialog.set(false);
             this.loadData();

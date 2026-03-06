@@ -7,7 +7,7 @@
   (saveEmitterRef)="onSubmit()"
   (cancelEmitterRef)="onHide()">
 
-  <form class="flex flex-col gap-6">
+  <form [formGroup]="form" class="flex flex-col gap-6">
     @if (errorMessage()) {
       <p-message severity="error" styleClass="w-full">
         {{ errorMessage() }}
@@ -22,13 +22,18 @@
       <input
         pInputText
         id="name"
-        [(ngModel)]="formData.name"
-        name="name"
+        formControlName="name"
         placeholder="e.g., Dining Out, Rent, Salary"
         class="w-full"
         maxlength="50"
-        required
       />
+      @if (form.controls.name.invalid && form.controls.name.touched) {
+        @if (form.controls.name.errors?.['required']) {
+          <small class="text-red-500">Category name is required</small>
+        } @else if (form.controls.name.errors?.['maxlength']) {
+          <small class="text-red-500">Category name must be 50 characters or less</small>
+        }
+      }
     </div>
 
     <!-- Parent Category -->
@@ -36,8 +41,7 @@
       <label for="parentId" class="text-sm font-medium text-surface-700">Parent Category</label>
       <p-select
         id="parentId"
-        [(ngModel)]="formData.parentId"
-        name="parentId"
+        formControlName="parentId"
         [options]="parentOptions()"
         optionLabel="label"
         optionValue="value"
@@ -55,8 +59,7 @@
         @for (opt of typeOptions; track opt.value) {
           <div class="flex items-center gap-2">
             <p-radioButton
-              [(ngModel)]="formData.type"
-              name="type"
+              formControlName="type"
               [value]="opt.value"
               [inputId]="'type-' + opt.value"
             />
@@ -74,12 +77,12 @@
           <div
             (click)="selectColor(color)"
             [class]="color + ' w-8 h-8 rounded-full cursor-pointer transition-transform hover:scale-110 flex items-center justify-center'"
-            [class.ring-2]="formData.color === color"
-            [class.ring-offset-2]="formData.color === color"
-            [class.ring-primary-500]="formData.color === color"
+            [class.ring-2]="form.value.color === color"
+            [class.ring-offset-2]="form.value.color === color"
+            [class.ring-primary-500]="form.value.color === color"
             [pTooltip]="color"
             tooltipPosition="top">
-            @if (formData.color === color) {
+            @if (form.value.color === color) {
               <i class="pi pi-check text-white text-xs"></i>
             }
           </div>
@@ -96,9 +99,9 @@
           <div
             (click)="selectIcon(icon)"
             class="w-10 h-10 flex items-center justify-center rounded-md cursor-pointer transition-all hover:bg-white hover:shadow-sm"
-            [class.bg-primary-500]="formData.icon === icon"
-            [class.text-white]="formData.icon === icon"
-            [class.text-surface-600]="formData.icon !== icon"
+            [class.bg-primary-500]="form.value.icon === icon"
+            [class.text-white]="form.value.icon === icon"
+            [class.text-surface-600]="form.value.icon !== icon"
             [pTooltip]="getIconLabel(icon)"
             tooltipPosition="top">
             <i [class]="'pi ' + icon + ' text-lg'"></i>
@@ -114,11 +117,11 @@
         <span class="text-xs text-surface-400 font-medium uppercase tracking-widest">Preview</span>
         <div class="flex items-center gap-3 px-4 py-2 bg-white rounded-full shadow-sm border border-surface-100">
           <div [class]="previewColor + ' w-6 h-6 rounded-full flex items-center justify-center text-white'">
-            @if (formData.icon) {
-              <i [class]="'pi ' + formData.icon + ' text-[10px]'"></i>
+            @if (form.value.icon) {
+              <i [class]="'pi ' + form.value.icon + ' text-[10px]'"></i>
             }
           </div>
-          <span class="font-medium text-surface-900">{{ formData.name || 'Category Name' }}</span>
+          <span class="font-medium text-surface-900">{{ form.value.name || 'Category Name' }}</span>
         </div>
       </div>
     </div>

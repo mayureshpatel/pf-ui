@@ -49,7 +49,7 @@ export class CategoryReportComponent {
 
     const labels: string[] = top10.map((c: CategoryReportData): string => c.category?.name || 'Uncategorized');
     const data: number[] = top10.map((c: CategoryReportData): number => Math.abs(c.total));
-    const colors: string[] = top10.map((c: CategoryReportData): string => getCategoryColorHex(c.category?.iconography?.color ?? ''));
+    const colors: string[] = top10.map((c: CategoryReportData): string => getCategoryColorHex(c.category?.color ?? ''));
 
     this.chartData.set({
       labels,

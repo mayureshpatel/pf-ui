@@ -12,5 +12,5 @@ export interface CategoryRule {
 export interface CategoryRuleRequest {
   keyword: string;
   priority: number;
-  category: Category | undefined;
+  categoryId: number;
 }

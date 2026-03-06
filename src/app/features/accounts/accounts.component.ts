@@ -6,7 +6,7 @@ import {TableModule} from 'primeng/table';
 import {CardModule} from 'primeng/card';
 import {TooltipModule} from 'primeng/tooltip';
 import {ConfirmationService} from 'primeng/api';
-import {Account, AccountType} from '@models/account.model';
+import {Account, AccountFormData, AccountType} from '@models/account.model';
 import {AccountApiService} from './services/account-api.service';
 import {AccountSummaryCardsComponent} from './components/account-summary-cards/account-summary-cards.component';
 import {AccountFormDrawerComponent} from './components/account-form-drawer/account-form-drawer.component';
@@ -108,12 +108,7 @@ export class AccountsComponent implements OnInit {
     this.showDialog.set(true);
   }
 
-  /**
-   * Handles the save event for the account form.
-   * If an account is selected, it updates the existing account; otherwise, it creates a new account.
-   * @param formData The form data containing the account details.
-   */
-  onSave(formData: Account): void {
+  onSave(formData: AccountFormData): void {
     const account: Account | null = this.selectedAccount();
 
     if (account) {
@@ -123,19 +118,14 @@ export class AccountsComponent implements OnInit {
     }
   }
 
-  /**
-   * Creates a new account using the provided account data.
-   * @param newAccount The account data to create.
-   */
-  private createAccount(newAccount: Account): void {
-    this.accountApi.create(newAccount)
+  private createAccount(data: AccountFormData): void {
+    this.accountApi.create(data)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (created: Account): void => {
-          this.accounts.set([...this.accounts(), created]);
-
+        next: (): void => {
           this.toast.success('Account created successfully');
           this.showDialog.set(false);
+          this.loadAccounts();
         },
         error: (error: any): void => {
           console.error('Error creating account:', error);
@@ -144,25 +134,14 @@ export class AccountsComponent implements OnInit {
       });
   }
 
-  /**
-   * Edits an existing account using the provided account data.
-   * @param existingAccount The account to edit.
-   * @param updateFormDate The updated account data.
-   */
-  private editAccount(existingAccount: Account, updateFormDate: Account): void {
-    this.accountApi.update(existingAccount.id, updateFormDate)
+  private editAccount(existingAccount: Account, data: AccountFormData): void {
+    this.accountApi.update(existingAccount.id, data, existingAccount.version!)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (updated: Account): void => {
-          const accounts: Account[] = this.accounts();
-          const index: number = accounts.findIndex((a: Account): boolean => a.id === existingAccount.id);
-
-          if (index !== -1) {
-            accounts[index] = updated;
-            this.accounts.set([...accounts]);
-          }
+        next: (): void => {
           this.toast.success('Account updated successfully');
           this.showDialog.set(false);
+          this.loadAccounts();
         },
         error: (error: any): void => {
           console.error('Error updating account:', error);

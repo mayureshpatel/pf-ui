@@ -49,7 +49,7 @@ export class CategoryChartComponent {
 
     const labels: Category[] = topXCategoryTotals.map((c: CategoryTotal): Category => c.category || 'Uncategorized');
     const data: number[] = topXCategoryTotals.map((c: CategoryTotal): number => Math.abs(c.total));
-    const colors: string[] = topXCategoryTotals.map((c: CategoryTotal): string => getCategoryColorHex(c.category.iconography.color || 'Uncategorized'));
+    const colors: string[] = topXCategoryTotals.map((c: CategoryTotal): string => getCategoryColorHex(c.category?.color ?? ''));
 
     this.chartData.set({
       labels,

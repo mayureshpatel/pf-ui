@@ -1,6 +1,5 @@
 import {User} from '@models/auth.model';
 import {Currency} from '@models/currency.model';
-import {Iconography} from '@models/iconography.model';
 
 export interface Account {
   id: number;
@@ -10,6 +9,14 @@ export interface Account {
   currentBalance: number;
   currency: Currency;
   bank: BankName;
+  version?: number;
+}
+
+export interface AccountFormData {
+  accountName: string;
+  accountType: AccountType | null;
+  currentBalance: number;
+  bankName: BankName | null;
 }
 
 export interface AccountType {
@@ -18,7 +25,8 @@ export interface AccountType {
   isAsset: boolean;
   sortOrder: number;
   isActive: boolean;
-  iconography: Iconography;
+  icon: string | null;
+  color: string | null;
 }
 
 export enum BankName {

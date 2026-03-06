@@ -101,6 +101,26 @@ export interface SaveTransactionRequest {
   fileHash: string;
 }
 
+export interface TransactionCreateRequest {
+  accountId: number;
+  categoryId?: number;
+  amount: number;
+  transactionDate: string;
+  description: string;
+  type: string;
+  merchantId?: number;
+}
+
+export interface TransactionUpdateRequest {
+  id: number;
+  categoryId?: number;
+  amount: number;
+  transactionDate: string;
+  description: string;
+  type: string;
+  merchantId?: number;
+}
+
 export interface BankOption {
   label: string;
   value: BankName;

@@ -7,7 +7,7 @@
   [draggable]="false"
   [resizable]="false">
 
-  <form (ngSubmit)="onSubmit()" class="flex flex-col gap-4">
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-4">
     @if (errorMessage()) {
       <p-message severity="error" styleClass="w-full">
         {{ errorMessage() }}
@@ -19,41 +19,42 @@
       <input
         pInputText
         id="keyword"
-        [(ngModel)]="formData.keyword"
-        name="keyword"
+        formControlName="keyword"
         placeholder="e.g., WALMART"
         class="w-full"
-        required
       />
       <small class="text-muted-color">Case-insensitive match</small>
+      @if (form.controls.keyword.invalid && form.controls.keyword.touched) {
+        <small class="text-red-500">Keyword is required</small>
+      }
     </div>
 
     <div class="flex flex-col gap-2">
       <label for="categoryName" class="font-medium text-color">Assign category to...</label>
       <p-select
         id="categoryName"
-        [(ngModel)]="formData.category"
-        name="categoryName"
+        formControlName="category"
         [options]="categoryGroups()"
         [group]="true"
         [filter]="true"
         [showClear]="true"
         optionLabel="name"
-        optionValue="id"
         groupLabel="groupLabel"
         groupChildren="items"
         placeholder="Select a category"
         class="w-full"
         appendTo="body"
       />
+      @if (form.controls.category.invalid && form.controls.category.touched) {
+        <small class="text-red-500">Category is required</small>
+      }
     </div>
 
     <div class="flex flex-col gap-2">
       <label for="priority" class="font-medium text-color">Priority (Optional)</label>
       <p-inputNumber
         id="priority"
-        [(ngModel)]="formData.priority"
-        name="priority"
+        formControlName="priority"
         [min]="0"
         placeholder="0"
         class="w-full"
@@ -75,6 +76,7 @@
       icon="pi pi-check"
       (onClick)="onSubmit()"
       [loading]="loading()"
+      [disabled]="loading()"
       severity="primary"
     />
   </ng-template>

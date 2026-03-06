@@ -3,6 +3,7 @@ import {HttpClient} from '@angular/common/http';
 import {Observable} from 'rxjs';
 import {environment} from '@env';
 import {CategoryRule, CategoryRuleRequest} from '@models/category-rule.model';
+import {AuthService} from '@core/auth/auth.service';
 import {
   RuleChangePreview
 } from '@features/settings/vendor-rules/components/apply-rules-dialog/apply-rules-dialog.component';
@@ -12,14 +13,16 @@ import {
 })
 export class CategoryRuleApiService {
   private readonly http: HttpClient = inject(HttpClient);
+  private readonly authService: AuthService = inject(AuthService);
   private readonly apiUrl: string = `${environment.apiUrl}/category-rules`;
 
   getRules(): Observable<CategoryRule[]> {
     return this.http.get<CategoryRule[]>(this.apiUrl);
   }
 
-  createRule(data: CategoryRuleRequest): Observable<CategoryRule> {
-    return this.http.post<CategoryRule>(this.apiUrl, data);
+  createRule(data: CategoryRuleRequest): Observable<number> {
+    const userId = this.authService.user()?.id;
+    return this.http.post<number>(this.apiUrl, { ...data, userId });
   }
 
   previewApply(): Observable<RuleChangePreview[]> {

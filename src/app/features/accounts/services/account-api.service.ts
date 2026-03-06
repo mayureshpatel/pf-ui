@@ -2,7 +2,7 @@ import {inject, Injectable} from '@angular/core';
 import {HttpClient} from '@angular/common/http';
 import {Observable} from 'rxjs';
 import {environment} from '@env';
-import {Account, AccountType} from '@models/account.model';
+import {Account, AccountFormData, AccountType} from '@models/account.model';
 
 @Injectable({
   providedIn: 'root'
@@ -12,56 +12,40 @@ export class AccountApiService {
   private readonly apiUrl = `${environment.apiUrl}/accounts`;
   private readonly accountTypeApiUrl = `${environment.apiUrl}/account-types`;
 
-  /**
-   * Gets all accounts from the api for the current user.
-   * @returns the accounts
-   */
   getAccounts(): Observable<Account[]> {
     return this.http.get<Account[]>(this.apiUrl);
   }
 
-  /**
-   * Creates a new account for the current user.
-   * @param account the account to create
-   * @returns the created account
-   */
-  create(account: Account): Observable<Account> {
-    return this.http.post<Account>(this.apiUrl, account);
+  create(data: AccountFormData): Observable<number> {
+    return this.http.post<number>(this.apiUrl, {
+      name: data.accountName,
+      type: data.accountType!.code,
+      startingBalance: data.currentBalance,
+      currencyCode: 'USD',
+      bankName: data.bankName ?? undefined
+    });
   }
 
-  /**
-   * Updates an existing account for the current user.
-   * @param id the id of the account to update
-   * @param account the account to update
-   * @returns the updated account
-   */
-  update(id: number, account: Account): Observable<Account> {
-    return this.http.put<Account>(`${this.apiUrl}/${id}`, account);
+  update(id: number, data: AccountFormData, version: number): Observable<number> {
+    return this.http.put<number>(this.apiUrl, {
+      id,
+      name: data.accountName,
+      type: data.accountType!.code,
+      currencyCode: 'USD',
+      bankName: data.bankName ?? undefined,
+      version
+    });
   }
 
-  /**
-   * Reconciles an account.
-   * @param id the id of the account to reconcile
-   * @param targetBalance the target balance
-   * @returns the reconciled account
-   */
-  reconcile(id: number, targetBalance: number): Observable<Account> {
-    return this.http.post<Account>(`${this.apiUrl}/${id}/reconcile`, {targetBalance});
+  reconcile(accountId: number, newBalance: number, version: number): Observable<number> {
+    return this.http.post<number>(`${this.apiUrl}/reconcile`, {accountId, newBalance, version});
   }
 
-  /**
-   * Deletes an account.
-   * @param id the id of the account to delete
-   */
   delete(id: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
 
-  /**
-   * Gets the account types.
-   * @returns the account types.
-   */
   getAccountTypes(): Observable<AccountType[]> {
-    return this.http.get<AccountType[]>(`${this.accountTypeApiUrl}`);
+    return this.http.get<AccountType[]>(this.accountTypeApiUrl);
   }
 }

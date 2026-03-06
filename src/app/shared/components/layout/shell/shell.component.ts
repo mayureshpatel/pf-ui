@@ -37,6 +37,7 @@ export class ShellComponent {
     {label: 'Accounts', icon: 'pi pi-wallet', routerLink: '/accounts'},
     {label: 'Budgets', icon: 'pi pi-calendar', routerLink: '/budgets'},
     {label: 'Categories', icon: 'pi pi-tags', routerLink: '/categories'},
+    {label: 'Recurring', icon: 'pi pi-refresh', routerLink: '/recurring'},
     {label: 'Settings', icon: 'pi pi-cog', routerLink: '/settings'},
     {label: 'Reports', icon: 'pi pi-chart-bar', routerLink: '/reports'}
   ];

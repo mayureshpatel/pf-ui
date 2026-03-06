@@ -1,17 +1,8 @@
-import {
-  Component,
-  DestroyRef,
-  inject,
-  input,
-  InputSignal,
-  OnChanges,
-  output,
-  OutputEmitterRef,
-  signal,
-  WritableSignal
-} from '@angular/core';
+import {Component, DestroyRef, inject, input, InputSignal, OnChanges, output, OutputEmitterRef, signal, WritableSignal} from '@angular/core';
 import {CommonModule} from '@angular/common';
-import {FormsModule} from '@angular/forms';
+import {ReactiveFormsModule, FormGroup, FormControl, Validators} from '@angular/forms';
+import {finalize} from 'rxjs';
+import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {DialogModule} from 'primeng/dialog';
 import {ButtonModule} from 'primeng/button';
 import {Select, SelectModule} from 'primeng/select';
@@ -19,18 +10,15 @@ import {InputNumberModule} from 'primeng/inputnumber';
 import {MessageModule} from 'primeng/message';
 import {SelectItemGroup} from 'primeng/api';
 import {Category} from '@models/category.model';
-import {Budget} from '@models/budget.model';
 import {BudgetApiService} from '../../services/budget-api.service';
 import {ToastService} from '@core/services/toast.service';
-import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
-import {finalize} from 'rxjs';
 
 @Component({
   selector: 'app-budget-form-dialog',
   standalone: true,
   imports: [
     CommonModule,
-    FormsModule,
+    ReactiveFormsModule,
     DialogModule,
     ButtonModule,
     Select,
@@ -41,7 +29,6 @@ import {finalize} from 'rxjs';
   templateUrl: './budget-form-dialog.component.html'
 })
 export class BudgetFormDialogComponent implements OnChanges {
-  // injected services
   private readonly budgetApi = inject(BudgetApiService);
   private readonly toast = inject(ToastService);
   private readonly destroyRef: DestroyRef = inject(DestroyRef);
@@ -61,19 +48,22 @@ export class BudgetFormDialogComponent implements OnChanges {
   errorMessage: WritableSignal<string | null> = signal(null);
   categoryGroups: WritableSignal<SelectItemGroup[]> = signal<SelectItemGroup[]>([]);
 
-  selectedCategoryId: number | null = null;
-  amount: number | null = null;
+  form = new FormGroup({
+    categoryId: new FormControl<number | null>(null, { validators: [Validators.required] }),
+    amount: new FormControl<number | null>(null, { validators: [Validators.required, Validators.min(0)] })
+  });
 
   ngOnChanges(): void {
     if (this.visible()) {
       this.categoryGroups.set(this.groupCategories(this.categories()));
+      this.form.reset();
+      this.errorMessage.set(null);
     }
   }
 
   private groupCategories(categories: Category[]): SelectItemGroup[] {
-    // group categories by parent
-    let parents: Category[] = [];
-    let children: Category[] = [];
+    const parents: Category[] = [];
+    const children: Category[] = [];
 
     categories.forEach((category: Category): void => {
       if (category.parent) {
@@ -81,32 +71,23 @@ export class BudgetFormDialogComponent implements OnChanges {
       } else {
         parents.push(category);
       }
-    })
+    });
 
     const groups: SelectItemGroup[] = [];
 
-    // Add parent categories as their own group
     if (parents.length > 0) {
       groups.push({
         label: 'Parent Categories',
-        items: parents.map((parentCategory: Category) => ({
-          label: parentCategory.name,
-          value: parentCategory.id
-        }))
+        items: parents.map((p: Category) => ({ label: p.name, value: p.id }))
       });
     }
 
-    // add children grouped by parent
     parents.forEach((parentCategory: Category): void => {
-      const childrenCategories: Category[] = children.filter((childCategory: Category): boolean => childCategory.parent.id === parentCategory.id);
-
+      const childrenCategories = children.filter((c: Category) => c.parent?.id === parentCategory.id);
       if (childrenCategories.length > 0) {
         groups.push({
           label: parentCategory.name,
-          items: childrenCategories.map((childCategory: Category) => ({
-            label: childCategory.name,
-            value: childCategory.id
-          }))
+          items: childrenCategories.map((c: Category) => ({ label: c.name, value: c.id }))
         });
       }
     });
@@ -116,36 +97,30 @@ export class BudgetFormDialogComponent implements OnChanges {
 
   onHide(): void {
     this.visibleChange.emit(false);
-    this.resetForm();
+    this.form.reset();
+    this.errorMessage.set(null);
+    this.loading.set(false);
   }
 
   onSubmit(): void {
-    if (!this.selectedCategoryId || this.amount === null) {
-      this.errorMessage.set('Please select a category and amount');
-      return;
-    }
+    this.form.markAllAsTouched();
+    if (this.form.invalid || this.loading()) return;
 
-    let selectedCategory: Category | undefined = this.categories().find((category: Category): boolean => category.id === this.selectedCategoryId);
+    const { categoryId, amount } = this.form.getRawValue();
+    const selectedCategory = this.categories().find((c: Category) => c.id === categoryId);
     if (!selectedCategory) {
       this.errorMessage.set('Selected category does not exist');
       return;
     }
 
     this.loading.set(true);
-    this.budgetApi.setBudget({
-      category: selectedCategory,
-      amount: this.amount,
-      month: this.month(),
-      year: this.year()
-    } as Budget)
+    this.budgetApi.createBudget(categoryId!, amount!, this.month(), this.year())
       .pipe(
         takeUntilDestroyed(this.destroyRef),
-        finalize((): void => {
-          this.loading.set(false);
-        })
+        finalize((): void => this.loading.set(false))
       )
       .subscribe({
-        next: (): void => {
+        next: (_: number): void => {
           this.toast.success('Budget updated successfully');
           this.save.emit();
           this.onHide();
@@ -155,12 +130,5 @@ export class BudgetFormDialogComponent implements OnChanges {
           this.errorMessage.set(error.error?.detail || 'Failed to update budget');
         }
       });
-  }
-
-  resetForm(): void {
-    this.selectedCategoryId = null;
-    this.amount = null;
-    this.errorMessage.set(null);
-    this.loading.set(false);
   }
 }

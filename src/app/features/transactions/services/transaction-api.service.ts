@@ -5,6 +5,8 @@ import { environment } from '@env';
 import {
   Transaction,
   TransactionFilter,
+  TransactionCreateRequest,
+  TransactionUpdateRequest,
   PageRequest,
   PageResponse,
   TransferSuggestion, CategoryTransactionCount
@@ -43,12 +45,12 @@ export class TransactionApiService {
     return this.http.get<PageResponse<Transaction>>(this.apiUrl, { params });
   }
 
-  createTransaction(data: Transaction): Observable<Transaction> {
-    return this.http.post<Transaction>(this.apiUrl, data);
+  createTransaction(data: TransactionCreateRequest): Observable<number> {
+    return this.http.post<number>(this.apiUrl, data);
   }
 
-  updateTransaction(id: number, data: Transaction): Observable<Transaction> {
-    return this.http.put<Transaction>(`${this.apiUrl}/${id}`, data);
+  updateTransaction(data: TransactionUpdateRequest): Observable<number> {
+    return this.http.put<number>(this.apiUrl, data);
   }
 
   deleteTransaction(id: number): Observable<void> {
@@ -59,8 +61,8 @@ export class TransactionApiService {
     return this.http.request<void>('delete', `${this.apiUrl}/bulk`, { body: ids });
   }
 
-  bulkUpdateTransactions(updates: Transaction[]): Observable<Transaction[]> {
-    return this.http.patch<Transaction[]>(`${this.apiUrl}/bulk`, updates);
+  bulkUpdateTransactions(updates: TransactionUpdateRequest[]): Observable<number> {
+    return this.http.patch<number>(`${this.apiUrl}/bulk`, updates);
   }
 
   getTransferSuggestions(): Observable<TransferSuggestion[]> {

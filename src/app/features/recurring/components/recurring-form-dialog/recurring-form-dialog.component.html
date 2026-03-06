@@ -1,0 +1,161 @@
+<p-dialog
+  [header]="isEditMode ? 'Edit Recurring Transaction' : 'New Recurring Transaction'"
+  [modal]="true"
+  [visible]="visible()"
+  (visibleChange)="onHide()"
+  [style]="{ width: '500px' }"
+  [draggable]="false"
+  [resizable]="false">
+
+  <form [formGroup]="form" class="flex flex-col gap-4">
+    @if (errorMessage()) {
+      <p-message severity="error" styleClass="w-full">{{ errorMessage() }}</p-message>
+    }
+
+    <!-- Account -->
+    <div class="flex flex-col gap-2">
+      <label for="accountId" class="font-medium text-color">
+        Account <span class="text-red-500">*</span>
+      </label>
+      <p-select
+        id="accountId"
+        formControlName="accountId"
+        [options]="accountOptions"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="Select account"
+        class="w-full"
+        appendTo="body"
+      />
+      @if (form.controls.accountId.invalid && form.controls.accountId.touched) {
+        <small class="text-red-500">Account is required</small>
+      }
+    </div>
+
+    <!-- Merchant -->
+    <div class="flex flex-col gap-2">
+      <label for="merchantId" class="font-medium text-color">
+        Merchant <span class="text-red-500">*</span>
+      </label>
+      <p-select
+        id="merchantId"
+        formControlName="merchantId"
+        [options]="merchantOptions"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="Select merchant"
+        class="w-full"
+        [filter]="true"
+        filterPlaceholder="Search merchants"
+        appendTo="body"
+      />
+      @if (form.controls.merchantId.invalid && form.controls.merchantId.touched) {
+        <small class="text-red-500">Merchant is required</small>
+      }
+    </div>
+
+    <!-- Amount -->
+    <div class="flex flex-col gap-2">
+      <label for="amount" class="font-medium text-color">
+        Amount <span class="text-red-500">*</span>
+      </label>
+      <p-inputNumber
+        id="amount"
+        formControlName="amount"
+        mode="currency"
+        currency="USD"
+        locale="en-US"
+        [minFractionDigits]="2"
+        [min]="0.01"
+        class="w-full"
+        inputStyleClass="w-full"
+      />
+      @if (form.controls.amount.invalid && form.controls.amount.touched) {
+        <small class="text-red-500">A valid amount is required</small>
+      }
+    </div>
+
+    <!-- Frequency -->
+    <div class="flex flex-col gap-2">
+      <label for="frequency" class="font-medium text-color">
+        Frequency <span class="text-red-500">*</span>
+      </label>
+      <p-select
+        id="frequency"
+        formControlName="frequency"
+        [options]="frequencyOptions"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="Select frequency"
+        class="w-full"
+        appendTo="body"
+      />
+      @if (form.controls.frequency.invalid && form.controls.frequency.touched) {
+        <small class="text-red-500">Frequency is required</small>
+      }
+    </div>
+
+    <!-- Next Date -->
+    <div class="flex flex-col gap-2">
+      <label for="nextDate" class="font-medium text-color">
+        Next Date <span class="text-red-500">*</span>
+      </label>
+      <p-datePicker
+        id="nextDate"
+        formControlName="nextDate"
+        dateFormat="mm/dd/yy"
+        placeholder="Select future date"
+        class="w-full"
+        appendTo="body"
+      />
+      @if (form.controls.nextDate.invalid && form.controls.nextDate.touched) {
+        @if (form.controls.nextDate.errors?.['required']) {
+          <small class="text-red-500">Next date is required</small>
+        } @else if (form.controls.nextDate.errors?.['notFuture']) {
+          <small class="text-red-500">Next date must be in the future</small>
+        }
+      }
+    </div>
+
+    <!-- Last Date (optional) -->
+    <div class="flex flex-col gap-2">
+      <label for="lastDate" class="font-medium text-color">Last Date (optional)</label>
+      <p-datePicker
+        id="lastDate"
+        formControlName="lastDate"
+        dateFormat="mm/dd/yy"
+        placeholder="Select past date"
+        class="w-full"
+        [showClear]="true"
+        appendTo="body"
+      />
+      @if (form.controls.lastDate.invalid && form.controls.lastDate.touched) {
+        <small class="text-red-500">Last date must be in the past</small>
+      }
+    </div>
+
+    <!-- Active Toggle -->
+    <div class="flex items-center gap-3">
+      <p-toggleSwitch formControlName="active" inputId="active" />
+      <label for="active" class="font-medium text-color cursor-pointer">Active</label>
+    </div>
+  </form>
+
+  <ng-template pTemplate="footer">
+    <p-button
+      label="Cancel"
+      icon="pi pi-times"
+      (onClick)="onHide()"
+      [text]="true"
+      severity="secondary"
+    />
+    <p-button
+      [label]="isEditMode ? 'Update' : 'Create'"
+      icon="pi pi-check"
+      (onClick)="onSubmit()"
+      [loading]="loading()"
+      [disabled]="loading()"
+      severity="primary"
+    />
+  </ng-template>
+</p-dialog>

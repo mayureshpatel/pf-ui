@@ -1,6 +1,6 @@
-import {Component, effect, input, InputSignal, output, OutputEmitterRef, signal, WritableSignal} from '@angular/core';
+import {Component, effect, inject, input, InputSignal, output, OutputEmitterRef, signal, WritableSignal} from '@angular/core';
 import {CommonModule} from '@angular/common';
-import {FormsModule} from '@angular/forms';
+import {ReactiveFormsModule, FormGroup, FormControl} from '@angular/forms';
 import {DialogModule} from 'primeng/dialog';
 import {ButtonModule} from 'primeng/button';
 import {InputTextModule} from 'primeng/inputtext';
@@ -26,7 +26,7 @@ export interface BulkEditData {
   standalone: true,
   imports: [
     CommonModule,
-    FormsModule,
+    ReactiveFormsModule,
     DialogModule,
     ButtonModule,
     InputTextModule,
@@ -36,6 +36,8 @@ export interface BulkEditData {
   templateUrl: './bulk-edit-dialog.component.html'
 })
 export class BulkEditDialogComponent {
+  private readonly categoryApi = inject(CategoryApiService);
+
   // input signals
   visible: InputSignal<boolean> = input.required<boolean>();
   transactions: InputSignal<Transaction[]> = input.required<Transaction[]>();
@@ -45,21 +47,20 @@ export class BulkEditDialogComponent {
   visibleChange: OutputEmitterRef<boolean> = output<boolean>();
   save: OutputEmitterRef<BulkEditData> = output<BulkEditData>();
 
-  // state
-  updateCategory: WritableSignal<boolean> = signal(false);
-  category: WritableSignal<Category | undefined> = signal<Category | undefined>(undefined);
-  updateVendor: WritableSignal<boolean> = signal(false);
-  merchant: WritableSignal<Merchant | undefined> = signal<Merchant | undefined>(undefined);
-  updateDescription: WritableSignal<boolean> = signal(false);
-  description: WritableSignal<string | undefined> = signal<string | undefined>(undefined);
+  form = new FormGroup({
+    updateCategory: new FormControl<boolean>(false, { nonNullable: true }),
+    category: new FormControl<Category | null>(null),
+    updateVendor: new FormControl<boolean>(false, { nonNullable: true }),
+    merchant: new FormControl<string>('', { nonNullable: true }),
+    updateDescription: new FormControl<boolean>(false, { nonNullable: true }),
+    description: new FormControl<string>('', { nonNullable: true })
+  });
 
   categoryGroups: WritableSignal<SelectItemGroup[]> = signal<SelectItemGroup[]>([]);
 
-  constructor(private readonly categoryApi: CategoryApiService) {
-    // Load categories on init
+  constructor() {
     this.loadCategories();
 
-    // Reset form when dialog visibility changes
     effect((): void => {
       if (!this.visible()) {
         this.resetForm();
@@ -74,7 +75,7 @@ export class BulkEditDialogComponent {
           label: g.groupLabel,
           items: g.items.map((c: Category) => ({
             label: c.name,
-            value: c.name
+            value: c
           }))
         }));
         this.categoryGroups.set(selectGroups);
@@ -91,13 +92,12 @@ export class BulkEditDialogComponent {
   }
 
   get isValid(): boolean {
-    const hasAtLeastOneField: boolean = this.updateCategory() || this.updateVendor() || this.updateDescription();
+    const v = this.form.getRawValue();
+    const hasAtLeastOneField = v.updateCategory || v.updateVendor || v.updateDescription;
     if (!hasAtLeastOneField) return false;
-
-    if (this.updateCategory() && !this.category()) return false;
-    if (this.updateVendor() && !this.merchant()) return false;
-    if (this.updateDescription() && !this.description()?.trim()) return false;
-
+    if (v.updateCategory && !v.category) return false;
+    if (v.updateVendor && !v.merchant?.trim()) return false;
+    if (v.updateDescription && !v.description?.trim()) return false;
     return true;
   }
 
@@ -108,24 +108,27 @@ export class BulkEditDialogComponent {
   onSave(): void {
     if (!this.isValid) return;
 
+    const v = this.form.getRawValue();
     const data: BulkEditData = {
-      updateCategory: this.updateCategory(),
-      category: this.category(),
-      updateMerchant: this.updateVendor(),
-      merchant: this.merchant(),
-      updateDescription: this.updateDescription(),
-      description: this.description()?.trim()
+      updateCategory: v.updateCategory,
+      category: v.category ?? undefined,
+      updateMerchant: v.updateVendor,
+      merchant: v.merchant ? { cleanName: v.merchant } as Merchant : undefined,
+      updateDescription: v.updateDescription,
+      description: v.description?.trim()
     };
 
     this.save.emit(data);
   }
 
   private resetForm(): void {
-    this.updateCategory.set(false);
-    this.category.set(undefined);
-    this.updateVendor.set(false);
-    this.merchant.set(undefined);
-    this.updateDescription.set(false);
-    this.description.set(undefined);
+    this.form.reset({
+      updateCategory: false,
+      category: null,
+      updateVendor: false,
+      merchant: '',
+      updateDescription: false,
+      description: ''
+    });
   }
 }

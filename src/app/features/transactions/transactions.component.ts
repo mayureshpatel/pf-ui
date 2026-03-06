@@ -12,7 +12,8 @@ import {
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {CommonModule} from '@angular/common';
 import {FormsModule} from '@angular/forms';
-import {ActivatedRoute, Params} from '@angular/router';
+import {ActivatedRoute, Params, Router} from '@angular/router';
+import {skip} from 'rxjs';
 import {ButtonModule} from 'primeng/button';
 import {TableModule} from 'primeng/table';
 import {CardModule} from 'primeng/card';
@@ -29,6 +30,8 @@ import {ContextMenuModule} from 'primeng/contextmenu';
 import {
   PageResponse,
   Transaction,
+  TransactionCreateRequest,
+  TransactionUpdateRequest,
   TransactionFilter,
   TransactionFormData,
   TransactionType
@@ -91,6 +94,7 @@ export class TransactionsComponent implements OnInit, OnDestroy {
   private readonly toast: ToastService = inject(ToastService);
   private readonly confirmationService: ConfirmationService = inject(ConfirmationService);
   private readonly route: ActivatedRoute = inject(ActivatedRoute);
+  private readonly router: Router = inject(Router);
   private readonly destroyRef: DestroyRef = inject(DestroyRef);
 
   // state
@@ -139,6 +143,9 @@ export class TransactionsComponent implements OnInit, OnDestroy {
   merchants: WritableSignal<Merchant[]> = signal([]);
   filteredVendors: WritableSignal<Merchant[]> = signal([]);
 
+  // guard to prevent double-load when we navigate internally
+  private skipNextQueryParamUpdate = false;
+
   // computed signals
   isEmpty: Signal<boolean> = computed((): boolean => this.transactions().length === 0 && !this.loading());
   allSelected: Signal<boolean> = computed((): boolean =>
@@ -185,7 +192,6 @@ export class TransactionsComponent implements OnInit, OnDestroy {
 
   accountOptions = computed(() => {
     const accounts: Account[] = this.accounts();
-
     return [
       {label: 'All Accounts', value: null},
       ...accounts.map((a: Account) => ({label: a.name, value: a.id}))
@@ -193,16 +199,22 @@ export class TransactionsComponent implements OnInit, OnDestroy {
   });
 
   ngOnInit(): void {
-    this.loadFilterState();
+    // Hydrate filter state from URL on initial load
+    this.hydrateFromParams(this.route.snapshot.queryParams);
 
+    // Handle external navigation (e.g., dashboard → /transactions?category=Food)
     this.route.queryParams
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        skip(1), // skip the initial emission, already handled via snapshot
+        takeUntilDestroyed(this.destroyRef)
+      )
       .subscribe((params: Params): void => {
-        if (params['category']) {
-          this.filterCategoryName.set(params['category']);
-          this.showAdvancedFilters.set(true);
-          this.saveFilterState();
+        if (this.skipNextQueryParamUpdate) {
+          this.skipNextQueryParamUpdate = false;
+          return;
         }
+        this.hydrateFromParams(params);
+        this.loadTransactions();
       });
 
     this.loadCategories();
@@ -212,13 +224,73 @@ export class TransactionsComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    // Explicitly clear all signals holding large data to allow garbage collection
     this.transactions.set([]);
     this.selectedTransactions.set([]);
     this.categories.set([]);
     this.accounts.set([]);
     this.filteredCategories.set([]);
     this.filteredVendors.set([]);
+  }
+
+  private hydrateFromParams(params: Params): void {
+    this.filterAccountId.set(params['accountId'] ? Number(params['accountId']) : null);
+    this.filterType.set((params['type'] as TransactionType) ?? null);
+    this.filterDescription.set(params['description'] ?? '');
+    this.filterMerchant.set(params['merchant'] ?? '');
+    this.filterCategoryName.set(params['categoryName'] ?? '');
+    this.filterMinAmount.set(params['minAmount'] != null ? Number(params['minAmount']) : null);
+    this.filterMaxAmount.set(params['maxAmount'] != null ? Number(params['maxAmount']) : null);
+    this.currentSort.set(params['sort'] ?? 'date,desc');
+    this.currentPage.set(params['page'] ? Number(params['page']) : 0);
+    this.pageSize.set(params['size'] ? Number(params['size']) : 20);
+
+    if (params['startDate'] && params['endDate']) {
+      this.filterDateRange.set([new Date(params['startDate']), new Date(params['endDate'])]);
+    } else {
+      this.filterDateRange.set(null);
+    }
+
+    if (this.hasAdvancedFilters()) {
+      this.showAdvancedFilters.set(true);
+    }
+  }
+
+  private updateUrlParams(): void {
+    const queryParams: Params = {};
+
+    const accountId = this.filterAccountId();
+    if (accountId !== null) queryParams['accountId'] = accountId;
+
+    const type = this.filterType();
+    if (type) queryParams['type'] = type;
+
+    const description = this.filterDescription();
+    if (description) queryParams['description'] = description;
+
+    const merchant = this.filterMerchant();
+    if (merchant) queryParams['merchant'] = merchant;
+
+    const categoryName = this.filterCategoryName();
+    if (categoryName) queryParams['categoryName'] = categoryName;
+
+    const minAmount = this.filterMinAmount();
+    if (minAmount !== null) queryParams['minAmount'] = minAmount;
+
+    const maxAmount = this.filterMaxAmount();
+    if (maxAmount !== null) queryParams['maxAmount'] = maxAmount;
+
+    const dateRange = this.filterDateRange();
+    if (dateRange?.length === 2 && dateRange[0] && dateRange[1]) {
+      queryParams['startDate'] = this.toISODate(dateRange[0]);
+      queryParams['endDate'] = this.toISODate(dateRange[1]);
+    }
+
+    if (this.currentPage() > 0) queryParams['page'] = this.currentPage();
+    if (this.pageSize() !== 20) queryParams['size'] = this.pageSize();
+    if (this.currentSort() !== 'date,desc') queryParams['sort'] = this.currentSort();
+
+    this.skipNextQueryParamUpdate = true;
+    this.router.navigate([], { queryParams, queryParamsHandling: 'replace', replaceUrl: true });
   }
 
   loadAccounts(): void {
@@ -279,8 +351,7 @@ export class TransactionsComponent implements OnInit, OnDestroy {
       filter.endDate = this.toISODate(dateRange[1]);
     }
 
-    // Save filter state to localStorage
-    this.saveFilterState();
+    this.updateUrlParams();
 
     this.transactionApi.getTransactions(filter, {
       page: this.currentPage(),
@@ -290,17 +361,12 @@ export class TransactionsComponent implements OnInit, OnDestroy {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (response: PageResponse<Transaction>): void => {
-          // Enrich transactions with account and category info
           const accountMap = new Map(this.accounts().map((a: Account) => [a.id, a]));
-          const categoryMap = new Map(this.categories().map((c: Category) => [c.id, c]));
 
           const enrichedTransactions = response.content.map((t: Transaction) => {
-            const category: Category | undefined = t.category ? categoryMap.get(t.category.id) : undefined;
-
             return {
               ...t,
-              accountName: accountMap.get(t.account.id) || undefined,
-              iconography: category?.iconography
+              accountName: accountMap.get(t.account.id) || undefined
             };
           });
 
@@ -311,7 +377,6 @@ export class TransactionsComponent implements OnInit, OnDestroy {
         },
         error: (error: any): void => {
           console.error('Failed to load transactions', error);
-
           this.toast.error('Failed to load transactions');
           this.loading.set(false);
         }
@@ -323,9 +388,8 @@ export class TransactionsComponent implements OnInit, OnDestroy {
     this.currentPage.set(page);
     this.pageSize.set(event.rows || 20);
 
-    // Handle sorting
     if (event.sortField) {
-      const direction: "asc" | "desc" = event.sortOrder === 1 ? 'asc' : 'desc';
+      const direction: 'asc' | 'desc' = event.sortOrder === 1 ? 'asc' : 'desc';
       this.currentSort.set(`${event.sortField},${direction}`);
     }
 
@@ -348,7 +412,6 @@ export class TransactionsComponent implements OnInit, OnDestroy {
   onCategorySearch(event: AutoCompleteCompleteEvent): void {
     const query: string = event.query.toLowerCase();
     const suggestions: string[] = this.categories().map((c: Category): string => c.name);
-
     this.filteredCategories.set(
       suggestions.filter(cat => cat.toLowerCase().includes(query))
     );
@@ -356,7 +419,6 @@ export class TransactionsComponent implements OnInit, OnDestroy {
 
   onVendorSearch(event: AutoCompleteCompleteEvent): void {
     const query: string = event.query.toLowerCase();
-
     this.filteredVendors.set(
       this.merchants().filter((v: Merchant): boolean => v.cleanName?.toLowerCase().includes(query))
     );
@@ -371,55 +433,10 @@ export class TransactionsComponent implements OnInit, OnDestroy {
     this.filterCategoryName.set('');
     this.filterMinAmount.set(null);
     this.filterMaxAmount.set(null);
-    localStorage.removeItem('pf_transaction_filters');
     this.onFilterChange();
   }
 
-  private saveFilterState(): void {
-    const filterState = {
-      accountId: this.filterAccountId(),
-      type: this.filterType(),
-      dateRange: this.filterDateRange(),
-      description: this.filterDescription(),
-      vendorName: this.filterMerchant(),
-      categoryName: this.filterCategoryName(),
-      minAmount: this.filterMinAmount(),
-      maxAmount: this.filterMaxAmount(),
-      sort: this.currentSort()
-    };
-    localStorage.setItem('pf_transaction_filters', JSON.stringify(filterState));
-  }
-
-  private loadFilterState(): void {
-    const saved: string | null = localStorage.getItem('pf_transaction_filters');
-
-    if (saved) {
-      try {
-        const state = JSON.parse(saved);
-        if (state.accountId) this.filterAccountId.set(state.accountId);
-        if (state.type) this.filterType.set(state.type);
-        if (state.dateRange) this.filterDateRange.set(state.dateRange.map((d: string): Date => new Date(d)));
-        if (state.description) this.filterDescription.set(state.description);
-        if (state.vendorName) this.filterMerchant.set(state.vendorName);
-        if (state.categoryName) this.filterCategoryName.set(state.categoryName);
-        if (state.minAmount !== null) this.filterMinAmount.set(state.minAmount);
-        if (state.maxAmount !== null) this.filterMaxAmount.set(state.maxAmount);
-        if (state.sort) this.currentSort.set(state.sort);
-
-        // Auto-expand advanced filters if any are active
-        if (this.hasAdvancedFilters()) {
-          this.showAdvancedFilters.set(true);
-        }
-      } catch (e) {
-        console.error('Error parsing transaction filter state', e);
-      }
-    }
-  }
-
-  private debounce<T extends (...args: any[]) => void>(
-    func: T,
-    wait: number
-  ): (...args: Parameters<T>) => void {
+  private debounce<T extends (...args: any[]) => void>(func: T, wait: number): (...args: Parameters<T>) => void {
     let timeout: ReturnType<typeof setTimeout> | null = null;
     return (...args: Parameters<T>): void => {
       if (timeout) clearTimeout(timeout);
@@ -455,33 +472,15 @@ export class TransactionsComponent implements OnInit, OnDestroy {
     this.loadTransactions();
   }
 
-  // Context Menu Actions
   prepareContextMenu(transaction: Transaction): void {
     this.selectedContextTransaction = transaction;
     this.contextMenuItems = [
-      {
-        label: 'Edit',
-        icon: 'pi pi-pencil',
-        command: () => this.openEditDialog(transaction)
-      },
-      {
-        label: 'Delete',
-        icon: 'pi pi-trash',
-        styleClass: 'text-red-500',
-        command: () => this.deleteTransaction(transaction)
-      },
-      {separator: true},
-      {
-        label: 'Mark as Transfer',
-        icon: 'pi pi-arrow-right-arrow-left',
-        command: () => this.markAsTransfer(transaction)
-      },
-      {separator: true},
-      {
-        label: 'Filter by Vendor',
-        icon: 'pi pi-search',
-        command: () => this.filterByVendor(transaction.merchant.cleanName)
-      }
+      { label: 'Edit', icon: 'pi pi-pencil', command: () => this.openEditDialog(transaction) },
+      { label: 'Delete', icon: 'pi pi-trash', styleClass: 'text-red-500', command: () => this.deleteTransaction(transaction) },
+      { separator: true },
+      { label: 'Mark as Transfer', icon: 'pi pi-arrow-right-arrow-left', command: () => this.markAsTransfer(transaction) },
+      { separator: true },
+      { label: 'Filter by Vendor', icon: 'pi pi-search', command: () => this.filterByVendor(transaction.merchant.cleanName) }
     ];
   }
 
@@ -499,7 +498,7 @@ export class TransactionsComponent implements OnInit, OnDestroy {
             },
             error: (error: any): void => {
               console.error('Failed to mark as transfer', error);
-              this.toast.error('Failed to update transaction')
+              this.toast.error('Failed to update transaction');
             }
           });
       }
@@ -518,24 +517,23 @@ export class TransactionsComponent implements OnInit, OnDestroy {
 
   onSave(formData: TransactionFormData): void {
     const transaction = this.selectedTransaction();
-    const account: Account = this.accounts().find((a: Account): boolean => a.id === formData.account)!;
-
     this.savingTransaction.set(true);
 
+    const transactionDate = `${formData.date}T00:00:00Z`;
+
     if (transaction) {
-      // Update existing transaction — spread existing to preserve fields not in the form
-      const payload: Transaction = {
-        ...transaction,
-        date: formData.date,
-        type: formData.type,
+      const resolvedMerchant = formData.merchant ?? transaction.merchant;
+      const payload: TransactionUpdateRequest = {
+        id: transaction.id,
         amount: formData.amount,
-        description: formData.description ?? null,
-        account,
-        category: formData.category ?? transaction.category,
-        merchant: formData.merchant ?? transaction.merchant
+        transactionDate,
+        description: formData.description ?? transaction.description ?? '',
+        type: formData.type,
+        categoryId: (formData.category ?? transaction.category)?.id ?? undefined,
+        merchantId: resolvedMerchant?.id && resolvedMerchant.id > 0 ? resolvedMerchant.id : undefined
       };
 
-      this.transactionApi.updateTransaction(transaction.id, payload)
+      this.transactionApi.updateTransaction(payload)
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({
           next: (): void => {
@@ -546,22 +544,19 @@ export class TransactionsComponent implements OnInit, OnDestroy {
           },
           error: (error: any): void => {
             console.error('Failed to update transaction', error);
-
             this.toast.error(error.error?.detail || 'Failed to update transaction');
             this.savingTransaction.set(false);
           }
         });
     } else {
-      // Create new transaction
-      const payload: Transaction = {
-        id: 0,
-        date: formData.date,
-        type: formData.type,
+      const payload: TransactionCreateRequest = {
+        accountId: formData.account,
         amount: formData.amount,
-        description: formData.description ?? null,
-        account,
-        category: formData.category!,
-        merchant: formData.merchant!
+        transactionDate,
+        description: formData.description ?? '',
+        type: formData.type,
+        categoryId: formData.category?.id ?? undefined,
+        merchantId: formData.merchant?.id && formData.merchant.id > 0 ? formData.merchant.id : undefined
       };
 
       this.transactionApi.createTransaction(payload)
@@ -575,7 +570,6 @@ export class TransactionsComponent implements OnInit, OnDestroy {
           },
           error: (error: any): void => {
             console.error('Failed to create transaction', error);
-
             this.toast.error(error.error?.detail || 'Failed to create transaction');
             this.savingTransaction.set(false);
           }
@@ -601,9 +595,7 @@ export class TransactionsComponent implements OnInit, OnDestroy {
             },
             error: (error: any): void => {
               console.error('Failed to delete transaction', error);
-
-              const message = error.error?.detail || 'Failed to delete transaction';
-              this.toast.error(message);
+              this.toast.error(error.error?.detail || 'Failed to delete transaction');
             }
           });
       }
@@ -612,7 +604,6 @@ export class TransactionsComponent implements OnInit, OnDestroy {
 
   bulkDelete(): void {
     const count: number = this.selectedTransactions().length;
-
     this.confirmationService.confirm({
       header: `Delete ${count} Transaction${count > 1 ? 's' : ''}?`,
       message: `This will permanently delete ${count} transaction${count > 1 ? 's' : ''}. This action cannot be undone.`,
@@ -644,22 +635,26 @@ export class TransactionsComponent implements OnInit, OnDestroy {
 
   onBulkSave(): void {
     this.savingBulkEdit.set(true);
-
-    // Build update DTOs by merging selected transactions with bulk edit data
-    const updates: Transaction[] = this.selectedTransactions();
-
+    const updates: TransactionUpdateRequest[] = this.selectedTransactions().map((t: Transaction) => ({
+      id: t.id,
+      amount: t.amount,
+      transactionDate: `${t.date}T00:00:00Z`,
+      description: t.description ?? '',
+      type: t.type,
+      categoryId: t.category?.id ?? undefined,
+      merchantId: t.merchant?.id ?? undefined
+    }));
     this.transactionApi.bulkUpdateTransactions(updates)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (updated: Transaction[]): void => {
-          this.toast.success(`${updated.length} transaction${updated.length > 1 ? 's' : ''} updated successfully`);
+        next: (count: number): void => {
+          this.toast.success(`${count} transaction${count !== 1 ? 's' : ''} updated successfully`);
           this.showBulkEditDialog.set(false);
           this.savingBulkEdit.set(false);
           this.loadTransactions();
         },
         error: (error: any): void => {
           console.error('Failed to update transactions', error);
-
           this.toast.error(error.error?.detail || 'Failed to update transactions');
           this.savingBulkEdit.set(false);
         }

@@ -1,19 +1,6 @@
-import {
-  Component,
-  computed,
-  inject,
-  input,
-  InputSignal,
-  model,
-  ModelSignal,
-  OnChanges,
-  output,
-  OutputEmitterRef,
-  signal,
-  WritableSignal
-} from '@angular/core';
-import {FormsModule} from '@angular/forms';
+import {Component, computed, inject, input, InputSignal, model, ModelSignal, OnChanges, output, OutputEmitterRef, signal, WritableSignal} from '@angular/core';
 import {CommonModule} from '@angular/common';
+import {ReactiveFormsModule, FormGroup, FormControl, Validators} from '@angular/forms';
 import {ButtonModule} from 'primeng/button';
 import {InputTextModule} from 'primeng/inputtext';
 import {Select} from 'primeng/select';
@@ -29,7 +16,7 @@ import {DrawerComponent} from '@shared/components/drawer/drawer.component';
   selector: 'app-category-form-drawer',
   imports: [
     CommonModule,
-    FormsModule,
+    ReactiveFormsModule,
     ButtonModule,
     InputTextModule,
     Select,
@@ -41,7 +28,6 @@ import {DrawerComponent} from '@shared/components/drawer/drawer.component';
   templateUrl: './category-form-drawer.component.html'
 })
 export class CategoryFormDrawerComponent implements OnChanges {
-  // injected services
   private readonly categoryApi: CategoryApiService = inject(CategoryApiService);
 
   // input signals
@@ -52,13 +38,13 @@ export class CategoryFormDrawerComponent implements OnChanges {
   // output signals
   save: OutputEmitterRef<any> = output<any>();
 
-  formData = {
-    name: '',
-    color: '',
-    icon: '',
-    type: undefined as CategoryType | undefined,
-    parentId: undefined as number | undefined
-  };
+  form = new FormGroup({
+    name: new FormControl<string>('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(50)] }),
+    color: new FormControl<string>('', { nonNullable: true }),
+    icon: new FormControl<string>('', { nonNullable: true }),
+    type: new FormControl<CategoryType | null>(null),
+    parentId: new FormControl<number | null>(null)
+  });
 
   // signals
   errorMessage: WritableSignal<string | null> = signal(null);
@@ -74,35 +60,40 @@ export class CategoryFormDrawerComponent implements OnChanges {
   ];
 
   typeOptions = [
-    {label: 'Expense', value: CategoryType.EXPENSE},
-    {label: 'Income', value: CategoryType.INCOME},
-    {label: 'Both', value: CategoryType.BOTH}
+    { label: 'Expense', value: CategoryType.EXPENSE },
+    { label: 'Income', value: CategoryType.INCOME },
+    { label: 'Both', value: CategoryType.BOTH }
   ];
 
   parentOptions = computed(() => {
-    const currentId: number | undefined = this.category()?.id;
-
+    const currentId = this.category()?.id;
     return this.allCategories()
-      .filter((category: Category): boolean => category.id !== currentId && !category.parent)
-      .map((category: Category) => ({label: category.name, value: category.id}));
+      .filter((c: Category): boolean => c.id !== currentId && !c.parent)
+      .map((c: Category) => ({ label: c.name, value: c.id }));
   });
 
+  get previewColor(): string {
+    const color = this.form.value.color;
+    if (color) return color;
+    const name = this.form.value.name;
+    return name ? getCategoryColor(name) : 'bg-gray-300';
+  }
+
   ngOnChanges(): void {
-    const category: Category | null = this.category();
-
+    const category = this.category();
     if (category) {
-      this.formData = {
+      this.form.patchValue({
         name: category.name,
-        color: category.iconography.color || getCategoryColor(category.name),
-        icon: category.iconography.icon || '',
-        type: category.type || CategoryType.EXPENSE,
-        parentId: category.parent.id
-      };
+        color: category.color || getCategoryColor(category.name),
+        icon: category.icon || '',
+        type: category.categoryType || CategoryType.EXPENSE,
+        parentId: category.parent?.id ?? null
+      });
     } else {
-      this.resetForm();
+      this.form.reset({ name: '', color: '', icon: '', type: null, parentId: null });
     }
+    this.errorMessage.set(null);
 
-    // load all categories for duplicate check & parent dropdown
     if (this.visible()) {
       this.loadCategories();
     }
@@ -111,14 +102,14 @@ export class CategoryFormDrawerComponent implements OnChanges {
   loadCategories(): void {
     this.categoryApi.getCategories().subscribe({
       next: (categories: Category[]): void => this.allCategories.set(categories),
-      error: (): void => {
-      }
+      error: (): void => {}
     });
   }
 
   onHide(): void {
     setTimeout((): void => {
-      this.resetForm();
+      this.form.reset({ name: '', color: '', icon: '', type: null, parentId: null });
+      this.errorMessage.set(null);
     }, 300);
   }
 
@@ -132,67 +123,44 @@ export class CategoryFormDrawerComponent implements OnChanges {
   }
 
   onSubmit(): void {
+    this.form.markAllAsTouched();
     this.errorMessage.set(null);
 
-    if (!this.formData.name || this.formData.name.trim().length === 0) {
+    if (this.form.invalid) return;
+
+    const { name, color, icon, type, parentId } = this.form.getRawValue();
+    const trimmedName = name.trim();
+
+    if (!trimmedName) {
       this.errorMessage.set('Please enter a category name');
       return;
     }
 
-    if (this.formData.name.length > 50) {
-      this.errorMessage.set('Category name must be 50 characters or less');
-      return;
-    }
-
-    // check for duplicate names within the same parent only
-    const currentCategory: Category | null = this.category();
-
-    const isDuplicate: boolean = this.allCategories().some(
-      (category: Category): boolean => category.name.toLowerCase() === this.formData.name.trim().toLowerCase()
-        && (category.parent.id ?? null) === (this.formData.parentId ?? null)
-        && (category.id !== currentCategory?.id)
+    const currentCategory = this.category();
+    const isDuplicate = this.allCategories().some(
+      (c: Category): boolean =>
+        c.name.toLowerCase() === trimmedName.toLowerCase() &&
+        (c.parent?.id ?? null) === (parentId ?? null) &&
+        c.id !== currentCategory?.id
     );
 
     if (isDuplicate) {
-      const parentContext = this.formData.parentId
-        ? 'under the same parent category'
-        : 'as a top-level category';
+      const parentContext = parentId ? 'under the same parent category' : 'as a top-level category';
       this.errorMessage.set(`A category with this name already exists ${parentContext}`);
       return;
     }
 
-    // if no color selected, use hash logic
-    let colorToSave: string = this.formData.color;
-    if (!colorToSave) {
-      colorToSave = getCategoryColor(this.formData.name);
-    }
+    const colorToSave = color || getCategoryColor(trimmedName);
 
-    this.save.emit({
-      name: this.formData.name.trim(),
-      color: colorToSave,
-      icon: this.formData.icon,
-      type: this.formData.type,
-      parentId: this.formData.parentId
-    });
-  }
-
-  resetForm(): void {
-    this.formData = {
-      name: '',
-      color: '',
-      icon: '',
-      type: undefined,
-      parentId: undefined
-    };
-    this.errorMessage.set(null);
+    this.save.emit({ name: trimmedName, color: colorToSave, icon, type, parentId });
   }
 
   selectColor(color: string): void {
-    this.formData.color = color;
+    this.form.patchValue({ color });
   }
 
   selectIcon(icon: string): void {
-    this.formData.icon = icon;
+    this.form.patchValue({ icon });
   }
 
   get isEditMode(): boolean {
@@ -205,12 +173,5 @@ export class CategoryFormDrawerComponent implements OnChanges {
 
   get drawerIcon(): string {
     return this.isEditMode ? 'pi-tag' : 'pi-plus';
-  }
-
-  get previewColor(): string {
-    if (this.formData.color) {
-      return this.formData.color;
-    }
-    return this.formData.name ? getCategoryColor(this.formData.name) : 'bg-gray-300';
   }
 }

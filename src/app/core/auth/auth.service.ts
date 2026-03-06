@@ -90,31 +90,28 @@ export class AuthService {
     const token: string | null = this.storage.getToken();
     if (!token) return null;
 
-    try {
-      const payload = this.decodeToken(token);
-      if (this.isTokenExpired(payload)) {
-        this.storage.clearToken();
-        return null;
-      }
-      return {
-        id: payload.userId,
-        username: payload.sub,
-        email: payload.email
-      };
-    } catch {
+    const payload = this.decodeToken(token);
+    if (!payload || this.isTokenExpired(payload)) {
       this.storage.clearToken();
       return null;
     }
+    return {
+      id: payload.userId,
+      username: payload.sub,
+      email: payload.email
+    };
   }
 
-  private decodeToken(token: string): JwtPayload {
-    const parts: string[] = token.split('.');
-    if (parts.length !== 3) {
-      throw new Error('Invalid token format');
+  private decodeToken(token: string): JwtPayload | null {
+    try {
+      const parts: string[] = token.split('.');
+      if (parts.length !== 3) return null;
+      const payload: string = parts[1];
+      const decoded: string = atob(payload.replaceAll('-', '+').replaceAll('_', '/'));
+      return JSON.parse(decoded);
+    } catch {
+      return null;
     }
-    const payload: string = parts[1];
-    const decoded: string = atob(payload.replaceAll('-', '+').replaceAll('_', '/'));
-    return JSON.parse(decoded);
   }
 
   private isTokenExpired(payload: JwtPayload): boolean {

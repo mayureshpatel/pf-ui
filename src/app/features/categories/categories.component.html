@@ -66,10 +66,10 @@
               <td>
                 <div
                   [class]="getDisplayColor(categoryViewModel) + ' w-8 h-8 rounded-full ml-4 flex items-center justify-center text-white cursor-help'"
-                  [pTooltip]="getIconLabel(categoryViewModel.iconography.icon)"
+                  [pTooltip]="getIconLabel(categoryViewModel.icon)"
                   tooltipPosition="top">
-                  @if (categoryViewModel.iconography.icon) {
-                    <i [class]="'pi ' + categoryViewModel.iconography.icon + ' text-sm'"></i>
+                  @if (categoryViewModel.icon) {
+                    <i [class]="'pi ' + categoryViewModel.icon + ' text-sm'"></i>
                   }
                 </div>
               </td>

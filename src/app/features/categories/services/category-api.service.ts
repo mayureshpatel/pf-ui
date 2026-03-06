@@ -4,12 +4,14 @@ import { map, Observable } from 'rxjs';
 import { environment } from '@env';
 import { Category, CategoryFormData, CategoryGroup } from '@models/category.model';
 import {Merchant} from '@models/merchant.model';
+import {AuthService} from '@core/auth/auth.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class CategoryApiService {
   private readonly http: HttpClient = inject(HttpClient);
+  private readonly authService: AuthService = inject(AuthService);
   private readonly apiUrl = `${environment.apiUrl}/categories`;
   private readonly transactionApiUrl = `${environment.apiUrl}/transactions`;
 
@@ -44,12 +46,14 @@ export class CategoryApiService {
     return this.http.get<Merchant[]>(`${this.transactionApiUrl}/existing-merchants`);
   }
 
-  createCategory(data: CategoryFormData): Observable<Category> {
-    return this.http.post<Category>(this.apiUrl, data);
+  createCategory(data: CategoryFormData): Observable<number> {
+    const userId = this.authService.user()?.id;
+    return this.http.post<number>(this.apiUrl, { ...data, userId });
   }
 
-  updateCategory(id: number, data: CategoryFormData): Observable<Category> {
-    return this.http.put<Category>(`${this.apiUrl}/${id}`, data);
+  updateCategory(id: number, data: CategoryFormData): Observable<number> {
+    const userId = this.authService.user()?.id;
+    return this.http.put<number>(this.apiUrl, { ...data, id, userId });
   }
 
   deleteCategory(id: number): Observable<void> {

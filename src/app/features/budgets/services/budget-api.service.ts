@@ -3,12 +3,14 @@ import {HttpClient, HttpParams} from '@angular/common/http';
 import {Observable} from 'rxjs';
 import {environment} from '@env';
 import {Budget, BudgetStatus} from '@models/budget.model';
+import {AuthService} from '@core/auth/auth.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class BudgetApiService {
   private readonly http: HttpClient = inject(HttpClient);
+  private readonly authService: AuthService = inject(AuthService);
   private readonly apiUrl = `${environment.apiUrl}/budgets`;
 
   getBudgets(month: number, year: number): Observable<Budget[]> {
@@ -29,8 +31,9 @@ export class BudgetApiService {
     return this.http.get<Budget[]>(`${this.apiUrl}/all`);
   }
 
-  setBudget(data: Budget): Observable<Budget> {
-    return this.http.post<Budget>(this.apiUrl, data);
+  createBudget(categoryId: number, amount: number, month: number, year: number): Observable<number> {
+    const userId = this.authService.user()?.id;
+    return this.http.post<number>(this.apiUrl, { userId, categoryId, amount, month, year });
   }
 
   deleteBudget(id: number): Observable<void> {

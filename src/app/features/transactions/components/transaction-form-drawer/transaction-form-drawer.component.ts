@@ -1,20 +1,6 @@
-import {
-  Component,
-  computed,
-  inject,
-  input,
-  InputSignal,
-  model,
-  ModelSignal,
-  OnChanges,
-  OnInit,
-  output,
-  OutputEmitterRef,
-  signal,
-  WritableSignal
-} from '@angular/core';
-import {FormsModule} from '@angular/forms';
+import {Component, computed, inject, input, InputSignal, model, ModelSignal, OnChanges, output, OutputEmitterRef, signal, WritableSignal} from '@angular/core';
 import {CommonModule} from '@angular/common';
+import {ReactiveFormsModule, FormGroup, FormControl, Validators} from '@angular/forms';
 import {ButtonModule} from 'primeng/button';
 import {InputTextModule} from 'primeng/inputtext';
 import {Select, SelectModule} from 'primeng/select';
@@ -26,6 +12,7 @@ import {DividerModule} from 'primeng/divider';
 import {Transaction, TransactionFormData, TransactionType} from '@models/transaction.model';
 import {Account} from '@models/account.model';
 import {Category, CategoryGroup, CategoryType} from '@models/category.model';
+import {Merchant} from '@models/merchant.model';
 import {TRANSACTION_TYPE_INFO} from '@shared/utils/transaction.utils';
 import {CategoryApiService} from '@features/categories/services/category-api.service';
 import {MessageService} from 'primeng/api';
@@ -40,7 +27,7 @@ interface AccountOption {
   selector: 'app-transaction-form-drawer',
   imports: [
     CommonModule,
-    FormsModule,
+    ReactiveFormsModule,
     ButtonModule,
     InputTextModule,
     Select,
@@ -54,8 +41,7 @@ interface AccountOption {
   ],
   templateUrl: './transaction-form-drawer.component.html'
 })
-export class TransactionFormDrawerComponent implements OnChanges, OnInit {
-  // injected services
+export class TransactionFormDrawerComponent implements OnChanges {
   private readonly categoryApi: CategoryApiService = inject(CategoryApiService);
   private readonly messageService: MessageService = inject(MessageService);
 
@@ -68,25 +54,27 @@ export class TransactionFormDrawerComponent implements OnChanges, OnInit {
   // output signals
   save: OutputEmitterRef<TransactionFormData> = output<TransactionFormData>();
 
-  formData: TransactionFormData = {
-    date: this.getTodayISO(),
-    type: TransactionType.EXPENSE,
-    description: '',
-    account: 0,
-    amount: 0
-  };
+  form = new FormGroup({
+    type: new FormControl<TransactionType>(TransactionType.EXPENSE, { nonNullable: true }),
+    date: new FormControl<Date>(new Date(), { nonNullable: true, validators: [Validators.required] }),
+    account: new FormControl<number | null>(null, { validators: [Validators.required] }),
+    amount: new FormControl<number | null>(null, { validators: [Validators.required, Validators.min(0.01)] }),
+    description: new FormControl<string>('', { nonNullable: true, validators: [Validators.maxLength(255)] }),
+    merchantName: new FormControl<string>('', { nonNullable: true, validators: [Validators.maxLength(100)] }),
+    category: new FormControl<Category | null>(null)
+  });
 
   // state
-  formDate: Date = new Date();
   errorMessage: WritableSignal<string | null> = signal(null);
   categoryGroups: WritableSignal<CategoryGroup[]> = signal([]);
+
+  private originalMerchant: Merchant | undefined = undefined;
 
   TransactionType = TransactionType;
   transactionTypeInfo = TRANSACTION_TYPE_INFO;
 
-  // computed signals
   filteredCategoryGroups = computed(() => {
-    const type: TransactionType = this.formData.type;
+    const type: TransactionType = this.form.value.type ?? TransactionType.EXPENSE;
     const groups: CategoryGroup[] = this.categoryGroups();
 
     return groups
@@ -95,108 +83,120 @@ export class TransactionFormDrawerComponent implements OnChanges, OnInit {
         value: group.groupId,
         items: group.items
           .filter((category: Category): boolean => {
-            if (!category.type || category.type === CategoryType.BOTH) return true;
-            if (type === TransactionType.INCOME) return category.type === CategoryType.INCOME;
-            if (type === TransactionType.EXPENSE) return category.type === CategoryType.EXPENSE;
+            if (!category.categoryType || category.categoryType === CategoryType.BOTH) return true;
+            if (type === TransactionType.INCOME) return category.categoryType === CategoryType.INCOME;
+            if (type === TransactionType.EXPENSE) return category.categoryType === CategoryType.EXPENSE;
             return true;
           })
           .map((category: Category) => ({
             label: category.name,
-            value: category.id,
-            iconography: category.iconography
+            value: category,
+            icon: category.icon,
+            color: category.color
           }))
       }))
       .filter(group => group.items.length > 0);
   });
 
-  accountOptions = (): AccountOption[] => {
-    return this.accounts().map((a: Account) => ({
-      label: a.name,
-      value: a.id
-    }));
-  };
+  accountOptions = computed((): AccountOption[] =>
+    this.accounts().map((a: Account) => ({ label: a.name, value: a.id }))
+  );
 
-  ngOnInit(): void {
+  ngOnChanges(): void {
     this.loadCategories();
+    const txn = this.transaction();
+
+    if (txn) {
+      this.originalMerchant = txn.merchant;
+      this.form.patchValue({
+        type: txn.type,
+        date: new Date(txn.date),
+        account: txn.account.id,
+        amount: Math.abs(txn.amount),
+        description: txn.description || '',
+        merchantName: txn.merchant?.cleanName || '',
+        category: txn.category || null
+      });
+    } else {
+      this.originalMerchant = undefined;
+      this.form.reset({
+        type: TransactionType.EXPENSE,
+        date: new Date(),
+        account: this.accounts().length > 0 ? this.accounts()[0].id : null,
+        amount: null,
+        description: '',
+        merchantName: '',
+        category: null
+      });
+    }
+    this.errorMessage.set(null);
   }
 
   loadCategories(): void {
     this.categoryApi.getGroupedCategories().subscribe({
       next: (groups: CategoryGroup[]): void => this.categoryGroups.set(groups),
       error: (): void => {
-        this.messageService.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: 'Failed to load categories'
-        });
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load categories' });
       }
     });
   }
 
-  ngOnChanges(): void {
-    const txn: Transaction | null = this.transaction();
-
-    if (txn) {
-      this.formData = {
-        id: txn.id,
-        date: txn.date,
-        type: txn.type,
-        account: txn.account.id,
-        amount: Math.abs(txn.amount),
-        description: txn.description || undefined,
-        merchant: txn.merchant || undefined,
-        category: txn.category || undefined
-      };
-      this.formDate = new Date(txn.date);
-    } else {
-      this.resetForm();
-    }
-  }
-
   onHide(): void {
     setTimeout((): void => {
-      this.resetForm();
+      this.form.reset({
+        type: TransactionType.EXPENSE,
+        date: new Date(),
+        account: this.accounts().length > 0 ? this.accounts()[0].id : null,
+        amount: null,
+        description: '',
+        merchantName: '',
+        category: null
+      });
+      this.errorMessage.set(null);
+      this.originalMerchant = undefined;
     }, 300);
   }
 
   onSubmit(): void {
+    this.form.markAllAsTouched();
     this.errorMessage.set(null);
 
-    // Validate required fields
-    if (!this.formData.date || !this.formData.type || !this.formData.account || this.formData.amount <= 0) {
+    if (this.form.invalid) {
       this.errorMessage.set('Please fill in all required fields');
       return;
     }
 
-    // Validate date is not in future
-    const selectedDate = new Date(this.formData.date);
+    const { type, date, account, amount, description, merchantName, category } = this.form.getRawValue();
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    if (selectedDate > today) {
+    if (date > today) {
       this.errorMessage.set('Transaction date cannot be in the future');
       return;
     }
 
-    this.save.emit(this.formData);
-  }
-
-  onDateChange(event: any): void {
-    if (event) {
-      this.formData.date = this.toISODate(event);
+    // Resolve merchant: use original if name unchanged, otherwise create partial merchant
+    let merchant: Merchant | undefined;
+    if (merchantName.trim()) {
+      merchant = this.originalMerchant?.cleanName === merchantName.trim()
+        ? this.originalMerchant
+        : { id: 0, user: null as any, originalName: merchantName.trim(), cleanName: merchantName.trim() };
+    } else {
+      merchant = this.originalMerchant;
     }
-  }
 
-  resetForm(): void {
-    const todayISO: string = this.getTodayISO();
-    this.formData = {
-      date: todayISO,
-      type: TransactionType.EXPENSE,
-      description: '',
-      account: this.accounts().length > 0 ? this.accounts()[0].id : 0,
-      amount: 0
+    const formData: TransactionFormData = {
+      id: this.transaction()?.id,
+      date: this.toISODate(date),
+      type: type!,
+      account: account!,
+      amount: amount!,
+      description: description || undefined,
+      merchant,
+      category: category ?? undefined
     };
-    this.formDate = new Date();
-    this.errorMessage.set(null);
+
+    this.save.emit(formData);
   }
 
   get isEditMode(): boolean {
@@ -213,10 +213,6 @@ export class TransactionFormDrawerComponent implements OnChanges, OnInit {
 
   get maxDate(): Date {
     return new Date();
-  }
-
-  private getTodayISO(): string {
-    return new Date().toISOString().split('T')[0];
   }
 
   private toISODate(date: Date): string {

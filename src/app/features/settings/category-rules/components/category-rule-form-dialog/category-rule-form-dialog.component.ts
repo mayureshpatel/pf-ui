@@ -1,17 +1,7 @@
-import {
-  Component,
-  inject,
-  input,
-  InputSignal,
-  OnChanges,
-  output,
-  OutputEmitterRef,
-  signal,
-  SimpleChanges,
-  WritableSignal
-} from '@angular/core';
+import {Component, inject, input, InputSignal, OnChanges, output, OutputEmitterRef, signal, SimpleChanges, WritableSignal} from '@angular/core';
 import {CommonModule} from '@angular/common';
-import {FormsModule} from '@angular/forms';
+import {ReactiveFormsModule, FormGroup, FormControl, Validators} from '@angular/forms';
+import {finalize} from 'rxjs';
 import {DialogModule} from 'primeng/dialog';
 import {ButtonModule} from 'primeng/button';
 import {InputTextModule} from 'primeng/inputtext';
@@ -21,15 +11,14 @@ import {MessageModule} from 'primeng/message';
 import {CategoryRuleApiService} from '../../services/category-rule-api.service';
 import {CategoryApiService} from '@features/categories/services/category-api.service';
 import {ToastService} from '@core/services/toast.service';
-import {CategoryGroup} from '@models/category.model';
-import {CategoryRuleRequest} from '@models/category-rule.model';
+import {Category, CategoryGroup} from '@models/category.model';
 
 @Component({
   selector: 'app-category-rule-form-dialog',
   standalone: true,
   imports: [
     CommonModule,
-    FormsModule,
+    ReactiveFormsModule,
     DialogModule,
     ButtonModule,
     InputTextModule,
@@ -40,7 +29,6 @@ import {CategoryRuleRequest} from '@models/category-rule.model';
   templateUrl: './category-rule-form-dialog.component.html'
 })
 export class CategoryRuleFormDialogComponent implements OnChanges {
-  // injected services
   private readonly api: CategoryRuleApiService = inject(CategoryRuleApiService);
   private readonly categoryApi: CategoryApiService = inject(CategoryApiService);
   private readonly toast: ToastService = inject(ToastService);
@@ -57,15 +45,16 @@ export class CategoryRuleFormDialogComponent implements OnChanges {
   loading: WritableSignal<boolean> = signal(false);
   errorMessage: WritableSignal<string | null> = signal(null);
 
-  formData: CategoryRuleRequest = {
-    keyword: '',
-    category: undefined,
-    priority: 0
-  };
+  form = new FormGroup({
+    keyword: new FormControl<string>('', { nonNullable: true, validators: [Validators.required] }),
+    category: new FormControl<Category | null>(null, { validators: [Validators.required] }),
+    priority: new FormControl<number>(0, { nonNullable: true, validators: [Validators.min(0)] })
+  });
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['visible'] && this.visible()) {
-      this.resetForm();
+      this.form.reset({ keyword: '', category: null, priority: 0 });
+      this.errorMessage.set(null);
       this.loadCategories();
     }
   }
@@ -75,41 +64,38 @@ export class CategoryRuleFormDialogComponent implements OnChanges {
       next: (groups: CategoryGroup[]): void => this.categoryGroups.set(groups),
       error: (error: any): void => {
         console.error('Error loading categories:', error);
-        this.toast.error('Failed to load categories')
+        this.toast.error('Failed to load categories');
       }
     });
   }
 
   onHide(): void {
     this.visibleChange.emit(false);
-    this.resetForm();
+    this.form.reset({ keyword: '', category: null, priority: 0 });
+    this.errorMessage.set(null);
+    this.loading.set(false);
   }
 
   onSubmit(): void {
-    if (!this.formData.keyword || !this.formData.category) {
-      this.errorMessage.set('Keyword and Category are required');
-      return;
-    }
+    this.form.markAllAsTouched();
+    if (this.form.invalid || this.loading()) return;
+
+    const { keyword, category, priority } = this.form.getRawValue();
+    if (!category) return;
 
     this.loading.set(true);
-    this.api.createRule(this.formData).subscribe({
-      next: (): void => {
-        this.toast.success('Rule created successfully');
-        this.save.emit();
-        this.onHide();
-      },
-      error: (error: any): void => {
-        console.error('Error creating rule:', error);
-
-        this.errorMessage.set(error.error?.detail || 'Failed to create rule');
-        this.loading.set(false);
-      }
-    });
-  }
-
-  resetForm(): void {
-    this.formData = {keyword: '', category: undefined, priority: 0};
-    this.errorMessage.set(null);
-    this.loading.set(false);
+    this.api.createRule({ keyword, categoryId: category.id, priority })
+      .pipe(finalize(() => this.loading.set(false)))
+      .subscribe({
+        next: (): void => {
+          this.toast.success('Rule created successfully');
+          this.save.emit();
+          this.onHide();
+        },
+        error: (error: any): void => {
+          console.error('Error creating rule:', error);
+          this.errorMessage.set(error.error?.detail || 'Failed to create rule');
+        }
+      });
   }
 }

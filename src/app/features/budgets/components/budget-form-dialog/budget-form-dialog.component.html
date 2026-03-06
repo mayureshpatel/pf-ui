@@ -7,7 +7,7 @@
   [draggable]="false"
   [resizable]="false">
 
-  <form (ngSubmit)="onSubmit()" class="flex flex-col gap-4">
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-4">
     @if (errorMessage()) {
       <p-message severity="error" styleClass="w-full">
         {{ errorMessage() }}
@@ -19,8 +19,7 @@
       <label for="category" class="font-medium text-color">Category</label>
       <p-select
         id="category"
-        [(ngModel)]="selectedCategoryId"
-        name="category"
+        formControlName="categoryId"
         [options]="categoryGroups()"
         [group]="true"
         optionLabel="label"
@@ -29,14 +28,16 @@
         class="w-full"
         [filter]="true"
         filterPlaceholder="Search categories"
-        appendTo="body"
-        required>
+        appendTo="body">
         <ng-template let-group pTemplate="group">
           <div class="flex items-center gap-2 px-3 py-2 font-semibold text-sm">
             <span>{{ group.label }}</span>
           </div>
         </ng-template>
       </p-select>
+      @if (form.controls.categoryId.invalid && form.controls.categoryId.touched) {
+        <small class="text-red-500">Category is required</small>
+      }
     </div>
 
     <!-- Amount -->
@@ -44,14 +45,16 @@
       <label for="amount" class="font-medium text-color">Monthly Budget Amount</label>
       <p-inputNumber
         id="amount"
-        [(ngModel)]="amount"
-        name="amount"
+        formControlName="amount"
         mode="currency"
         currency="USD"
         [min]="0"
         placeholder="$0.00"
         class="w-full"
       />
+      @if (form.controls.amount.invalid && form.controls.amount.touched) {
+        <small class="text-red-500">A valid amount is required</small>
+      }
     </div>
 
     <p class="text-xs text-muted-color mt-2">
@@ -73,6 +76,7 @@
       icon="pi pi-check"
       (onClick)="onSubmit()"
       [loading]="loading()"
+      [disabled]="loading()"
       severity="primary"
     />
   </ng-template>

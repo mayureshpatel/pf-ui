@@ -181,7 +181,7 @@ export class DashboardComponent implements OnInit {
     const currentYear: number = this.currentDate.getFullYear();
     const years: YearOption[] = [];
 
-    for (let year: number = 2020; year <= currentYear + 1; year++) {
+    for (let year: number = currentYear - 5; year <= currentYear + 1; year++) {
       years.push({label: year.toString(), value: year});
     }
     this.yearOptions = years;

@@ -1,23 +1,12 @@
-import {
-  Component,
-  input,
-  InputSignal,
-  model,
-  ModelSignal,
-  OnChanges,
-  output,
-  OutputEmitterRef,
-  signal,
-  WritableSignal
-} from '@angular/core';
-import {FormsModule} from '@angular/forms';
+import {Component, input, InputSignal, model, ModelSignal, OnChanges, output, OutputEmitterRef, signal, WritableSignal} from '@angular/core';
 import {CommonModule} from '@angular/common';
+import {ReactiveFormsModule, FormGroup, FormControl, Validators} from '@angular/forms';
 import {ButtonModule} from 'primeng/button';
 import {InputTextModule} from 'primeng/inputtext';
 import {Select} from 'primeng/select';
 import {InputNumberModule} from 'primeng/inputnumber';
 import {MessageModule} from 'primeng/message';
-import {Account, AccountType, BankName} from '@models/account.model';
+import {Account, AccountFormData, AccountType, BankName} from '@models/account.model';
 import {DrawerComponent} from '@shared/components/drawer/drawer.component';
 import {ReconcileDialogComponent} from '../reconcile-dialog/reconcile-dialog.component';
 import {BankOption} from '@models/transaction.model';
@@ -26,7 +15,7 @@ import {BankOption} from '@models/transaction.model';
   selector: 'app-account-form-drawer',
   imports: [
     CommonModule,
-    FormsModule,
+    ReactiveFormsModule,
     ButtonModule,
     InputTextModule,
     Select,
@@ -45,89 +34,53 @@ export class AccountFormDrawerComponent implements OnChanges {
   saving: InputSignal<boolean> = input<boolean>(false);
 
   // output signals
-  save: OutputEmitterRef<any> = output<any>();
+  save: OutputEmitterRef<AccountFormData> = output<AccountFormData>();
 
   // signals
   errorMessage: WritableSignal<string | null> = signal(null);
   showReconcileDialog: WritableSignal<boolean> = signal(false);
-  selectedBank: WritableSignal<BankOption | undefined> = signal(undefined);
 
   bankOptions: BankOption[] = [
-    {
-      label: 'Standard CSV',
-      value: BankName.STANDARD,
-      description: 'Generic format (Date, Description, Amount, Type)'
-    },
-    {
-      label: 'Capital One',
-      value: BankName.CAPITAL_ONE,
-      description: 'Capital One bank export format'
-    },
-    {
-      label: 'Discover',
-      value: BankName.DISCOVER,
-      description: 'Discover credit card export format'
-    },
-    {
-      label: 'Synovus',
-      value: BankName.SYNOVUS,
-      description: 'Synovus bank export format'
-    },
-    {
-      label: 'Universal CSV',
-      value: BankName.UNIVERSAL,
-      description: 'Auto-detect columns (Date, Amount, Description)'
-    }
+    { label: 'Standard CSV', value: BankName.STANDARD, description: 'Generic format (Date, Description, Amount, Type)' },
+    { label: 'Capital One', value: BankName.CAPITAL_ONE, description: 'Capital One bank export format' },
+    { label: 'Discover', value: BankName.DISCOVER, description: 'Discover credit card export format' },
+    { label: 'Synovus', value: BankName.SYNOVUS, description: 'Synovus bank export format' },
+    { label: 'Universal CSV', value: BankName.UNIVERSAL, description: 'Auto-detect columns (Date, Amount, Description)' }
   ];
 
-  formData = {
-    accountName: '',
-    accountType: undefined as AccountType | undefined,
-    currentBalance: 0,
-    bankName: undefined as BankName | undefined
-  };
+  form = new FormGroup({
+    accountName: new FormControl<string>('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(100)] }),
+    accountType: new FormControl<AccountType | null>(null, { validators: [Validators.required] }),
+    currentBalance: new FormControl<number>(0, { nonNullable: true, validators: [Validators.required] }),
+    bankName: new FormControl<BankName | null>(null)
+  });
 
   ngOnChanges(): void {
-    const selectedAccount: Account | null = this.account();
-
+    const selectedAccount = this.account();
     if (selectedAccount) {
-      this.formData = {
+      this.form.patchValue({
         accountName: selectedAccount.name,
         accountType: selectedAccount.type,
         currentBalance: selectedAccount.currentBalance,
-        bankName: this.selectedBank()?.value
-      };
+        bankName: selectedAccount.bank ?? null
+      });
     } else {
-      this.resetForm();
+      this.form.reset({ accountName: '', accountType: null, currentBalance: 0, bankName: null });
     }
+    this.errorMessage.set(null);
   }
 
   onHide(): void {
     setTimeout((): void => {
-      this.resetForm();
+      this.form.reset({ accountName: '', accountType: null, currentBalance: 0, bankName: null });
+      this.errorMessage.set(null);
     }, 300);
   }
 
   onSubmit(): void {
-    this.errorMessage.set(null);
-
-    if (!this.formData.accountName || !this.formData.accountType || this.formData.currentBalance === null) {
-      this.errorMessage.set('Please fill in all required fields');
-      return;
-    }
-
-    this.save.emit(this.formData);
-  }
-
-  resetForm(): void {
-    this.formData = {
-      accountName: '',
-      accountType: undefined,
-      currentBalance: 0,
-      bankName: undefined
-    };
-
-    this.errorMessage.set(null);
+    this.form.markAllAsTouched();
+    if (this.form.invalid) return;
+    this.save.emit(this.form.getRawValue());
   }
 
   get isEditMode(): boolean {
@@ -147,7 +100,7 @@ export class AccountFormDrawerComponent implements OnChanges {
   }
 
   onReconciled(): void {
-    this.save.emit(this.formData);
+    this.save.emit(this.form.getRawValue());
     this.visible.set(false);
   }
 }
