@@ -9,6 +9,11 @@ import {MenuItem} from 'primeng/api';
 import {AuthService} from '@core/auth/auth.service';
 import {Tooltip} from 'primeng/tooltip';
 
+/**
+ * Shell component for the application layout.
+ *
+ * Provides a consistent layout structure with a sidebar, navigation menu, and user profile.
+ */
 @Component({
   selector: 'app-shell',
   standalone: true,
@@ -46,14 +51,20 @@ export class ShellComponent {
     {
       label: 'Logout',
       icon: 'pi pi-sign-out',
-      command: () => this.logout()
+      command: (): void => this.logout()
     }
   ];
 
+  /**
+   * Toggles the sidebar visibility.
+   */
   toggleSidebar(): void {
     this.sidebarVisible.update((v: boolean): boolean => !v);
   }
 
+  /**
+   * Initiates the logout process.
+   */
   logout(): void {
     this.authService.logout();
   }
