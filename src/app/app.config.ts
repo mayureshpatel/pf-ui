@@ -6,13 +6,14 @@ import {ConfirmationService, MessageService} from 'primeng/api';
 import Aura from '@primeuix/themes/aura';
 
 import {routes} from './app.routes';
-import {authInterceptor} from '@core/auth/auth.interceptor';
+import {jwtInterceptor} from '@core/auth/jwt.interceptor';
+import {errorInterceptor} from '@core/auth/error.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes),
-    provideHttpClient(withInterceptors([authInterceptor])),
+    provideHttpClient(withInterceptors([jwtInterceptor, errorInterceptor])),
     providePrimeNG({
       theme: {
         preset: Aura,
