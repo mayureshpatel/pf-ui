@@ -11,6 +11,8 @@ import {CommonModule} from '@angular/common';
  *    [severity]= "selectedItems().length > 0 ? 'info' : 'primary'"
  * >
  * </app-table-toolbar>
+ *
+ * todo: check if we can remove this in favor of primeng table ng-template/content
  */
 @Component({
   selector: 'app-table-toolbar',
