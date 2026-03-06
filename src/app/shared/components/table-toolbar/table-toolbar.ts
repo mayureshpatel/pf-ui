@@ -1,6 +1,17 @@
 import {Component, input, InputSignal} from '@angular/core';
-import { CommonModule } from '@angular/common';
+import {CommonModule} from '@angular/common';
 
+/**
+ * Toolbar component for table operations.
+ *
+ * @example
+ * <app-table-toolbar
+ *    [selectedCount]= selectedItems().length
+ *    [totalCount]= totalItems()
+ *    [severity]= "selectedItems().length > 0 ? 'info' : 'primary'"
+ * >
+ * </app-table-toolbar>
+ */
 @Component({
   selector: 'app-table-toolbar',
   standalone: true,
