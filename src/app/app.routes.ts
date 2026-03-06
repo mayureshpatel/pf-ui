@@ -1,5 +1,5 @@
 import {Routes} from '@angular/router';
-import {authGuard, noAuthGuard} from '@core/auth/auth.guard';
+import {requireAuth, guestGuard} from '@core/auth/auth.guard';
 import {ShellComponent} from '@shared/components/layout/shell/shell.component';
 
 export const routes: Routes = [
@@ -7,18 +7,18 @@ export const routes: Routes = [
     path: 'login',
     loadComponent: () =>
       import('./features/auth/login/login.component').then((m) => m.LoginComponent),
-    canActivate: [noAuthGuard]
+    canActivate: [guestGuard]
   },
   {
     path: 'register',
     loadComponent: () =>
       import('./features/auth/register/register.component').then((m) => m.RegisterComponent),
-    canActivate: [noAuthGuard]
+    canActivate: [guestGuard]
   },
   {
     path: '',
     component: ShellComponent,
-    canActivate: [authGuard],
+    canActivate: [requireAuth],
     children: [
       {
         path: '',
