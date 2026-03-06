@@ -1,7 +1,7 @@
-import { Component } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
-import { ToastModule } from 'primeng/toast';
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import {Component} from '@angular/core';
+import {RouterOutlet} from '@angular/router';
+import {ToastModule} from 'primeng/toast';
+import {ConfirmDialogModule} from 'primeng/confirmdialog';
 
 @Component({
   selector: 'app-root',
@@ -9,4 +9,5 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
   imports: [RouterOutlet, ToastModule, ConfirmDialogModule],
   templateUrl: './app.html'
 })
-export class App {}
+export class App {
+}
