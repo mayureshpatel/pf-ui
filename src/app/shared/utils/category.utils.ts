@@ -26,6 +26,9 @@ const CATEGORY_COLOR_HEX: Record<string, string> = {
 
 /**
  * Generate a consistent color for a category name using hash-based selection
+ *
+ * @param categoryName The name of the category
+ * @returns The Tailwind CSS class for the category color
  */
 export function getCategoryColor(categoryName: string): string {
   if (!categoryName) {
@@ -44,6 +47,9 @@ export function getCategoryColor(categoryName: string): string {
 
 /**
  * Get hex color for a category (for charts)
+ *
+ * @param categoryName The name of the category
+ * @returns The hex color for the category
  */
 export function getCategoryColorHex(categoryName: string): string {
   const tailwindClass: string = getCategoryColor(categoryName);
@@ -52,6 +58,9 @@ export function getCategoryColorHex(categoryName: string): string {
 
 /**
  * Get PrimeNG severity for tag styling based on category color
+ *
+ * @param categoryName The name of the category
+ * @returns The PrimeNG severity for the category
  */
 export function getCategorySeverity(categoryName: string): string {
   const color: string = getCategoryColor(categoryName);
