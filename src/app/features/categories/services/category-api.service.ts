@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { map, Observable } from 'rxjs';
 import { environment } from '@env';
-import { Category, CategoryFormData, CategoryGroup } from '@models/category.model';
+import {Category, CategoryCreateRequest, CategoryGroup, CategoryUpdateRequest} from '@models/category.model';
 import {Merchant} from '@models/merchant.model';
 import {AuthService} from '@core/auth/auth.service';
 
@@ -46,13 +46,13 @@ export class CategoryApiService {
     return this.http.get<Merchant[]>(`${this.transactionApiUrl}/existing-merchants`);
   }
 
-  createCategory(data: CategoryFormData): Observable<number> {
-    const userId = this.authService.user()?.id;
+  createCategory(data: CategoryCreateRequest): Observable<number> {
+    const userId: number | undefined = this.authService.user()?.id;
     return this.http.post<number>(this.apiUrl, { ...data, userId });
   }
 
-  updateCategory(id: number, data: CategoryFormData): Observable<number> {
-    const userId = this.authService.user()?.id;
+  updateCategory(id: number, data: CategoryUpdateRequest): Observable<number> {
+    const userId: number | undefined = this.authService.user()?.id;
     return this.http.put<number>(this.apiUrl, { ...data, id, userId });
   }
 
