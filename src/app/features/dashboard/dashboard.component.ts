@@ -1,12 +1,13 @@
-import {Component, DestroyRef, inject, OnInit, signal, WritableSignal} from '@angular/core';
+import {Component, computed, DestroyRef, effect, inject, OnInit, Signal, signal, WritableSignal} from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {CommonModule} from '@angular/common';
 import {FormsModule} from '@angular/forms';
-import {forkJoin} from 'rxjs';
+import {finalize, forkJoin} from 'rxjs';
 import {CardModule} from 'primeng/card';
 import {Select} from 'primeng/select';
 import {ProgressSpinnerModule} from 'primeng/progressspinner';
 import {SelectButtonModule} from 'primeng/selectbutton';
+
 import {
   ActionItem,
   CashFlowTrend,
@@ -29,6 +30,12 @@ import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-t
 
 type RangePreset = 'THIS_MONTH' | 'LAST_MONTH' | 'THIS_YEAR' | 'LAST_YEAR' | 'CUSTOM';
 
+/**
+ * Main dashboard component serving as the operational command center.
+ *
+ * Orchestrates data from multiple domains (accounts, budgets, transactions)
+ * and provides reactive filtering by time period.
+ */
 @Component({
   selector: 'app-dashboard',
   standalone: true,
@@ -52,161 +59,54 @@ export class DashboardComponent implements OnInit {
   private readonly dashboardApi: DashboardApiService = inject(DashboardApiService);
   private readonly categoryApi: CategoryApiService = inject(CategoryApiService);
   private readonly toast: ToastService = inject(ToastService);
-
   private readonly destroyRef: DestroyRef = inject(DestroyRef);
 
-  readonly currentDate: Date = new Date();
+  private readonly currentDate: Date = new Date();
 
-  pulse: WritableSignal<DashboardPulse | null> = signal(null);
-  trends: WritableSignal<CashFlowTrend[]> = signal([]);
-  ytd: WritableSignal<YtdSummary | null> = signal(null);
-  actions: WritableSignal<ActionItem[]> = signal([]);
-  topCategories: WritableSignal<CategoryBreakdown[]> = signal([]);
-  topMerchants: WritableSignal<MerchantBreakdown[]> = signal([]);
+  /** Currently selected range preset (e.g., 'THIS_MONTH', 'CUSTOM'). */
+  readonly selectedPreset: WritableSignal<RangePreset> = signal('LAST_MONTH');
 
-  loading: WritableSignal<boolean> = signal(false);
+  /** Currently selected month for custom filtering (1-12). */
+  readonly selectedMonth: WritableSignal<number> = signal(this.currentDate.getMonth());
 
-  selectedPreset: WritableSignal<RangePreset> = signal('LAST_MONTH');
-  selectedMonth: WritableSignal<number> = signal(this.currentDate.getMonth() - 1);
-  selectedYear: WritableSignal<number> = signal(this.currentDate.getFullYear());
+  /** Currently selected year for custom filtering. */
+  readonly selectedYear: WritableSignal<number> = signal(this.currentDate.getFullYear());
 
-  // Options
-  presetOptions = [
-    {label: 'This Month', value: 'THIS_MONTH'},
-    {label: 'Last Month', value: 'LAST_MONTH'},
-    {label: 'This Year', value: 'THIS_YEAR'},
-    {label: 'Last Year', value: 'LAST_YEAR'},
-    {label: 'Custom', value: 'CUSTOM'}
-  ];
+  /** High-level financial metrics comparison (Pulse). */
+  readonly pulse: WritableSignal<DashboardPulse | null> = signal(null);
 
-  monthOptions: MonthOption[] = [
-    {label: 'January', value: 1},
-    {label: 'February', value: 2},
-    {label: 'March', value: 3},
-    {label: 'April', value: 4},
-    {label: 'May', value: 5},
-    {label: 'June', value: 6},
-    {label: 'July', value: 7},
-    {label: 'August', value: 8},
-    {label: 'September', value: 9},
-    {label: 'October', value: 10},
-    {label: 'November', value: 11},
-    {label: 'December', value: 12}
-  ];
+  /** Cash flow trend data over time. */
+  readonly trends: WritableSignal<CashFlowTrend[]> = signal([]);
 
-  yearOptions: YearOption[] = [];
+  /** Year-to-date summary metrics. */
+  readonly ytd: WritableSignal<YtdSummary | null> = signal(null);
 
-  ngOnInit(): void {
-    this.initializeSelectedPeriod();
-    this.initializeYearOptions();
-    this.loadAllData();
-  }
+  /** List of pending financial actions/alerts. */
+  readonly actions: WritableSignal<ActionItem[]> = signal([]);
 
-  private loadAllData(): void {
-    this.loading.set(true);
-    const range = this.calculatePeriodRange();
+  /** Spending breakdown by category. */
+  readonly topCategories: WritableSignal<CategoryBreakdown[]> = signal([]);
 
-    forkJoin({
-      // fetch pulse data
-      pulse: range
-        ? this.dashboardApi.getPulse(undefined, undefined, range.start, range.end)
-        : this.dashboardApi.getPulse(this.selectedMonth(), this.selectedYear()),
+  /** Highest volume merchants for the period. */
+  readonly topMerchants: WritableSignal<MerchantBreakdown[]> = signal([]);
 
-      // fetch trend data
-      trends: this.dashboardApi.getCashFlowTrend(),
-
-      // fetch YTD summary
-      ytd: this.dashboardApi.getYtdSummary(this.currentDate.getFullYear()),
-
-      // fetch action item data
-      actions: this.dashboardApi.getActionItems(),
-
-      // fetch category breakdown data
-      categories: range
-        ? this.dashboardApi.getCategoryBreakdown(undefined, undefined, range.start, range.end)
-        : this.dashboardApi.getCategoryBreakdown(this.selectedMonth(), this.selectedYear()),
-
-      // fetch merchant breakdown data
-      // todo: merchants will include income/expense/transfer transactions; will need to figure out how to get only
-      //  expenses; merchant breakdown will need to change in the backend
-      merchants: range
-        ? this.dashboardApi.getVendorBreakdown(undefined, undefined, range.start, range.end)
-        : this.dashboardApi.getVendorBreakdown(this.selectedMonth(), this.selectedYear()),
-
-      // fetch all categories
-      categoryMeta: this.categoryApi.getCategories()
-    })
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (results): void => {
-          this.pulse.set(results.pulse);
-          this.trends.set(results.trends);
-          this.ytd.set(results.ytd);
-          this.actions.set(results.actions);
-          this.topMerchants.set(results.merchants.slice(0, 5));
-          this.topCategories.set(results.categories);
-
-          this.loading.set(false);
-        },
-        error: (): void => {
-          this.toast.error('Failed to load dashboard data');
-          this.loading.set(false);
-        }
-      });
-  }
+  /** Global loading state for dashboard refresh. */
+  readonly loading: WritableSignal<boolean> = signal(false);
 
   /**
-   * Initializes the selected period to the previous month.
-   * <br><br>
-   * Handles an edge-case of January being the current month.
+   * Reactively calculates the specific date range based on the selected preset or custom filters.
+   * This is used as the primary input for the data-loading engine.
    */
-  private initializeSelectedPeriod(): void {
-    if (this.currentDate.getMonth() === 0) {
-      this.selectedMonth.set(12);
-      this.selectedYear.set(this.currentDate.getFullYear() - 1);
-    } else {
-      this.selectedMonth.set(this.currentDate.getMonth());
-      this.selectedYear.set(this.currentDate.getFullYear());
-    }
-  }
-
-  /**
-   * Initializes the year options array so that the select dropdown only
-   * has options starting from 2020 up to the following year of the current year.
-   *
-   * todo: look into initializing year options based on transactions in the database;
-   *  might be best to have a simple query to get first and last transactions by date
-   */
-  private initializeYearOptions(): void {
-    const currentYear: number = this.currentDate.getFullYear();
-    const years: YearOption[] = [];
-
-    for (let year: number = currentYear - 5; year <= currentYear + 1; year++) {
-      years.push({label: year.toString(), value: year});
-    }
-    this.yearOptions = years;
-  }
-
-  /**
-   * When the user changes the period, reload the data.
-   */
-  onPeriodChange(): void {
-    this.loadAllData();
-  }
-
-  /**
-   * Returns tailwind classes for styling savings rate value based on positive/negative percentage.
-   * @param rate the savings rate
-   * @returns text red or green, based on the negative/positive value, respectively
-   */
-  getSavingsRateColor(rate: number | undefined): string {
-    if (rate === undefined || rate === 0) return 'text-color';
-    return rate > 0 ? 'text-green-600' : 'text-red-600';
-  }
-
-
-  private calculatePeriodRange(): { start: string, end: string } | null {
+  readonly periodRange: Signal<{ start: string, end: string } | null> = computed(() => {
     const preset: RangePreset = this.selectedPreset();
+    const month: number = this.selectedMonth();
+    const year: number = this.selectedYear();
+
+    if (preset === 'CUSTOM') {
+      // return null to signal that custom range is selected
+      return null;
+    }
+
     let start: Date;
     let end: Date;
 
@@ -227,8 +127,6 @@ export class DashboardComponent implements OnInit {
         start = new Date(this.currentDate.getFullYear() - 1, 0, 1);
         end = new Date(this.currentDate.getFullYear() - 1, 11, 31);
         break;
-      case 'CUSTOM':
-        return null;
       default:
         return null;
     }
@@ -237,5 +135,127 @@ export class DashboardComponent implements OnInit {
       start: start.toISOString().split('T')[0],
       end: end.toISOString().split('T')[0]
     };
+  });
+
+  readonly presetOptions = [
+    {label: 'This Month', value: 'THIS_MONTH'},
+    {label: 'Last Month', value: 'LAST_MONTH'},
+    {label: 'This Year', value: 'THIS_YEAR'},
+    {label: 'Last Year', value: 'LAST_YEAR'},
+    {label: 'Custom Range', value: 'CUSTOM'}
+  ];
+
+  readonly monthOptions: MonthOption[] = [
+    {label: 'January', value: 1}, {label: 'February', value: 2},
+    {label: 'March', value: 3}, {label: 'April', value: 4},
+    {label: 'May', value: 5}, {label: 'June', value: 6},
+    {label: 'July', value: 7}, {label: 'August', value: 8},
+    {label: 'September', value: 9}, {label: 'October', value: 10},
+    {label: 'November', value: 11}, {label: 'December', value: 12}
+  ];
+
+  yearOptions: YearOption[] = [];
+
+  constructor() {
+    /**
+     * The reactive heart of the dashboard.
+     * Whenever the periodRange (preset) OR specific month/year (custom) change,
+     * this effect automatically triggers a data refresh.
+     */
+    effect((): void => {
+      this.periodRange();
+      this.selectedMonth();
+      this.selectedYear();
+
+      this.loadAllData();
+    });
+  }
+
+  /**
+   * Initializes component prerequisites.
+   */
+  ngOnInit(): void {
+    this.initializeSelectedPeriod();
+    this.initializeYearOptions();
+  }
+
+  /**
+   * Fetches and aggregates all data points for the current filter set.
+   */
+  private loadAllData(): void {
+    this.loading.set(true);
+    const range = this.periodRange();
+    const month: number = this.selectedMonth();
+    const year: number = this.selectedYear();
+
+    forkJoin({
+      pulse: range
+        ? this.dashboardApi.getPulse(undefined, undefined, range.start, range.end)
+        : this.dashboardApi.getPulse(month, year),
+
+      trends: this.dashboardApi.getCashFlowTrend(),
+      ytd: this.dashboardApi.getYtdSummary(year),
+      actions: this.dashboardApi.getActionItems(),
+
+      categories: range
+        ? this.dashboardApi.getCategoryBreakdown(undefined, undefined, range.start, range.end)
+        : this.dashboardApi.getCategoryBreakdown(month, year),
+
+      merchants: range
+        ? this.dashboardApi.getVendorBreakdown(undefined, undefined, range.start, range.end)
+        : this.dashboardApi.getVendorBreakdown(month, year)
+    })
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.loading.set(false))
+      )
+      .subscribe({
+        next: (res): void => {
+          this.pulse.set(res.pulse);
+          this.trends.set(res.trends);
+          this.ytd.set(res.ytd);
+          this.actions.set(res.actions);
+          this.topMerchants.set(res.merchants.slice(0, 5));
+          this.topCategories.set(res.categories);
+        },
+        error: (err: any): void => {
+          console.error('Dashboard data load failed:', err);
+          this.toast.error('Failed to update dashboard data.');
+        }
+      });
+  }
+
+  /**
+   * Sets default filters to the previous month on first load.
+   */
+  private initializeSelectedPeriod(): void {
+    if (this.currentDate.getMonth() === 0) {
+      this.selectedMonth.set(12);
+      this.selectedYear.set(this.currentDate.getFullYear() - 1);
+    } else {
+      this.selectedMonth.set(this.currentDate.getMonth());
+      this.selectedYear.set(this.currentDate.getFullYear());
+    }
+  }
+
+  /**
+   * Populates the year selection dropdown with a sensible range.
+   */
+  private initializeYearOptions(): void {
+    const currentYear = this.currentDate.getFullYear();
+    const years: YearOption[] = [];
+    for (let year = currentYear - 5; year <= currentYear + 1; year++) {
+      years.push({label: year.toString(), value: year});
+    }
+    this.yearOptions = years;
+  }
+
+  /**
+   * Returns Tailwind classes for styling the savings rate.
+   * @param rate - The savings percentage.
+   */
+  getSavingsRateColor(rate: number | undefined): string {
+    if (!rate) return 'text-surface-500';
+    return rate > 0 ? 'text-emerald-600' : 'text-rose-600';
   }
 }

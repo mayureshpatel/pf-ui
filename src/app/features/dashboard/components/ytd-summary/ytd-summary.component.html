@@ -1,33 +1,57 @@
-<p-card class="h-full shadow-sm">
-  <div class="flex flex-col gap-4">
+<p-card class="h-full shadow-sm border-none ring-1 ring-surface-200 dark:ring-surface-800">
+  <div class="flex flex-col gap-6">
+    <!-- Header -->
     <div class="flex items-center justify-between">
-      <span class="text-lg font-bold text-color">{{ year() }} Year-to-Date</span>
-      <i class="pi pi-calendar text-muted-color"></i>
+      <div class="flex flex-col">
+        <span class="text-xl font-black text-surface-900 dark:text-surface-0 tracking-tight">{{ year() }} Summary</span>
+        <span class="text-[10px] font-black uppercase tracking-widest text-surface-400">Year to Date</span>
+      </div>
+      <div class="bg-surface-100 dark:bg-surface-800 p-2 rounded-lg">
+        <i class="pi pi-calendar-clock text-surface-500"></i>
+      </div>
     </div>
 
-    <div class="flex flex-col gap-1">
-      <span class="text-xs text-muted-color uppercase font-medium">Total Income</span>
-      <span class="text-xl font-semibold text-green-500">{{ totalIncome() | formatCurrency }}</span>
+    <!-- Main Metrics Grid -->
+    <div class="grid grid-cols-1 gap-4">
+      <!-- Total Income -->
+      <div
+        class="flex justify-between items-center p-3 rounded-xl bg-surface-50 dark:bg-surface-900/50 border border-surface-100 dark:border-surface-800">
+        <span class="text-xs font-bold text-surface-500 uppercase">Income</span>
+        <span class="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+          {{ totalIncome() | formatCurrency }}
+        </span>
+      </div>
+
+      <!-- Total Expenses -->
+      <div
+        class="flex justify-between items-center p-3 rounded-xl bg-surface-50 dark:bg-surface-900/50 border border-surface-100 dark:border-surface-800">
+        <span class="text-xs font-bold text-surface-500 uppercase">Expenses</span>
+        <span class="font-mono font-bold text-rose-600 dark:text-rose-400">
+          {{ totalExpense() | formatCurrency }}
+        </span>
+      </div>
+
+      <!-- Net Savings -->
+      <div class="flex justify-between items-center p-4 rounded-xl bg-primary/5 border border-primary/10">
+        <span class="text-xs font-black text-primary uppercase tracking-widest">Net Savings</span>
+        <span class="text-xl font-black font-mono text-primary">
+          {{ netSavings() | formatCurrency }}
+        </span>
+      </div>
     </div>
 
-    <p-divider class="m-0" />
-
-    <div class="flex flex-col gap-1">
-      <span class="text-xs text-muted-color uppercase font-medium">Total Expenses</span>
-      <span class="text-xl font-semibold text-red-500">{{ totalExpense() | formatCurrency }}</span>
-    </div>
-
-    <p-divider class="m-0" />
-
-    <div class="flex flex-col gap-1">
-      <span class="text-xs text-muted-color uppercase font-medium">Avg. Savings Rate</span>
-      <div class="flex items-center gap-2">
-        <span class="text-xl font-semibold text-color">{{ avgSavingsRate().toFixed(1) }}%</span>
-        <div class="flex-1 h-2 rounded-full overflow-hidden">
-          <div
-            class="bg-primary h-full rounded-full"
-            [style.width.%]="Math.min(Math.max(avgSavingsRate(), 0), 100)">
-          </div>
+    <!-- Savings Rate Progress -->
+    <div class="flex flex-col gap-3 pt-2">
+      <div class="flex justify-between items-end">
+        <span class="text-[10px] font-black uppercase tracking-[0.2em] text-surface-400">Avg. Savings Rate</span>
+        <span [class]="savingsRateStyles() + ' px-2 py-0.5 rounded text-xs font-black font-mono'">
+          {{ avgSavingsRate().toFixed(1) }}%
+        </span>
+      </div>
+      <div class="h-2.5 w-full bg-surface-100 dark:bg-surface-800 rounded-full overflow-hidden shadow-inner">
+        <div
+          class="bg-primary h-full rounded-full transition-all duration-1000 ease-out shadow-sm"
+          [style.width.%]="Math.min(Math.max(avgSavingsRate(), 0), 100)">
         </div>
       </div>
     </div>

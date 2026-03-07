@@ -4,8 +4,13 @@ import {CardModule} from 'primeng/card';
 import {ChartModule} from 'primeng/chart';
 import {CategoryBreakdown} from '@models/dashboard.model';
 import {getCategoryColorHex} from '@shared/utils/category.utils';
-import {Category} from '@models/category.model';
 
+/**
+ * Component for visualizing spending distribution across categories.
+ *
+ * Uses a horizontal bar chart to display the top spending categories
+ * for the selected dashboard period.
+ */
 @Component({
   selector: 'app-category-chart',
   standalone: true,
@@ -13,20 +18,33 @@ import {Category} from '@models/category.model';
   templateUrl: './category-chart.component.html'
 })
 export class CategoryChartComponent {
-  title: InputSignal<string> = input<string>('Spending by Category');
-  categories: InputSignal<CategoryBreakdown[]> = input.required<CategoryBreakdown[]>();
-  topX: InputSignal<number> = input<number>(5);
+  /** The title of the chart widget. */
+  readonly title: InputSignal<string> = input<string>('Spending by Category');
 
-  chartData: WritableSignal<any> = signal({});
-  chartOptions: WritableSignal<any> = signal({});
+  /** The list of category spending totals. */
+  readonly categories: InputSignal<CategoryBreakdown[]> = input.required<CategoryBreakdown[]>();
 
-  hasData: Signal<boolean> = computed((): boolean => this.categories().length > 0);
+  /** The maximum number of categories to display in the chart. */
+  readonly topX: InputSignal<number> = input<number>(5);
+
+  /** The reactive chart data configuration. */
+  readonly chartData: WritableSignal<any> = signal({});
+
+  /** The chart display options. */
+  readonly chartOptions: WritableSignal<any> = signal({});
+
+  /** Derived signal indicating if the chart has data to display. */
+  readonly hasData: Signal<boolean> = computed((): boolean => this.categories().length > 0);
 
   constructor() {
+    /**
+     * Effect to reactively update chart data whenever the input categories change.
+     */
     effect((): void => {
-      const categories: CategoryBreakdown[] = this.categories();
-      if (categories.length > 0) {
-        this.updateChartData(categories, this.topX());
+      const data: CategoryBreakdown[] = this.categories();
+
+      if (data.length > 0) {
+        this.updateChartData(data, this.topX());
       }
     });
 
@@ -34,69 +52,67 @@ export class CategoryChartComponent {
   }
 
   /**
-   * Constructs the chart data based on the top X categories.
-   * <br><br>
-   * The data displayed will come from the parent component, which will have selected the period
-   * from which the data is pulled from.
+   * Transforms raw breakdown data into a Chart.js compatible dataset.
    *
-   * @param categories The category total data to use for the chart
-   * @param topX The number of categories to include in the chart. Defaults to 5.
+   * @param breakdown - The category spending totals.
+   * @param limit - The max number of bars to show.
    */
-  private updateChartData(categories: CategoryBreakdown[], topX: number = 5): void {
-    const topXCategoryTotals: CategoryBreakdown[] = [...categories]
-      .sort((a: CategoryBreakdown, b: CategoryBreakdown): number => b.total - a.total)
-      .slice(0, topX);
-
-    const labels: Category[] = topXCategoryTotals.map((c: CategoryBreakdown): Category => c.category || 'Uncategorized');
-    const data: number[] = topXCategoryTotals.map((c: CategoryBreakdown): number => Math.abs(c.total));
-    const colors: string[] = topXCategoryTotals.map((c: CategoryBreakdown): string => getCategoryColorHex(c.category?.color ?? ''));
+  private updateChartData(breakdown: CategoryBreakdown[], limit: number): void {
+    const topItems: CategoryBreakdown[] = [...breakdown]
+      .sort((a: CategoryBreakdown, b: CategoryBreakdown): number => Math.abs(b.total) - Math.abs(a.total))
+      .slice(0, limit);
 
     this.chartData.set({
-      labels,
+      labels: topItems.map((item: CategoryBreakdown): string => item.category?.name || 'Uncategorized'),
       datasets: [
         {
-          label: 'Spent',
-          data,
-          backgroundColor: colors,
-          borderRadius: 6,
-          barThickness: 24
+          label: 'Total Spent',
+          data: topItems.map((item: CategoryBreakdown): number => Math.abs(item.total)),
+          backgroundColor: topItems.map((item: CategoryBreakdown): string => getCategoryColorHex(item.category?.color || '')),
+          borderRadius: 8,
+          barThickness: 32,
+          hoverBackgroundColor: topItems.map((item: CategoryBreakdown): string => getCategoryColorHex(item.category?.color || ''))
         }
       ]
     });
   }
 
   /**
-   * Initializes the chart options.
+   * Initializes the visual configuration for the horizontal bar chart.
    */
   private initChartOptions(): void {
-    const documentStyle: CSSStyleDeclaration = getComputedStyle(document.documentElement);
-    const textColor: string = documentStyle.getPropertyValue('--text-color-secondary');
-
     this.chartOptions.set({
       indexAxis: 'y',
       maintainAspectRatio: false,
-      aspectRatio: 0.8,
       plugins: {
         legend: {
           display: false
         },
         tooltip: {
+          backgroundColor: '#1e293b',
+          padding: 12,
+          titleFont: {size: 14, weight: 'bold'},
+          bodyFont: {size: 13, family: 'monospace'},
+          usePointStyle: true,
           callbacks: {
             label: (context: any): string => {
               const value: any = context.parsed.x || 0;
-              return `Spent: $${value.toLocaleString()}`;
+              return ` Total Spent: $${value.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
             }
           }
         }
       },
       scales: {
         x: {
+          beginAtZero: true,
           grid: {
-            display: false,
+            color: 'rgba(148, 163, 184, 0.1)',
             drawBorder: false
           },
           ticks: {
-            color: textColor
+            color: '#94a3b8',
+            font: {size: 11, family: 'monospace'},
+            callback: (value: number): string => `$${value >= 1000 ? (value / 1000) + 'k' : value}`
           }
         },
         y: {
@@ -105,7 +121,8 @@ export class CategoryChartComponent {
             drawBorder: false
           },
           ticks: {
-            color: textColor
+            color: '#64748b',
+            font: {size: 12, weight: '700'}
           }
         }
       }

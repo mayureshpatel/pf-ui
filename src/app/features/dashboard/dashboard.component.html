@@ -1,31 +1,31 @@
-<div class="p-4">
+<div class="p-6 bg-surface-50 dark:bg-surface-950 min-h-screen">
   <!-- Page Header -->
-  <app-screen-toolbar [showDivider]="false">
+  <app-screen-toolbar [showDivider]="false" class="mb-6">
     <div toolbarTitle>
-      <h1 class="text-3xl font-bold text-color">Dashboard</h1>
-      <p class="text-muted-color mt-1">Operational Command Center</p>
+      <h1 class="text-4xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight">Dashboard</h1>
+      <p class="text-muted-color mt-1 text-lg italic">Operational Command Center</p>
     </div>
 
     <div toolbarFilters>
-      <!-- Period Filters -->
-      <div class="flex flex-wrap gap-4 items-center p-2 rounded-xl border border-surface-200 dark:border-surface-800">
+      <!-- Period Filters Container -->
+      <div
+        class="flex flex-wrap gap-4 items-center p-1.5 bg-surface-0 dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 shadow-sm ring-1 ring-surface-100 dark:ring-surface-800">
         <p-selectButton
           [(ngModel)]="selectedPreset"
           [options]="presetOptions"
           optionLabel="label"
           optionValue="value"
-          (onChange)="onPeriodChange()"
-          styleClass="custom-selectbutton"
+          class="custom-selectbutton"
         />
 
         @if (selectedPreset() === 'CUSTOM') {
-          <div class="flex gap-2 animate-in fade-in slide-in-from-left-2 duration-300">
+          <div class="flex items-center gap-2 pr-2 animate-in fade-in slide-in-from-left-2 duration-500">
+            <div class="w-px h-6 bg-surface-200 dark:bg-surface-700 mx-1"></div>
             <p-select
               [(ngModel)]="selectedMonth"
               [options]="monthOptions"
               optionLabel="label"
               optionValue="value"
-              (onChange)="onPeriodChange()"
               class="w-36 border-none bg-transparent"
             />
             <p-select
@@ -33,7 +33,6 @@
               [options]="yearOptions"
               optionLabel="label"
               optionValue="value"
-              (onChange)="onPeriodChange()"
               class="w-24 border-none bg-transparent"
             />
           </div>
@@ -43,24 +42,26 @@
   </app-screen-toolbar>
 
   @if (loading()) {
-    <div class="flex justify-center items-center py-12">
-      <p-progressSpinner class="w-16 h-16" />
+    <div class="flex flex-col justify-center items-center py-32 gap-4">
+      <p-progressSpinner strokeWidth="4"/>
+      <span
+        class="text-muted-color font-bold uppercase tracking-widest animate-pulse">Synchronizing Intelligence...</span>
     </div>
   } @else {
-    <!-- Pulse Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+    <!-- Row 1: High Level Pulse (Key Metrics) -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
       <app-pulse-card
         title="Total Income"
         [value]="pulse()?.currentIncome || 0"
         [previousValue]="pulse()?.previousIncome || 0"
-        color="text-green-600"
+        color="text-emerald-600 dark:text-emerald-400"
       />
       <app-pulse-card
         title="Total Expenses"
         [value]="pulse()?.currentExpense || 0"
         [previousValue]="pulse()?.previousExpense || 0"
         [inverseTrend]="true"
-        color="text-red-600"
+        color="text-rose-600 dark:text-rose-400"
       />
       <app-pulse-card
         title="Savings Rate"
@@ -71,11 +72,14 @@
       />
     </div>
 
-    <!-- Cash Flow Trend -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+    <!-- Row 2: Performance Core (Charts & Summaries) -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+      <!-- Main Trend Chart -->
       <div class="lg:col-span-2">
-        <app-cash-flow-trend [data]="trends()" />
+        <app-cash-flow-trend [data]="trends()"/>
       </div>
+
+      <!-- Annual Recap Widget -->
       <div class="lg:col-span-1">
         <app-ytd-summary
           [year]="ytd()?.year || selectedYear()"
@@ -86,51 +90,57 @@
       </div>
     </div>
 
-    <!-- Category/Merchant Charts + Action Center -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-      <!-- Top Categories -->
+    <!-- Row 3: Insights & Logistics -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Spend Breakdown (Analytics) -->
       <div class="lg:col-span-1">
         <app-category-chart
-          title="Spending by Category"
+          title="Top Categories"
           [categories]="topCategories()"
         />
       </div>
 
-      <!-- Top Merchants -->
+      <!-- Merchant Velocity (Engagement) -->
       <div class="lg:col-span-1">
-        <p-card class="h-full shadow-sm">
+        <p-card class="h-full shadow-sm border-none ring-1 ring-surface-200 dark:ring-surface-800">
           <ng-template pTemplate="title">
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 mb-2">
               <i class="pi pi-shop text-primary"></i>
-              <span class="text-xl font-bold text-surface-900">Top Merchants</span>
+              <span
+                class="text-xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight">Top Merchants</span>
             </div>
           </ng-template>
 
-          <!-- todo: merchant information should probably show how many transactions total and total money spent -->
-          <div class="flex flex-col gap-4">
-            @for (merchant of topMerchants(); track merchant.merchant) {
-              <div class="flex justify-between items-center p-3 rounded-lg border border-surface-100 dark:border-surface-800 transition-hover hover:shadow-xs">
+          <div class="flex flex-col gap-4 mt-4">
+            @for (item of topMerchants(); track item.merchant.id) {
+              <div
+                class="group flex justify-between items-center p-4 rounded-2xl bg-surface-50 dark:bg-surface-900/50 border border-surface-100 dark:border-surface-800 hover:border-primary/30 transition-all duration-300">
                 <div class="flex flex-col">
-                  <span class="font-semibold text-surface-900">{{ merchant.merchant.cleanName }}</span>
-                  <span class="text-xs text-muted-color">High Frequency</span>
+                  <span
+                    class="font-bold text-surface-900 dark:text-surface-0 tracking-tight">{{ item.merchant.cleanName }}</span>
+                  <span class="text-[10px] font-black uppercase tracking-widest text-muted-color">Volume Leader</span>
                 </div>
                 <div class="flex flex-col items-end">
-                  <span class="font-bold text-primary">{{ merchant.total | currency:'USD' }}</span>
-                  <span class="text-[10px] text-muted-color uppercase font-medium">This Period</span>
+                  <span class="font-mono font-black text-lg text-primary">{{ item.total | currency:'USD' }}</span>
+                  <div class="flex items-center gap-1 text-[9px] font-bold text-muted-color uppercase">
+                    <i class="pi pi-clock text-[8px]"></i>
+                    <span>This Period</span>
+                  </div>
                 </div>
               </div>
             } @empty {
-              <div class="flex flex-col items-center justify-center py-12 text-muted-color italic text-sm">
-                No merchant data for this period
+              <div class="flex flex-col items-center justify-center py-16 text-center animate-fade-in">
+                <i class="pi pi-receipt text-4xl text-surface-200 mb-2"></i>
+                <span class="text-sm font-bold text-surface-400 uppercase tracking-widest">No Merchant Activity</span>
               </div>
             }
           </div>
         </p-card>
       </div>
 
-      <!-- Action Center -->
+      <!-- Actionable Intelligence (Logistics) -->
       <div class="lg:col-span-1">
-        <app-action-center [items]="actions()" />
+        <app-action-center [items]="actions()"/>
       </div>
     </div>
   }

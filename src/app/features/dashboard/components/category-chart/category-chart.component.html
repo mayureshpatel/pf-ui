@@ -1,12 +1,22 @@
-<p-card [header]="title()" class="h-full shadow-sm">
-  @if (hasData()) {
-    <div class="h-80">
-      <p-chart type="bar" [data]="chartData()" [options]="chartOptions" class="h-full" />
+<p-card class="h-full shadow-sm border-none ring-1 ring-surface-200 dark:ring-surface-800">
+  <ng-template pTemplate="title">
+    <div class="flex items-center gap-2 mb-2">
+      <i class="pi pi-chart-pie text-primary"></i>
+      <span class="text-xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight">{{ title() }}</span>
     </div>
-  } @else {
-    <div class="flex flex-col items-center justify-center py-12 text-muted-color gap-3 h-80">
-      <i class="pi pi-chart-bar text-4xl"></i>
-      <span class="text-sm">No spending data for this period</span>
-    </div>
-  }
+  </ng-template>
+
+  <div class="h-80 w-full mt-4">
+    @if (hasData()) {
+      <p-chart type="bar" [data]="chartData()" [options]="chartOptions" class="h-full w-full"/>
+    } @else {
+      <div class="flex flex-col items-center justify-center h-full text-center animate-fade-in">
+        <div class="w-16 h-16 rounded-full bg-surface-50 dark:bg-surface-900 flex items-center justify-center mb-4">
+          <i class="pi pi-chart-bar text-2xl text-surface-300"></i>
+        </div>
+        <span class="text-sm font-bold text-surface-400 uppercase tracking-widest">No spending data</span>
+        <p class="text-xs text-muted-color mt-1">Try selecting a different time period.</p>
+      </div>
+    }
+  </div>
 </p-card>

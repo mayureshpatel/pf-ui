@@ -1,34 +1,51 @@
-<p-card header="Action Center" class="h-full shadow-sm">
-  <div class="flex flex-col gap-3">
-    @if (items().length === 0) {
-      <div class="flex flex-col items-center justify-center py-8 text-muted-color gap-2">
-        <i class="pi pi-check-circle text-4xl text-green-500"></i>
-        <span class="font-medium">Everything is up to date!</span>
-      </div>
-    } @else {
-      @for (item of items(); track item.type) {
-        <div
-          class="flex items-center justify-between p-3 rounded-lg border border-surface-200 dark:border-surface-700 hover:border-primary transition-colors cursor-pointer"
-          (click)="onAction(item)"
-        >
-          <div class="flex items-center gap-3">
-            <!-- action item icon -->
-            <div [class]="'w-10 h-10 rounded-full flex items-center justify-center'">
-              <i [class]="getIcon(item.type) + ' text-xl'"></i>
-            </div>
+<p-card class="h-full shadow-sm border-none ring-1 ring-surface-200 dark:ring-surface-800">
+  <ng-template pTemplate="title">
+    <div class="flex items-center gap-2 mb-2">
+      <i class="pi pi-bolt text-primary"></i>
+      <span class="text-xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight">Action Center</span>
+    </div>
+  </ng-template>
 
-            <!-- action item -->
-            <div class="flex flex-col">
-              <span class="font-semibold text-color">{{ item.message }}</span>
-              @if (item.count > 1) {
-                <span class="text-xs text-muted-color">{{ item.count }} items need attention</span>
-              }
-            </div>
+  <div class="flex flex-col gap-4 mt-2">
+    @for (item of items(); track item.type) {
+      <div
+        class="group flex items-center justify-between p-4 rounded-2xl bg-surface-0 dark:bg-surface-900 border border-surface-100 dark:border-surface-800 hover:border-primary/50 hover:shadow-md transition-all duration-300 cursor-pointer"
+        (click)="onAction(item)"
+        (keydown)="onAction(item)"
+      >
+        <div class="flex items-center gap-4">
+          <!-- Action Icon -->
+          @let theme = getActionTheme(item.type);
+          <div
+            [class]="theme.styles + ' w-12 h-12 rounded-xl flex items-center justify-center ring-1 shadow-sm transition-transform group-hover:scale-110'">
+            <i [class]="theme.icon + ' text-xl'"></i>
           </div>
 
-          <i class="pi pi-chevron-right text-muted-color"></i>
+          <!-- Message -->
+          <div class="flex flex-col">
+            <span class="text-sm font-bold text-surface-900 dark:text-surface-0 leading-tight">{{ item.message }}</span>
+            @if (item.count > 0) {
+              <span class="text-[10px] font-black uppercase tracking-widest text-muted-color mt-1">
+                {{ item.count }} unresolved items
+              </span>
+            }
+          </div>
         </div>
-      }
+
+        <i
+          class="pi pi-chevron-right text-surface-300 group-hover:text-primary group-hover:translate-x-1 transition-all"></i>
+      </div>
+    } @empty {
+      <!-- Perfect State -->
+      <div class="flex flex-col items-center justify-center py-12 text-center animate-fade-in">
+        <div class="w-20 h-20 rounded-full bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center mb-4">
+          <i class="pi pi-check-circle text-4xl text-emerald-500"></i>
+        </div>
+        <h3 class="text-lg font-bold text-surface-900 dark:text-surface-0">All Clear!</h3>
+        <p class="text-xs text-muted-color mt-1 max-w-50">
+          Everything is organized and up to date. You're a financial pro!
+        </p>
+      </div>
     }
   </div>
 </p-card>
