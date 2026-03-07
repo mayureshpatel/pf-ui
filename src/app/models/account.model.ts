@@ -13,6 +13,7 @@ import {Currency} from '@models/currency.model';
  * @property currentBalance - The current balance of the account.
  * @property currency - The {@link Currency} of the account.
  * @property bank - The {@link BankName} associated with the account.
+ * @property version - The version of the account for optimistic locking.
  */
 export interface Account {
   id: number;
@@ -22,6 +23,7 @@ export interface Account {
   currentBalance: number;
   currency: Currency;
   bank: BankName;
+  version: number;
 }
 
 /**

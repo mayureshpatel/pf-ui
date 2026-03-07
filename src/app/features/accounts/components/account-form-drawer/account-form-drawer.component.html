@@ -1,139 +1,140 @@
 <app-drawer
   [(visible)]="visible"
-  [title]="drawerTitle"
-  [icon]="drawerIcon"
+  [title]="drawerTitle()"
+  [icon]="drawerIcon()"
   [saving]="saving()"
-  [saveLabel]="isEditMode ? 'Update' : 'Create'"
+  [saveLabel]="isEditMode() ? 'Update' : 'Create'"
   (saveEmitterRef)="onSubmit()"
-  (cancelEmitterRef)="onHide()">
-
-  <form [formGroup]="form" class="flex flex-col gap-6">
-    @if (errorMessage()) {
-      <p-message severity="error" styleClass="w-full">
-        {{ errorMessage() }}
-      </p-message>
+  (cancelEmitterRef)="onHide()"
+>
+  <form [formGroup]="form" class="flex flex-col gap-6 py-4">
+    <!-- Account ID -->
+    @if (isEditMode()) {
+      <div class="flex flex-col gap-2 opacity-70">
+        <label for="id" class="text-xs font-bold uppercase text-muted-color">
+          Account ID
+        </label>
+        <div class="p-3 bg-surface-100 rounded-lg font-mono text-sm border border-surface-200">
+          #{{ form.controls.id.value }}
+        </div>
+      </div>
     }
 
     <!-- Account Name -->
     <div class="flex flex-col gap-2">
-      <label for="name" class="text-sm font-medium text-surface-700">
-        Account Name <span class="text-red-500">*</span>
+      <label for="name" class="text-sm font-bold text-surface-900 tracking-wide uppercase">
+        Account Name
       </label>
       <input
         pInputText
         id="name"
-        formControlName="accountName"
-        placeholder="e.g., Main Checking, Travel Savings"
-        class="w-full"
-        maxlength="100"
+        formControlName="name"
+        placeholder="e.g. Personal Checking"
+        class="w-full py-3"
       />
-      @if (form.controls.accountName.invalid && form.controls.accountName.touched) {
-        @if (form.controls.accountName.errors?.['required']) {
-          <small class="text-red-500">Account name is required</small>
-        } @else if (form.controls.accountName.errors?.['maxlength']) {
-          <small class="text-red-500">Account name must not exceed 100 characters</small>
+
+      @if (form.controls.name.invalid && form.controls.name.touched) {
+        <small class="text-rose-500 font-medium flex items-center gap-1">
+          <i class="pi pi-times-circle text-xs"></i>
+          Account name is required
+        </small>
+      }
+    </div>
+
+    <!-- Account Type and Currency -->
+    <div class="grid gird-cols-2 gap-4">
+      <div class="flex flex-col gap-2">
+        <label for="type" class="text-sm font-bold text-surface-900 tracking-wide uppercase">
+          Type
+        </label>
+        <p-select
+          formControlName="type"
+          [options]="accountTypes()"
+          optionLabel="label"
+          optionValue="code"
+          placeholder="Select account type"
+          class="w-full"
+          appendTo="body"
+        >
+          <ng-template #item let-option>
+            <div class="flex items-center gap-3">
+              <i [class]="'pi ' + option.icon + ' ' + option.color"></i>
+              <span>{{ option.label }}</span>
+            </div>
+          </ng-template>
+        </p-select>
+
+        @if (form.controls.type.invalid && form.controls.type.touched) {
+          <small class="text-rose-500 font-medium flex items-center gap-1">
+            <i class="pi pi-times-circle text-xs"></i>
+            Account type is required
+          </small>
         }
-      }
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <label for="currency" class="text-sm font-bold text-surface-900 tracking-wide uppercase">
+          Currency
+        </label>
+        <input
+          pInputText
+          id="currency"
+          formControlName="currencyCode"
+          [disabled]="true"
+          class="w-full py-3"
+        />
+      </div>
     </div>
 
-    <!-- Account Type -->
+    <!-- Bank Selector -->
     <div class="flex flex-col gap-2">
-      <label for="type" class="text-sm font-medium text-surface-700">
-        Account Type <span class="text-red-500">*</span>
+      <label for="bank" class="text-sm font-bold text-surface-900 tracking-wide uppercase">
+        Bank
       </label>
       <p-select
-        id="type"
-        formControlName="accountType"
-        [options]="accountTypes()"
-        optionLabel="label"
-        optionValue="code"
-        placeholder="Select account type"
-        class="w-full">
-        <ng-template let-option pTemplate="item">
-          <div class="flex items-center gap-2">
-            <i [class]="'pi ' + option.icon + ' text-surface-400'"></i>
-            <span>{{ option.label }}</span>
-          </div>
-        </ng-template>
-      </p-select>
-      @if (form.controls.accountType.invalid && form.controls.accountType.touched) {
-        <small class="text-red-500">Account type is required</small>
-      }
-    </div>
-
-    <!-- Bank Format (Optional) -->
-    <div class="flex flex-col gap-2">
-      <label for="bankName" class="text-sm font-medium text-surface-700">
-        Default Bank Format
-      </label>
-      <p-select
-        id="bankName"
         formControlName="bankName"
         [options]="bankOptions"
         optionLabel="label"
         optionValue="value"
-        placeholder="Select bank format"
+        placeholder="Select a bank"
         class="w-full"
         appendTo="body"
-        [showClear]="true">
-        <ng-template let-option pTemplate="item">
-          <div class="flex flex-col">
-            <span class="font-medium">{{ option.label }}</span>
-            <small class="text-muted-color">{{ option.description }}</small>
-          </div>
-        </ng-template>
-      </p-select>
-      <small class="text-muted-color">
-        Automatically selects the correct CSV parser for imports
-      </small>
+        showClear="true"
+      />
     </div>
 
-    <!-- Current Balance -->
-    <div class="flex flex-col gap-2">
-      <label for="balance" class="text-sm font-medium text-surface-700">
-        Current Balance <span class="text-red-500">*</span>
+    <!-- Balance Section -->
+    <div class="p-4 rounded-x1 bg-surface-50 border border-surface-200">
+      <label for="balance" class="text-sm font-bold text-muted-color uppercase mb-2 block">
+        {{ isEditMode() ? 'Current Balance' : 'Initial Balance' }}
       </label>
 
-      @if (!isEditMode) {
+      @if (!isEditMode()) {
         <p-inputNumber
-          id="balance"
           formControlName="currentBalance"
           mode="currency"
           currency="USD"
           locale="en-US"
           [minFractionDigits]="2"
           [maxFractionDigits]="2"
+          [inputId]="'current-balance'"
           class="w-full"
-          inputStyleClass="w-full font-bold text-lg"
+          inputStyleClass="text-2x1 font-mono font-bold gb-transparent border-none p-0 focus:ring-0"
         />
-        <small class="text-muted-color">
-          Initial balance for the new account.
-        </small>
       } @else {
-        <div class="flex items-center gap-3">
-          <span class="text-2xl font-bold font-mono">
-            {{ form.value.currentBalance | currency }}
+        <div class="flex justify-between items-center">
+          <span class="text-3x1 font-mono font-black text-surface-900">
+            {{ form.value.currentBalance | currency: form.controls.currencyCode.value }}
           </span>
           <p-button
             label="Reconcile"
-            icon="pi pi-check-circle"
-            severity="secondary"
+            icon="pi pi-sync"
+            [text]="true"
             size="small"
             (onClick)="openReconcileDialog()"
           />
         </div>
-        <small class="text-muted-color italic">
-          Balance cannot be edited directly. Use 'Reconcile' to adjust.
-        </small>
       }
     </div>
   </form>
-
-  @if (isEditMode && account()) {
-    <app-reconcile-dialog
-      [(visible)]="showReconcileDialog"
-      [account]="account()!"
-      (reconciled)="onReconciled()"
-    />
-  }
 </app-drawer>

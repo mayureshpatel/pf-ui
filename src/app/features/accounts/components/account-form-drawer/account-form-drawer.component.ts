@@ -1,14 +1,26 @@
-import {Component, input, InputSignal, model, ModelSignal, OnChanges, output, OutputEmitterRef, signal, WritableSignal} from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  input,
+  InputSignal,
+  model,
+  ModelSignal,
+  output,
+  OutputEmitterRef,
+  Signal,
+  signal,
+  WritableSignal
+} from '@angular/core';
 import {CommonModule} from '@angular/common';
-import {ReactiveFormsModule, FormGroup, FormControl, Validators} from '@angular/forms';
+import {FormControl, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
 import {ButtonModule} from 'primeng/button';
 import {InputTextModule} from 'primeng/inputtext';
 import {Select} from 'primeng/select';
 import {InputNumberModule} from 'primeng/inputnumber';
 import {MessageModule} from 'primeng/message';
-import {Account, AccountFormData, AccountType, BankName} from '@models/account.model';
+import {Account, AccountCreateRequest, AccountType, AccountUpdateRequest, BankName} from '@models/account.model';
 import {DrawerComponent} from '@shared/components/drawer/drawer.component';
-import {ReconcileDialogComponent} from '../reconcile-dialog/reconcile-dialog.component';
 import {BankOption} from '@models/transaction.model';
 
 @Component({
@@ -21,86 +33,124 @@ import {BankOption} from '@models/transaction.model';
     Select,
     InputNumberModule,
     MessageModule,
-    DrawerComponent,
-    ReconcileDialogComponent
+    DrawerComponent
   ],
   templateUrl: './account-form-drawer.component.html'
 })
-export class AccountFormDrawerComponent implements OnChanges {
-  // input signals
+export class AccountFormDrawerComponent {
   visible: ModelSignal<boolean> = model.required<boolean>();
   account: InputSignal<Account | null> = input<Account | null>(null);
   accountTypes: InputSignal<AccountType[]> = input.required<AccountType[]>();
   saving: InputSignal<boolean> = input<boolean>(false);
 
-  // output signals
-  save: OutputEmitterRef<AccountFormData> = output<AccountFormData>();
+  save: OutputEmitterRef<AccountUpdateRequest | AccountCreateRequest> = output<AccountUpdateRequest | AccountCreateRequest>();
 
-  // signals
   errorMessage: WritableSignal<string | null> = signal(null);
   showReconcileDialog: WritableSignal<boolean> = signal(false);
 
+  isEditMode: Signal<boolean> = computed((): boolean => this.account() !== null);
+  drawerTitle: Signal<string> = computed((): string => this.isEditMode() ? 'Edit Account' : 'Create Account');
+  drawerIcon: Signal<string> = computed((): string => this.isEditMode() ? 'pi-wallet' : 'pi-plus');
+
   bankOptions: BankOption[] = [
-    { label: 'Standard CSV', value: BankName.STANDARD, description: 'Generic format (Date, Description, Amount, Type)' },
-    { label: 'Capital One', value: BankName.CAPITAL_ONE, description: 'Capital One bank export format' },
-    { label: 'Discover', value: BankName.DISCOVER, description: 'Discover credit card export format' },
-    { label: 'Synovus', value: BankName.SYNOVUS, description: 'Synovus bank export format' },
-    { label: 'Universal CSV', value: BankName.UNIVERSAL, description: 'Auto-detect columns (Date, Amount, Description)' }
+    {label: 'Standard CSV', value: BankName.STANDARD, description: 'Generic format (Date, Description, Amount, Type)'},
+    {label: 'Capital One', value: BankName.CAPITAL_ONE, description: 'Capital One bank export format'},
+    {label: 'Discover', value: BankName.DISCOVER, description: 'Discover credit card export format'},
+    {label: 'Synovus', value: BankName.SYNOVUS, description: 'Synovus bank export format'},
+    {label: 'Universal CSV', value: BankName.UNIVERSAL, description: 'Auto-detect columns (Date, Amount, Description)'}
   ];
 
+  private readonly defaultCurrency: string = Intl.NumberFormat().resolvedOptions().currency ?? 'USD';
+
   form = new FormGroup({
-    accountName: new FormControl<string>('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(100)] }),
-    accountType: new FormControl<AccountType | null>(null, { validators: [Validators.required] }),
-    currentBalance: new FormControl<number>(0, { nonNullable: true, validators: [Validators.required] }),
+    id: new FormControl<number | null>({value: null, disabled: true}),
+    name: new FormControl('', {
+      nonNullable: true, validators: [Validators.required, Validators.maxLength(100)]
+    }),
+    type: new FormControl<AccountType | null>(null, {validators: [Validators.required]}),
+    currencyCode: new FormControl(this.defaultCurrency, {
+      nonNullable: true, validators: [Validators.required]
+    }),
+    currentBalance: new FormControl(0, {nonNullable: true, validators: [Validators.required]}),
     bankName: new FormControl<BankName | null>(null)
   });
 
-  ngOnChanges(): void {
-    const selectedAccount = this.account();
-    if (selectedAccount) {
-      this.form.patchValue({
-        accountName: selectedAccount.name,
-        accountType: selectedAccount.type,
-        currentBalance: selectedAccount.currentBalance,
-        bankName: selectedAccount.bank ?? null
-      });
-    } else {
-      this.form.reset({ accountName: '', accountType: null, currentBalance: 0, bankName: null });
-    }
-    this.errorMessage.set(null);
-  }
+  constructor() {
+    effect((): void => {
+      const selectedAccount: Account | null = this.account();
 
-  onHide(): void {
-    setTimeout((): void => {
-      this.form.reset({ accountName: '', accountType: null, currentBalance: 0, bankName: null });
-      this.errorMessage.set(null);
-    }, 300);
+      if (selectedAccount) {
+        this.form.patchValue({
+          id: selectedAccount.id,
+          name: selectedAccount.name,
+          type: selectedAccount.type,
+          currencyCode: selectedAccount.currency.code,
+          currentBalance: selectedAccount.currentBalance,
+          bankName: selectedAccount.bank
+        });
+
+        this.form.controls.currentBalance.disable();
+      } else {
+        this.form.reset({
+          id: null,
+          name: '',
+          type: null,
+          currencyCode: this.defaultCurrency,
+          currentBalance: 0,
+          bankName: null
+        });
+
+        this.form.controls.currentBalance.enable();
+      }
+    });
   }
 
   onSubmit(): void {
-    this.form.markAllAsTouched();
-    if (this.form.invalid) return;
-    this.save.emit(this.form.getRawValue());
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
+
+    const rawValue = this.form.getRawValue();
+    const selectedAccount: Account | null = this.account();
+
+    if (selectedAccount) {
+      const updateRequest: AccountUpdateRequest = {
+        id: selectedAccount.id,
+        name: rawValue.name,
+        type: rawValue.type!.code,
+        currencyCode: rawValue.currencyCode,
+        bankName: rawValue.bankName ?? '',
+        version: selectedAccount.version
+      };
+
+      this.save.emit(updateRequest);
+    } else {
+      const createRequest: AccountCreateRequest = {
+        name: rawValue.name,
+        type: rawValue.type!.code,
+        startingBalance: rawValue.currentBalance,
+        currencyCode: rawValue.currencyCode,
+        bankName: rawValue.bankName ?? ''
+      };
+
+      this.save.emit(createRequest);
+    }
   }
 
-  get isEditMode(): boolean {
-    return this.account() !== null;
-  }
-
-  get drawerTitle(): string {
-    return this.isEditMode ? 'Edit Account' : 'Create Account';
-  }
-
-  get drawerIcon(): string {
-    return this.isEditMode ? 'pi-wallet' : 'pi-plus';
+  onHide(): void {
+    this.form.reset({
+      id: null,
+      name: '',
+      type: null,
+      currencyCode: this.defaultCurrency,
+      currentBalance: 0,
+      bankName: null
+    });
+    this.errorMessage.set(null);
   }
 
   openReconcileDialog(): void {
     this.showReconcileDialog.set(true);
-  }
-
-  onReconciled(): void {
-    this.save.emit(this.form.getRawValue());
-    this.visible.set(false);
   }
 }
