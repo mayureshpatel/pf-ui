@@ -217,8 +217,8 @@ export class CategoriesComponent implements OnInit {
   onSave(formData: CategoryCreateRequest | CategoryUpdateRequest): void {
     const existing: Category | null = this.selectedCategory();
     const operation: Observable<number> = existing
-      ? this.categoryApi.updateCategory(existing.id, formData)
-      : this.categoryApi.createCategory(formData);
+      ? this.categoryApi.updateCategory(existing.id, formData as CategoryUpdateRequest)
+      : this.categoryApi.createCategory(formData as CategoryCreateRequest);
 
     this.loading.set(true);
     operation
