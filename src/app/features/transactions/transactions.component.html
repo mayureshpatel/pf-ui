@@ -1,436 +1,359 @@
-<div class="p-4">
+<div class="p-6 bg-surface-50 dark:bg-surface-950 min-h-screen">
   <!-- Page Header -->
-  <app-screen-toolbar>
+  <app-screen-toolbar class="mb-6">
     <div toolbarTitle>
-      <h1 class="text-3xl font-bold text-color">Transactions</h1>
-      <p class="text-muted-color mt-1">View and manage your financial transactions</p>
+      <h1 class="text-4xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight">Ledger</h1>
+      <p class="text-muted-color mt-1 text-lg">Detailed audit trail of all financial movements</p>
     </div>
 
-    <div toolbarActions>
-      <p-button
-        label="Review Transfers"
-        icon="pi pi-arrow-right-arrow-left"
-        (onClick)="openTransferDialog()"
-        severity="info"
-        [outlined]="true"
-      />
+    <div toolbarActions class="flex gap-3">
       <p-button
         label="Import CSV"
         icon="pi pi-upload"
-        (onClick)="openImportDialog()"
         severity="secondary"
         [outlined]="true"
+        (onClick)="showImportDialog.set(true)"
+        class="shadow-sm"
       />
       <p-button
-        label="New Transaction"
+        label="Add Transaction"
         icon="pi pi-plus"
         (onClick)="openCreateDialog()"
         severity="primary"
+        [raised]="true"
       />
     </div>
   </app-screen-toolbar>
 
-  <!-- Quick Filters -->
-  <div class="mb-4 flex flex-wrap gap-3 items-end">
-    <!-- Account Filter -->
-    <div class="flex flex-col gap-2">
-      <label for="account-select" class="text-sm font-medium text-color">Account</label>
+  <!-- Filter & Action Command Center -->
+  <div class="flex flex-col gap-4 mb-6">
+    <!-- Quick Filters Bar -->
+    <div
+      class="flex flex-wrap items-center gap-4 p-2 bg-surface-0 dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 shadow-sm ring-1 ring-surface-100 dark:ring-surface-800">
+
+      <!-- Search Input -->
+      <div class="relative w-full md:w-72">
+        <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-muted-color"></i>
+        <input
+          pInputText
+          placeholder="Search descriptions..."
+          class="w-full pl-10 bg-transparent border-none focus:ring-0 text-sm font-bold"
+          [ngModel]="state().filter.description"
+          (ngModelChange)="onFilterUpdate({description: $event})"
+        />
+      </div>
+
+      <div class="hidden md:block w-px h-6 bg-surface-200 dark:bg-surface-700"></div>
+
+      <!-- Quick Account Select -->
       <p-select
-        id="account-select"
-        [(ngModel)]="filterAccountId"
         [options]="accountOptions()"
+        [ngModel]="state().filter.accountId"
+        (ngModelChange)="onFilterUpdate({accountId: $event})"
         optionLabel="label"
         optionValue="value"
-        (onChange)="onFilterChange()"
         placeholder="All Accounts"
-        class="w-56"
+        class="w-48 border-none bg-transparent"
       />
-    </div>
 
-    <!-- Type Filter -->
-    <div class="flex flex-col gap-2">
-      <label for="type-select" class="text-sm font-medium text-color">Type</label>
+      <!-- Quick Type Select -->
       <p-select
-        id="type-select"
-        [(ngModel)]="filterType"
         [options]="transactionTypes"
+        [ngModel]="state().filter.type"
+        (ngModelChange)="onFilterUpdate({type: $event})"
         optionLabel="label"
         optionValue="value"
-        (onChange)="onFilterChange()"
         placeholder="All Types"
-        class="w-48"
+        class="w-40 border-none bg-transparent"
       />
+
+      <div class="flex-1"></div>
+
+      <!-- Advanced Filter Toggle & Clear -->
+      <div class="flex items-center gap-2 pr-2">
+        @if (activeFilterCount() > 0) {
+          <p-button
+            label="Clear"
+            icon="pi pi-filter-slash"
+            [text]="true"
+            severity="danger"
+            size="small"
+            (onClick)="clearFilters()"
+          />
+        }
+        <p-button
+          [label]="showAdvancedFilters() ? 'Hide Filters' : 'Filters'"
+          [icon]="showAdvancedFilters() ? 'pi pi-chevron-up' : 'pi pi-filter'"
+          [badge]="activeFilterCount() > 0 ? activeFilterCount().toString() : ''"
+          [outlined]="!showAdvancedFilters()"
+          severity="secondary"
+          size="small"
+          (onClick)="showAdvancedFilters.set(!showAdvancedFilters())"
+        />
+      </div>
     </div>
 
-    <!-- Date Range Filter -->
-    <div class="flex flex-col gap-2">
-      <label for="date-picker" class="text-sm font-medium text-color">Date Range</label>
-      <p-datePicker
-        id="date-picker"
-        [(ngModel)]="filterDateRange"
-        selectionMode="range"
-        (onSelect)="onFilterChange()"
-        (onClearClick)="onFilterChange()"
-        [showButtonBar]="true"
-        [readonlyInput]="true"
-        placeholder="Select date range"
-        dateFormat="mm/dd/yy"
-        class="w-64"
-      />
-    </div>
+    <!-- Advanced Filters Drawer -->
+    @if (showAdvancedFilters()) {
+      <div
+        class="p-6 bg-surface-0 dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 shadow-inner animate-in slide-in-from-top-4 duration-300">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <!-- Merchant Autocomplete -->
+          <div class="flex flex-col gap-2">
+            <label class="text-[10px] font-black uppercase tracking-widest text-surface-400">Merchant</label>
+            <input
+              pInputText
+              placeholder="Filter by vendor..."
+              class="w-full text-sm font-bold"
+              [ngModel]="state().filter.merchant"
+              (ngModelChange)="onFilterUpdate({merchant: $event})"
+            />
+          </div>
 
-    <!-- Clear Filters -->
-    @if (activeFilterCount() > 0) {
-      <p-button
-        label="Clear All Filters"
-        icon="pi pi-filter-slash"
-        (onClick)="clearFilters()"
-        [text]="true"
-        severity="secondary"
-      />
+          <!-- Date Range Picker -->
+          <div class="flex flex-col gap-2">
+            <label class="text-[10px] font-black uppercase tracking-widest text-surface-400">Date Range</label>
+            <p-datePicker
+              selectionMode="range"
+              placeholder="Select dates..."
+              [showIcon]="true"
+              styleClass="w-full"
+              [ngModel]="[state().filter.startDate, state().filter.endDate]"
+              (ngModelChange)="onFilterUpdate({startDate: $event?.[0], endDate: $event?.[1]})"
+            />
+          </div>
+
+          <!-- Amount Range -->
+          <div class="flex flex-col gap-2 md:col-span-2">
+            <label class="text-[10px] font-black uppercase tracking-widest text-surface-400">Amount Range</label>
+            <div class="flex items-center gap-3">
+              <p-inputNumber
+                placeholder="Min"
+                mode="currency"
+                currency="USD"
+                class="flex-1"
+                [ngModel]="state().filter.minAmount"
+                (ngModelChange)="onFilterUpdate({minAmount: $event || undefined})"
+              />
+              <span class="text-surface-300">to</span>
+              <p-inputNumber
+                placeholder="Max"
+                mode="currency"
+                currency="USD"
+                class="flex-1"
+                [ngModel]="state().filter.maxAmount"
+                (ngModelChange)="onFilterUpdate({maxAmount: $event || undefined})"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
     }
-
-    <!-- Show More Filters Toggle -->
-    <p-button
-      [label]="showAdvancedFilters() ? 'Hide Advanced Filters' : 'Show More Filters'"
-      [icon]="showAdvancedFilters() ? 'pi pi-chevron-up' : 'pi pi-chevron-down'"
-      (onClick)="toggleAdvancedFilters()"
-      [text]="true"
-      severity="secondary"
-      [badge]="hasAdvancedFilters() ? activeFilterCount().toString() : undefined"
-      badgeSeverity="info"
-    />
   </div>
 
-  <!-- Advanced Filters Panel (Collapsible) -->
-  @if (showAdvancedFilters()) {
-    <div class="mb-4 p-4 rounded-lg border border-surface-200 dark:border-surface-700">
-      <div class="flex flex-wrap gap-3 items-end">
-
-        <!-- Description Filter -->
-        <div class="flex flex-col gap-2">
-          <label for="description-input" class="text-sm font-medium text-color">Description</label>
-          <span class="p-input-icon-left w-64">
-            <i class="pi pi-search"></i>
-            <input
-              id="description-input"
-              pInputText
-              type="text"
-              [(ngModel)]="filterDescription"
-              (ngModelChange)="debouncedFilterChange()"
-              placeholder="Search description..."
-              class="w-full"
-            />
-          </span>
+  <!-- Bulk Action Toolbar -->
+  @if (selectedTransactions().length > 0) {
+    <div
+      class="sticky top-4 z-50 mb-6 flex items-center justify-between p-4 bg-surface-900 text-white rounded-2xl shadow-2xl animate-in zoom-in-95 duration-300">
+      <div class="flex items-center gap-4">
+        <div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center font-black">
+          {{ selectedTransactions().length }}
         </div>
-
-        <!-- Vendor Filter (AutoComplete) -->
-        <div class="flex flex-col gap-2">
-          <label for="merchant-select" class="text-sm font-medium text-color">Vendor</label>
-          <p-autoComplete
-            id="merchant-select"
-            [(ngModel)]="filterMerchant"
-            [suggestions]="filteredVendors()"
-            optionValue="cleanName"
-            optionLabel="cleanName"
-            (completeMethod)="onVendorSearch($event)"
-            (ngModelChange)="onFilterChange()"
-            placeholder="Search vendor..."
-            class="w-64"
-            [dropdown]="true"
-          />
-        </div>
-
-        <!-- Category Filter (AutoComplete) -->
-        <div class="flex flex-col gap-2">
-          <label for="category-select" class="text-sm font-medium text-color">Category</label>
-          <p-autoComplete
-            id="category-select"
-            [(ngModel)]="filterCategoryName"
-            [suggestions]="filteredCategories()"
-            (completeMethod)="onCategorySearch($event)"
-            (ngModelChange)="onFilterChange()"
-            placeholder="Search category..."
-            class="w-64"
-            [dropdown]="true"
-          />
-        </div>
-
-        <!-- Min Amount Filter -->
-        <div class="flex flex-col gap-2">
-          <label for="min-amount-input" class="text-sm font-medium text-color">Min Amount</label>
-          <p-inputNumber
-            id="min-amount-input"
-            [(ngModel)]="filterMinAmount"
-            (ngModelChange)="onFilterChange()"
-            mode="currency"
-            currency="USD"
-            placeholder="Min"
-            class="w-40"
-          />
-        </div>
-
-        <!-- Max Amount Filter -->
-        <div class="flex flex-col gap-2">
-          <label for="max-amount-input" class="text-sm font-medium text-color">Max Amount</label>
-          <p-inputNumber
-            id="max-amount-input"
-            [(ngModel)]="filterMaxAmount"
-            (ngModelChange)="onFilterChange()"
-            mode="currency"
-            currency="USD"
-            placeholder="Max"
-            class="w-40"
-          />
-        </div>
-
+        <span class="font-bold tracking-tight">Transactions Selected</span>
+      </div>
+      <div class="flex gap-2">
+        <p-button label="Edit" icon="pi pi-pencil" [text]="true" styleClass="text-white hover:bg-white/10"/>
+        <p-button label="Delete" icon="pi pi-trash" [text]="true" severity="danger" (onClick)="bulkDelete()"/>
+        <div class="w-px h-6 bg-white/20 mx-2"></div>
+        <p-button icon="pi pi-times" [text]="true" styleClass="text-white hover:bg-white/10"
+                  (onClick)="selectedTransactions.set([])"/>
       </div>
     </div>
   }
 
-  <!-- Bulk Actions Toolbar -->
-  <app-table-toolbar
-    [selectedCount]="selectedTransactions().length"
-    [totalCount]="totalRecords()">
-    <div bulkActions>
-      <p-button
-        label="Bulk Edit"
-        icon="pi pi-pencil"
-        (onClick)="openBulkEditDialog()"
-        severity="info"
-        [outlined]="true"
-      />
-      <p-button
-        label="Delete Selected"
-        icon="pi pi-trash"
-        (onClick)="bulkDelete()"
-        severity="danger"
-        [outlined]="true"
-      />
-    </div>
-  </app-table-toolbar>
-
-  <!-- Transactions Table -->
+  <!-- Main Ledger Table -->
   @if (!isEmpty()) {
-    <p-card class="shadow-sm">
+    <p-card class="shadow-sm border-none ring-1 ring-surface-200 dark:ring-surface-800 overflow-hidden">
       <p-table
         [value]="transactions()"
-        [(selection)]="selectedTransactions"
-        [(contextMenuSelection)]="selectedContextTransaction"
-        [contextMenu]="cm"
-        [loading]="loading()"
-        [paginator]="true"
-        [rows]="pageSize()"
-        [totalRecords]="totalRecords()"
         [lazy]="true"
-        (onLazyLoad)="onLazyLoad($event)"
-        [rowsPerPageOptions]="[20, 50, 100]"
-        class="p-datatable-sm"
-        dataKey="id">
+        (onLazyLoad)="onPageChange($event)"
+        (onSort)="onSort($event)"
+        [paginator]="true"
+        [rows]="state().size"
+        [totalRecords]="totalRecords()"
+        [loading]="loading()"
+        [stripedRows]="true"
+        size="small"
+        selectionMode="multiple"
+        [(selection)]="selectedTransactions"
+        dataKey="id"
+        responsiveLayout="stack"
+        [breakpoint]="'960px'">
 
-        <ng-template pTemplate="header">
-          <tr>
-            <th style="width: 50px">
-              <p-checkbox
-                [ngModel]="allSelected()"
-                (onChange)="toggleSelectAll()"
-                [binary]="true"
-              />
-            </th>
-            <th pSortableColumn="date">
+        <ng-template #header>
+          <tr class="bg-surface-50 dark:bg-surface-900/50">
+            <th style="width: 4rem"></th>
+            <th id="txn-date" pSortableColumn="date" class="py-4 font-bold text-surface-700 dark:text-surface-200">
               Date
               <p-sortIcon field="date"/>
             </th>
-            <th pSortableColumn="description">
-              Description
-              <p-sortIcon field="description"/>
+            <th id="txn-merchant" class="py-4 font-bold text-surface-700 dark:text-surface-200">Merchant / Description
             </th>
-            <th pSortableColumn="merchant.cleanName" style="width: 200px">
-              Vendor
-              <p-sortIcon field="merchant.cleanName"/>
-            </th>
-            <th pSortableColumn="category.name" style="width: 200px">
-              Category
-              <p-sortIcon field="category.name"/>
-            </th>
-            <th>Account</th>
-            <th>Type</th>
-            <th class="text-right" pSortableColumn="amount">
+            <th id="txn-category" class="py-4 font-bold text-surface-700 dark:text-surface-200">Category</th>
+            <th id="txn-account" class="py-4 font-bold text-surface-700 dark:text-surface-200">Account</th>
+            <th id="txn-amount" pSortableColumn="amount"
+                class="py-4 font-bold text-surface-700 dark:text-surface-200 text-right">
               Amount
               <p-sortIcon field="amount"/>
             </th>
-            <th class="text-center" style="width: 150px">Actions</th>
+            <th id="txn-actions" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-center w-24">
+              Actions
+            </th>
           </tr>
         </ng-template>
 
-        <ng-template pTemplate="body" let-transaction>
-          <tr [pContextMenuRow]="transaction">
-            <!-- Checkbox -->
-            <td>
-              <p-checkbox
-                [(ngModel)]="selectedTransactions"
-                [value]="transaction"
-                [binary]="false"
-              />
+        <ng-template #body let-txn>
+          <tr class="hover:bg-surface-100/50 dark:hover:bg-surface-800/30 transition-colors duration-200 group">
+            <td class="text-center">
+              <p-tableCheckbox [value]="txn"/>
             </td>
 
             <!-- Date -->
-            <td>
-              <span class="font-medium">{{ formatDate(transaction.date) }}</span>
+            <td class="py-4">
+              <div class="flex flex-col">
+                <span
+                  class="text-sm font-bold text-surface-900 dark:text-surface-0">{{ txn.date | date:'MMM d, yyyy' }}</span>
+                <span class="text-[10px] font-black uppercase text-muted-color tracking-tighter">{{ txn.type }}</span>
+              </div>
             </td>
 
-            <!-- Description -->
+            <!-- Merchant / Desc -->
             <td>
-              <span class="text-color" [pTooltip]="transaction.description" tooltipPosition="top">
-                {{ transaction.description || '-' }}
-              </span>
-            </td>
-
-            <!-- Vendor -->
-            <td>
-              @if (transaction.merchant && transaction.merchant.cleanName) {
-                <span class="text-color">{{ transaction.merchant.cleanName }}</span>
-              } @else {
-                <span class="text-color">-</span>
-              }
+              <div class="flex items-center gap-3">
+                <div
+                  class="w-10 h-10 rounded-xl bg-surface-100 dark:bg-surface-800 flex items-center justify-center shrink-0 shadow-xs">
+                  <i class="pi pi-receipt text-surface-400 group-hover:text-primary transition-colors"></i>
+                </div>
+                <div class="flex flex-col truncate max-w-[250px]">
+                  <span
+                    class="font-bold text-surface-900 dark:text-surface-0 truncate">{{ txn.merchant.cleanName }}</span>
+                  <span class="text-xs text-muted-color truncate italic">{{ txn.description }}</span>
+                </div>
+              </div>
             </td>
 
             <!-- Category -->
             <td>
-              <p-tag
-                [severity]="transaction.category ? 'secondary' : 'contrast'"
-                class="text-xs">
-                <div class="flex items-center gap-1">
-                  @if (transaction.category) {
-                    @if (transaction.category.icon) {
-                      <i [class]="'pi ' + transaction.category.icon + ' text-[10px]'"></i>
-                    }
-                    <span>{{ transaction.category.name }}</span>
-                  } @else {
-                    <span>Uncategorized</span>
-                  }
-                </div>
-              </p-tag>
+              <div class="flex items-center gap-2">
+                <div [class]="'w-2 h-2 rounded-full ' + (txn.category.color || 'bg-surface-300')"></div>
+                <span class="text-sm font-medium text-surface-700 dark:text-surface-200">{{ txn.category.name }}</span>
+              </div>
             </td>
 
             <!-- Account -->
             <td>
-              <span class="text-color">{{ transaction.account.name }}</span>
-            </td>
-
-            <!-- Type -->
-            <td>
-              <div class="flex items-center gap-2">
-                <i
-                  [class]="'pi ' + transaction.type.icon + ' ' + transaction.type.color"></i>
-                <span>{{ transaction.type.label }}</span>
-              </div>
+              <span
+                class="px-2 py-1 rounded bg-surface-100 dark:bg-surface-800 text-[10px] font-black uppercase text-surface-500 tracking-tighter ring-1 ring-surface-200 dark:ring-surface-700">
+                {{ txn.account.name }}
+              </span>
             </td>
 
             <!-- Amount -->
             <td class="text-right">
-              <span class="font-semibold" [ngClass]="transaction.type">
-                {{ transaction.amount | formatTransactionTypeAmount: transaction.type.label }}
+              <span class="font-mono font-black text-lg"
+                    [class.text-emerald-600]="txn.type === 'INCOME'"
+                    [class.text-rose-600]="txn.type === 'EXPENSE'"
+                    [class.text-surface-500]="txn.type === 'TRANSFER'">
+                {{ txn.amount | formatTransactionTypeAmount:txn.type }}
               </span>
             </td>
 
-            <!-- Actions -->
+            <!-- Inline Actions -->
             <td class="text-center">
-              <p-button
-                icon="pi pi-pencil"
-                [text]="true"
-                [rounded]="true"
-                severity="info"
-                (onClick)="openEditDialog(transaction)"
-                pTooltip="Edit"
-                tooltipPosition="top"
-              />
-              <p-button
-                icon="pi pi-trash"
-                [text]="true"
-                [rounded]="true"
-                severity="danger"
-                (onClick)="deleteTransaction(transaction)"
-                pTooltip="Delete"
-                tooltipPosition="top"
-              />
+              <div class="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <p-button
+                  icon="pi pi-pencil"
+                  [text]="true"
+                  [rounded]="true"
+                  severity="secondary"
+                  (onClick)="openEditDialog(txn)"
+                  pTooltip="Edit Entry"
+                />
+                <p-button
+                  icon="pi pi-trash"
+                  [text]="true"
+                  [rounded]="true"
+                  severity="danger"
+                  (onClick)="deleteTransaction(txn)"
+                  pTooltip="Remove Record"
+                />
+              </div>
             </td>
           </tr>
         </ng-template>
 
-        <ng-template pTemplate="emptymessage">
+        <ng-template #emptymessage>
           <tr>
-            <td colspan="9" class="text-center py-8 text-muted-color">
-              @if (activeFilterCount() > 0) {
-                <div>
-                  <i class="pi pi-filter text-4xl mb-3"></i>
-                  <p class="text-lg font-medium">No transactions match your filters</p>
-                  <p class="text-sm mt-2">Try adjusting your filter criteria</p>
-                  <p-button
-                    label="Clear All Filters"
-                    (onClick)="clearFilters()"
-                    [text]="true"
-                    class="mt-3"
-                  />
-                </div>
-              } @else {
-                No transactions found
-              }
+            <td colspan="7" class="text-center py-16 text-muted-color italic">
+              No transactions match your current filtering criteria.
             </td>
           </tr>
         </ng-template>
       </p-table>
     </p-card>
-  }
-
-  <!-- Context Menu -->
-  <p-contextMenu #cm [model]="contextMenuItems"
-                 (onShow)="selectedContextTransaction && prepareContextMenu(selectedContextTransaction)"></p-contextMenu>
-
-  <!-- Empty State -->
-  @if (isEmpty()) {
-    <p-card class="shadow-sm">
-      <div class="flex flex-col items-center justify-center py-12">
-        <i class="pi pi-receipt text-6xl text-muted-color mb-4"></i>
-        <h2 class="text-2xl font-semibold text-color mb-2">No transactions yet</h2>
-        <p class="text-muted-color text-center max-w-md">
-          Add your first transaction using the "New Transaction" button above, or import transactions from a CSV file
-          using the "Import CSV" button.
-        </p>
+  } @else if (!loading()) {
+    <!-- Ledger Hero State -->
+    <div class="flex flex-col items-center justify-center min-h-[60vh] text-center animate-fade-in">
+      <div class="relative mb-8">
+        <div class="absolute -inset-4 bg-primary/10 rounded-full blur-2xl animate-pulse"></div>
+        <i class="pi pi-list text-8xl text-primary/40 relative"></i>
       </div>
-    </p-card>
+      <h2 class="text-3xl font-bold text-surface-900 dark:text-surface-0 mb-3">Your ledger is empty</h2>
+      <p class="text-muted-color mb-8 max-w-lg leading-relaxed text-lg">
+        Start building your financial trail by importing your bank's CSV history
+        or adding a new transaction manually.
+      </p>
+      <div class="flex gap-4">
+        <p-button
+          label="Import CSV Ledger"
+          icon="pi pi-upload"
+          severity="info"
+          [outlined]="true"
+          size="large"
+          (onClick)="showImportDialog.set(true)"
+        />
+        <p-button
+          label="Add Transaction"
+          icon="pi pi-plus"
+          (onClick)="openCreateDialog()"
+          severity="primary"
+          size="large"
+          [raised]="true"
+        />
+      </div>
+    </div>
   }
 
-  <!-- Transaction Form Drawer -->
+  <!-- Operation Dialogs & Drawers -->
   <app-transaction-form-drawer
     [(visible)]="showDialog"
     [transaction]="selectedTransaction()"
     [accounts]="accounts()"
+    [categories]="categories()"
+    [merchants]="merchants()"
     [saving]="savingTransaction()"
     (save)="onSave($event)"
   />
 
-  <!-- CSV Import Dialog -->
   <app-csv-import-dialog
-    [visible]="showImportDialog()"
+    [(visible)]="showImportDialog"
     [accounts]="accounts()"
-    (visibleChange)="showImportDialog.set($event)"
     (importComplete)="onImportComplete()"
   />
 
-  <!-- Scan Dialog -->
   <app-transfer-matching-dialog
-    [visible]="showTransferDialog()"
-    (visibleChange)="showTransferDialog.set($event)"
-    (matchComplete)="onTransferMatchComplete()"
-  />
-
-  <!-- Bulk Edit Dialog -->
-  <app-bulk-edit-dialog
-    [visible]="showBulkEditDialog()"
-    [transactions]="selectedTransactions()"
-    [saving]="savingBulkEdit()"
-    (visibleChange)="showBulkEditDialog.set($event)"
-    (save)="onBulkSave()"
+    [(visible)]="showTransferDialog"
+    (complete)="showTransferDialog.set(false)"
   />
 </div>

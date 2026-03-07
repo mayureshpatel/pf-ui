@@ -191,18 +191,19 @@ export interface SaveTransactionRequest {
 export interface TransactionCreateRequest {
   accountId: number;
   amount: number;
-  transactionDate: Date;
+  transactionDate: string;
   description: string;
   type: string;
-  categoryId?: number;
-  postDate?: Date;
-  merchantId?: number;
+  categoryId: number;
+  postDate: string;
+  merchantId: number;
 }
 
 /**
  * Represents a request to update an existing transaction.
  *
  * @property id - The ID of the transaction to update.
+ * @property accountId - The ID of the account associated with the transaction.
  * @property amount - The new amount of the transaction.
  * @property transactionDate - The new date of the transaction.
  * @property description - The new description of the transaction.
@@ -213,13 +214,14 @@ export interface TransactionCreateRequest {
  */
 export interface TransactionUpdateRequest {
   id: number;
+  accountId: number;
   amount: number;
-  transactionDate: Date;
+  transactionDate: string;
   description: string;
   type: string;
-  categoryId?: number;
-  postDate?: Date;
-  merchantId?: number;
+  categoryId: number;
+  postDate: string;
+  merchantId: number;
 }
 
 /**

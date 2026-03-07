@@ -22,7 +22,12 @@ import {SelectModule} from 'primeng/select';
 import {DatePicker} from 'primeng/datepicker';
 import {MessageModule} from 'primeng/message';
 
-import {Transaction, TransactionType} from '@models/transaction.model';
+import {
+  Transaction,
+  TransactionCreateRequest,
+  TransactionType,
+  TransactionUpdateRequest
+} from '@models/transaction.model';
 import {Account} from '@models/account.model';
 import {Category} from '@models/category.model';
 import {Merchant} from '@models/merchant.model';
@@ -71,7 +76,7 @@ export class TransactionFormDrawerComponent {
   readonly saving: InputSignal<boolean> = input(false);
 
   /** Emitted when the form is validated and ready for persistence. */
-  readonly save: OutputEmitterRef<void> = output<void>();
+  readonly save: OutputEmitterRef<TransactionCreateRequest | TransactionUpdateRequest> = output<TransactionCreateRequest | TransactionUpdateRequest>();
 
   /** Filtered suggestions for the category autocomplete. */
   readonly filteredCategories: WritableSignal<Category[]> = signal([]);
@@ -90,16 +95,18 @@ export class TransactionFormDrawerComponent {
    * Strongly typed reactive form for transaction details.
    */
   readonly form = new FormGroup({
-    date: new FormControl<string>('', {nonNullable: true, validators: [Validators.required]}),
+    id: new FormControl<number | null>({value: null, disabled: true}),
+    accountId: new FormControl<number>({value: 0, disabled: true}, {nonNullable: true, validators: [Validators.required]}),
     amount: new FormControl<number>(0, {nonNullable: true, validators: [Validators.required, Validators.min(0.01)]}),
+    transactionDate: new FormControl<string>('', {nonNullable: true, validators: [Validators.required]}),
     description: new FormControl<string>(''),
     type: new FormControl<TransactionType>(TransactionType.EXPENSE, {
       nonNullable: true,
       validators: [Validators.required]
     }),
-    category: new FormControl<Category | null>(null),
-    merchant: new FormControl<Merchant | null>(null),
-    account: new FormControl<number | null>(null, {validators: [Validators.required]})
+    categoryId: new FormControl<number | null>(null),
+    postDate: new FormControl<string | null>(null),
+    merchantId: new FormControl<number | null>(null)
   });
 
   /** Indicates if the component is in edit mode. */
@@ -120,17 +127,17 @@ export class TransactionFormDrawerComponent {
       if (isVisible) {
         if (txn) {
           this.form.patchValue({
-            date: txn.date instanceof Date ? txn.date.toISOString().split('T')[0] : txn.date,
+            transactionDate: txn.date instanceof Date ? txn.date.toISOString().split('T')[0] : txn.date,
             amount: Math.abs(txn.amount),
             description: txn.description,
             type: txn.type,
-            category: txn.category,
-            merchant: txn.merchant,
-            account: txn.account.id
+            categoryId: txn.category.id,
+            merchantId: txn.merchant.id,
+            accountId: txn.account.id
           });
         } else {
           this.form.reset({
-            date: new Date().toISOString().split('T')[0],
+            transactionDate: new Date().toISOString().split('T')[0],
             amount: 0,
             type: TransactionType.EXPENSE,
             description: ''
@@ -171,10 +178,41 @@ export class TransactionFormDrawerComponent {
    * Validates and submits the form data.
    */
   onSubmit(): void {
-    this.form.markAllAsTouched();
-    if (this.form.invalid) return;
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
 
-    const val = this.form.getRawValue();
-    this.save.emit();
+    const rawValue = this.form.getRawValue();
+    const selectedTransaction: Transaction | null = this.transaction();
+
+    if (selectedTransaction) {
+      const updateRequest: TransactionUpdateRequest = {
+        id: selectedTransaction.id,
+        accountId: rawValue.accountId,
+        amount: rawValue.amount,
+        transactionDate: rawValue.transactionDate,
+        description: rawValue.description ?? '',
+        type: rawValue.type,
+        categoryId: rawValue.categoryId!,
+        postDate: rawValue.postDate!,
+        merchantId: rawValue.merchantId!
+      }
+
+      this.save.emit(updateRequest);
+    } else {
+      const createRequest: TransactionCreateRequest = {
+        accountId: rawValue.accountId,
+        amount: rawValue.amount,
+        transactionDate: rawValue.transactionDate,
+        description: rawValue.description ?? '',
+        type: rawValue.type,
+        categoryId: rawValue.categoryId!,
+        postDate: rawValue.postDate!,
+        merchantId: rawValue.merchantId!
+      }
+
+      this.save.emit(createRequest);
+    }
   }
 }
