@@ -1,38 +1,51 @@
 <p-dialog
   header="Add Category Rule"
+  [(visible)]="visible"
   [modal]="true"
-  [visible]="visible()"
-  (visibleChange)="onHide()"
-  [style]="{ width: '450px' }"
   [draggable]="false"
-  [resizable]="false">
+  [resizable]="false"
+  [style]="{ width: '450px' }"
+  class="p-fluid">
 
-  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-4">
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-8 py-4">
     @if (errorMessage()) {
-      <p-message severity="error" styleClass="w-full">
+      <p-message severity="error" variant="simple" class="w-full animate-fade-in">
         {{ errorMessage() }}
       </p-message>
     }
 
+    <!-- Keyword Match -->
     <div class="flex flex-col gap-2">
-      <label for="keyword" class="font-medium text-color">If description contains...</label>
+      <label for="keyword" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
+        If Description Contains...
+      </label>
       <input
         pInputText
         id="keyword"
         formControlName="keyword"
-        placeholder="e.g., WALMART"
-        class="w-full"
+        placeholder="e.g., WALMART, NETFLIX"
+        class="w-full py-3"
       />
-      <small class="text-muted-color">Case-insensitive match</small>
+      <div class="flex items-center gap-1.5 mt-1">
+        <i class="pi pi-info-circle text-[10px] text-muted-color"></i>
+        <small class="text-[10px] font-bold text-muted-color uppercase tracking-tighter italic">
+          Case-insensitive keyword matching
+        </small>
+      </div>
       @if (form.controls.keyword.invalid && form.controls.keyword.touched) {
-        <small class="text-red-500">Keyword is required</small>
+        <small class="text-rose-500 font-medium flex items-center gap-1 animate-fade-in">
+          <i class="pi pi-times-circle text-xs"></i> A match keyword is required
+        </small>
       }
     </div>
 
+    <!-- Category Assignment -->
     <div class="flex flex-col gap-2">
-      <label for="categoryName" class="font-medium text-color">Assign category to...</label>
+      <label for="category" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
+        Assign Category
+      </label>
       <p-select
-        id="categoryName"
+        id="category"
         formControlName="category"
         [options]="categoryGroups()"
         [group]="true"
@@ -41,43 +54,65 @@
         optionLabel="name"
         groupLabel="groupLabel"
         groupChildren="items"
-        placeholder="Select a category"
+        placeholder="Select target category"
         class="w-full"
-        appendTo="body"
-      />
+        appendTo="body">
+
+        <ng-template #group let-group>
+          <div class="flex items-center gap-2 py-1 px-2">
+            <span class="text-xs font-black uppercase text-surface-400 tracking-tighter">{{ group.groupLabel }}</span>
+          </div>
+        </ng-template>
+
+        <ng-template #item let-option>
+          <div class="flex items-center gap-2">
+            <div [class]="'w-2 h-2 rounded-full ' + (option.color || 'bg-surface-300')"></div>
+            <span class="font-medium text-sm">{{ option.name }}</span>
+          </div>
+        </ng-template>
+      </p-select>
       @if (form.controls.category.invalid && form.controls.category.touched) {
-        <small class="text-red-500">Category is required</small>
+        <small class="text-rose-500 font-medium flex items-center gap-1 animate-fade-in">
+          <i class="pi pi-times-circle text-xs"></i> Please select a category
+        </small>
       }
     </div>
 
+    <!-- Rule Priority -->
     <div class="flex flex-col gap-2">
-      <label for="priority" class="font-medium text-color">Priority (Optional)</label>
+      <label for="priority" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
+        Execution Priority
+      </label>
       <p-inputNumber
         id="priority"
         formControlName="priority"
         [min]="0"
         placeholder="0"
         class="w-full"
+        inputStyleClass="font-mono font-bold"
       />
-      <small class="text-muted-color">Higher numbers run first. Useful for specific vs general rules.</small>
+      <p class="text-[10px] text-muted-color leading-tight mt-1">
+        Higher numbers take precedence. Use this to handle overlapping keywords (e.g., more specific rules first).
+      </p>
     </div>
   </form>
 
-  <ng-template pTemplate="footer">
-    <p-button
-      label="Cancel"
-      icon="pi pi-times"
-      (onClick)="onHide()"
-      [text]="true"
-      severity="secondary"
-    />
-    <p-button
-      label="Create Rule"
-      icon="pi pi-check"
-      (onClick)="onSubmit()"
-      [loading]="loading()"
-      [disabled]="loading()"
-      severity="primary"
-    />
+  <ng-template #footer>
+    <div class="flex justify-end gap-3 pt-4 border-t border-surface-100 dark:border-surface-800">
+      <p-button
+        label="Cancel"
+        [text]="true"
+        severity="secondary"
+        (onClick)="onHide()"
+      />
+      <p-button
+        label="Create Rule"
+        icon="pi pi-check"
+        (onClick)="onSubmit()"
+        [loading]="loading()"
+        [disabled]="form.invalid || loading()"
+        [raised]="true"
+      />
+    </div>
   </ng-template>
 </p-dialog>

@@ -1,73 +1,89 @@
 <p-dialog
   [header]="'Apply ' + fieldLabel() + ' Rules'"
-  [visible]="visible()"
-  (visibleChange)="visibleChange.emit($event)"
+  [(visible)]="visible"
   [modal]="true"
-  [style]="{ width: '700px' }"
   [draggable]="false"
-  [resizable]="false">
+  [resizable]="false"
+  [style]="{ width: '750px' }"
+  [breakpoints]="{ '960px': '90vw' }"
+  class="p-fluid">
 
-  <div class="flex flex-col gap-4">
-    <!-- Summary -->
-    <div class="border border-primary-200 dark:border-primary-700 rounded-lg p-4">
-      <div class="flex items-start gap-3">
-        <i class="pi pi-info-circle text-primary text-xl"></i>
-        <div>
-          <h3 class="font-semibold text-color mb-1">
-            {{ totalCount }} transaction{{ totalCount === 1 ? '' : 's' }} will be updated
-          </h3>
-          <p class="text-sm text-color">
-            {{ fieldLabel() }} values will be assigned based on your current rules.
-          </p>
-        </div>
+  <div class="flex flex-col gap-6 py-2">
+    <!-- Analysis Summary Card -->
+    <div
+      class="p-5 rounded-2xl bg-primary/5 border border-primary/10 flex gap-4 items-center animate-in fade-in slide-in-from-top-2 duration-500">
+      <div
+        class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 shadow-sm ring-1 ring-primary/20">
+        <i class="pi pi-bolt text-primary text-xl"></i>
+      </div>
+      <div class="flex flex-col">
+        <h3 class="font-black text-surface-900 dark:text-surface-0 tracking-tight">
+          {{ totalCount() }} Transaction{{ totalCount() === 1 ? '' : 's' }} Identified
+        </h3>
+        <p class="text-xs text-muted-color leading-normal uppercase font-bold tracking-tighter">
+          {{ fieldLabel() }} values will be assigned based on your active ruleset.
+        </p>
       </div>
     </div>
 
-    <!-- Warning for large updates -->
-    @if (isLargeUpdate) {
-      <div class="bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-400 dark:border-yellow-600 rounded-lg p-3">
-        <p class="text-sm text-yellow-900 dark:text-yellow-100">
-          <i class="pi pi-exclamation-triangle mr-2"></i>
-          This is a large update that will affect {{ totalCount }} transactions. This may take a moment to process.
-        </p>
+    <!-- Scale Warning -->
+    @if (isLargeUpdate()) {
+      <div
+        class="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 flex items-center gap-3 animate-in zoom-in-95 duration-300">
+        <i class="pi pi-exclamation-triangle text-amber-600 dark:text-amber-400"></i>
+        <span class="text-xs font-bold text-amber-900 dark:text-amber-100 italic">
+          Large batch detected. Application may take a few seconds to synchronize with all accounts.
+        </span>
       </div>
     }
 
-    <!-- Preview Table -->
-    <div>
-      <h4 class="font-semibold text-color mb-3">
-        Preview of Changes ({{ totalCount }} transaction{{ totalCount === 1 ? '' : 's' }})
-      </h4>
+    <!-- Change Ledger -->
+    <div class="flex flex-col gap-3">
+      <div class="flex items-center justify-between px-1">
+        <span class="text-[10px] font-black uppercase tracking-[0.2em] text-surface-400">Projected Change Ledger</span>
+        <span class="text-[10px] font-mono font-bold text-muted-color">{{ totalCount() }} entries</span>
+      </div>
+
       <p-table
         [value]="previewItems()"
-        [tableStyle]="{ 'min-width': '100%' }"
-        styleClass="p-datatable-sm"
+        [stripedRows]="true"
+        size="small"
         [scrollable]="true"
-        scrollHeight="400px"
-      >
-        <ng-template pTemplate="header">
-          <tr>
-            <th class="w-2/5">Description</th>
-            <th class="w-1/4">Before</th>
-            <th class="w-1/4">After</th>
+        scrollHeight="350px"
+        class="border border-surface-200 dark:border-surface-800 rounded-xl overflow-hidden shadow-xs">
+
+        <ng-template #header>
+          <tr class="bg-surface-50 dark:bg-surface-900/50">
+            <th id="desc" class="py-3 font-bold text-surface-700 dark:text-surface-200">Description</th>
+            <th id="prev" class="py-3 font-bold text-surface-700 dark:text-surface-200">Current</th>
+            <th id="next" class="py-3 font-bold text-surface-700 dark:text-surface-200">New Value</th>
           </tr>
         </ng-template>
-        <ng-template pTemplate="body" let-txn>
-          <tr>
-            <td>
-              <span class="font-mono text-xs truncate block max-w-xs" [title]="txn.description">
+
+        <ng-template #body let-txn>
+          <tr class="hover:bg-surface-100/50 dark:hover:bg-surface-800/30 transition-colors duration-200">
+            <td class="py-3">
+              <span class="font-mono text-[11px] truncate block max-w-[300px] text-surface-600 dark:text-surface-400"
+                    [title]="txn.description">
                 {{ txn.description }}
               </span>
             </td>
             <td>
               @if (txn.oldValue) {
-                <span class="text-muted-color line-through">{{ txn.oldValue }}</span>
+                <span
+                  class="text-[11px] font-bold text-surface-400 line-through decoration-rose-500/50 decoration-2 italic">
+                  {{ txn.oldValue }}
+                </span>
               } @else {
-                <span class="text-muted-color italic">None</span>
+                <span
+                  class="text-[10px] font-black uppercase text-surface-300 dark:text-surface-700 tracking-widest italic">Unset</span>
               }
             </td>
             <td>
-              <span class="font-medium text-green-600 dark:text-green-400">{{ txn.newValue }}</span>
+              <span
+                class="text-[11px] font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-2 py-0.5 rounded ring-1 ring-emerald-200/50">
+                {{ txn.newValue }}
+              </span>
             </td>
           </tr>
         </ng-template>
@@ -75,19 +91,23 @@
     </div>
   </div>
 
-  <ng-template pTemplate="footer">
-    <p-button
-      label="Cancel"
-      severity="secondary"
-      (onClick)="onCancel()"
-      [disabled]="loading()"
-    />
-    <p-button
-      label="Apply Changes"
-      icon="pi pi-check"
-      (onClick)="onConfirm()"
-      [disabled]="loading()"
-      [loading]="loading()"
-    />
+  <ng-template #footer>
+    <div class="flex justify-end gap-3 pt-4 border-t border-surface-100 dark:border-surface-800">
+      <p-button
+        label="Cancel"
+        [text]="true"
+        severity="secondary"
+        (onClick)="onCancel()"
+        [disabled]="loading()"
+      />
+      <p-button
+        label="Commit Changes"
+        icon="pi pi-check"
+        (onClick)="onConfirm()"
+        [loading]="loading()"
+        [disabled]="loading()"
+        [raised]="true"
+      />
+    </div>
   </ng-template>
 </p-dialog>

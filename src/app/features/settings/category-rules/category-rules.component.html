@@ -1,92 +1,141 @@
-<div class="p-4">
+<div class="p-6 bg-surface-50 dark:bg-surface-950 min-h-screen">
   <!-- Page Header -->
-  <app-screen-toolbar>
+  <app-screen-toolbar class="mb-6">
     <div toolbarTitle>
-      <h1 class="text-3xl font-bold text-color">Category Rules</h1>
-      <p class="text-muted-color mt-1">Automatically assign categories to uncategorized transactions</p>
+      <h1 class="text-4xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight">Category Rules</h1>
+      <p class="text-muted-color mt-1 text-lg italic">Intelligent Automation Engine</p>
     </div>
 
-    <div toolbarActions>
+    <div toolbarActions class="flex gap-3">
       <p-button
         label="Apply Rules"
         icon="pi pi-refresh"
         (onClick)="openApplyPreview()"
         severity="secondary"
         [outlined]="true"
+        class="shadow-sm"
       />
       <p-button
         label="New Rule"
         icon="pi pi-plus"
         (onClick)="openCreateDialog()"
         severity="primary"
+        [raised]="true"
       />
     </div>
   </app-screen-toolbar>
 
-  <!-- Rules Table -->
-  <p-card class="shadow-sm">
-    <p-table
-      [value]="rules()"
-      [loading]="loading()"
-      class="p-datatable-sm">
+  <!-- Rules Ledger -->
+  @if (!isEmpty()) {
+    <p-card class="shadow-sm border-none ring-1 ring-surface-200 dark:ring-surface-800 overflow-hidden">
+      <p-table
+        [value]="rules()"
+        [loading]="loading()"
+        [rowHover]="true"
+        [stripedRows]="true"
+        size="small"
+        responsiveLayout="stack"
+        [breakpoint]="'960px'">
 
-      <ng-template pTemplate="header">
-        <tr>
-          <th>Priority</th>
-          <th>If Description Contains...</th>
-          <th>Assign Category</th>
-          <th class="text-center" style="width: 100px">Action</th>
-        </tr>
-      </ng-template>
+        <ng-template #header>
+          <tr class="bg-surface-50 dark:bg-surface-900/50">
+            <th id="rule-priority" class="py-4 font-bold text-surface-700 dark:text-surface-200 w-24">Priority</th>
+            <th id="rule-keyword" class="py-4 font-bold text-surface-700 dark:text-surface-200">Match Keyword</th>
+            <th id="rule-category" class="py-4 font-bold text-surface-700 dark:text-surface-200">Assigned Category</th>
+            <th id="rule-actions" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-center w-24">
+              Action
+            </th>
+          </tr>
+        </ng-template>
 
-      <ng-template pTemplate="body" let-rule>
-        <tr>
-          <td>
-            <span class="text-muted-color">{{ rule.priority }}</span>
-          </td>
-          <td class="font-mono text-sm px-2 py-1 rounded">
-            {{ rule.keyword }}
-          </td>
-          <td class="font-medium text-primary">
-            {{ rule.category.name }}
-          </td>
-          <td class="text-center">
-            <p-button
-              icon="pi pi-trash"
-              [text]="true"
-              [rounded]="true"
-              severity="danger"
-              (onClick)="deleteRule(rule)"
-              pTooltip="Delete Rule"
-              tooltipPosition="top"
-            />
-          </td>
-        </tr>
-      </ng-template>
+        <ng-template #body let-rule>
+          <tr class="hover:bg-surface-100/50 dark:hover:bg-surface-800/30 transition-colors duration-200">
+            <!-- Priority Badge -->
+            <td>
+              <span
+                class="px-2 py-0.5 rounded bg-surface-100 dark:bg-surface-800 text-[10px] font-black font-mono text-surface-500 ring-1 ring-surface-200 dark:ring-surface-700">
+                #{{ rule.priority }}
+              </span>
+            </td>
 
-      <ng-template pTemplate="emptymessage">
-        <tr>
-          <td colspan="4" class="text-center py-8 text-muted-color">
-            No rules found. Create one to start categorizing your transactions automatically.
-          </td>
-        </tr>
-      </ng-template>
-    </p-table>
-  </p-card>
+            <!-- Keyword Display -->
+            <td class="py-4">
+              <div class="flex items-center gap-2">
+                <i class="pi pi-search text-xs text-muted-color"></i>
+                <span
+                  class="font-mono font-bold text-surface-900 dark:text-surface-0 bg-primary/5 px-2 py-1 rounded border border-primary/10">
+                  {{ rule.keyword }}
+                </span>
+              </div>
+            </td>
 
-  <!-- Create Rule Dialog -->
+            <!-- Category Association -->
+            <td>
+              <div class="flex items-center gap-3">
+                <div
+                  [class]="'w-8 h-8 rounded-lg flex items-center justify-center text-white shadow-sm ' + (rule.category.color || 'bg-surface-400')">
+                  <i [class]="'pi ' + (rule.category.icon || 'pi-tag') + ' text-xs'"></i>
+                </div>
+                <span class="font-bold text-surface-700 dark:text-surface-200">{{ rule.category.name }}</span>
+              </div>
+            </td>
+
+            <!-- Inline Actions -->
+            <td class="text-center">
+              <p-button
+                icon="pi pi-trash"
+                [text]="true"
+                [rounded]="true"
+                severity="danger"
+                (onClick)="deleteRule(rule)"
+                pTooltip="Permanently remove this rule"
+              />
+            </td>
+          </tr>
+        </ng-template>
+
+        <ng-template #emptymessage>
+          <tr>
+            <td colspan="4" class="text-center py-16 text-muted-color italic">
+              No categorization rules found.
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </p-card>
+  } @else if (!loading()) {
+    <!-- Hero State -->
+    <div class="flex flex-col items-center justify-center min-h-[60vh] text-center animate-fade-in">
+      <div class="relative mb-8">
+        <div class="absolute -inset-4 bg-primary/10 rounded-full blur-2xl animate-pulse"></div>
+        <i class="pi pi-tags text-8xl text-primary/40 relative"></i>
+      </div>
+      <h2 class="text-3xl font-bold text-surface-900 dark:text-surface-0 mb-3">No active rules</h2>
+      <p class="text-muted-color mb-8 max-w-lg leading-relaxed text-lg">
+        Automate your accounting by creating rules that detect keywords in transaction
+        descriptions and automatically assign the correct category.
+      </p>
+      <p-button
+        label="Create Your First Rule"
+        icon="pi pi-plus"
+        (onClick)="openCreateDialog()"
+        severity="primary"
+        size="large"
+        [raised]="true"
+      />
+    </div>
+  }
+
+  <!-- Dialogs -->
   <app-category-rule-form-dialog
-    [visible]="showDialog()"
-    (visibleChange)="showDialog.set($event)"
+    [(visible)]="showDialog"
     (save)="onRuleSaved()"
   />
 
-  <!-- Apply Rules Preview Dialog -->
   <app-apply-rules-dialog
-    [visible]="showApplyDialog()"
+    [(visible)]="showApplyDialog"
     [previewItems]="previewItems()"
     fieldLabel="Category"
-    (visibleChange)="showApplyDialog.set($event)"
     (confirm)="confirmApply()"
   />
 </div>
