@@ -129,3 +129,16 @@ export enum BankName {
   STANDARD = 'STANDARD',
   UNIVERSAL = 'UNIVERSAL'
 }
+
+/**
+ * Represents a summary of all accounts.
+ *
+ * @property totalAssets - The total value of all asset accounts.
+ * @property totalLiabilities - The total value of all liability accounts.
+ * @property netWorth - The net worth (total assets minus total liabilities).
+ */
+export interface AccountSummary {
+  totalAssets: number;
+  totalLiabilities: number;
+  netWorth: number;
+}

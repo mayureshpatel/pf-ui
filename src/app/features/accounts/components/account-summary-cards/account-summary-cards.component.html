@@ -1,49 +1,47 @@
-<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
   <!-- Total Assets -->
-  <p-card class="shadow-sm">
+  <p-card class="shadow-sm border-none ring-1 ring-surface-200 dark:ring-surface-800 hover:shadow-md transition-all duration-300">
     <div class="flex items-center justify-between">
-      <div>
-        <p class="text-muted-color text-sm mb-1">Total Assets</p>
-        <p class="text-2xl font-semibold text-green-600">
+      <div class="flex flex-col gap-1">
+        <span class="text-xs font-bold uppercase tracking-widest text-surface-500 dark:text-surface-400">Total Assets</span>
+        <span class="text-3xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
           {{ summary().totalAssets | formatCurrency }}
-        </p>
+        </span>
       </div>
-      <div class="bg-green-100 dark:bg-green-900 p-3 rounded-full">
-        <i class="pi pi-arrow-up text-green-600 dark:text-green-300 text-xl"></i>
+      <div class="bg-emerald-50 dark:bg-emerald-900/30 p-4 rounded-2xl ring-1 ring-emerald-200/50 dark:ring-emerald-700/50">
+        <i class="pi pi-chart-line text-emerald-600 dark:text-emerald-400 text-2xl"></i>
       </div>
     </div>
   </p-card>
 
   <!-- Total Liabilities -->
-  <p-card class="shadow-sm">
+  <p-card class="shadow-sm border-none ring-1 ring-surface-200 dark:ring-surface-800 hover:shadow-md transition-all duration-300">
     <div class="flex items-center justify-between">
-      <div>
-        <p class="text-muted-color text-sm mb-1">Total Liabilities</p>
-        <p class="text-2xl font-semibold text-red-600">
+      <div class="flex flex-col gap-1">
+        <span class="text-xs font-bold uppercase tracking-widest text-surface-500 dark:text-surface-400">Total Liabilities</span>
+        <span class="text-3xl font-black text-rose-600 dark:text-rose-400 font-mono">
           {{ summary().totalLiabilities | formatCurrency }}
-        </p>
+        </span>
       </div>
-      <div class="bg-red-100 dark:bg-red-900 p-3 rounded-full">
-        <i class="pi pi-arrow-down text-red-600 dark:text-red-300 text-xl"></i>
+      <div class="bg-rose-50 dark:bg-rose-900/30 p-4 rounded-2xl ring-1 ring-rose-200/50 dark:ring-rose-700/50">
+        <i class="pi pi-credit-card text-rose-600 dark:text-rose-400 text-2xl"></i>
       </div>
     </div>
   </p-card>
 
   <!-- Net Worth -->
-  <p-card class="shadow-sm">
+  <p-card class="shadow-sm border-none ring-1 ring-surface-200 dark:ring-surface-800 hover:shadow-md transition-all duration-300">
     <div class="flex items-center justify-between">
-      <div>
-        <p class="text-muted-color text-sm mb-1">Net Worth</p>
-        <p class="text-2xl font-semibold"
-           [ngClass]="{
-             'text-green-600': summary().netWorth >= 0,
-             'text-red-600': summary().netWorth < 0
-           }">
+      <div class="flex flex-col gap-1">
+        <span class="text-xs font-bold uppercase tracking-widest text-surface-500 dark:text-surface-400">Net Worth</span>
+        <span class="text-3xl font-black font-mono tracking-tighter"
+              [class.text-emerald-600]="summary().netWorth >= 0"
+              [class.text-rose-600]="summary().netWorth < 0">
           {{ summary().netWorth | formatCurrency }}
-        </p>
+        </span>
       </div>
-      <div class="bg-primary-100 dark:bg-primary-900 p-3 rounded-full">
-        <i class="pi pi-wallet text-primary text-xl"></i>
+      <div class="bg-surface-100 dark:bg-surface-800 p-4 rounded-2xl ring-1 ring-surface-200 dark:ring-surface-700">
+        <i class="pi pi-wallet text-surface-700 dark:text-surface-200 text-2xl"></i>
       </div>
     </div>
   </p-card>
