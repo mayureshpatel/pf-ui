@@ -125,6 +125,6 @@ export class RecurringSuggestionsDialogComponent {
       return 'text-amber-600 bg-amber-50 dark:bg-amber-950/20 ring-amber-200/50';
     }
 
-    return 'text-surface-500 dark:bg-surface-800 ring-surface-200';
+    return 'text-surface-500 ring-surface-200';
   }
 }

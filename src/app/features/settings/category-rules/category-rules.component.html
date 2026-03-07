@@ -1,4 +1,4 @@
-<div class="p-6 dark:bg-surface-950 min-h-screen">
+<div class="p-6 min-h-screen">
   <!-- Page Header -->
   <app-screen-toolbar class="mb-6">
     <div toolbarTitle>
@@ -38,7 +38,7 @@
         [breakpoint]="'960px'">
 
         <ng-template #header>
-          <tr class="dark:bg-surface-900/50">
+          <tr>
             <th id="rule-priority" class="py-4 font-bold text-surface-700 dark:text-surface-200 w-24">Priority</th>
             <th id="rule-keyword" class="py-4 font-bold text-surface-700 dark:text-surface-200">Match Keyword</th>
             <th id="rule-category" class="py-4 font-bold text-surface-700 dark:text-surface-200">Assigned Category</th>
@@ -53,7 +53,7 @@
             <!-- Priority Badge -->
             <td>
               <span
-                class="px-2 py-0.5 rounded bg-surface-100 dark:bg-surface-800 text-[10px] font-black font-mono text-surface-500 ring-1 ring-surface-200 dark:ring-surface-700">
+                class="px-2 py-0.5 rounded bg-surface-100 text-[10px] font-black font-mono text-surface-500 ring-1 ring-surface-200 dark:ring-surface-700">
                 #{{ rule.priority }}
               </span>
             </td>

@@ -20,7 +20,7 @@
 
     <!-- Comparison Subtext -->
     <div class="flex items-center gap-1.5 mt-1">
-      <div class="w-1.5 h-1.5 rounded-full bg-surface-200 dark:bg-surface-700"></div>
+      <div class="w-1.5 h-1.5 rounded-full bg-surface-200"></div>
       <span class="text-[11px] font-bold text-muted-color">
         vs {{ type() === 'percent' ? previousValue().toFixed(1) + '%' : previousValue() | formatCurrency }} last period
       </span>

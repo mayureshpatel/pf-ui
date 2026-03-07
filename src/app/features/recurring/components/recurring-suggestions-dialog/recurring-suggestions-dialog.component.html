@@ -33,7 +33,7 @@
       [breakpoint]="'640px'">
 
       <ng-template #header>
-        <tr class="dark:bg-surface-900/50">
+        <tr>
           <th id="suggested-merchant" class="py-4 font-bold text-surface-700 dark:text-surface-200">Merchant</th>
           <th id="suggested-amount" class="py-4 font-bold text-surface-700 dark:text-surface-200">Typical Amount</th>
           <th id="suggested-frequency" class="py-4 font-bold text-surface-700 dark:text-surface-200">Frequency</th>
@@ -48,7 +48,7 @@
         <tr class="hover:bg-surface-100/50 dark:hover:bg-surface-800/30 transition-colors duration-200">
           <td class="py-4">
             <div class="flex items-center gap-3">
-              <div class="w-8 h-8 rounded-lg bg-surface-100 dark:bg-surface-800 flex items-center justify-center">
+              <div class="w-8 h-8 rounded-lg bg-surface-100 flex items-center justify-center">
                 <i class="pi pi-shop text-surface-400"></i>
               </div>
               <span class="font-bold text-surface-900 dark:text-surface-0">{{ suggestion.merchant.cleanName }}</span>
@@ -57,7 +57,7 @@
           <td class="font-mono font-black text-primary">{{ suggestion.amount | currency }}</td>
           <td>
             <span
-              class="px-2 py-0.5 rounded-full bg-surface-100 dark:bg-surface-800 text-[10px] font-black uppercase text-surface-600 dark:text-surface-300 ring-1 ring-surface-200 dark:ring-surface-700">
+              class="px-2 py-0.5 rounded-full bg-surface-100 text-[10px] font-black uppercase text-surface-600 dark:text-surface-300 ring-1 ring-surface-200 dark:ring-surface-700">
               {{ frequencyLabels[suggestion.frequency] }}
             </span>
           </td>

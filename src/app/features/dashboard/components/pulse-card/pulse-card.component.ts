@@ -60,7 +60,7 @@ export class PulseCardComponent {
   readonly trendStyles = computed(() => {
     const t: number = this.trend();
     if (t === 0) {
-      return 'text-surface-500 bg-surface-100 dark:bg-surface-800';
+      return 'text-surface-500 bg-surface-100';
     }
 
     const isPositive: boolean = t > 0;

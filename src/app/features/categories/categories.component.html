@@ -1,4 +1,4 @@
-<div class="p-6 dark:bg-surface-950 min-h-screen">
+<div class="p-6 min-h-screen">
   <!-- Page Header -->
   <app-screen-toolbar class="mb-6">
     <div toolbarTitle>
@@ -36,7 +36,7 @@
         [breakpoint]="'960px'">
 
         <ng-template #header>
-          <tr class="dark:bg-surface-900/50">
+          <tr>
             <th id="category-icon" style="width: 60px"></th>
             <th id="category-name" class="py-4 font-bold text-surface-700 dark:text-surface-200">Category Name</th>
             <th id="usage" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-center"
@@ -56,14 +56,14 @@
 
         <!-- Group Header (Parent Categories) -->
         <ng-template #groupheader let-cat>
-          <tr pRowGroupHeader class="bg-surface-100/50 dark:bg-surface-800/20">
+          <tr pRowGroupHeader>
             <td colspan="6" class="py-3 px-4">
               <div class="flex items-center justify-between w-full">
                 <div class="flex items-center gap-3">
                   <span
                     class="text-lg font-black text-surface-900 dark:text-surface-0 tracking-tight uppercase">{{ cat.groupName }}</span>
                   <span
-                    class="px-2 py-0.5 rounded-full bg-surface-200 dark:bg-surface-700 text-xs font-bold text-surface-600 dark:text-surface-300">
+                    class="px-2 py-0.5 rounded-full bg-surface-200 text-xs font-bold text-surface-600 dark:text-surface-300">
                     Parent Group
                   </span>
                 </div>

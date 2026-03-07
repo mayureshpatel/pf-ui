@@ -1,4 +1,4 @@
-<div class="p-6 dark:bg-surface-950 min-h-screen">
+<div class="p-6 min-h-screen">
   <!-- Page Header -->
   <app-screen-toolbar [showDivider]="false" class="mb-6">
     <div toolbarTitle>
@@ -9,7 +9,7 @@
     <div toolbarFilters>
       <!-- Period Filters Container -->
       <div
-        class="flex flex-wrap gap-4 items-center p-1.5 bg-surface-0 dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 shadow-sm ring-1 ring-surface-100 dark:ring-surface-800">
+        class="flex flex-wrap gap-4 items-center p-1.5 bg-surface-0 rounded-2xl border border-surface-200 dark:border-surface-800 shadow-sm ring-1 ring-surface-100 dark:ring-surface-800">
         <p-selectButton
           [(ngModel)]="selectedPreset"
           [options]="presetOptions"
@@ -20,7 +20,7 @@
 
         @if (selectedPreset() === 'CUSTOM') {
           <div class="flex items-center gap-2 pr-2 animate-in fade-in slide-in-from-left-2 duration-500">
-            <div class="w-px h-6 bg-surface-200 dark:bg-surface-700 mx-1"></div>
+            <div class="w-px h-6 bg-surface-200 mx-1"></div>
             <p-select
               [(ngModel)]="selectedMonth"
               [options]="monthOptions"
@@ -114,7 +114,7 @@
           <div class="flex flex-col gap-4 mt-4">
             @for (item of topMerchants(); track item.merchant.id) {
               <div
-                class="group flex justify-between items-center p-4 rounded-2xl dark:bg-surface-900/50 border border-surface-100 dark:border-surface-800 hover:border-primary/30 transition-all duration-300">
+                class="group flex justify-between items-center p-4 rounded-2xl border border-surface-100 dark:border-surface-800 hover:border-primary/30 transition-all duration-300">
                 <div class="flex flex-col">
                   <span
                     class="font-bold text-surface-900 dark:text-surface-0 tracking-tight">{{ item.merchant.cleanName }}</span>

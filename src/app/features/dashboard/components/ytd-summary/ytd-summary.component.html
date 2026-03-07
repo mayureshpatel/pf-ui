@@ -6,7 +6,7 @@
         <span class="text-xl font-black text-surface-900 dark:text-surface-0 tracking-tight">{{ year() }} Summary</span>
         <span class="text-[10px] font-black uppercase tracking-widest text-surface-400">Year to Date</span>
       </div>
-      <div class="bg-surface-100 dark:bg-surface-800 p-2 rounded-lg">
+      <div class="bg-surface-100 p-2 rounded-lg">
         <i class="pi pi-calendar-clock text-surface-500"></i>
       </div>
     </div>
@@ -15,7 +15,7 @@
     <div class="grid grid-cols-1 gap-4">
       <!-- Total Income -->
       <div
-        class="flex justify-between items-center p-3 rounded-xl dark:bg-surface-900/50 border border-surface-100 dark:border-surface-800">
+        class="flex justify-between items-center p-3 rounded-xl border border-surface-100 dark:border-surface-800">
         <span class="text-xs font-bold text-surface-500 uppercase">Income</span>
         <span class="font-mono font-bold text-emerald-600 dark:text-emerald-400">
           {{ totalIncome() | formatCurrency }}
@@ -24,7 +24,7 @@
 
       <!-- Total Expenses -->
       <div
-        class="flex justify-between items-center p-3 rounded-xl dark:bg-surface-900/50 border border-surface-100 dark:border-surface-800">
+        class="flex justify-between items-center p-3 rounded-xl border border-surface-100 dark:border-surface-800">
         <span class="text-xs font-bold text-surface-500 uppercase">Expenses</span>
         <span class="font-mono font-bold text-rose-600 dark:text-rose-400">
           {{ totalExpense() | formatCurrency }}
@@ -48,7 +48,7 @@
           {{ avgSavingsRate().toFixed(1) }}%
         </span>
       </div>
-      <div class="h-2.5 w-full bg-surface-100 dark:bg-surface-800 rounded-full overflow-hidden shadow-inner">
+      <div class="h-2.5 w-full bg-surface-100 rounded-full overflow-hidden shadow-inner">
         <div
           class="bg-primary h-full rounded-full transition-all duration-1000 ease-out shadow-sm"
           [style.width.%]="Math.min(Math.max(avgSavingsRate(), 0), 100)">

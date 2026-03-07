@@ -1,4 +1,4 @@
-<div class="p-6 dark:bg-surface-950 min-h-screen">
+<div class="p-6 min-h-screen">
   <!-- Page Header -->
   <app-screen-toolbar class="mb-6">
     <div toolbarTitle>
@@ -27,7 +27,7 @@
       <!-- Period Filters (Conditional) -->
       @if (viewMode() === 'monthly') {
         <div
-          class="flex items-center p-1 bg-surface-0 dark:bg-surface-900 rounded-xl border border-surface-200 dark:border-surface-800 shadow-sm ring-1 ring-surface-100 dark:ring-surface-800">
+          class="flex items-center p-1 rounded-xl border border-surface-200 dark:border-surface-800 shadow-sm ring-1 ring-surface-100 dark:ring-surface-800">
           <p-select
             [(ngModel)]="selectedMonth"
             [options]="monthOptions"
@@ -36,7 +36,7 @@
             (onChange)="onPeriodChange()"
             class="w-36 border-none bg-transparent"
           />
-          <div class="w-px h-6 bg-surface-200 dark:bg-surface-700 mx-2"></div>
+          <div class="w-px h-6 mx-2"></div>
           <p-select
             [(ngModel)]="selectedYear"
             [options]="yearOptions"
@@ -127,7 +127,7 @@
           [breakpoint]="'960px'">
 
           <ng-template #header>
-            <tr class="dark:bg-surface-900/50">
+            <tr>
               <th id="category" colspan="2" class="py-4 font-bold text-surface-700 dark:text-surface-200">Category</th>
               <th id="budgeted" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-right">Budgeted</th>
               <th id="spent" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-right">Spent</th>
@@ -201,7 +201,7 @@
           responsiveLayout="stack">
 
           <ng-template #header>
-            <tr class="dark:bg-surface-900/50">
+            <tr>
               <th id="period" class="py-4 font-bold text-surface-700 dark:text-surface-200">Period</th>
               <th id="all-category" class="py-4 font-bold text-surface-700 dark:text-surface-200">Category</th>
               <th id="amount" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-right">Amount</th>

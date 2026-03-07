@@ -37,7 +37,7 @@
 
     <form [formGroup]="form" class="flex flex-col gap-6">
       <!-- Category Overwrite -->
-      <div class="flex items-start gap-4 p-4 rounded-xl border border-surface-200 dark:border-surface-800 bg-surface-0 dark:bg-surface-900 shadow-xs transition-all duration-300"
+      <div class="flex items-start gap-4 p-4 rounded-xl border border-surface-200 dark:border-surface-800 bg-surface-0 shadow-xs transition-all duration-300"
            [class.ring-1]="form.value.updateCategory" [class.ring-primary/30]="form.value.updateCategory">
         <p-checkbox formControlName="updateCategory" [binary]="true" class="mt-1" />
         <div class="flex-1 flex flex-col gap-2">
@@ -52,7 +52,7 @@
             placeholder="Search Categories..."
             [filter]="true"
             appendTo="body"
-            class="w-full border-none dark:bg-surface-800/50 rounded-lg overflow-hidden"
+            class="w-full border-none rounded-lg overflow-hidden"
           >
             <ng-template let-group pTemplate="group">
               <span class="text-[9px] font-black uppercase text-muted-color">{{ group.label }}</span>
@@ -62,7 +62,7 @@
       </div>
 
       <!-- Merchant Overwrite -->
-      <div class="flex items-start gap-4 p-4 rounded-xl border border-surface-200 dark:border-surface-800 bg-surface-0 dark:bg-surface-900 shadow-xs transition-all duration-300"
+      <div class="flex items-start gap-4 p-4 rounded-xl border border-surface-200 dark:border-surface-800 bg-surface-0 shadow-xs transition-all duration-300"
            [class.ring-1]="form.value.updateVendor" [class.ring-primary/30]="form.value.updateVendor">
         <p-checkbox formControlName="updateVendor" [binary]="true" class="mt-1" />
         <div class="flex-1 flex flex-col gap-2">
@@ -72,13 +72,13 @@
             formControlName="merchant"
             [disabled]="!form.value.updateVendor"
             placeholder="Enter standard name..."
-            class="w-full border-none dark:bg-surface-800/50 text-sm font-bold"
+            class="w-full border-none text-sm font-bold"
           />
         </div>
       </div>
 
       <!-- Description Overwrite -->
-      <div class="flex items-start gap-4 p-4 rounded-xl border border-surface-200 dark:border-surface-800 bg-surface-0 dark:bg-surface-900 shadow-xs transition-all duration-300"
+      <div class="flex items-start gap-4 p-4 rounded-xl border border-surface-200 dark:border-surface-800 bg-surface-0 shadow-xs transition-all duration-300"
            [class.ring-1]="form.value.updateDescription" [class.ring-primary/30]="form.value.updateDescription">
         <p-checkbox formControlName="updateDescription" [binary]="true" class="mt-1" />
         <div class="flex-1 flex flex-col gap-2">
@@ -88,7 +88,7 @@
             formControlName="description"
             [disabled]="!form.value.updateDescription"
             placeholder="Add universal note..."
-            class="w-full border-none dark:bg-surface-800/50 text-sm font-bold"
+            class="w-full border-none text-sm font-bold"
           />
         </div>
       </div>
