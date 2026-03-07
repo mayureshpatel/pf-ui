@@ -15,7 +15,7 @@
     <div class="grid grid-cols-1 gap-4">
       <!-- Total Income -->
       <div
-        class="flex justify-between items-center p-3 rounded-xl bg-surface-50 dark:bg-surface-900/50 border border-surface-100 dark:border-surface-800">
+        class="flex justify-between items-center p-3 rounded-xl dark:bg-surface-900/50 border border-surface-100 dark:border-surface-800">
         <span class="text-xs font-bold text-surface-500 uppercase">Income</span>
         <span class="font-mono font-bold text-emerald-600 dark:text-emerald-400">
           {{ totalIncome() | formatCurrency }}
@@ -24,7 +24,7 @@
 
       <!-- Total Expenses -->
       <div
-        class="flex justify-between items-center p-3 rounded-xl bg-surface-50 dark:bg-surface-900/50 border border-surface-100 dark:border-surface-800">
+        class="flex justify-between items-center p-3 rounded-xl dark:bg-surface-900/50 border border-surface-100 dark:border-surface-800">
         <span class="text-xs font-bold text-surface-500 uppercase">Expenses</span>
         <span class="font-mono font-bold text-rose-600 dark:text-rose-400">
           {{ totalExpense() | formatCurrency }}
