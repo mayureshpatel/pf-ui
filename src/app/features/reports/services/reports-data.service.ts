@@ -119,8 +119,8 @@ export class ReportsDataService {
       // Exclude transfers to avoid double-counting or inflated volumes
       if (txn.type === TransactionType.TRANSFER) continue;
 
-      // Normalize date to YYYY-MM for map grouping
-      const monthKey = txn.date.substring(0, 7);
+      const date: Date = txn.date instanceof Date ? txn.date : new Date(txn.date);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 
       if (!monthMap.has(monthKey)) {
         monthMap.set(monthKey, {income: 0, expense: 0});

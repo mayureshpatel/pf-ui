@@ -1,4 +1,4 @@
-import {Component, DestroyRef, effect, inject, OnInit, signal, WritableSignal} from '@angular/core';
+import {Component, DestroyRef, effect, inject, signal, WritableSignal} from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {finalize} from 'rxjs';
@@ -36,7 +36,7 @@ import {DateRange} from './models/reports.model';
   ],
   templateUrl: './reports.component.html'
 })
-export class ReportsComponent implements OnInit {
+export class ReportsComponent {
   private readonly transactionApi: TransactionApiService = inject(TransactionApiService);
   private readonly toast: ToastService = inject(ToastService);
   private readonly destroyRef: DestroyRef = inject(DestroyRef);
@@ -59,16 +59,9 @@ export class ReportsComponent implements OnInit {
      * whenever the user changes the global date range filters.
      */
     effect((): void => {
-      this.dateRange(); // Track as dependency
+      this.dateRange();
       this.loadTransactions();
     });
-  }
-
-  /**
-   * Initializes component data on first load.
-   */
-  ngOnInit(): void {
-    this.loadTransactions();
   }
 
   /**
@@ -82,8 +75,8 @@ export class ReportsComponent implements OnInit {
     this.loading.set(true);
 
     const filter: TransactionFilter = {
-      startDate: range.startDate,
-      endDate: range.endDate
+      startDate: new Date(range.startDate),
+      endDate: new Date(range.endDate)
     };
 
     const pageRequest: PageRequest = {
@@ -111,8 +104,8 @@ export class ReportsComponent implements OnInit {
    * @returns A pre-populated DateRange object.
    */
   private getDefaultDateRange(): DateRange {
-    const end = new Date();
-    const start = new Date();
+    const end: Date = new Date();
+    const start: Date = new Date();
     start.setMonth(start.getMonth() - 3);
 
     return {
