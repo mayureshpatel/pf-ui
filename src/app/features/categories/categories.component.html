@@ -1,9 +1,9 @@
-<div class="p-4">
+<div class="p-6 bg-surface-50 dark:bg-surface-950 min-h-screen">
   <!-- Page Header -->
-  <app-screen-toolbar>
+  <app-screen-toolbar class="mb-6">
     <div toolbarTitle>
-      <h1 class="text-3xl font-bold text-color">Categories</h1>
-      <p class="text-muted-color mt-1">Manage your transaction categories</p>
+      <h1 class="text-4xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight">Categories</h1>
+      <p class="text-muted-color mt-1 text-lg">Organize your transactions and track spending by category</p>
     </div>
 
     <div toolbarActions>
@@ -12,134 +12,154 @@
         icon="pi pi-plus"
         (onClick)="openCreateDialog()"
         severity="primary"
+        [raised]="true"
       />
     </div>
   </app-screen-toolbar>
 
-  <!-- Categories Table with Row Grouping -->
+  <!-- Categories Table -->
   @if (!isEmpty()) {
-    <p-card class="shadow-sm">
+    <p-card class="shadow-sm border-none ring-1 ring-surface-200 dark:ring-surface-800 overflow-hidden">
       <p-table
         [value]="categoryViewModels()"
         [loading]="loading()"
         [paginator]="false"
-        class="p-datatable-sm"
+        [stripedRows]="true"
+        size="small"
         rowGroupMode="subheader"
         groupRowsBy="groupName"
         sortField="groupName"
         sortMode="single"
         [scrollable]="true"
-        scrollHeight="600px">
+        scrollHeight="calc(100vh - 280px)"
+        responsiveLayout="stack"
+        [breakpoint]="'960px'">
 
-        <ng-template pTemplate="header">
-          <tr>
-            <th style="width: 60px"></th>
-            <th>Category Name</th>
-            <th class="text-center" style="width: 150px">Usage</th>
-            <th class="text-right" style="width: 120px">Budget</th>
-            <th style="width: 200px">Monthly Progress</th>
-            <th class="text-center" style="width: 120px">Actions</th>
+        <ng-template #header>
+          <tr class="bg-surface-50 dark:bg-surface-900/50">
+            <th id="category-icon" style="width: 60px"></th>
+            <th id="category-name" class="py-4 font-bold text-surface-700 dark:text-surface-200">Category Name</th>
+            <th id="usage" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-center"
+                style="width: 150px">Usage
+            </th>
+            <th id="budget" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-right"
+                style="width: 140px">Budget
+            </th>
+            <th id="progress" class="py-4 font-bold text-surface-700 dark:text-surface-200" style="width: 220px">Monthly
+              Progress
+            </th>
+            <th id="actions" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-center"
+                style="width: 120px">Actions
+            </th>
           </tr>
         </ng-template>
 
-        <!-- Group Header -->
-        <ng-template pTemplate="groupheader" let-categoryViewModel>
-          <tr pRowGroupHeader>
-            <td colspan="6">
-              <div class="flex items-center gap-2 py-1">
-                <span
-                  class="font-bold text-lg text-primary uppercase tracking-wide">{{ categoryViewModel.groupName }}</span>
-                <span class="text-sm text-muted-color font-normal">
-                  ({{ calculateGroupTotal(categoryViewModel.groupName) }} transactions)
-                </span>
+        <!-- Group Header (Parent Categories) -->
+        <ng-template #groupheader let-cat>
+          <tr pRowGroupHeader class="bg-surface-100/50 dark:bg-surface-800/20">
+            <td colspan="6" class="py-3 px-4">
+              <div class="flex items-center justify-between w-full">
+                <div class="flex items-center gap-3">
+                  <span
+                    class="text-lg font-black text-surface-900 dark:text-surface-0 tracking-tight uppercase">{{ cat.groupName }}</span>
+                  <span
+                    class="px-2 py-0.5 rounded-full bg-surface-200 dark:bg-surface-700 text-xs font-bold text-surface-600 dark:text-surface-300">
+                    Parent Group
+                  </span>
+                </div>
+                <div class="flex items-center gap-2 text-sm font-bold text-muted-color">
+                  <i class="pi pi-chart-bar"></i>
+                  <span>{{ calculateGroupTotal(cat.groupName) }} transactions in group</span>
+                </div>
               </div>
             </td>
           </tr>
         </ng-template>
 
-        <!-- Data Rows — parent categories are kept in the data so PrimeNG renders their group header,
-             but their body row is suppressed; only child categories render as visible rows. -->
-        <ng-template pTemplate="body" let-categoryViewModel let-rowIndex="rowIndex">
-          @if (categoryViewModel.parent != null && categoryViewModel.parent.id != null) {
-            <tr>
+        <!-- Data Rows (Sub-categories) -->
+        <ng-template #body let-cat let-rowIndex="rowIndex">
+          @if (cat.parent?.id) {
+            <tr class="hover:bg-surface-100/50 dark:hover:bg-surface-800/30 transition-colors duration-200">
               <!-- Color Badge / Icon -->
-              <td>
+              <td class="py-4 pl-8">
                 <div
-                  [class]="getDisplayColor(categoryViewModel) + ' w-8 h-8 rounded-full ml-4 flex items-center justify-center text-white cursor-help'"
-                  [pTooltip]="getIconLabel(categoryViewModel.icon)"
+                  [class]="getColorStyle(cat.percentageUsed) + ' w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm ring-1 ring-white/20 cursor-help'"
+                  [pTooltip]="getIconLabel(cat.icon)"
                   tooltipPosition="top">
-                  @if (categoryViewModel.icon) {
-                    <i [class]="'pi ' + categoryViewModel.icon + ' text-sm'"></i>
-                  }
+                  <i [class]="'pi ' + (cat.icon || 'pi-tag') + ' text-lg'"></i>
                 </div>
               </td>
 
-              <!-- Category Name -->
-              <td>
+              <!-- Category Name & Type -->
+              <td class="py-4">
                 <div class="flex flex-col">
-                  <span class="font-medium">{{ categoryViewModel.name }}</span>
-                  @if (categoryViewModel.type) {
-                    <span class="text-xs text-muted-color capitalize">{{ categoryViewModel.type.toLowerCase() }}</span>
-                  }
+                  <span class="font-bold text-surface-900 dark:text-surface-0">{{ cat.name }}</span>
+                  <span class="text-xs font-bold text-muted-color uppercase tracking-tighter opacity-70">
+                    {{ cat.categoryType || 'Expense' }}
+                  </span>
                 </div>
               </td>
 
               <!-- Usage Count -->
-              <td class="text-center">
-                <span
-                  class="text-primary hover:underline cursor-pointer"
-                  (click)="viewTransactions(categoryViewModel)"
-                  pTooltip="View transactions"
-                  tooltipPosition="top">
-                  {{ categoryViewModel.transactionCount }}
-                  transaction{{ categoryViewModel.transactionCount !== 1 ? 's' : '' }}
-                </span>
+              <td class="text-center py-4">
+                <button
+                  (click)="viewTransactions(cat)"
+                  class="flex items-center gap-2 mx-auto px-3 py-1 rounded-lg hover:bg-primary/10 text-primary font-bold transition-all group"
+                  [pTooltip]="'View transactions for ' + cat.name">
+                  <span class="font-mono">{{ cat.transactionCount }}</span>
+                  <i class="pi pi-external-link text-[10px] opacity-0 group-hover:opacity-100 transition-opacity"></i>
+                </button>
               </td>
 
               <!-- Budget -->
-              <td class="text-right font-medium">
-                {{ categoryViewModel.budgetedAmount | formatCurrency }}
+              <td class="text-right py-4 font-mono font-bold text-surface-700 dark:text-surface-300">
+                @if (cat.budgetedAmount !== undefined) {
+                  {{ cat.budgetedAmount | formatCurrency }}
+                } @else {
+                  <span class="text-surface-300 dark:text-surface-700">---</span>
+                }
               </td>
 
               <!-- Monthly Progress -->
-              <td>
-                @if (categoryViewModel.budgetedAmount !== undefined) {
+              <td class="py-4">
+                @if (cat.budgetedAmount !== undefined) {
                   <div class="flex flex-col gap-1 pr-4">
                     <p-progressBar
-                      [value]="categoryViewModel.percentageUsed"
+                      [value]="cat.percentageUsed"
                       [showValue]="false"
-                      [class]="'h-2 ' + getProgressBarTailwind(categoryViewModel.percentageUsed)">
+                      [class]="'h-2 rounded-full ' + getProgressBarTailwind(cat.percentageUsed)">
                     </p-progressBar>
-                    <span class="text-xs text-muted-color text-right">
-                      {{ categoryViewModel.percentageUsed?.toFixed(0) }}% used
-                    </span>
+                    <div
+                      class="flex justify-between items-center text-[10px] font-black uppercase tracking-tighter text-muted-color">
+                      <span>Utilization</span>
+                      <span class="font-mono text-xs">{{ cat.percentageUsed?.toFixed(0) }}%</span>
+                    </div>
                   </div>
                 } @else {
-                  <span class="text-xs text-muted-color italic">No budget set</span>
+                  <span
+                    class="text-xs font-bold text-surface-300 dark:text-surface-700 uppercase tracking-widest italic">No Budget</span>
                 }
               </td>
 
               <!-- Actions -->
-              <td class="text-center">
+              <td class="text-center py-2">
                 <div class="flex justify-center gap-1">
                   <p-button
                     icon="pi pi-pencil"
                     [text]="true"
                     [rounded]="true"
-                    severity="info"
-                    (onClick)="openEditDialog(categoryViewModel)"
-                    pTooltip="Edit"
-                    tooltipPosition="top"
+                    severity="secondary"
+                    (onClick)="openEditDialog(cat)"
+                    pTooltip="Edit Category"
                   />
                   <p-button
                     icon="pi pi-trash"
                     [text]="true"
                     [rounded]="true"
                     severity="danger"
-                    (onClick)="deleteCategory(categoryViewModel)"
-                    [disabled]="categoryViewModel.transactionCount > 0"
-                    [pTooltip]="categoryViewModel.transactionCount > 0 ? 'Cannot delete category with transactions' : 'Delete'"
-                    tooltipPosition="top"
+                    (onClick)="deleteCategory(cat)"
+                    [disabled]="cat.transactionCount > 0"
+                    [pTooltip]="cat.transactionCount > 0 ? 'Cannot delete categories with transactions' : 'Delete Category'"
                   />
                 </div>
               </td>
@@ -147,10 +167,11 @@
           }
         </ng-template>
 
-        <ng-template pTemplate="emptymessage">
+        <ng-template #emptymessage>
           <tr>
-            <td colspan="6" class="text-center py-8 text-muted-color">
-              No categories found
+            <td colspan="6" class="text-center py-16 text-muted-color">
+              <i class="pi pi-search text-4xl mb-3 block opacity-20"></i>
+              No categories found matching your criteria.
             </td>
           </tr>
         </ng-template>
@@ -158,24 +179,27 @@
     </p-card>
   }
 
-  <!-- Empty State -->
+  <!-- Empty State Hero -->
   @if (isEmpty()) {
-    <p-card class="shadow-sm">
-      <div class="flex flex-col items-center justify-center py-12">
-        <i class="pi pi-tags text-6xl text-muted-color mb-4"></i>
-        <h2 class="text-2xl font-semibold text-color mb-2">No categories yet</h2>
-        <p class="text-muted-color mb-6 text-center max-w-md">
-          Get started by creating your first category to organize your transactions
-        </p>
-        <p-button
-          label="Add Your First Category"
-          icon="pi pi-plus"
-          (onClick)="openCreateDialog()"
-          severity="primary"
-          size="large"
-        />
+    <div class="flex flex-col items-center justify-center min-h-[60vh] text-center animate-fade-in">
+      <div class="relative mb-8">
+        <div class="absolute -inset-4 bg-primary/10 rounded-full blur-2xl animate-pulse"></div>
+        <i class="pi pi-tags text-8xl text-primary/40 relative"></i>
       </div>
-    </p-card>
+      <h2 class="text-3xl font-bold text-surface-900 dark:text-surface-0 mb-3">No categories yet</h2>
+      <p class="text-muted-color mb-8 max-w-lg leading-relaxed text-lg">
+        Create categories to organize your income and expenses.
+        You can group them under parent categories for better tracking.
+      </p>
+      <p-button
+        label="Create Your First Category"
+        icon="pi pi-plus"
+        (onClick)="openCreateDialog()"
+        severity="primary"
+        size="large"
+        [raised]="true"
+      />
+    </div>
   }
 
   <!-- Form Drawer -->
