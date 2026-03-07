@@ -4,6 +4,8 @@ import {
   inject,
   input,
   InputSignal,
+  model,
+  ModelSignal,
   output,
   OutputEmitterRef,
   Signal,
@@ -12,6 +14,8 @@ import {
 } from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {FormsModule} from '@angular/forms';
+import {forkJoin, of} from 'rxjs';
+import {catchError, map} from 'rxjs/operators';
 import {DialogModule} from 'primeng/dialog';
 import {ButtonModule} from 'primeng/button';
 import {Select} from 'primeng/select';
@@ -21,14 +25,21 @@ import {MessageModule} from 'primeng/message';
 import {ProgressSpinnerModule} from 'primeng/progressspinner';
 import {TagModule} from 'primeng/tag';
 import {TooltipModule} from 'primeng/tooltip';
-import {BankOption, CsvTransactionData, SaveTransactionRequest, TransactionPreview} from '@models/transaction.model';
+
+import {
+  BankOption,
+  CsvTransactionData,
+  SaveTransactionRequest,
+  TransactionPreview,
+  TransactionType
+} from '@models/transaction.model';
 import {Account, BankName} from '@models/account.model';
 import {TransactionImportService} from '@features/transactions/services/transaction-import.service';
 import {ToastService} from '@core/services/toast.service';
-import {convertDateString} from '@shared/utils/transaction.utils';
-import {forkJoin, of} from 'rxjs';
-import {catchError, map} from 'rxjs/operators';
 
+/**
+ * Represents a single file in a multi-file import batch.
+ */
 interface BatchImportItem {
   id: string;
   file: File;
@@ -39,6 +50,12 @@ interface BatchImportItem {
   error?: string;
 }
 
+/**
+ * Sophisticated dialog for processing and mapping CSV transaction exports.
+ *
+ * Supports multi-file batches, automatic bank format detection,
+ * and a comprehensive preview ledger before final persistence.
+ */
 @Component({
   selector: 'app-csv-import-dialog',
   standalone: true,
@@ -58,329 +75,265 @@ interface BatchImportItem {
   templateUrl: './csv-import-dialog.component.html'
 })
 export class CsvImportDialogComponent {
-  // injected services
   private readonly importService: TransactionImportService = inject(TransactionImportService);
   private readonly toast: ToastService = inject(ToastService);
 
-  // input signals
-  visible: InputSignal<boolean> = input.required<boolean>();
-  accounts: InputSignal<Account[]> = input.required<Account[]>();
+  /** Two-way binding for dialog visibility. */
+  readonly visible: ModelSignal<boolean> = model.required<boolean>();
 
-  // output signals
-  visibleChange: OutputEmitterRef<boolean> = output<boolean>();
-  importComplete: OutputEmitterRef<void> = output<void>();
+  /** Available bank accounts for mapping. */
+  readonly accounts: InputSignal<Account[]> = input.required<Account[]>();
 
-  // State
-  currentStep: WritableSignal<number> = signal(0);
-  importItems: WritableSignal<BatchImportItem[]> = signal([]);
+  /** Emitted when the entire batch is successfully imported. */
+  readonly importComplete: OutputEmitterRef<void> = output<void>();
 
-  // Global controls for bulk applying
-  globalAccountId: WritableSignal<number | null> = signal(null);
-  globalBankName: WritableSignal<BankName | null> = signal(null);
+  /** Current workflow step (0: Setup, 1: Preview). */
+  readonly currentStep: WritableSignal<number> = signal(0);
 
-  uploading: WritableSignal<boolean> = signal(false);
-  saving: WritableSignal<boolean> = signal(false);
+  /** Active batch of files being processed. */
+  readonly importItems: WritableSignal<BatchImportItem[]> = signal([]);
 
-  // Overall status message (e.g., "3 files processed, 1 failed")
-  generalMessage: WritableSignal<{
+  /** Global overrides for the current batch. */
+  readonly globalAccountId: WritableSignal<number | null> = signal(null);
+  readonly globalBankName: WritableSignal<BankName | null> = signal(null);
+
+  readonly uploading: WritableSignal<boolean> = signal(false);
+  readonly saving: WritableSignal<boolean> = signal(false);
+
+  /** System-wide feedback message for the import process. */
+  readonly generalMessage: WritableSignal<{
     severity: 'success' | 'info' | 'warn' | 'error',
     text: string
   } | null> = signal(null);
 
-  // Bank options
-  bankOptions: BankOption[] = [
-    {
-      label: 'Standard CSV',
-      value: BankName.STANDARD,
-      description: 'Generic format (Date, Description, Amount, Type)'
-    },
-    {
-      label: 'Capital One',
-      value: BankName.CAPITAL_ONE,
-      description: 'Capital One bank export format'
-    },
-    {
-      label: 'Discover',
-      value: BankName.DISCOVER,
-      description: 'Discover credit card export format'
-    },
-    {
-      label: 'Synovus',
-      value: BankName.SYNOVUS,
-      description: 'Synovus bank export format'
-    },
-    {
-      label: 'Universal CSV',
-      value: BankName.UNIVERSAL,
-      description: 'Auto-detect columns (Date, Amount, Description)'
-    }
+  readonly bankOptions: BankOption[] = [
+    {label: 'Standard CSV', value: BankName.STANDARD, description: 'Generic format (Date, Description, Amount)'},
+    {label: 'Capital One', value: BankName.CAPITAL_ONE, description: 'Official bank export format'},
+    {label: 'Discover', value: BankName.DISCOVER, description: 'Official card export format'},
+    {label: 'Synovus', value: BankName.SYNOVUS, description: 'Official bank export format'},
+    {label: 'Universal CSV', value: BankName.UNIVERSAL, description: 'Intelligent auto-detection'}
   ];
 
-  // computed properties
-  accountOptions = computed(() => {
-    return this.accounts().map((a: Account) => ({
-      label: a.name,
-      value: a.id
-    }));
-  });
+  readonly accountOptions = computed(() =>
+    this.accounts().map((a: Account) => ({label: a.name, value: a.id}))
+  );
 
-  canProceedToPreview: Signal<boolean> = computed((): boolean => {
+  readonly canProceedToPreview: Signal<boolean> = computed((): boolean => {
     const items: BatchImportItem[] = this.importItems();
-    return items.length > 0 && items.every((item: BatchImportItem): boolean => item.accountId !== null && item.bankName !== null);
+    return items.length > 0 && items.every((i: BatchImportItem): boolean => i.accountId !== -1 && i.bankName !== null);
   });
 
-  canSave: Signal<boolean> = computed((): boolean => {
-    const items: BatchImportItem[] = this.importItems();
-    // Can save if we have at least one 'ready' item
-    return items.some((item: BatchImportItem): boolean => item.status === 'ready' && item.previews.length > 0);
-  });
+  readonly canSave: Signal<boolean> = computed((): boolean =>
+    this.importItems().some((i: BatchImportItem): boolean => i.status === 'ready' && i.previews.length > 0)
+  );
 
-  hasItems: Signal<boolean> = computed((): boolean => this.importItems().length > 0);
+  readonly hasItems: Signal<boolean> = computed((): boolean => this.importItems().length > 0);
 
-  // Combined previews for Step 2
-  allPreviews = computed(() => {
-    return this.importItems().flatMap((item: BatchImportItem) =>
+  /** Flattens all file previews into a single master ledger for review. */
+  readonly allPreviews = computed(() =>
+    this.importItems().flatMap((item: BatchImportItem) =>
       item.previews.map((p: TransactionPreview) => ({...p, _sourceFile: item.file.name}))
-    );
-  });
+    )
+  );
 
-  // Utility functions
-  formatDate = convertDateString;
-
+  /**
+   * Resets and closes the dialog.
+   */
   onHide(): void {
-    this.visibleChange.emit(false);
+    this.visible.set(false);
     this.resetDialog();
   }
 
+  /**
+   * Processes file selection and attempts automatic metadata detection.
+   */
   onFilesSelect(event: any): void {
     const files = event.files || event.currentFiles;
-    if (files && files.length > 0) {
-      const newItems: BatchImportItem[] = [];
-      for (const file of files) {
-        if (!this.importItems().some((i: BatchImportItem): boolean => i.file.name === file.name)) {
-          const detectedBank: BankName | null = this.detectBankName(file.name);
-          let suggestedAccountId: number = -1;
+    if (!files?.length) return;
 
-          // If we detected a bank, see if we can find a unique account for it
-          if (detectedBank) {
-            const matchingAccounts: Account[] = this.accounts().filter((a: Account): boolean => a.bank === detectedBank);
-            if (matchingAccounts.length === 1) {
-              suggestedAccountId = matchingAccounts[0].id;
-            }
-          }
+    const newItems: BatchImportItem[] = [];
+    for (const file of files) {
+      if (!this.importItems().some((i: BatchImportItem): boolean => i.file.name === file.name)) {
+        const detectedBank: BankName | null = this.detectBankName(file.name);
+        let suggestedAccountId: number = -1;
 
-          newItems.push({
-            id: crypto.randomUUID(),
-            file: file,
-            accountId: suggestedAccountId,
-            bankName: detectedBank,
-            previews: [],
-            status: 'pending'
-          });
+        if (detectedBank) {
+          const match: Account | undefined = this.accounts().find((a: Account): boolean => a.bank === detectedBank);
+          if (match) suggestedAccountId = match.id;
         }
+
+        newItems.push({
+          id: crypto.randomUUID(),
+          file,
+          accountId: suggestedAccountId,
+          bankName: detectedBank,
+          previews: [],
+          status: 'pending'
+        });
       }
-      this.importItems.update((current: BatchImportItem[]): BatchImportItem[] => [...current, ...newItems]);
-      this.generalMessage.set(null);
     }
+    this.importItems.update((current: BatchImportItem[]): BatchImportItem[] => [...current, ...newItems]);
+    this.generalMessage.set(null);
   }
 
+  /**
+   * Synchronizes per-file account selection.
+   */
   onAccountChange(index: number, accountId: number): void {
     this.importItems.update((items: BatchImportItem[]): BatchImportItem[] => {
       const updated: BatchImportItem[] = [...items];
-      const item = {...updated[index]};
-
-      item.accountId = accountId;
-
-      // Find the selected account
       const account: Account | undefined = this.accounts().find((a: Account): boolean => a.id === accountId);
-      if (account?.bank) {
-        item.bankName = account.bank;
-      }
-
-      updated[index] = item;
+      updated[index] = {
+        ...updated[index],
+        accountId,
+        bankName: account?.bank || updated[index].bankName
+      };
       return updated;
     });
   }
 
-  private detectBankName(fileName: string): BankName | null {
-    const lowerName: string = fileName.toLowerCase();
-
-    if (lowerName.includes('discover')) return BankName.DISCOVER;
-    if (lowerName.includes('capital') && lowerName.includes('one')) return BankName.CAPITAL_ONE;
-    if (lowerName.includes('synovus')) return BankName.SYNOVUS;
-    return null;
-  }
-
+  /**
+   * Removes a file from the current batch.
+   */
   removeItem(index: number): void {
     this.importItems.update((items: BatchImportItem[]): BatchImportItem[] => items.filter((_: BatchImportItem, i: number): boolean => i !== index));
   }
 
-  clearAllFiles(): void {
-    this.importItems.set([]);
-    this.currentStep.set(0);
+  /**
+   * Heuristic engine for bank format detection based on filenames.
+   */
+  private detectBankName(fileName: string): BankName | null {
+    const name: string = fileName.toLowerCase();
+    if (name.includes('discover')) return BankName.DISCOVER;
+    if (name.includes('capital') && name.includes('one')) return BankName.CAPITAL_ONE;
+    if (name.includes('synovus')) return BankName.SYNOVUS;
+    return null;
   }
 
   applyGlobalAccount(): void {
-    const accountId: number | null = this.globalAccountId();
-
-    if (accountId) {
-      this.importItems.update((items: BatchImportItem[]) => items.map((item: BatchImportItem) => ({
-        ...item,
-        accountId
-      })));
-    }
+    const id: number | null = this.globalAccountId();
+    if (id) this.importItems.update((items: BatchImportItem[]) => items.map((i: BatchImportItem) => ({
+      ...i,
+      accountId: id
+    })));
   }
 
   applyGlobalBank(): void {
-    const bankName: BankName | null = this.globalBankName();
-
-    if (bankName) {
-      this.importItems.update((items: BatchImportItem[]) => items.map((item: BatchImportItem) => ({
-        ...item,
-        bankName
-      })));
-    }
+    const bank: BankName | null = this.globalBankName();
+    if (bank) this.importItems.update((items: BatchImportItem[]) => items.map((i: BatchImportItem) => ({
+      ...i,
+      bankName: bank
+    })));
   }
 
+  /**
+   * Uploads all files in parallel and retrieves transaction previews.
+   */
   async uploadAndPreview(): Promise<void> {
     if (!this.canProceedToPreview()) return;
 
     this.uploading.set(true);
-    this.generalMessage.set(null);
-
-    // Update status to uploading
-    this.importItems.update((items: BatchImportItem[]) => items.map((item: BatchImportItem) => ({
-      ...item,
+    this.importItems.update((items: BatchImportItem[]) => items.map((i: BatchImportItem) => ({
+      ...i,
       status: 'uploading',
       error: undefined
     })));
 
-    const tasks = this.importItems().map((item: BatchImportItem) => {
-      return this.importService.uploadCsv(item.accountId, item.file, item.bankName!).pipe(
-        map((previews: TransactionPreview[]) => ({id: item.id, status: 'ready' as const, previews, error: undefined})),
-        catchError((err: any) => {
-          const errorMsg: any = err.error?.detail || err.error?.message || 'Failed to parse CSV';
-          return of({id: item.id, status: 'error' as const, previews: [], error: errorMsg});
-        })
-      );
-    });
+    const tasks = this.importItems().map((item: BatchImportItem) =>
+      this.importService.uploadCsv(item.accountId, item.file, item.bankName!).pipe(
+        map((previews: TransactionPreview[]) => ({id: item.id, status: 'ready' as const, previews})),
+        catchError((err: any) => of({
+          id: item.id,
+          status: 'error' as const,
+          previews: [],
+          error: err.error?.detail || 'Format Mismatch'
+        }))
+      )
+    );
 
     forkJoin(tasks).subscribe({
-      next: (results) => {
+      next: (results): void => {
         this.importItems.update((items: BatchImportItem[]) =>
-          items.map((item: BatchImportItem) => {
-            const result = results.find(r => r.id === item.id);
-            return result ? {...item, ...result} : item;
-          })
+          items.map((i: BatchImportItem) => ({...i, ...results.find(r => r.id === i.id)}))
         );
 
-        const failedCount: number = results.filter(r => r.status === 'error').length;
-        if (failedCount > 0) {
-          this.generalMessage.set({
-            severity: 'warn',
-            text: `${failedCount} file(s) failed to parse. Review errors below.`
-          });
-        }
-
-        // If at least one file succeeded, move to next step to show previews
         if (results.some(r => r.status === 'ready')) {
           this.currentStep.set(1);
+        } else {
+          this.generalMessage.set({severity: 'error', text: 'All files failed to parse. Verify bank formats.'});
         }
-
         this.uploading.set(false);
       },
-      error: (err: any): void => {
-        console.error('Unexpected error during upload and preview:', err);
-        this.uploading.set(false);
-      }
+      error: (): void => this.uploading.set(false)
     });
   }
 
+  /**
+   * Finalizes the import by calculating hashes and persisting data to the ledger.
+   */
   async saveTransactions(): Promise<void> {
     if (!this.canSave()) return;
 
     this.saving.set(true);
-    this.generalMessage.set(null);
-
-    const itemsToSave: BatchImportItem[] = this.importItems().filter((item: BatchImportItem): boolean => item.status === 'ready');
-
-    // Mark them as saving
-    this.importItems.update((all: BatchImportItem[]): BatchImportItem[] => all.map((item: BatchImportItem): BatchImportItem =>
-      itemsToSave.some((i: BatchImportItem): boolean => i.id === item.id) ? {...item, status: 'saving'} : item
-    ));
+    const itemsToSave: BatchImportItem[] = this.importItems().filter((i: BatchImportItem): boolean => i.status === 'ready');
 
     let successCount: number = 0;
     let failCount: number = 0;
 
     for (const item of itemsToSave) {
       try {
+        item.status = 'saving';
         const fileHash: string = await this.importService.calculateFileHash(item.file);
 
         const transactions: CsvTransactionData[] = item.previews.map((p: TransactionPreview) => ({
-          date: p.date,
-          postDate: p.postDate,
+          date: p.date.toDateString(),
+          postDate: p.postDate?.toDateString(),
           type: p.type,
           account: item.accountId,
           amount: Math.abs(p.amount),
-          description: p.description || undefined,
-          vendorName: p.vendorName || undefined,
-          categoryName: p.suggestedCategory || undefined
+          description: p.description,
+          vendorName: p.suggestedMerchant.originalName,
+          categoryName: p.suggestedCategory.name
         }));
 
-        const request: SaveTransactionRequest = {
-          transactions,
-          fileName: item.file.name,
-          fileHash
-        };
+        const request: SaveTransactionRequest = {transactions, fileName: item.file.name, fileHash};
 
-        // Convert Observable to Promise for sequential execution
-        await new Promise<void>((resolve): void => {
+        await new Promise<void>((res): void => {
           this.importService.saveTransactions(item.accountId, request).subscribe({
-            next: () => {
-              this.importItems.update((all: BatchImportItem[]): BatchImportItem[] => all.map((i: BatchImportItem): BatchImportItem => i.id === item.id ? {
-                ...i,
-                status: 'success'
-              } : i));
+            next: (): void => {
               successCount++;
-              resolve();
+              item.status = 'success';
+              res();
             },
-            error: (err: any): void => {
-              const msg: any = err.error?.detail || 'Save failed';
-              this.importItems.update((all: BatchImportItem[]) => all.map((i: BatchImportItem) => i.id === item.id ? {
-                ...i,
-                status: 'error',
-                error: msg
-              } : i));
+            error: (): void => {
               failCount++;
-              resolve(); // Resolve anyway to continue to next file
+              item.status = 'error';
+              res();
             }
           });
         });
-
-      } catch (e) {
-        this.importItems.update((all: BatchImportItem[]): BatchImportItem[] => all.map((i: BatchImportItem): BatchImportItem => i.id === item.id ? {
-          ...i,
-          status: 'error',
-          error: 'Pre-save processing failed'
-        } : i));
+      } catch {
         failCount++;
+        item.status = 'error';
       }
     }
 
     this.saving.set(false);
-
     if (failCount === 0) {
-      this.toast.success(`Successfully imported ${successCount} file(s).`);
+      this.toast.success(`Batch complete: ${successCount} files imported.`);
       this.importComplete.emit();
       this.onHide();
     } else {
       this.generalMessage.set({
-        severity: 'error',
-        text: `Import completed with errors. ${successCount} succeeded, ${failCount} failed.`
+        severity: 'warn',
+        text: `Import partially successful. Succeeded: ${successCount}, Failed: ${failCount}`
       });
     }
   }
 
+  /**
+   * Returns to the previous step
+   */
   goBack(): void {
     if (this.currentStep() > 0) {
       this.currentStep.set(this.currentStep() - 1);
@@ -388,21 +341,22 @@ export class CsvImportDialogComponent {
     }
   }
 
-  getCategoryDisplay(categoryName: string | null): string {
-    return categoryName || 'Uncategorized';
-  }
-
-  getCategorySeverity(categoryName: string | null): 'secondary' | 'contrast' {
-    return categoryName ? 'secondary' : 'contrast';
-  }
-
   private resetDialog(): void {
     this.currentStep.set(0);
     this.importItems.set([]);
-    this.globalAccountId.set(null);
-    this.globalBankName.set(null);
     this.uploading.set(false);
     this.saving.set(false);
     this.generalMessage.set(null);
+  }
+
+  getTransactionTypeStyles(type: TransactionType): string {
+    switch (type) {
+      case TransactionType.INCOME:
+        return 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20';
+      case TransactionType.EXPENSE:
+        return 'text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/20';
+      default:
+        return 'text-surface-500 bg-surface-100';
+    }
   }
 }
