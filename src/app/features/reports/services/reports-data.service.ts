@@ -7,9 +7,6 @@ import {Merchant} from '@models/merchant.model';
 /**
  * Service responsible for aggregating and transforming raw transaction data
  * into report-ready formats.
- *
- * Implements sophisticated Map/Reduce logic to group financial data by
- * category, vendor, and monthly time periods.
  */
 @Injectable({
   providedIn: 'root'
@@ -43,13 +40,13 @@ export class ReportsDataService {
     }
 
     return Array.from(categoryMap.values())
-      .map(({category, total, count}) => ({
-        category,
-        total,
-        count,
-        avgTransaction: count > 0 ? total / count : 0
+      .map((item): CategoryReportData => ({
+        category: item.category,
+        total: item.total,
+        count: item.count,
+        avgTransaction: item.count > 0 ? item.total / item.count : 0
       }))
-      .sort((a, b): number => b.total - a.total);
+      .sort((a: CategoryReportData, b: CategoryReportData): number => b.total - a.total);
   }
 
   /**
@@ -70,7 +67,6 @@ export class ReportsDataService {
     }>();
 
     for (const txn of transactions) {
-      // Focus on external expenses with known merchants
       if (txn.type === TransactionType.EXPENSE && txn.merchant) {
         const {merchant} = txn;
 
@@ -94,11 +90,11 @@ export class ReportsDataService {
     }
 
     return Array.from(vendorMap.values())
-      .map(({merchant, total, count, categories}) => ({
-        merchant,
-        total,
-        count,
-        categories: Array.from(categories)
+      .map((item): VendorReportData => ({
+        merchant: item.merchant,
+        total: item.total,
+        count: item.count,
+        categories: Array.from(item.categories)
       }))
       .sort((a, b) => b.total - a.total);
   }
@@ -116,11 +112,9 @@ export class ReportsDataService {
     const monthMap = new Map<string, { income: number; expense: number }>();
 
     for (const txn of transactions) {
-      // Exclude transfers to avoid double-counting or inflated volumes
       if (txn.type === TransactionType.TRANSFER) continue;
 
-      const date: Date = txn.date instanceof Date ? txn.date : new Date(txn.date);
-      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const monthKey: string = this.getYearMonthKey(txn.date);
 
       if (!monthMap.has(monthKey)) {
         monthMap.set(monthKey, {income: 0, expense: 0});
@@ -136,12 +130,22 @@ export class ReportsDataService {
     }
 
     return Array.from(monthMap.entries())
-      .map(([month, data]) => ({
+      .map(([month, data]): MonthlyReportData => ({
         month,
         income: data.income,
         expense: data.expense,
         netSavings: data.income - data.expense
       }))
       .sort((a, b) => a.month.localeCompare(b.month));
+  }
+
+  /**
+   * Helper to extract a "YYYY-MM" string from a Date or string source.
+   */
+  private getYearMonthKey(dateSource: Date | string): string {
+    if (dateSource instanceof Date) {
+      return `${dateSource.getFullYear()}-${String(dateSource.getMonth() + 1).padStart(2, '0')}`;
+    }
+    return dateSource.substring(0, 7);
   }
 }
