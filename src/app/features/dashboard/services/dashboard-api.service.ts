@@ -5,7 +5,7 @@ import {environment} from '@env';
 import {
   ActionItem,
   CashFlowTrend,
-  CategoryTotal,
+  CategoryBreakdown,
   DashboardPulse,
   MerchantBreakdown,
   YtdSummary
@@ -29,8 +29,8 @@ export class DashboardApiService {
    * @param endDate the period end
    * @returns the category breakdown data.
    */
-  getCategoryBreakdown(month?: number, year?: number, startDate?: string, endDate?: string): Observable<CategoryTotal[]> {
-    return this.http.get<CategoryTotal[]>(
+  getCategoryBreakdown(month?: number, year?: number, startDate?: string, endDate?: string): Observable<CategoryBreakdown[]> {
+    return this.http.get<CategoryBreakdown[]>(
       `${this.apiUrl}/categories`,
       {
         params: this.getPeriodHttpParams(month, year, startDate, endDate),

@@ -25,12 +25,7 @@ import {BankOption, CsvTransactionData, SaveTransactionRequest, TransactionPrevi
 import {Account, BankName} from '@models/account.model';
 import {TransactionImportService} from '@features/transactions/services/transaction-import.service';
 import {ToastService} from '@core/services/toast.service';
-import {
-  formatDate,
-  formatTransactionAmount,
-  getAmountClass,
-  getTransactionTypeInfo
-} from '@shared/utils/transaction.utils';
+import {convertDateString} from '@shared/utils/transaction.utils';
 import {forkJoin, of} from 'rxjs';
 import {catchError, map} from 'rxjs/operators';
 
@@ -150,10 +145,7 @@ export class CsvImportDialogComponent {
   });
 
   // Utility functions
-  formatTransactionAmount = formatTransactionAmount;
-  getTransactionTypeInfo = getTransactionTypeInfo;
-  getAmountClass = getAmountClass;
-  formatDate = formatDate;
+  formatDate = convertDateString;
 
   onHide(): void {
     this.visibleChange.emit(false);

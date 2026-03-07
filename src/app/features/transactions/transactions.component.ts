@@ -31,10 +31,10 @@ import {
   PageResponse,
   Transaction,
   TransactionCreateRequest,
-  TransactionUpdateRequest,
   TransactionFilter,
   TransactionFormData,
-  TransactionType
+  TransactionType,
+  TransactionUpdateRequest
 } from '@models/transaction.model';
 import {Account} from '@models/account.model';
 import {Category} from '@models/category.model';
@@ -48,16 +48,11 @@ import {
 import {AccountApiService} from '@features/accounts/services/account-api.service';
 import {CategoryApiService} from '@features/categories/services/category-api.service';
 import {ToastService} from '@core/services/toast.service';
-import {
-  formatDate,
-  formatTransactionAmount,
-  getAmountClass,
-  getTransactionTypeInfo
-} from '@shared/utils/transaction.utils';
+import {convertDateString} from '@shared/utils/transaction.utils';
 import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-toolbar';
 import {TableToolbarComponent} from '@shared/components/table-toolbar/table-toolbar';
 import {Merchant} from '@models/merchant.model';
-import {getCategorySeverity} from '@shared/utils/category.utils';
+import {FormatTransactionTypeAmountPipe} from '@shared/pipes/format-transaction-type-amount.pipe';
 
 @Component({
   selector: 'app-transactions',
@@ -82,7 +77,8 @@ import {getCategorySeverity} from '@shared/utils/category.utils';
     TransactionFormDrawerComponent,
     CsvImportDialogComponent,
     BulkEditDialogComponent,
-    TransferMatchingDialogComponent
+    TransferMatchingDialogComponent,
+    FormatTransactionTypeAmountPipe
   ],
   templateUrl: './transactions.component.html'
 })
@@ -175,10 +171,7 @@ export class TransactionsComponent implements OnInit, OnDestroy {
   );
 
   // utility functions
-  formatTransactionAmount = formatTransactionAmount;
-  getTransactionTypeInfo = getTransactionTypeInfo;
-  getAmountClass = getAmountClass;
-  formatDate = formatDate;
+  formatDate = convertDateString;
 
   // dropdown options
   transactionTypes = [

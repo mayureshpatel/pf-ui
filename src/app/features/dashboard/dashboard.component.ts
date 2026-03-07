@@ -10,7 +10,7 @@ import {SelectButtonModule} from 'primeng/selectbutton';
 import {
   ActionItem,
   CashFlowTrend,
-  CategoryTotal,
+  CategoryBreakdown,
   DashboardPulse,
   MerchantBreakdown,
   MonthOption,
@@ -61,7 +61,7 @@ export class DashboardComponent implements OnInit {
   trends: WritableSignal<CashFlowTrend[]> = signal([]);
   ytd: WritableSignal<YtdSummary | null> = signal(null);
   actions: WritableSignal<ActionItem[]> = signal([]);
-  topCategories: WritableSignal<CategoryTotal[]> = signal([]);
+  topCategories: WritableSignal<CategoryBreakdown[]> = signal([]);
   topMerchants: WritableSignal<MerchantBreakdown[]> = signal([]);
 
   loading: WritableSignal<boolean> = signal(false);

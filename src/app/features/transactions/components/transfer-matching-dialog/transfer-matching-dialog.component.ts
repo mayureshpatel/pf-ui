@@ -18,7 +18,7 @@ import {TagModule} from 'primeng/tag';
 import {TransferSuggestion} from '@models/transaction.model';
 import {TransactionApiService} from '../../services/transaction-api.service';
 import {ToastService} from '@core/services/toast.service';
-import {formatDate} from '@shared/utils/transaction.utils';
+import {convertDateString} from '@shared/utils/transaction.utils';
 import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
 
 @Component({
@@ -52,7 +52,7 @@ export class TransferMatchingDialogComponent {
   loading: WritableSignal<boolean> = signal(false);
   processing: WritableSignal<boolean> = signal(false);
 
-  formatDate = formatDate;
+  formatDate = convertDateString;
   Math = Math;
 
   constructor() {

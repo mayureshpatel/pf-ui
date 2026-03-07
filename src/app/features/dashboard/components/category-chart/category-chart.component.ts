@@ -2,7 +2,7 @@ import {Component, computed, effect, input, InputSignal, Signal, signal, Writabl
 import {CommonModule} from '@angular/common';
 import {CardModule} from 'primeng/card';
 import {ChartModule} from 'primeng/chart';
-import {CategoryTotal} from '@models/dashboard.model';
+import {CategoryBreakdown} from '@models/dashboard.model';
 import {getCategoryColorHex} from '@shared/utils/category.utils';
 import {Category} from '@models/category.model';
 
@@ -14,7 +14,7 @@ import {Category} from '@models/category.model';
 })
 export class CategoryChartComponent {
   title: InputSignal<string> = input<string>('Spending by Category');
-  categories: InputSignal<CategoryTotal[]> = input.required<CategoryTotal[]>();
+  categories: InputSignal<CategoryBreakdown[]> = input.required<CategoryBreakdown[]>();
   topX: InputSignal<number> = input<number>(5);
 
   chartData: WritableSignal<any> = signal({});
@@ -24,7 +24,7 @@ export class CategoryChartComponent {
 
   constructor() {
     effect((): void => {
-      const categories: CategoryTotal[] = this.categories();
+      const categories: CategoryBreakdown[] = this.categories();
       if (categories.length > 0) {
         this.updateChartData(categories, this.topX());
       }
@@ -42,14 +42,14 @@ export class CategoryChartComponent {
    * @param categories The category total data to use for the chart
    * @param topX The number of categories to include in the chart. Defaults to 5.
    */
-  private updateChartData(categories: CategoryTotal[], topX: number = 5): void {
-    const topXCategoryTotals: CategoryTotal[] = [...categories]
-      .sort((a: CategoryTotal, b: CategoryTotal): number => b.total - a.total)
+  private updateChartData(categories: CategoryBreakdown[], topX: number = 5): void {
+    const topXCategoryTotals: CategoryBreakdown[] = [...categories]
+      .sort((a: CategoryBreakdown, b: CategoryBreakdown): number => b.total - a.total)
       .slice(0, topX);
 
-    const labels: Category[] = topXCategoryTotals.map((c: CategoryTotal): Category => c.category || 'Uncategorized');
-    const data: number[] = topXCategoryTotals.map((c: CategoryTotal): number => Math.abs(c.total));
-    const colors: string[] = topXCategoryTotals.map((c: CategoryTotal): string => getCategoryColorHex(c.category?.color ?? ''));
+    const labels: Category[] = topXCategoryTotals.map((c: CategoryBreakdown): Category => c.category || 'Uncategorized');
+    const data: number[] = topXCategoryTotals.map((c: CategoryBreakdown): number => Math.abs(c.total));
+    const colors: string[] = topXCategoryTotals.map((c: CategoryBreakdown): string => getCategoryColorHex(c.category?.color ?? ''));
 
     this.chartData.set({
       labels,

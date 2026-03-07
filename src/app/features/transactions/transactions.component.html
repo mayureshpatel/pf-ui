@@ -322,15 +322,15 @@
             <td>
               <div class="flex items-center gap-2">
                 <i
-                  [class]="'pi ' + getTransactionTypeInfo(transaction.type).icon + ' ' + getTransactionTypeInfo(transaction.type).color"></i>
-                <span>{{ getTransactionTypeInfo(transaction.type).label }}</span>
+                  [class]="'pi ' + transaction.type.icon + ' ' + transaction.type.color"></i>
+                <span>{{ transaction.type.label }}</span>
               </div>
             </td>
 
             <!-- Amount -->
             <td class="text-right">
-              <span class="font-semibold" [ngClass]="getAmountClass(transaction.type)">
-                {{ formatTransactionAmount(transaction.amount, transaction.type) }}
+              <span class="font-semibold" [ngClass]="transaction.type">
+                {{ transaction.amount | formatTransactionTypeAmount: transaction.type.label }}
               </span>
             </td>
 

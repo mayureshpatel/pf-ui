@@ -13,7 +13,6 @@ import {Transaction, TransactionFormData, TransactionType} from '@models/transac
 import {Account} from '@models/account.model';
 import {Category, CategoryGroup, CategoryType} from '@models/category.model';
 import {Merchant} from '@models/merchant.model';
-import {TRANSACTION_TYPE_INFO} from '@shared/utils/transaction.utils';
 import {CategoryApiService} from '@features/categories/services/category-api.service';
 import {MessageService} from 'primeng/api';
 import {DrawerComponent} from '@shared/components/drawer/drawer.component';
@@ -71,7 +70,6 @@ export class TransactionFormDrawerComponent implements OnChanges {
   private originalMerchant: Merchant | undefined = undefined;
 
   TransactionType = TransactionType;
-  transactionTypeInfo = TRANSACTION_TYPE_INFO;
 
   filteredCategoryGroups = computed(() => {
     const type: TransactionType = this.form.value.type ?? TransactionType.EXPENSE;
