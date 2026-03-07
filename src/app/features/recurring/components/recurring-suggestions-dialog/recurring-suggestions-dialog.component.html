@@ -1,69 +1,106 @@
 <p-dialog
-  header="Recurring Transaction Suggestions"
+  header="Detected Recurring Patterns"
+  [(visible)]="visible"
   [modal]="true"
-  [visible]="visible()"
-  (visibleChange)="onHide()"
-  [style]="{ width: '650px' }"
   [draggable]="false"
-  [resizable]="false">
+  [resizable]="false"
+  [style]="{ width: '800px' }"
+  [breakpoints]="{ '960px': '95vw' }"
+  class="p-fluid">
 
-  <div class="flex flex-col gap-4">
-    <p class="text-muted-color text-sm">
-      Based on your transaction history, these merchants appear to charge you on a recurring basis.
-      Accept a suggestion to create a recurring transaction entry.
-    </p>
+  <div class="flex flex-col gap-6 py-2">
+    <div
+      class="p-4 rounded-xl bg-primary/5 border border-primary/10 flex gap-4 items-center animate-in fade-in slide-in-from-top-2 duration-500">
+      <div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+        <i class="pi pi-sparkles text-primary text-xl"></i>
+      </div>
+      <div>
+        <h3 class="font-bold text-surface-900 dark:text-surface-0">Intelligent Pattern Detection</h3>
+        <p class="text-xs text-muted-color leading-normal">
+          We analyzed your transaction history and identified these recurring patterns.
+          Select one to automate its tracking and project it into your future cash flow.
+        </p>
+      </div>
+    </div>
 
-    @if (loading()) {
-      <div class="flex justify-center py-8">
-        <i class="pi pi-spin pi-spinner text-3xl text-primary"></i>
-      </div>
-    } @else if (suggestions().length === 0) {
-      <div class="flex flex-col items-center py-8 text-muted-color">
-        <i class="pi pi-check-circle text-4xl mb-3 text-green-500"></i>
-        <p class="font-medium">No new suggestions found</p>
-        <p class="text-sm">All detected recurring transactions have already been tracked.</p>
-      </div>
-    } @else {
-      <p-table [value]="suggestions()" [rowHover]="true" styleClass="p-datatable-sm">
-        <ng-template pTemplate="header">
-          <tr>
-            <th>Merchant</th>
-            <th>Amount</th>
-            <th>Frequency</th>
-            <th>Last Seen</th>
-            <th style="width: 100px"></th>
-          </tr>
-        </ng-template>
-        <ng-template pTemplate="body" let-suggestion>
-          <tr>
-            <td class="font-medium">{{ suggestion.merchant.cleanName }}</td>
-            <td class="font-mono">{{ suggestion.amount | currency }}</td>
-            <td>
-              <p-tag [value]="frequencyLabels[suggestion.frequency]" severity="info" />
-            </td>
-            <td class="text-muted-color text-sm">{{ suggestion.lastDate }}</td>
-            <td>
-              <p-button
-                label="Accept"
-                icon="pi pi-check"
-                size="small"
-                severity="success"
-                (onClick)="onAccept(suggestion)"
-              />
-            </td>
-          </tr>
-        </ng-template>
-      </p-table>
-    }
+    <p-table
+      [value]="suggestions()"
+      [loading]="loading()"
+      [rowHover]="true"
+      size="small"
+      [stripedRows]="true"
+      responsiveLayout="stack"
+      [breakpoint]="'640px'">
+
+      <ng-template #header>
+        <tr class="bg-surface-50 dark:bg-surface-900/50">
+          <th id="suggested-merchant" class="py-4 font-bold text-surface-700 dark:text-surface-200">Merchant</th>
+          <th id="suggested-amount" class="py-4 font-bold text-surface-700 dark:text-surface-200">Typical Amount</th>
+          <th id="suggested-frequency" class="py-4 font-bold text-surface-700 dark:text-surface-200">Frequency</th>
+          <th id="confidence" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-center">Confidence</th>
+          <th id="suggested-action" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-center"
+              style="width: 100px">Action
+          </th>
+        </tr>
+      </ng-template>
+
+      <ng-template #body let-suggestion>
+        <tr class="hover:bg-surface-100/50 dark:hover:bg-surface-800/30 transition-colors duration-200">
+          <td class="py-4">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-lg bg-surface-100 dark:bg-surface-800 flex items-center justify-center">
+                <i class="pi pi-shop text-surface-400"></i>
+              </div>
+              <span class="font-bold text-surface-900 dark:text-surface-0">{{ suggestion.merchant.cleanName }}</span>
+            </div>
+          </td>
+          <td class="font-mono font-black text-primary">{{ suggestion.amount | currency }}</td>
+          <td>
+            <span
+              class="px-2 py-0.5 rounded-full bg-surface-100 dark:bg-surface-800 text-[10px] font-black uppercase text-surface-600 dark:text-surface-300 ring-1 ring-surface-200 dark:ring-surface-700">
+              {{ frequencyLabels[suggestion.frequency] }}
+            </span>
+          </td>
+          <td class="text-center">
+            <div
+              [class]="getConfidenceStyle(suggestion.confidenceScore) + ' inline-flex items-center gap-1.5 px-2 py-1 rounded-lg ring-1 shadow-xs'">
+              <span class="font-mono font-black text-xs">{{ suggestion.confidenceScore }}%</span>
+            </div>
+          </td>
+          <td class="text-center">
+            <p-button
+              icon="pi pi-plus"
+              label="Accept"
+              size="small"
+              [text]="true"
+              (onClick)="onAccept(suggestion)"
+              pTooltip="Create recurring entry from this pattern"
+            />
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template #emptymessage>
+        <tr>
+          <td colspan="5" class="text-center py-16">
+            <div class="flex flex-col items-center gap-2 opacity-40">
+              <i class="pi pi-search text-4xl"></i>
+              <span class="font-bold uppercase tracking-widest text-xs">No Patterns Detected Yet</span>
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
   </div>
 
-  <ng-template pTemplate="footer">
-    <p-button
-      label="Close"
-      icon="pi pi-times"
-      (onClick)="onHide()"
-      [text]="true"
-      severity="secondary"
-    />
+  <ng-template #footer>
+    <div class="flex justify-end pt-4 border-t border-surface-100 dark:border-surface-800">
+      <p-button
+        label="Close"
+        [text]="true"
+        severity="secondary"
+        (onClick)="onHide()"
+      />
+    </div>
   </ng-template>
 </p-dialog>
