@@ -6,6 +6,7 @@
   [saveLabel]="isEditMode() ? 'Update' : 'Create'"
   (saveEmitterRef)="onSubmit()"
   (cancelEmitterRef)="onHide()"
+  (showEmitterRef)="onShow()"
 >
   <form [formGroup]="form" class="flex flex-col gap-6 py-4">
     <!-- Account ID -->
@@ -42,7 +43,7 @@
     </div>
 
     <!-- Account Type and Currency -->
-    <div class="grid gird-cols-2 gap-4">
+    <div class="grid grid-cols-2 gap-4">
       <div class="flex flex-col gap-2">
         <label for="type" class="text-sm font-bold text-surface-900 tracking-wide uppercase">
           Type

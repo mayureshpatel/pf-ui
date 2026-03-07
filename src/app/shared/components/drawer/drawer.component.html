@@ -4,7 +4,9 @@
   [styleClass]="width() + ' flex flex-col'"
   [modal]="true"
   [dismissible]="!saving()"
-  (onHide)="cancelEmitterRef.emit()">
+  (onHide)="cancelEmitterRef.emit()"
+  (onShow)="showEmitterRef.emit()"
+>
 
   <!-- Header section -->
   <ng-template pTemplate="header">

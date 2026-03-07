@@ -1,7 +1,6 @@
 import {
   Component,
   computed,
-  effect,
   input,
   InputSignal,
   model,
@@ -75,36 +74,6 @@ export class AccountFormDrawerComponent {
     bankName: new FormControl<BankName | null>(null)
   });
 
-  constructor() {
-    effect((): void => {
-      const selectedAccount: Account | null = this.account();
-
-      if (selectedAccount) {
-        this.form.patchValue({
-          id: selectedAccount.id,
-          name: selectedAccount.name,
-          type: selectedAccount.type,
-          currencyCode: selectedAccount.currency.code,
-          currentBalance: selectedAccount.currentBalance,
-          bankName: selectedAccount.bank
-        });
-
-        this.form.controls.currentBalance.disable();
-      } else {
-        this.form.reset({
-          id: null,
-          name: '',
-          type: null,
-          currencyCode: this.defaultCurrency,
-          currentBalance: 0,
-          bankName: null
-        });
-
-        this.form.controls.currentBalance.enable();
-      }
-    });
-  }
-
   onSubmit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -138,15 +107,34 @@ export class AccountFormDrawerComponent {
     }
   }
 
+  onShow(): void {
+    const account: Account | null = this.account();
+
+    if (account) {
+      this.form.patchValue({
+        id: account.id,
+        name: account.name,
+        type: account.type,
+        currencyCode: account.currency.code,
+        currentBalance: account.currentBalance,
+        bankName: account.bank
+      });
+      this.form.controls.currentBalance.disable();
+    } else {
+      this.form.patchValue({
+        id: null,
+        name: '',
+        type: null,
+        currencyCode: this.defaultCurrency,
+        currentBalance: 0,
+        bankName: null
+      });
+      this.form.controls.currentBalance.enable();
+    }
+  }
+
   onHide(): void {
-    this.form.reset({
-      id: null,
-      name: '',
-      type: null,
-      currencyCode: this.defaultCurrency,
-      currentBalance: 0,
-      bankName: null
-    });
+    this.form.reset();
     this.errorMessage.set(null);
   }
 

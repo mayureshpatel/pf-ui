@@ -74,6 +74,11 @@ export class DrawerComponent {
   cancelEmitterRef: OutputEmitterRef<void> = output<void>();
 
   /**
+   * Show event emitter.
+   */
+  showEmitterRef: OutputEmitterRef<void> = output<void>();
+
+  /**
    * Emits the save event when the form is valid and not already saving.
    */
   onSave(): void {
