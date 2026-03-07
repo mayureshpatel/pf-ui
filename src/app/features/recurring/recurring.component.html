@@ -1,137 +1,189 @@
-<div class="p-4">
+<div class="p-6 bg-surface-50 dark:bg-surface-950 min-h-screen">
   <!-- Page Header -->
-  <app-screen-toolbar>
+  <app-screen-toolbar class="mb-6">
     <div toolbarTitle>
-      <h1 class="text-3xl font-bold text-color">Recurring Transactions</h1>
-      <p class="text-muted-color mt-1">Manage your recurring income and expenses</p>
+      <h1 class="text-4xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight">Recurring</h1>
+      <p class="text-muted-color mt-1 text-lg">Automate your subscriptions and repeating payments</p>
     </div>
 
-    <div toolbarActions>
+    <div toolbarActions class="flex gap-3">
       <p-button
         label="View Suggestions"
-        icon="pi pi-lightbulb"
+        icon="pi pi-sparkles"
         severity="info"
         [outlined]="true"
         (onClick)="showSuggestionsDialog.set(true)"
+        class="shadow-sm"
       />
       <p-button
         label="New Recurring"
         icon="pi pi-plus"
-        severity="primary"
         (onClick)="openCreateDialog()"
+        severity="primary"
+        [raised]="true"
       />
     </div>
   </app-screen-toolbar>
 
-  <!-- Table -->
+  <!-- Main Content: Table or Empty State -->
   @if (!isEmpty()) {
-    <p-card class="shadow-sm">
+    <p-card class="shadow-sm border-none ring-1 ring-surface-200 dark:ring-surface-800 overflow-hidden">
       <p-table
         [value]="recurringTransactions()"
         [loading]="loading()"
         [rowHover]="true"
-        styleClass="p-datatable-sm"
+        [stripedRows]="true"
+        size="small"
+        responsiveLayout="stack"
+        [breakpoint]="'960px'"
         dataKey="id">
 
-        <ng-template pTemplate="header">
-          <tr>
-            <th>Merchant</th>
-            <th>Account</th>
-            <th>Amount</th>
-            <th>Frequency</th>
-            <th>Next Date</th>
-            <th>Last Date</th>
-            <th>Status</th>
-            <th class="text-center" style="width: 120px">Actions</th>
+        <ng-template #header>
+          <tr class="bg-surface-50 dark:bg-surface-900/50">
+            <th id="rec-merchant" class="py-4 font-bold text-surface-700 dark:text-surface-200">Merchant</th>
+            <th id="rec-account" class="py-4 font-bold text-surface-700 dark:text-surface-200">Account</th>
+            <th id="rec-amount" class="py-4 font-bold text-surface-700 dark:text-surface-200">Amount</th>
+            <th id="rec-freq" class="py-4 font-bold text-surface-700 dark:text-surface-200">Frequency</th>
+            <th id="rec-next" class="py-4 font-bold text-surface-700 dark:text-surface-200">Next Date</th>
+            <th id="rec-status" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-center">Status</th>
+            <th id="rec-actions" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-center"
+                style="width: 120px">Actions
+            </th>
           </tr>
         </ng-template>
 
-        <ng-template pTemplate="body" let-rec>
-          <tr>
-            <td class="font-medium">{{ rec.merchant.cleanName }}</td>
-            <td>{{ rec.account.name }}</td>
-            <td class="font-mono font-semibold">{{ rec.amount | currency }}</td>
-            <td>
-              <p-tag [value]="frequencyLabels[rec.frequency]" severity="info" />
+        <ng-template #body let-rec>
+          <tr class="hover:bg-surface-100/50 dark:hover:bg-surface-800/30 transition-colors duration-200">
+            <!-- Merchant -->
+            <td class="py-4">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-surface-100 dark:bg-surface-800 flex items-center justify-center">
+                  <i class="pi pi-shop text-surface-400"></i>
+                </div>
+                <span class="font-bold text-surface-900 dark:text-surface-0">{{ rec.merchant.cleanName }}</span>
+              </div>
             </td>
-            <td>{{ rec.nextDate }}</td>
-            <td class="text-muted-color">{{ rec.lastDate || '—' }}</td>
+
+            <!-- Account -->
             <td>
+              <span class="text-sm font-medium text-surface-600 dark:text-surface-400">{{ rec.account.name }}</span>
+            </td>
+
+            <!-- Amount -->
+            <td>
+              <span class="font-mono font-black text-primary text-lg">{{ rec.amount | currency }}</span>
+            </td>
+
+            <!-- Frequency -->
+            <td>
+              <span
+                class="px-2 py-0.5 rounded-full bg-primary/5 text-primary text-[10px] font-black uppercase tracking-wider ring-1 ring-primary/10">
+                {{ frequencyLabels[rec.frequency] }}
+              </span>
+            </td>
+
+            <!-- Next Date -->
+            <td>
+              <div class="flex flex-col">
+                <span class="text-sm font-bold text-surface-700 dark:text-surface-200">{{ rec.nextDate }}</span>
+                <span class="text-[10px] text-muted-color uppercase font-medium">Projected</span>
+              </div>
+            </td>
+
+            <!-- Status -->
+            <td class="text-center">
               @if (rec.active) {
-                <p-tag value="Active" severity="success" />
+                <div
+                  class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-200/50">
+                  <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                  <span class="text-[10px] font-black uppercase">Active</span>
+                </div>
               } @else {
-                <p-tag value="Inactive" severity="secondary" />
+                <div
+                  class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-surface-100 dark:bg-surface-800 text-surface-500 ring-1 ring-surface-200 dark:ring-surface-700">
+                  <span class="text-[10px] font-black uppercase">Paused</span>
+                </div>
               }
             </td>
+
+            <!-- Actions -->
             <td class="text-center">
-              <p-button
-                icon="pi pi-pencil"
-                [text]="true"
-                [rounded]="true"
-                severity="info"
-                (onClick)="openEditDialog(rec)"
-                pTooltip="Edit"
-                tooltipPosition="top"
-              />
-              <p-button
-                icon="pi pi-trash"
-                [text]="true"
-                [rounded]="true"
-                severity="danger"
-                (onClick)="deleteRecurring(rec)"
-                pTooltip="Delete"
-                tooltipPosition="top"
-              />
+              <div class="flex justify-center gap-1">
+                <p-button
+                  icon="pi pi-pencil"
+                  [text]="true"
+                  [rounded]="true"
+                  severity="secondary"
+                  (onClick)="openEditDialog(rec)"
+                  pTooltip="Edit Schedule"
+                />
+                <p-button
+                  icon="pi pi-trash"
+                  [text]="true"
+                  [rounded]="true"
+                  severity="danger"
+                  (onClick)="deleteRecurring(rec)"
+                  pTooltip="Delete Entry"
+                />
+              </div>
+            </td>
+          </tr>
+        </ng-template>
+
+        <ng-template #emptymessage>
+          <tr>
+            <td colspan="7" class="text-center py-16 text-muted-color italic">
+              No recurring transactions found.
             </td>
           </tr>
         </ng-template>
       </p-table>
     </p-card>
-  }
-
-  <!-- Empty State -->
-  @if (isEmpty()) {
-    <p-card class="shadow-sm">
-      <div class="flex flex-col items-center justify-center py-12">
-        <i class="pi pi-refresh text-6xl text-muted-color mb-4"></i>
-        <h2 class="text-2xl font-semibold text-color mb-2">No recurring transactions</h2>
-        <p class="text-muted-color text-center max-w-md">
-          Track subscriptions, rent, and other repeating charges. Use "View Suggestions" to detect
-          recurring patterns from your transaction history.
-        </p>
-        <div class="flex gap-3 mt-6">
-          <p-button
-            label="View Suggestions"
-            icon="pi pi-lightbulb"
-            severity="info"
-            [outlined]="true"
-            (onClick)="showSuggestionsDialog.set(true)"
-          />
-          <p-button
-            label="Add Recurring"
-            icon="pi pi-plus"
-            severity="primary"
-            (onClick)="openCreateDialog()"
-          />
-        </div>
+  } @else if (!loading()) {
+    <!-- Modern Empty State Hero -->
+    <div class="flex flex-col items-center justify-center min-h-[60vh] text-center animate-fade-in">
+      <div class="relative mb-8">
+        <div class="absolute -inset-4 bg-primary/10 rounded-full blur-2xl animate-pulse"></div>
+        <i class="pi pi-refresh text-8xl text-primary/40 relative"></i>
       </div>
-    </p-card>
+      <h2 class="text-3xl font-bold text-surface-900 dark:text-surface-0 mb-3">No recurring transactions</h2>
+      <p class="text-muted-color mb-8 max-w-lg leading-relaxed text-lg">
+        Track subscriptions, rent, and other repeating charges automatically.
+        Detect patterns from your history or create entries manually.
+      </p>
+      <div class="flex gap-4">
+        <p-button
+          label="Identify Patterns"
+          icon="pi pi-sparkles"
+          severity="info"
+          [outlined]="true"
+          size="large"
+          (onClick)="showSuggestionsDialog.set(true)"
+        />
+        <p-button
+          label="Add Manually"
+          icon="pi pi-plus"
+          (onClick)="openCreateDialog()"
+          severity="primary"
+          size="large"
+          [raised]="true"
+        />
+      </div>
+    </div>
   }
 
-  <!-- Form Dialog -->
+  <!-- Dialogs -->
   <app-recurring-form-dialog
-    [visible]="showFormDialog()"
+    [(visible)]="showFormDialog"
     [accounts]="accounts()"
     [merchants]="merchants()"
     [recurring]="selectedRecurring()"
-    (visibleChange)="showFormDialog.set($event)"
+    [suggestion]="pendingSuggestion()"
     (saved)="onSaved()"
   />
 
-  <!-- Suggestions Dialog -->
   <app-recurring-suggestions-dialog
-    [visible]="showSuggestionsDialog()"
-    (visibleChange)="showSuggestionsDialog.set($event)"
+    [(visible)]="showSuggestionsDialog"
     (suggestionAccepted)="onSuggestionAccepted($event)"
   />
 </div>
