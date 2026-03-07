@@ -1,28 +1,37 @@
-<div class="flex flex-wrap gap-3 items-center p-3 rounded-lg border border-surface-200 dark:border-surface-700">
+<div
+  class="flex flex-wrap items-center gap-4 p-1.5 bg-surface-0 dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 shadow-sm ring-1 ring-surface-100 dark:ring-surface-800">
   <!-- Preset Buttons -->
-  <div class="flex flex-wrap gap-2">
+  <div class="flex items-center gap-1.5 px-1.5">
     @for (preset of presets; track preset.label) {
       <p-button
         [label]="preset.label"
-        [outlined]="true"
-        severity="secondary"
+        [text]="dateRange().label !== preset.label"
+        [severity]="dateRange().label === preset.label ? 'primary' : 'secondary'"
         size="small"
         (onClick)="onPresetClick(preset)"
+        class="transition-all duration-200"
       />
     }
   </div>
 
+  <div class="w-px h-6 bg-surface-200 dark:bg-surface-700 hidden md:block"></div>
+
   <!-- Custom Date Range Picker -->
-  <div class="flex items-center gap-2">
-    <label for="datepicker" class="text-xs font-semibold text-muted-color uppercase">Custom Range</label>
-    <p-date-picker
-      id="datepicker"
-      [(ngModel)]="selectedRange"
-      selectionMode="range"
-      (onSelect)="onDateSelect()"
-      [showButtonBar]="true"
-      dateFormat="mm/dd/yy"
-      placeholder="Select dates"
-      class="w-64"></p-date-picker>
+  <div class="flex items-center gap-3 pr-3">
+    <div class="flex flex-col">
+      <span class="text-[9px] font-black uppercase tracking-widest text-surface-400">Custom Period</span>
+      <p-datePicker
+        [(ngModel)]="selectedRange"
+        selectionMode="range"
+        (onSelect)="onDateSelect()"
+        [showButtonBar]="true"
+        [showIcon]="true"
+        iconDisplay="input"
+        dateFormat="yy-mm-dd"
+        placeholder="Select dates..."
+        styleClass="border-none bg-transparent"
+        inputStyleClass="p-0 text-sm font-bold text-surface-700 dark:text-surface-200 bg-transparent border-none focus:ring-0 w-48"
+      />
+    </div>
   </div>
 </div>

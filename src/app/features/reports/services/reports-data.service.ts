@@ -4,26 +4,36 @@ import {CategoryReportData, MonthlyReportData, VendorReportData} from '../models
 import {Category} from '@models/category.model';
 import {Merchant} from '@models/merchant.model';
 
+/**
+ * Service responsible for aggregating and transforming raw transaction data
+ * into report-ready formats.
+ *
+ * Implements sophisticated Map/Reduce logic to group financial data by
+ * category, vendor, and monthly time periods.
+ */
 @Injectable({
   providedIn: 'root'
 })
 export class ReportsDataService {
 
   /**
-   * Aggregate transactions by category
-   * Filters out TRANSFER transactions and groups by categoryName
+   * Aggregates total spending and transaction counts by category.
+   *
+   * Filters out internal transfers and focuses exclusively on expense transactions.
+   *
+   * @param transactions - The array of transactions to analyze.
+   * @returns An array of CategoryReportData objects sorted by highest spending.
    */
   aggregateByCategory(transactions: Transaction[]): CategoryReportData[] {
-    const relevantTransactions: Transaction[] = transactions.filter((t: Transaction): boolean => t.type !== TransactionType.TRANSFER);
     const categoryMap = new Map<number, { category: Category; total: number; count: number }>();
 
-    for (const txn of relevantTransactions) {
-      if (txn.type === TransactionType.EXPENSE) {
+    for (const txn of transactions) {
+      // Only include expenses for category analysis
+      if (txn.type === TransactionType.EXPENSE && txn.category) {
         const category: Category = txn.category;
-        if (!category) continue;
 
         if (!categoryMap.has(category.id)) {
-          categoryMap.set(category.id, { category, total: 0, count: 0 });
+          categoryMap.set(category.id, {category, total: 0, count: 0});
         }
 
         const entry = categoryMap.get(category.id)!;
@@ -33,49 +43,58 @@ export class ReportsDataService {
     }
 
     return Array.from(categoryMap.values())
-      .map(({ category, total, count }) => ({
+      .map(({category, total, count}) => ({
         category,
         total,
         count,
-        avgTransaction: total / count
+        avgTransaction: count > 0 ? total / count : 0
       }))
-      .sort((a, b) => b.total - a.total);
+      .sort((a, b): number => b.total - a.total);
   }
 
   /**
-   * Aggregate transactions by vendor/merchant
-   * Filters out TRANSFER transactions and groups by vendorName
+   * Aggregates spending volume and transaction frequency by vendor/merchant.
+   *
+   * Analyzes where money is being spent most frequently and identifies
+   * which categories are associated with specific vendors.
+   *
+   * @param transactions - The array of transactions to analyze.
+   * @returns An array of VendorReportData objects sorted by highest total volume.
    */
   aggregateByVendor(transactions: Transaction[]): VendorReportData[] {
     const vendorMap = new Map<number, {
       merchant: Merchant;
       total: number;
       count: number;
-      categories: Set<Category>;
+      categories: Set<string>;
     }>();
 
     for (const txn of transactions) {
-      if (txn.type !== TransactionType.EXPENSE || !txn.merchant) {
-        continue;
-      }
+      // Focus on external expenses with known merchants
+      if (txn.type === TransactionType.EXPENSE && txn.merchant) {
+        const {merchant} = txn;
 
-      const { merchant } = txn;
+        if (!vendorMap.has(merchant.id)) {
+          vendorMap.set(merchant.id, {
+            merchant,
+            total: 0,
+            count: 0,
+            categories: new Set<string>()
+          });
+        }
 
-      if (!vendorMap.has(merchant.id)) {
-        vendorMap.set(merchant.id, { merchant, total: 0, count: 0, categories: new Set<Category>() });
-      }
+        const entry = vendorMap.get(merchant.id)!;
+        entry.total += Math.abs(txn.amount);
+        entry.count += 1;
 
-      const entry = vendorMap.get(merchant.id)!;
-      entry.total += Math.abs(txn.amount);
-      entry.count += 1;
-
-      if (txn.category) {
-        entry.categories.add(txn.category);
+        if (txn.category) {
+          entry.categories.add(txn.category.name);
+        }
       }
     }
 
     return Array.from(vendorMap.values())
-      .map(({ merchant, total, count, categories }) => ({
+      .map(({merchant, total, count, categories}) => ({
         merchant,
         total,
         count,
@@ -85,51 +104,44 @@ export class ReportsDataService {
   }
 
   /**
-   * Aggregate transactions by month
-   * Separates INCOME from EXPENSE and calculates net savings
+   * Generates a monthly breakdown of income vs. expenses.
+   *
+   * Provides the foundation for trend analysis and savings rate calculation
+   * over time. Filters out internal transfers to maintain data integrity.
+   *
+   * @param transactions - The array of transactions to analyze.
+   * @returns Chronologically sorted array of MonthlyReportData.
    */
   aggregateByMonth(transactions: Transaction[]): MonthlyReportData[] {
-    // Filter out transfers
-    const relevantTransactions: Transaction[] = transactions.filter(
-      (t: Transaction): boolean => t.type !== TransactionType.TRANSFER
-    );
-
-    // Group by month (YYYY-MM format)
     const monthMap = new Map<string, { income: number; expense: number }>();
 
-    for (const txn of relevantTransactions) {
-      // Extract YYYY-MM from ISO date string
-      const month: string = txn.date.substring(0, 7); // "2024-01-15" -> "2024-01"
+    for (const txn of transactions) {
+      // Exclude transfers to avoid double-counting or inflated volumes
+      if (txn.type === TransactionType.TRANSFER) continue;
 
-      if (!monthMap.has(month)) {
-        monthMap.set(month, {income: 0, expense: 0});
+      // Normalize date to YYYY-MM for map grouping
+      const monthKey = txn.date.substring(0, 7);
+
+      if (!monthMap.has(monthKey)) {
+        monthMap.set(monthKey, {income: 0, expense: 0});
       }
 
-      const entry = monthMap.get(month)!;
+      const entry = monthMap.get(monthKey)!;
 
       if (txn.type === TransactionType.INCOME) {
         entry.income += txn.amount;
       } else if (txn.type === TransactionType.EXPENSE) {
-        // Expenses are typically negative in the database, take absolute value
         entry.expense += Math.abs(txn.amount);
       }
     }
 
-    // Convert map to array and calculate net savings
-    const results: MonthlyReportData[] = [];
-
-    for (const [month, data] of monthMap.entries()) {
-      results.push({
+    return Array.from(monthMap.entries())
+      .map(([month, data]) => ({
         month,
         income: data.income,
         expense: data.expense,
         netSavings: data.income - data.expense
-      });
-    }
-
-    // Sort chronologically
-    results.sort((a: MonthlyReportData, b: MonthlyReportData): number => a.month.localeCompare(b.month));
-
-    return results;
+      }))
+      .sort((a, b) => a.month.localeCompare(b.month));
   }
 }

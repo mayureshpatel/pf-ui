@@ -1,54 +1,85 @@
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
   <!-- Top Vendors Bar Chart -->
-  <p-card header="Top Vendors by Spending" class="shadow-sm">
+  <p-card class="h-full shadow-sm border-none ring-1 ring-surface-200 dark:ring-surface-800">
+    <ng-template pTemplate="title">
+      <div class="flex items-center gap-2 mb-2">
+        <i class="pi pi-shop text-primary"></i>
+        <span class="text-xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight">Vendor Volume</span>
+      </div>
+    </ng-template>
+
     @if (hasData()) {
-      <div class="h-96">
-        <p-chart type="bar" [data]="barChartData()" [options]="barChartOptions()"/>
+      <div class="h-[400px] w-full mt-4">
+        <p-chart type="bar" [data]="barChartData()" [options]="barChartOptions" class="h-full w-full" />
       </div>
     } @else {
-      <div class="flex flex-col items-center justify-center py-12 text-muted-color gap-3 h-96">
-        <i class="pi pi-chart-bar text-4xl"></i>
-        <span class="text-sm">No vendor data for this period</span>
+      <div class="flex flex-col items-center justify-center h-[400px] text-center animate-fade-in">
+        <i class="pi pi-chart-bar text-4xl text-surface-200 mb-2"></i>
+        <span class="text-sm font-bold text-surface-400 uppercase tracking-widest">No vendor activity</span>
       </div>
     }
   </p-card>
 
-  <!-- Top 5 Vendors Doughnut Chart -->
-  <p-card header="Top 5 Vendor Distribution" class="shadow-sm">
+  <!-- Distribution Doughnut Chart -->
+  <p-card class="h-full shadow-sm border-none ring-1 ring-surface-200 dark:ring-surface-800">
+    <ng-template pTemplate="title">
+      <div class="flex items-center gap-2 mb-2">
+        <i class="pi pi-chart-pie text-primary"></i>
+        <span class="text-xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight">Spend Distribution</span>
+      </div>
+    </ng-template>
+
     @if (hasData()) {
-      <div class="h-96 flex items-center justify-center">
-        <p-chart type="doughnut" [data]="doughnutChartData()" [options]="doughnutChartOptions()"/>
+      <div class="h-[400px] w-full mt-4 flex items-center justify-center">
+        <p-chart type="doughnut" [data]="doughnutChartData()" [options]="doughnutChartOptions" class="h-[320px] w-full" />
       </div>
     } @else {
-      <div class="flex flex-col items-center justify-center py-12 text-muted-color gap-3 h-96">
-        <i class="pi pi-chart-pie text-4xl"></i>
-        <span class="text-sm">No vendor data for this period</span>
+      <div class="flex flex-col items-center justify-center h-[400px] text-center animate-fade-in">
+        <i class="pi pi-chart-pie text-4xl text-surface-200 mb-2"></i>
+        <span class="text-sm font-bold text-surface-400 uppercase tracking-widest">No distribution data</span>
       </div>
     }
   </p-card>
 </div>
 
 <!-- Vendor Details Table -->
-<div class="mt-6">
-  <p-card header="Vendor Details" class="shadow-sm">
-    <p-table [value]="vendorData()" class="p-datatable-sm">
-      <ng-template pTemplate="header">
-        <tr>
-          <th>Vendor</th>
-          <th class="text-right">Total Spent</th>
-          <th class="text-right">Transactions</th>
-          <th>Categories</th>
+<div class="mt-8">
+  <p-card class="shadow-sm border-none ring-1 ring-surface-200 dark:ring-surface-800 overflow-hidden">
+    <ng-template pTemplate="title">
+      <div class="flex items-center gap-2 mb-2">
+        <i class="pi pi-list text-primary"></i>
+        <span class="text-xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight">Merchant Details</span>
+      </div>
+    </ng-template>
+
+    <p-table
+      [value]="vendorData()"
+      [stripedRows]="true"
+      size="small"
+      [paginator]="true"
+      [rows]="10"
+      class="mt-4">
+      <ng-template #header>
+        <tr class="bg-surface-50 dark:bg-surface-900/50">
+          <th id="vendor-name" class="py-3 font-bold text-surface-700 dark:text-surface-200">Merchant</th>
+          <th id="vendor-total" class="py-3 font-bold text-surface-700 dark:text-surface-200 text-right">Total Spent</th>
+          <th id="vendor-count" class="py-3 font-bold text-surface-700 dark:text-surface-200 text-center">Txns</th>
+          <th id="vendor-cats" class="py-3 font-bold text-surface-700 dark:text-surface-200">Primary Categories</th>
         </tr>
       </ng-template>
-      <ng-template pTemplate="body" let-vendor>
-        <tr>
-          <td class="font-medium">{{ vendor.merchant.name }}</td>
-          <td class="text-right">{{ vendor.total | formatCurrency }}</td>
-          <td class="text-right">{{ vendor.count }}</td>
+      <ng-template #body let-vendor>
+        <tr class="hover:bg-surface-100/50 dark:hover:bg-surface-800/30 transition-colors duration-200">
+          <td class="py-3">
+            <span class="font-bold text-surface-900 dark:text-surface-0">{{ vendor.merchant.cleanName }}</span>
+          </td>
+          <td class="text-right font-mono font-black text-primary">{{ vendor.total | formatCurrency }}</td>
+          <td class="text-center font-mono text-xs text-muted-color">{{ vendor.count }}</td>
           <td>
             <div class="flex flex-wrap gap-1">
               @for (category of vendor.categories; track category) {
-                <p-tag [value]="category" severity="secondary"/>
+                <span class="px-2 py-0.5 rounded-full bg-surface-100 dark:bg-surface-800 text-[10px] font-black uppercase text-surface-500 tracking-tighter ring-1 ring-surface-200 dark:ring-surface-700">
+                  {{ category }}
+                </span>
               }
             </div>
           </td>

@@ -1,51 +1,85 @@
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
   <!-- Stacked Bar Chart: Income vs Expense -->
-  <p-card header="Income vs Expenses by Month" class="shadow-sm">
+  <p-card class="h-full shadow-sm border-none ring-1 ring-surface-200 dark:ring-surface-800">
+    <ng-template pTemplate="title">
+      <div class="flex items-center gap-2 mb-2">
+        <i class="pi pi-chart-bar text-primary"></i>
+        <span
+          class="text-xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight">Income vs Expenses</span>
+      </div>
+    </ng-template>
+
     @if (hasData()) {
-      <div class="h-96">
-        <p-chart type="bar" [data]="stackedBarData()" [options]="stackedBarOptions()"/>
+      <div class="h-[400px] w-full mt-4">
+        <p-chart type="bar" [data]="stackedBarData()" [options]="stackedBarOptions" class="h-full w-full"/>
       </div>
     } @else {
-      <div class="flex flex-col items-center justify-center py-12 text-muted-color gap-3 h-96">
-        <i class="pi pi-chart-bar text-4xl"></i>
-        <span class="text-sm">No income/expense data for this period</span>
+      <div class="flex flex-col items-center justify-center h-[400px] text-center animate-fade-in">
+        <i class="pi pi-chart-bar text-4xl text-surface-200 mb-2"></i>
+        <span class="text-sm font-bold text-surface-400 uppercase tracking-widest">No activity data</span>
       </div>
     }
   </p-card>
 
   <!-- Line Chart: Net Savings Trend -->
-  <p-card header="Net Savings Trend" class="shadow-sm">
+  <p-card class="h-full shadow-sm border-none ring-1 ring-surface-200 dark:ring-surface-800">
+    <ng-template pTemplate="title">
+      <div class="flex items-center gap-2 mb-2">
+        <i class="pi pi-chart-line text-primary"></i>
+        <span
+          class="text-xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight">Net Savings Trend</span>
+      </div>
+    </ng-template>
+
     @if (hasData()) {
-      <div class="h-96">
-        <p-chart type="line" [data]="lineChartData()" [options]="lineChartOptions()"/>
+      <div class="h-[400px] w-full mt-4">
+        <p-chart type="line" [data]="lineChartData()" [options]="lineChartOptions" class="h-full w-full"/>
       </div>
     } @else {
-      <div class="flex flex-col items-center justify-center py-12 text-muted-color gap-3 h-96">
-        <i class="pi pi-chart-line text-4xl"></i>
-        <span class="text-sm">No savings data for this period</span>
+      <div class="flex flex-col items-center justify-center h-[400px] text-center animate-fade-in">
+        <i class="pi pi-chart-line text-4xl text-surface-200 mb-2"></i>
+        <span class="text-sm font-bold text-surface-400 uppercase tracking-widest">No savings data</span>
       </div>
     }
   </p-card>
 </div>
 
 <!-- Monthly Summary Table -->
-<div class="mt-6">
-  <p-card header="Monthly Summary" class="shadow-sm">
-    <p-table [value]="monthlyData()" class="p-datatable-sm">
-      <ng-template pTemplate="header">
-        <tr>
-          <th>Month</th>
-          <th class="text-right">Income</th>
-          <th class="text-right">Expenses</th>
-          <th class="text-right">Net Savings</th>
+<div class="mt-8">
+  <p-card class="shadow-sm border-none ring-1 ring-surface-200 dark:ring-surface-800 overflow-hidden">
+    <ng-template pTemplate="title">
+      <div class="flex items-center gap-2 mb-2">
+        <i class="pi pi-calendar text-primary"></i>
+        <span
+          class="text-xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight">Monthly Performance</span>
+      </div>
+    </ng-template>
+
+    <p-table
+      [value]="monthlyData()"
+      [stripedRows]="true"
+      size="small"
+      class="mt-4">
+      <ng-template #header>
+        <tr class="bg-surface-50 dark:bg-surface-900/50">
+          <th id="mo-month" class="py-3 font-bold text-surface-700 dark:text-surface-200">Month</th>
+          <th id="mo-income" class="py-3 font-bold text-surface-700 dark:text-surface-200 text-right">Income</th>
+          <th id="mo-expense" class="py-3 font-bold text-surface-700 dark:text-surface-200 text-right">Expenses</th>
+          <th id="mo-net" class="py-3 font-bold text-surface-700 dark:text-surface-200 text-right">Net Savings</th>
         </tr>
       </ng-template>
-      <ng-template pTemplate="body" let-data>
-        <tr>
-          <td class="font-medium">{{ data.month }}</td>
-          <td class="text-right text-green-600">{{ data.income | formatCurrency }}</td>
-          <td class="text-right text-red-600">{{ data.expense | formatCurrency }}</td>
-          <td class="text-right font-semibold" [ngClass]="getSavingsClass(data.netSavings)">
+      <ng-template #body let-data>
+        <tr class="hover:bg-surface-100/50 dark:hover:bg-surface-800/30 transition-colors duration-200">
+          <td class="py-3">
+            <span class="font-bold text-surface-900 dark:text-surface-0">{{ data.month }}</span>
+          </td>
+          <td class="text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
+            {{ data.income | formatCurrency }}
+          </td>
+          <td class="text-right font-mono font-bold text-rose-600 dark:text-rose-400">
+            {{ data.expense | formatCurrency }}
+          </td>
+          <td class="text-right font-mono font-black text-lg" [ngClass]="getSavingsClass(data.netSavings)">
             {{ data.netSavings | formatCurrency }}
           </td>
         </tr>

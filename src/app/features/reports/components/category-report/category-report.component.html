@@ -1,35 +1,62 @@
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
   <!-- Top Categories Chart -->
-  <p-card header="Top Spending Categories" class="shadow-sm">
+  <p-card class="h-full shadow-sm border-none ring-1 ring-surface-200 dark:ring-surface-800">
+    <ng-template pTemplate="title">
+      <div class="flex items-center gap-2 mb-2">
+        <i class="pi pi-chart-pie text-primary"></i>
+        <span
+          class="text-xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight">Spending Breakdown</span>
+      </div>
+    </ng-template>
+
     @if (hasData()) {
-      <div class="h-96">
-        <p-chart type="bar" [data]="chartData()" [options]="chartOptions()"/>
+      <div class="h-[400px] w-full mt-4">
+        <p-chart type="bar" [data]="chartData()" [options]="chartOptions" class="h-full w-full"/>
       </div>
     } @else {
-      <div class="flex flex-col items-center justify-center py-12 text-muted-color gap-3 h-96">
-        <i class="pi pi-chart-bar text-4xl"></i>
-        <span class="text-sm">No category data for this period</span>
+      <div class="flex flex-col items-center justify-center h-[400px] text-center animate-fade-in">
+        <div class="w-16 h-16 rounded-full bg-surface-50 dark:bg-surface-900 flex items-center justify-center mb-4">
+          <i class="pi pi-chart-bar text-2xl text-surface-300"></i>
+        </div>
+        <span class="text-sm font-bold text-surface-400 uppercase tracking-widest">No spending data</span>
+        <p class="text-xs text-muted-color mt-1">Try expanding your date range filters.</p>
       </div>
     }
   </p-card>
 
   <!-- Category Summary Table -->
-  <p-card header="Category Details" class="shadow-sm">
-    <p-table [value]="categoryData()" class="p-datatable-sm">
-      <ng-template pTemplate="header">
-        <tr>
-          <th>Category</th>
-          <th class="text-right">Total</th>
-          <th class="text-right">Transactions</th>
-          <th class="text-right">Average</th>
+  <p-card class="h-full shadow-sm border-none ring-1 ring-surface-200 dark:ring-surface-800 overflow-hidden">
+    <ng-template pTemplate="title">
+      <div class="flex items-center gap-2 mb-2">
+        <i class="pi pi-list text-primary"></i>
+        <span class="text-xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight">Category Details</span>
+      </div>
+    </ng-template>
+
+    <p-table
+      [value]="categoryData()"
+      [stripedRows]="true"
+      size="small"
+      [scrollable]="true"
+      scrollHeight="400px"
+      class="mt-4">
+      <ng-template #header>
+        <tr class="bg-surface-50 dark:bg-surface-900/50">
+          <th id="cat-name" class="py-3 font-bold text-surface-700 dark:text-surface-200">Category</th>
+          <th id="cat-total" class="py-3 font-bold text-surface-700 dark:text-surface-200 text-right">Total</th>
+          <th id="cat-avg" class="py-3 font-bold text-surface-700 dark:text-surface-200 text-right">Avg / Txn</th>
         </tr>
       </ng-template>
-      <ng-template pTemplate="body" let-cat>
-        <tr>
-          <td class="font-medium">{{ cat.category.name }}</td>
-          <td class="text-right">{{ cat.total | formatCurrency }}</td>
-          <td class="text-right">{{ cat.count }}</td>
-          <td class="text-right">{{ cat.avgTransaction | formatCurrency }}</td>
+      <ng-template #body let-cat>
+        <tr class="hover:bg-surface-100/50 dark:hover:bg-surface-800/30 transition-colors duration-200">
+          <td class="py-3">
+            <div class="flex items-center gap-2">
+              <div [class]="'w-2 h-2 rounded-full ' + (cat.category.color || 'bg-surface-300')"></div>
+              <span class="font-bold text-surface-900 dark:text-surface-0">{{ cat.category.name }}</span>
+            </div>
+          </td>
+          <td class="text-right font-mono font-black text-primary">{{ cat.total | formatCurrency }}</td>
+          <td class="text-right font-mono text-xs text-muted-color">{{ cat.avgTransaction | formatCurrency }}</td>
         </tr>
       </ng-template>
     </p-table>

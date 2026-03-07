@@ -1,34 +1,48 @@
-<div class="p-4">
+<div class="p-6 bg-surface-50 dark:bg-surface-950 min-h-screen">
   <!-- Header with Date Range Filter -->
-  <app-screen-toolbar [showDivider]="false">
+  <app-screen-toolbar [showDivider]="false" class="mb-6">
     <div toolbarTitle>
-      <h1 class="text-3xl font-bold text-color">Reports</h1>
-      <p class="text-muted-color mt-1">Analyze your spending patterns and trends</p>
+      <h1 class="text-4xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight">Reports</h1>
+      <p class="text-muted-color mt-1 text-lg italic">Strategic Financial Analytics</p>
     </div>
 
     <div toolbarFilters>
-      <app-date-range-filter
-        [dateRange]="dateRange()"
-        (rangeChange)="onDateRangeChange($event)"
-      />
+      <app-date-range-filter [(dateRange)]="dateRange"/>
     </div>
   </app-screen-toolbar>
 
-  <!-- Loading Spinner -->
+  <!-- Content State Manager -->
   @if (loading()) {
-    <div class="flex justify-center items-center py-12">
-      <p-progressSpinner class="w-16 h-16"/>
+    <div class="flex flex-col justify-center items-center py-32 gap-4">
+      <p-progressSpinner strokeWidth="4"/>
+      <span
+        class="text-muted-color font-bold uppercase tracking-widest animate-pulse">Aggregating Fiscal Intel...</span>
     </div>
   } @else {
     <!-- Tabs with Report Components -->
     <p-tabs [(value)]="activeTabIndex" class="shadow-sm">
-      <p-tablist>
-        <p-tab [value]="0">Category Analysis</p-tab>
-        <p-tab [value]="1">Vendor Analysis</p-tab>
-        <p-tab [value]="2">Income vs Expense</p-tab>
+      <p-tablist class="bg-transparent border-none">
+        <p-tab [value]="0">
+          <div class="flex items-center gap-2">
+            <i class="pi pi-tags"></i>
+            <span class="font-bold">Categories</span>
+          </div>
+        </p-tab>
+        <p-tab [value]="1">
+          <div class="flex items-center gap-2">
+            <i class="pi pi-shop"></i>
+            <span class="font-bold">Vendors</span>
+          </div>
+        </p-tab>
+        <p-tab [value]="2">
+          <div class="flex items-center gap-2">
+            <i class="pi pi-chart-line"></i>
+            <span class="font-bold">Cash Flow</span>
+          </div>
+        </p-tab>
       </p-tablist>
 
-      <p-tabpanels>
+      <p-tabpanels class="bg-transparent px-0 py-6">
         <p-tabpanel [value]="0">
           <app-category-report [transactions]="transactions()"/>
         </p-tabpanel>

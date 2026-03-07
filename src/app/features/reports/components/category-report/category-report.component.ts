@@ -1,14 +1,21 @@
-import {Component, computed, effect, inject, input, InputSignal, Signal, signal, WritableSignal} from '@angular/core';
+import {Component, computed, inject, input, InputSignal, Signal} from '@angular/core';
 import {CommonModule, formatCurrency} from '@angular/common';
 import {CardModule} from 'primeng/card';
 import {ChartModule} from 'primeng/chart';
 import {TableModule} from 'primeng/table';
+
 import {Transaction} from '@models/transaction.model';
 import {ReportsDataService} from '../../services/reports-data.service';
 import {CategoryReportData} from '../../models/reports.model';
 import {getCategoryColorHex} from '@shared/utils/category.utils';
 import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
 
+/**
+ * Sub-report component for analyzing spending by category.
+ *
+ * Provides a horizontal bar chart of the top 10 categories and a detailed
+ * breakdown table showing transaction volume and averages.
+ */
 @Component({
   selector: 'app-category-report',
   standalone: true,
@@ -16,78 +23,78 @@ import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
   templateUrl: './category-report.component.html'
 })
 export class CategoryReportComponent {
-  // injected services
   private readonly dataService: ReportsDataService = inject(ReportsDataService);
 
-  // input signals
-  transactions: InputSignal<Transaction[]> = input.required<Transaction[]>();
+  /** The dataset of transactions to analyze. */
+  readonly transactions: InputSignal<Transaction[]> = input.required<Transaction[]>();
 
-  // computed signals
-  protected categoryData: Signal<CategoryReportData[]> = computed((): CategoryReportData[] => {
-    return this.dataService.aggregateByCategory(this.transactions());
+  /** Aggregated report data calculated reactively from transactions. */
+  readonly categoryData: Signal<CategoryReportData[]> = computed((): CategoryReportData[] =>
+    this.dataService.aggregateByCategory(this.transactions())
+  );
+
+  /** Indicates if there is sufficient data to render visuals. */
+  readonly hasData: Signal<boolean> = computed((): boolean => this.categoryData().length > 0);
+
+  /**
+   * Derived Chart.js data object.
+   * Uses pure computed signal for maximum performance.
+   */
+  readonly chartData = computed(() => {
+    const data: CategoryReportData[] = this.categoryData().slice(0, 10); // Show top 10
+
+    return {
+      labels: data.map((c: CategoryReportData): string => c.category.name),
+      datasets: [{
+        label: 'Total Spent',
+        data: data.map((c: CategoryReportData): number => c.total),
+        backgroundColor: data.map((c: CategoryReportData): string => getCategoryColorHex(c.category.color)),
+        borderRadius: 8,
+        barThickness: 32,
+        hoverBackgroundColor: data.map((c: CategoryReportData): string => getCategoryColorHex(c.category.color))
+      }]
+    };
   });
 
-  protected hasData: Signal<boolean> = computed((): boolean => this.categoryData().length > 0);
-
-  // signals
-  protected chartData: WritableSignal<any> = signal({});
-  protected chartOptions: WritableSignal<any> = signal({});
-
-  constructor() {
-    effect((): void => {
-      const categories: CategoryReportData[] = this.categoryData();
-
-      if (categories.length > 0) {
-        this.updateChartData(categories);
-      }
-    });
-    this.initChartOptions();
-  }
-
-  private updateChartData(categories: CategoryReportData[]): void {
-    const top10: CategoryReportData[] = categories.slice(0, 10);
-
-    const labels: string[] = top10.map((c: CategoryReportData): string => c.category?.name || 'Uncategorized');
-    const data: number[] = top10.map((c: CategoryReportData): number => Math.abs(c.total));
-    const colors: string[] = top10.map((c: CategoryReportData): string => getCategoryColorHex(c.category?.color ?? ''));
-
-    this.chartData.set({
-      labels,
-      datasets: [{
-        label: 'Spent',
-        data,
-        backgroundColor: colors,
-        borderRadius: 6,
-        barThickness: 32
-      }]
-    });
-  }
-
-  private initChartOptions(): void {
-    this.chartOptions.set({
-      indexAxis: 'y', // Horizontal bar chart
-      maintainAspectRatio: false,
-      aspectRatio: 0.8,
-      plugins: {
-        legend: {display: false},
-        tooltip: {
-          callbacks: {
-            label: (context: any): string => {
-              const value: any = context.parsed.x || 0;
-              return `Spent: ${formatCurrency(value, 'en-US', '$', '1.2-2')}`;
-            }
+  /**
+   * Static chart options configuration.
+   */
+  readonly chartOptions = {
+    indexAxis: 'y',
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {display: false},
+      tooltip: {
+        backgroundColor: '#1e293b',
+        padding: 12,
+        titleFont: {size: 14, weight: 'bold'},
+        bodyFont: {size: 13, family: 'monospace'},
+        usePointStyle: true,
+        callbacks: {
+          label: (context: any): string => {
+            const val: any = context.parsed.x || 0;
+            return ` Total Spent: ${formatCurrency(val, 'en-US', '$', '1.2-2')}`;
           }
         }
-      },
-      scales: {
-        x: {
-          ticks: {
-            callback: (value: any): string => formatCurrency(value, 'en-US', '$', '1.2-2')
-          },
-          grid: {display: false}
-        },
-        y: {grid: {display: false}}
       }
-    });
-  }
+    },
+    scales: {
+      x: {
+        beginAtZero: true,
+        grid: {color: 'rgba(148, 163, 184, 0.1)', drawBorder: false},
+        ticks: {
+          color: '#94a3b8',
+          font: {size: 11, family: 'monospace'},
+          callback: (val: any): string => `$${val >= 1000 ? (val / 1000) + 'k' : val}`
+        }
+      },
+      y: {
+        grid: {display: false, drawBorder: false},
+        ticks: {
+          color: '#64748b',
+          font: {size: 12, weight: '700'}
+        }
+      }
+    }
+  };
 }
