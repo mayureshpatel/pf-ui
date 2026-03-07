@@ -1,103 +1,118 @@
-<div class="flex items-center justify-center min-h-screen bg-surface-ground">
-  <p-card class="w-full max-w-md shadow-lg">
+<div class="flex items-center justify-center min-h-screen bg-surface-50 dark:bg-surface-950 p-4">
+  <p-card class="w-full max-w-md shadow-xl border-none ring-1 ring-surface-200 dark:ring-surface-800">
     <ng-template pTemplate="header">
-      <div class="text-center pt-6">
-        <i class="pi pi-wallet text-5xl text-primary"></i>
-        <h1 class="text-2xl font-semibold mt-4 text-color">Personal Finance</h1>
-        <p class="text-muted-color mt-2">Create your account</p>
+      <div class="flex flex-col items-center pt-8 pb-4">
+        <div class="bg-primary/10 rounded-2xl p-4 mb-4">
+          <i class="pi pi-wallet text-5xl text-primary"></i>
+        </div>
+        <h1 class="text-3xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight">Create Account</h1>
+        <p class="text-muted-color mt-1 text-lg">Join us and take control of your finances.</p>
       </div>
     </ng-template>
 
-    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-4">
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-5 py-2">
       @if (errorMessage()) {
-        <p-message severity="error" [text]="errorMessage()!" styleClass="w-full" />
+        <p-message severity="error" variant="simple" class="w-full animate-fade-in">
+          {{ errorMessage() }}
+        </p-message>
       }
 
+      <!-- Username -->
       <div class="flex flex-col gap-2">
-        <label for="username" class="font-medium text-color">Username</label>
+        <label for="username" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
+          Username
+        </label>
         <input
           pInputText
           id="username"
           formControlName="username"
           placeholder="Choose a username"
-          class="w-full"
+          class="w-full py-2"
           autocomplete="username"
         />
         @if (form.controls.username.invalid && form.controls.username.touched) {
-          @if (form.controls.username.errors?.['required']) {
-            <small class="text-red-500">Username is required</small>
-          } @else if (form.controls.username.errors?.['minlength']) {
-            <small class="text-red-500">Username must be at least 3 characters</small>
-          } @else if (form.controls.username.errors?.['maxlength']) {
-            <small class="text-red-500">Username must not exceed 50 characters</small>
-          } @else if (form.controls.username.errors?.['pattern']) {
-            <small class="text-red-500">Username can only contain letters, numbers, and underscores</small>
-          }
+          <div class="flex flex-col gap-1 mt-1 animate-fade-in">
+            @if (form.controls.username.errors?.['required']) {
+              <small class="text-rose-500 font-medium flex items-center gap-1">
+                <i class="pi pi-times-circle text-xs"></i> Username is required
+              </small>
+            } @else {
+              <small class="text-rose-500 font-medium flex items-center gap-1">
+                <i class="pi pi-times-circle text-xs"></i> 3-50 chars, alphanumeric/underscores only
+              </small>
+            }
+          </div>
         }
       </div>
 
+      <!-- Email -->
       <div class="flex flex-col gap-2">
-        <label for="email" class="font-medium text-color">Email</label>
+        <label for="email" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
+          Email Address
+        </label>
         <input
           pInputText
           id="email"
           formControlName="email"
           type="email"
-          placeholder="Enter your email"
-          class="w-full"
+          placeholder="your@email.com"
+          class="w-full py-2"
           autocomplete="email"
         />
         @if (form.controls.email.invalid && form.controls.email.touched) {
-          @if (form.controls.email.errors?.['required']) {
-            <small class="text-red-500">Email is required</small>
-          } @else if (form.controls.email.errors?.['email']) {
-            <small class="text-red-500">Please enter a valid email address</small>
-          }
+          <small class="text-rose-500 font-medium flex items-center gap-1 mt-1 animate-fade-in">
+            <i class="pi pi-times-circle text-xs"></i> Valid email is required
+          </small>
         }
       </div>
 
+      <!-- Password -->
       <div class="flex flex-col gap-2">
-        <label for="password" class="font-medium text-color">Password</label>
+        <label for="password" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
+          Password
+        </label>
         <p-password
           id="password"
           formControlName="password"
-          placeholder="Create a password"
+          placeholder="Create a strong password"
           [feedback]="true"
           [toggleMask]="true"
           styleClass="w-full"
-          inputStyleClass="w-full"
+          inputStyleClass="w-full py-2"
           autocomplete="new-password"
         />
         @if (form.controls.password.invalid && form.controls.password.touched) {
-          @if (form.controls.password.errors?.['required']) {
-            <small class="text-red-500">Password is required</small>
-          } @else if (form.controls.password.errors?.['minlength']) {
-            <small class="text-red-500">Password must be at least 8 characters</small>
-          } @else if (form.controls.password.errors?.['maxlength']) {
-            <small class="text-red-500">Password must not exceed 100 characters</small>
-          } @else if (form.controls.password.errors?.['pattern']) {
-            <small class="text-red-500">Password must contain uppercase, lowercase, digit, and special character (@$!%*?&)</small>
-          }
+          <small class="text-rose-500 font-medium flex items-center gap-1 mt-1 animate-fade-in">
+            <i class="pi pi-times-circle text-xs"></i> Password must meet security requirements
+          </small>
         }
       </div>
 
+      <!-- Confirm Password -->
       <div class="flex flex-col gap-2">
-        <label for="confirmPassword" class="font-medium text-color">Confirm Password</label>
+        <label for="confirmPassword"
+               class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
+          Confirm Password
+        </label>
         <p-password
           id="confirmPassword"
           formControlName="confirmPassword"
-          placeholder="Confirm your password"
+          placeholder="Re-enter your password"
           [feedback]="false"
           [toggleMask]="true"
           styleClass="w-full"
-          inputStyleClass="w-full"
+          inputStyleClass="w-full py-2"
           autocomplete="new-password"
         />
         @if (form.controls.confirmPassword.touched) {
           @if (form.controls.confirmPassword.errors?.['required']) {
-            <small class="text-red-500">Please confirm your password</small>
+            <small class="text-rose-500 font-medium flex items-center gap-1 mt-1 animate-fade-in">
+              <i class="pi pi-times-circle text-xs"></i> Please confirm your password
+            </small>
           } @else if (form.errors?.['passwordMismatch']) {
-            <small class="text-red-500">Passwords do not match</small>
+            <small class="text-rose-500 font-medium flex items-center gap-1 mt-1 animate-fade-in">
+              <i class="pi pi-exclamation-triangle text-xs"></i> Passwords do not match
+            </small>
           }
         }
       </div>
@@ -105,15 +120,17 @@
       <p-button
         type="submit"
         label="Create Account"
+        icon="pi pi-user-plus"
         [loading]="isSubmitting()"
         [disabled]="isSubmitting()"
-        styleClass="w-full"
-        severity="primary"
+        size="large"
+        [raised]="true"
+        class="w-full mt-2"
       />
 
-      <div class="text-center text-muted-color">
+      <div class="text-center text-muted-color text-sm">
         Already have an account?
-        <a routerLink="/login" class="text-primary cursor-pointer hover:underline ml-1">
+        <a routerLink="/login" class="text-primary font-bold hover:underline ml-1">
           Sign in
         </a>
       </div>

@@ -3,10 +3,14 @@ import {HttpClient} from '@angular/common/http';
 import {Router} from '@angular/router';
 import {catchError, Observable, tap, throwError} from 'rxjs';
 import {environment} from '@env';
-import {AuthRequest, AuthResponse, JwtPayload, RegistrationRequest, User} from '@models/auth.model';
+import {AuthRequest, AuthResponse, RegistrationRequest, User} from '@models/auth.model';
 import {StorageService} from '../services/storage.service';
 import {ToastService} from '../services/toast.service';
+import {getUserFromToken} from './utils/jwt.utils';
 
+/**
+ * Service responsible for managing authentication state and user operations.
+ */
 @Injectable({
   providedIn: 'root'
 })
@@ -17,17 +21,30 @@ export class AuthService {
   private readonly toast: ToastService = inject(ToastService);
 
   private readonly _isAuthenticated: WritableSignal<boolean> = signal<boolean>(this.storage.hasToken());
-  private readonly _user: WritableSignal<User | null> = signal<User | null>(this.getUserFromToken());
+  private readonly _user: WritableSignal<User | null> = signal<User | null>(getUserFromToken(this.storage.getToken()));
 
+  /**
+   * Whether the user is currently authenticated.
+   */
   readonly isAuthenticated: Signal<boolean> = this._isAuthenticated.asReadonly();
+
+  /**
+   * The currently logged-in user, or null if not authenticated.
+   */
   readonly user: Signal<User | null> = this._user.asReadonly();
 
-  readonly username: Signal<string> = computed(() => this._user()?.username ?? '');
+  /**
+   * The username of the currently logged-in user, or an empty string.
+   */
+  readonly username: Signal<string> = computed((): string => this.user()?.username ?? '');
 
   /**
    * Authenticates the user with the provided credentials.
-   * @param credentials the user credentials
-   * @param rememberMe whether to remember the user's login
+   *
+   * @param credentials - The user credentials (username and password).
+   * @param rememberMe - Whether to store the token in local storage (persistent) or session storage.
+   * @returns An observable of the authentication response.
+   * @throws An error if authentication fails.
    */
   login(credentials: AuthRequest, rememberMe: boolean): Observable<AuthResponse> {
     return this.http
@@ -36,7 +53,7 @@ export class AuthService {
         tap((response: AuthResponse): void => {
           this.storage.setToken(response.token, rememberMe);
           this._isAuthenticated.set(true);
-          this._user.set(this.getUserFromToken());
+          this._user.set(getUserFromToken(response.token));
           this.toast.success('Welcome back!');
           this.router.navigate(['/dashboard']);
         }),
@@ -52,8 +69,10 @@ export class AuthService {
 
   /**
    * Registers a new user with the provided registration request.
-   * @param request the registration request
-   * @returns an observable that emits the authentication response
+   *
+   * @param request - The registration details (username, email, password).
+   * @returns An observable of the authentication response.
+   * @throws An error if registration fails (e.g., duplicate user).
    */
   register(request: RegistrationRequest): Observable<AuthResponse> {
     return this.http
@@ -62,7 +81,7 @@ export class AuthService {
         tap((response: AuthResponse): void => {
           this.storage.setToken(response.token, false);
           this._isAuthenticated.set(true);
-          this._user.set(this.getUserFromToken());
+          this._user.set(getUserFromToken(response.token));
           this.toast.success('Welcome! Your account has been created successfully.');
           this.router.navigate(['/dashboard']);
         }),
@@ -71,7 +90,7 @@ export class AuthService {
           if (error.status === 409) {
             message = error.error?.detail || 'Username or email already exists';
           } else if (error.status === 400 && error.error?.validationErrors) {
-            message = error.error.validationErrors.map((e: any) => e.message).join('. ');
+            message = error.error.validationErrors.map((e: any): string => e.message).join('. ');
           }
           return throwError(() => new Error(message));
         })
@@ -79,7 +98,7 @@ export class AuthService {
   }
 
   /**
-   * Logs out the current user.
+   * Logs out the current user and clears all stored authentication data.
    */
   logout(): void {
     this.storage.clearToken();
@@ -90,7 +109,7 @@ export class AuthService {
   }
 
   /**
-   * Handles unauthorized requests by logging out the user.
+   * Resets the authentication state in response to an unauthorized request (e.g., 401).
    */
   handleUnauthorized(): void {
     this.storage.clearToken();
@@ -100,61 +119,11 @@ export class AuthService {
   }
 
   /**
-   * Retrieves the current user's token.
-   * @returns the current user's token or null if not authenticated
+   * Retrieves the current user's JWT token from storage.
+   *
+   * @returns The JWT token or null if no token is stored.
    */
   getToken(): string | null {
     return this.storage.getToken();
-  }
-
-  /**
-   * Retrieves the current user from the stored token.
-   * @returns the current user or null if the token is invalid or expired
-   */
-  private getUserFromToken(): User | null {
-    const token: string | null = this.storage.getToken();
-    if (!token) return null;
-
-    const payload: JwtPayload | null = this.decodeToken(token);
-    if (!payload || this.isTokenExpired(payload)) {
-      this.storage.clearToken();
-      return null;
-    }
-
-    return {
-      id: payload.userId,
-      username: payload.sub,
-      email: payload.email
-    };
-  }
-
-  /**
-   * Decodes a JWT token and returns its payload.
-   * @param token the JWT token to decode
-   * @returns the decoded payload or null if the token is invalid
-   */
-  private decodeToken(token: string): JwtPayload | null {
-    try {
-      const parts: string[] = token.split('.');
-      if (parts.length !== 3) {
-        return null;
-      }
-
-      const payload: string = parts[1];
-      const decoded: string = atob(payload.replaceAll('-', '+').replaceAll('_', '/'));
-      return JSON.parse(decoded);
-    } catch {
-      return null;
-    }
-  }
-
-  /**
-   * Checks if a JWT token has expired.
-   * @param payload the decoded JWT payload
-   * @returns true if the token has expired, false otherwise
-   */
-  private isTokenExpired(payload: JwtPayload): boolean {
-    const now: number = Math.floor(Date.now() / 1000);
-    return payload.exp < now;
   }
 }

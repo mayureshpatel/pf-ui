@@ -1,35 +1,50 @@
-<div class="flex items-center justify-center min-h-screen bg-surface-ground">
-  <p-card class="w-full max-w-md shadow-lg">
+<div class="flex items-center justify-center min-h-screen bg-surface-50 dark:bg-surface-950 p-4">
+  <p-card class="w-full max-w-md shadow-xl border-none ring-1 ring-surface-200 dark:ring-surface-800">
     <ng-template pTemplate="header">
-      <div class="text-center pt-6">
-        <i class="pi pi-wallet text-5xl text-primary"></i>
-        <h1 class="text-2xl font-semibold mt-4 text-color">Personal Finance</h1>
-        <p class="text-muted-color mt-2">Sign in to your account</p>
+      <div class="flex flex-col items-center pt-8 pb-4">
+        <div class="bg-primary/10 rounded-2xl p-4 mb-4">
+          <i class="pi pi-wallet text-5xl text-primary"></i>
+        </div>
+        <h1 class="text-3xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight">Personal Finance</h1>
+        <p class="text-muted-color mt-1 text-lg">Welcome back! Please sign in.</p>
       </div>
     </ng-template>
 
-    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-4">
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-6 py-2">
       @if (errorMessage()) {
-        <p-message severity="error" [text]="errorMessage()!" styleClass="w-full" />
+        <p-message severity="error" variant="simple" class="w-full animate-fade-in">
+          {{ errorMessage() }}
+        </p-message>
       }
 
+      <!-- Username Input -->
       <div class="flex flex-col gap-2">
-        <label for="username" class="font-medium text-color">Username</label>
-        <input
-          pInputText
-          id="username"
-          formControlName="username"
-          placeholder="Enter your username"
-          class="w-full"
-          autocomplete="username"
-        />
+        <label for="username" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
+          Username
+        </label>
+        <div class="p-input-icon-left w-full">
+          <i class="pi pi-user text-muted-color"></i>
+          <input
+            pInputText
+            id="username"
+            formControlName="username"
+            placeholder="Enter your username"
+            class="w-full pl-10"
+            autocomplete="username"
+          />
+        </div>
         @if (form.controls.username.invalid && form.controls.username.touched) {
-          <small class="text-red-500">Username is required</small>
+          <small class="text-rose-500 font-medium flex items-center gap-1 animate-fade-in">
+            <i class="pi pi-times-circle text-xs"></i> Username is required
+          </small>
         }
       </div>
 
+      <!-- Password Input -->
       <div class="flex flex-col gap-2">
-        <label for="password" class="font-medium text-color">Password</label>
+        <label for="password" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
+          Password
+        </label>
         <p-password
           id="password"
           formControlName="password"
@@ -37,35 +52,47 @@
           [feedback]="false"
           [toggleMask]="true"
           styleClass="w-full"
-          inputStyleClass="w-full"
+          inputStyleClass="w-full py-2"
           autocomplete="current-password"
         />
         @if (form.controls.password.invalid && form.controls.password.touched) {
-          <small class="text-red-500">Password is required</small>
+          <small class="text-rose-500 font-medium flex items-center gap-1 animate-fade-in">
+            <i class="pi pi-times-circle text-xs"></i> Password is required
+          </small>
         }
       </div>
 
-      <div class="flex items-center gap-2">
-        <p-checkbox
-          formControlName="rememberMe"
-          [binary]="true"
-          inputId="rememberMe"
-        />
-        <label for="rememberMe" class="text-color cursor-pointer">Remember me</label>
+      <!-- Remember Me & Actions -->
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <p-checkbox
+            formControlName="rememberMe"
+            [binary]="true"
+            inputId="rememberMe"
+          />
+          <label for="rememberMe" class="text-sm font-medium text-surface-600 dark:text-surface-300 cursor-pointer">
+            Keep me signed in
+          </label>
+        </div>
+        <a class="text-sm font-bold text-primary hover:underline cursor-pointer">
+          Forgot password?
+        </a>
       </div>
 
       <p-button
         type="submit"
         label="Sign In"
+        icon="pi pi-sign-in"
         [loading]="isSubmitting()"
         [disabled]="isSubmitting()"
-        styleClass="w-full"
-        severity="primary"
+        size="large"
+        [raised]="true"
+        class="w-full"
       />
 
-      <div class="text-center text-muted-color">
+      <div class="text-center text-muted-color text-sm">
         Don't have an account?
-        <a routerLink="/register" class="text-primary cursor-pointer hover:underline ml-1">
+        <a routerLink="/register" class="text-primary font-bold hover:underline ml-1">
           Create account
         </a>
       </div>
