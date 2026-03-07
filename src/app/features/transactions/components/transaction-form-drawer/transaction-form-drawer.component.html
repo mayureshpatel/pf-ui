@@ -1,168 +1,149 @@
 <app-drawer
   [(visible)]="visible"
-  [title]="drawerTitle"
-  [icon]="drawerIcon"
+  [title]="drawerTitle()"
+  [icon]="isEditMode() ? 'pi-receipt' : 'pi-plus'"
   [saving]="saving()"
-  [saveLabel]="isEditMode ? 'Update' : 'Create'"
+  [saveLabel]="isEditMode() ? 'Update Record' : 'Post Transaction'"
   (saveEmitterRef)="onSubmit()"
   (cancelEmitterRef)="onHide()">
 
-  <form [formGroup]="form" class="flex flex-col gap-6">
-    @if (errorMessage()) {
-      <p-message severity="error" styleClass="w-full">
-        {{ errorMessage() }}
-      </p-message>
-    }
-
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-8 py-4">
     <!-- Transaction Type -->
-    <div class="flex flex-col gap-2">
-      <label for="transaction-type-radio" class="text-sm font-medium text-surface-700">
-        Type <span class="text-red-500">*</span>
-      </label>
-      <div id="transaction-type-radio" class="flex flex-wrap gap-3">
-        @for (type of [TransactionType.INCOME, TransactionType.EXPENSE, TransactionType.TRANSFER_IN, TransactionType.TRANSFER_OUT]; track type) {
-          <div
-            class="flex items-center gap-2 px-3 py-2 border border-surface-200 rounded-lg transition-colors hover:bg-surface-50"
-            [class.bg-primary-50]="form.value.type === type"
-            [class.border-primary-500]="form.value.type === type">
-            <p-radioButton
-              formControlName="type"
-              [value]="type"
-              [inputId]="'type-' + type"
-            />
-            <label [for]="'type-' + type" class="cursor-pointer flex items-center gap-2">
-              <i [class]="'pi ' + transactionTypeInfo[type].icon + ' ' + transactionTypeInfo[type].color"></i>
-              <span class="text-sm">{{ transactionTypeInfo[type].label }}</span>
-            </label>
-          </div>
+    <div class="flex flex-col gap-3">
+      <label class="text-[10px] font-black uppercase tracking-[0.2em] text-surface-400">Transaction
+        Classification</label>
+      <div class="grid grid-cols-3 gap-3">
+        @for (option of typeOptions; track option.value) {
+          <button
+            type="button"
+            (click)="form.patchValue({type: option.value})"
+            [class]="'flex flex-col items-center justify-center p-4 rounded-2xl border transition-all duration-300 ' +
+                     (form.value.type === option.value ?
+                      'bg-primary/5 border-primary shadow-sm ring-1 ring-primary/20' :
+                      'bg-surface-0 border-surface-200 dark:border-surface-800 opacity-60 hover:opacity-100')"
+          >
+            <i
+              [class]="option.icon + ' text-2xl mb-2 ' + (form.value.type === option.value ? 'text-primary' : option.color)"></i>
+            <span
+              [class]="'text-[10px] font-black uppercase tracking-widest ' + (form.value.type === option.value ? 'text-primary' : 'text-surface-500')">
+              {{ option.label }}
+            </span>
+          </button>
         }
       </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <!-- Date -->
+    <!-- Amount and Date -->
+    <div
+      class="grid grid-cols-2 gap-6 p-6 rounded-2xl bg-surface-50 dark:bg-surface-900 border border-surface-200 dark:border-surface-800 ring-1 ring-surface-100 dark:ring-surface-800">
       <div class="flex flex-col gap-2">
-        <label for="date" class="text-sm font-medium text-surface-700">
-          Date <span class="text-red-500">*</span>
-        </label>
+        <label for="amount" class="text-[10px] font-black uppercase tracking-widest text-surface-400">Amount</label>
+        <p-inputNumber
+          id="amount"
+          formControlName="amount"
+          mode="currency"
+          currency="USD"
+          placeholder="$0.00"
+          [autofocus]="!isEditMode()"
+          inputStyleClass="text-2xl font-mono font-black bg-transparent border-none p-0 focus:ring-0"
+        />
+      </div>
+      <div class="flex flex-col gap-2 border-l border-surface-200 dark:border-surface-700 pl-6">
+        <label for="date" class="text-[10px] font-black uppercase tracking-widest text-surface-400">Date</label>
         <p-datePicker
           id="date"
           formControlName="date"
-          [showButtonBar]="true"
-          [maxDate]="maxDate"
-          dateFormat="mm/dd/yy"
-          placeholder="Select date"
-          class="w-full"
+          dateFormat="yy-mm-dd"
+          appendTo="body"
+          styleClass="w-full"
+          inputStyleClass="text-sm font-bold bg-transparent border-none p-0 focus:ring-0"
         />
-        @if (form.controls.date.invalid && form.controls.date.touched) {
-          <small class="text-red-500">Date is required</small>
-        }
       </div>
+    </div>
 
-      <!-- Account -->
+    <!-- Merchant and Category -->
+    <div class="flex flex-col gap-6">
+      <!-- Merchant Autocomplete -->
       <div class="flex flex-col gap-2">
-        <label for="account" class="text-sm font-medium text-surface-700">
-          Account <span class="text-red-500">*</span>
+        <label for="merchant" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
+          Merchant / Payee
         </label>
-        <p-select
-          id="account"
-          formControlName="account"
-          [options]="accountOptions()"
-          optionLabel="label"
-          optionValue="value"
-          placeholder="Select account"
-          class="w-full"
-        />
-        @if (form.controls.account.invalid && form.controls.account.touched) {
-          <small class="text-red-500">Account is required</small>
-        }
+        <p-autoComplete
+          id="merchant"
+          formControlName="merchant"
+          [suggestions]="filteredMerchants()"
+          (completeMethod)="filterMerchants($event)"
+          field="cleanName"
+          [dropdown]="true"
+          placeholder="Search for a merchant..."
+          styleClass="w-full"
+          inputStyleClass="w-full py-3"
+          appendTo="body">
+          <ng-template #item let-merchant>
+            <div class="flex items-center gap-2">
+              <i class="pi pi-shop text-surface-400"></i>
+              <span class="font-medium">{{ merchant.cleanName }}</span>
+            </div>
+          </ng-template>
+        </p-autoComplete>
+      </div>
+
+      <!-- Category Autocomplete -->
+      <div class="flex flex-col gap-2">
+        <label for="category" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
+          Classification
+        </label>
+        <p-autoComplete
+          id="category"
+          formControlName="category"
+          [suggestions]="filteredCategories()"
+          (completeMethod)="filterCategories($event)"
+          field="name"
+          [dropdown]="true"
+          placeholder="Select a category..."
+          styleClass="w-full"
+          inputStyleClass="w-full py-3"
+          appendTo="body">
+          <ng-template #item let-category>
+            <div class="flex items-center gap-2">
+              <div [class]="'w-2 h-2 rounded-full ' + (category.color || 'bg-surface-300')"></div>
+              <span class="font-medium">{{ category.name }}</span>
+            </div>
+          </ng-template>
+        </p-autoComplete>
       </div>
     </div>
 
-    <!-- Amount -->
+    <!-- Target Account -->
     <div class="flex flex-col gap-2">
-      <label for="amount" class="text-sm font-medium text-surface-700">
-        Amount <span class="text-red-500">*</span>
+      <label for="account" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
+        Source Account
       </label>
-      <p-inputNumber
-        id="amount"
-        formControlName="amount"
-        mode="currency"
-        currency="USD"
-        locale="en-US"
-        [minFractionDigits]="2"
-        [maxFractionDigits]="2"
-        [min]="0.01"
+      <p-select
+        id="account"
+        formControlName="account"
+        [options]="accounts()"
+        optionLabel="name"
+        optionValue="id"
+        placeholder="Select the associated account"
         class="w-full"
-        inputStyleClass="w-full font-bold text-lg"
+        appendTo="body"
       />
-      @if (form.controls.amount.invalid && form.controls.amount.touched) {
-        <small class="text-red-500">A valid amount greater than $0.00 is required</small>
-      }
     </div>
-
-    <p-divider/>
 
     <!-- Description -->
     <div class="flex flex-col gap-2">
-      <label for="description" class="text-sm font-medium text-surface-700">Description</label>
-      <input
+      <label for="description" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
+        Description / Notes
+      </label>
+      <textarea
         pInputText
         id="description"
         formControlName="description"
-        placeholder="What was this for?"
-        class="w-full"
-        maxlength="255"
-      />
-    </div>
-
-    <!-- Vendor Name -->
-    <div class="flex flex-col gap-2">
-      <label for="vendor" class="text-sm font-medium text-surface-700">Vendor Name</label>
-      <input
-        pInputText
-        id="vendor"
-        formControlName="merchantName"
-        placeholder="e.g., Walmart, Amazon"
-        class="w-full"
-        maxlength="100"
-      />
-    </div>
-
-    <!-- Category -->
-    <div class="flex flex-col gap-2">
-      <label for="category" class="text-sm font-medium text-surface-700">Category</label>
-      <p-select
-        id="category"
-        formControlName="category"
-        [options]="filteredCategoryGroups()"
-        [group]="true"
-        optionLabel="label"
-        optionValue="value"
-        placeholder="Select a subcategory"
-        class="w-full"
-        [filter]="true"
-        filterPlaceholder="Search categories"
-        [showClear]="true"
-        appendTo="body">
-        <ng-template let-group pTemplate="group">
-          <div
-            class="flex items-center gap-2 px-3 py-2 font-semibold text-xs text-surface-500 uppercase tracking-wider">
-            <span>{{ group.label }}</span>
-          </div>
-        </ng-template>
-        <ng-template let-category pTemplate="item">
-          <div class="flex items-center gap-2">
-            @if (category.icon) {
-              <i [class]="'pi ' + category.icon + ' text-surface-400'"></i>
-            }
-            @if (category.color) {
-              <div [class]="category.color + ' w-2 h-2 rounded-full'"></div>
-            }
-            <span>{{ category.label }}</span>
-          </div>
-        </ng-template>
-      </p-select>
+        rows="3"
+        placeholder="Add any additional details or memos here..."
+        class="w-full p-3 text-sm font-medium leading-relaxed bg-surface-50 dark:bg-surface-900 border-surface-200 dark:border-surface-800"
+      ></textarea>
     </div>
   </form>
 </app-drawer>

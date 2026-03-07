@@ -1,219 +1,180 @@
-import {Component, computed, inject, input, InputSignal, model, ModelSignal, OnChanges, output, OutputEmitterRef, signal, WritableSignal} from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  input,
+  InputSignal,
+  model,
+  ModelSignal,
+  output,
+  OutputEmitterRef,
+  Signal,
+  signal,
+  WritableSignal
+} from '@angular/core';
 import {CommonModule} from '@angular/common';
-import {ReactiveFormsModule, FormGroup, FormControl, Validators} from '@angular/forms';
+import {FormControl, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
+import {AutoCompleteModule} from 'primeng/autocomplete';
 import {ButtonModule} from 'primeng/button';
-import {InputTextModule} from 'primeng/inputtext';
-import {Select, SelectModule} from 'primeng/select';
 import {InputNumberModule} from 'primeng/inputnumber';
-import {MessageModule} from 'primeng/message';
+import {InputTextModule} from 'primeng/inputtext';
+import {SelectModule} from 'primeng/select';
 import {DatePicker} from 'primeng/datepicker';
-import {RadioButtonModule} from 'primeng/radiobutton';
-import {DividerModule} from 'primeng/divider';
-import {Transaction, TransactionFormData, TransactionType} from '@models/transaction.model';
+import {MessageModule} from 'primeng/message';
+
+import {Transaction, TransactionType} from '@models/transaction.model';
 import {Account} from '@models/account.model';
-import {Category, CategoryGroup, CategoryType} from '@models/category.model';
+import {Category} from '@models/category.model';
 import {Merchant} from '@models/merchant.model';
-import {CategoryApiService} from '@features/categories/services/category-api.service';
-import {MessageService} from 'primeng/api';
 import {DrawerComponent} from '@shared/components/drawer/drawer.component';
 
-interface AccountOption {
-  label: string;
-  value: number;
-}
-
+/**
+ * Drawer component for creating or editing individual ledger transactions.
+ *
+ * Implements a signal-first architecture for reactive form synchronization
+ * and features intelligent autocomplete for merchants and categories.
+ */
 @Component({
   selector: 'app-transaction-form-drawer',
+  standalone: true,
   imports: [
     CommonModule,
     ReactiveFormsModule,
+    AutoCompleteModule,
     ButtonModule,
-    InputTextModule,
-    Select,
-    SelectModule,
     InputNumberModule,
-    MessageModule,
+    InputTextModule,
+    SelectModule,
     DatePicker,
-    RadioButtonModule,
-    DividerModule,
+    MessageModule,
     DrawerComponent
   ],
   templateUrl: './transaction-form-drawer.component.html'
 })
-export class TransactionFormDrawerComponent implements OnChanges {
-  private readonly categoryApi: CategoryApiService = inject(CategoryApiService);
-  private readonly messageService: MessageService = inject(MessageService);
+export class TransactionFormDrawerComponent {
+  /** Two-way binding for drawer visibility. */
+  readonly visible: ModelSignal<boolean> = model.required<boolean>();
 
-  // input signals
-  visible: ModelSignal<boolean> = model.required<boolean>();
-  transaction: InputSignal<Transaction | null> = input<Transaction | null>(null);
-  accounts: InputSignal<Account[]> = input.required<Account[]>();
-  saving: InputSignal<boolean> = input<boolean>(false);
+  /** The transaction being edited, or null for creation mode. */
+  readonly transaction: InputSignal<Transaction | null> = input<Transaction | null>(null);
 
-  // output signals
-  save: OutputEmitterRef<TransactionFormData> = output<TransactionFormData>();
+  /** Available bank accounts for transaction association. */
+  readonly accounts: InputSignal<Account[]> = input.required<Account[]>();
 
-  form = new FormGroup({
-    type: new FormControl<TransactionType>(TransactionType.EXPENSE, { nonNullable: true }),
-    date: new FormControl<Date>(new Date(), { nonNullable: true, validators: [Validators.required] }),
-    account: new FormControl<number | null>(null, { validators: [Validators.required] }),
-    amount: new FormControl<number | null>(null, { validators: [Validators.required, Validators.min(0.01)] }),
-    description: new FormControl<string>('', { nonNullable: true, validators: [Validators.maxLength(255)] }),
-    merchantName: new FormControl<string>('', { nonNullable: true, validators: [Validators.maxLength(100)] }),
-    category: new FormControl<Category | null>(null)
+  /** Available categories for classification. */
+  readonly categories: InputSignal<Category[]> = input.required<Category[]>();
+
+  /** Known merchants for autocomplete suggestions. */
+  readonly merchants: InputSignal<Merchant[]> = input.required<Merchant[]>();
+
+  /** Indicates if a save operation is in flight. */
+  readonly saving: InputSignal<boolean> = input(false);
+
+  /** Emitted when the form is validated and ready for persistence. */
+  readonly save: OutputEmitterRef<void> = output<void>();
+
+  /** Filtered suggestions for the category autocomplete. */
+  readonly filteredCategories: WritableSignal<Category[]> = signal([]);
+
+  /** Filtered suggestions for the merchant autocomplete. */
+  readonly filteredMerchants: WritableSignal<Merchant[]> = signal([]);
+
+  /** Options for the transaction type selector. */
+  readonly typeOptions = [
+    {label: 'Expense', value: TransactionType.EXPENSE, icon: 'pi-minus-circle', color: 'text-rose-500'},
+    {label: 'Income', value: TransactionType.INCOME, icon: 'pi-plus-circle', color: 'text-emerald-500'},
+    {label: 'Transfer', value: TransactionType.TRANSFER, icon: 'pi-sync', color: 'text-surface-500'}
+  ];
+
+  /**
+   * Strongly typed reactive form for transaction details.
+   */
+  readonly form = new FormGroup({
+    date: new FormControl<string>('', {nonNullable: true, validators: [Validators.required]}),
+    amount: new FormControl<number>(0, {nonNullable: true, validators: [Validators.required, Validators.min(0.01)]}),
+    description: new FormControl<string>(''),
+    type: new FormControl<TransactionType>(TransactionType.EXPENSE, {
+      nonNullable: true,
+      validators: [Validators.required]
+    }),
+    category: new FormControl<Category | null>(null),
+    merchant: new FormControl<Merchant | null>(null),
+    account: new FormControl<number | null>(null, {validators: [Validators.required]})
   });
 
-  // state
-  errorMessage: WritableSignal<string | null> = signal(null);
-  categoryGroups: WritableSignal<CategoryGroup[]> = signal([]);
+  /** Indicates if the component is in edit mode. */
+  readonly isEditMode: Signal<boolean> = computed((): boolean => this.transaction() !== null);
 
-  private originalMerchant: Merchant | undefined = undefined;
+  /** Title displayed in the drawer header. */
+  readonly drawerTitle: Signal<string> = computed((): string => this.isEditMode() ? 'Edit Transaction' : 'New Transaction');
 
-  TransactionType = TransactionType;
+  constructor() {
+    /**
+     * Core effect to synchronize the form state whenever the input transaction changes
+     * or the drawer is opened.
+     */
+    effect((): void => {
+      const txn: Transaction | null = this.transaction();
+      const isVisible: boolean = this.visible();
 
-  filteredCategoryGroups = computed(() => {
-    const type: TransactionType = this.form.value.type ?? TransactionType.EXPENSE;
-    const groups: CategoryGroup[] = this.categoryGroups();
-
-    return groups
-      .map((group: CategoryGroup) => ({
-        label: group.groupLabel,
-        value: group.groupId,
-        items: group.items
-          .filter((category: Category): boolean => {
-            if (!category.categoryType || category.categoryType === CategoryType.BOTH) return true;
-            if (type === TransactionType.INCOME) return category.categoryType === CategoryType.INCOME;
-            if (type === TransactionType.EXPENSE) return category.categoryType === CategoryType.EXPENSE;
-            return true;
-          })
-          .map((category: Category) => ({
-            label: category.name,
-            value: category,
-            icon: category.icon,
-            color: category.color
-          }))
-      }))
-      .filter(group => group.items.length > 0);
-  });
-
-  accountOptions = computed((): AccountOption[] =>
-    this.accounts().map((a: Account) => ({ label: a.name, value: a.id }))
-  );
-
-  ngOnChanges(): void {
-    this.loadCategories();
-    const txn = this.transaction();
-
-    if (txn) {
-      this.originalMerchant = txn.merchant;
-      this.form.patchValue({
-        type: txn.type,
-        date: new Date(txn.date),
-        account: txn.account.id,
-        amount: Math.abs(txn.amount),
-        description: txn.description || '',
-        merchantName: txn.merchant?.cleanName || '',
-        category: txn.category || null
-      });
-    } else {
-      this.originalMerchant = undefined;
-      this.form.reset({
-        type: TransactionType.EXPENSE,
-        date: new Date(),
-        account: this.accounts().length > 0 ? this.accounts()[0].id : null,
-        amount: null,
-        description: '',
-        merchantName: '',
-        category: null
-      });
-    }
-    this.errorMessage.set(null);
-  }
-
-  loadCategories(): void {
-    this.categoryApi.getGroupedCategories().subscribe({
-      next: (groups: CategoryGroup[]): void => this.categoryGroups.set(groups),
-      error: (): void => {
-        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load categories' });
+      if (isVisible) {
+        if (txn) {
+          this.form.patchValue({
+            date: txn.date instanceof Date ? txn.date.toISOString().split('T')[0] : txn.date,
+            amount: Math.abs(txn.amount),
+            description: txn.description,
+            type: txn.type,
+            category: txn.category,
+            merchant: txn.merchant,
+            account: txn.account.id
+          });
+        } else {
+          this.form.reset({
+            date: new Date().toISOString().split('T')[0],
+            amount: 0,
+            type: TransactionType.EXPENSE,
+            description: ''
+          });
+        }
       }
     });
   }
 
+  /**
+   * Closes the drawer.
+   */
   onHide(): void {
-    setTimeout((): void => {
-      this.form.reset({
-        type: TransactionType.EXPENSE,
-        date: new Date(),
-        account: this.accounts().length > 0 ? this.accounts()[0].id : null,
-        amount: null,
-        description: '',
-        merchantName: '',
-        category: null
-      });
-      this.errorMessage.set(null);
-      this.originalMerchant = undefined;
-    }, 300);
+    this.visible.set(false);
   }
 
+  /**
+   * Filters the category list based on user input.
+   */
+  filterCategories(event: any): void {
+    const query: any = event.query.toLowerCase();
+    this.filteredCategories.set(
+      this.categories().filter((c: Category): any => c.name.toLowerCase().includes(query))
+    );
+  }
+
+  /**
+   * Filters the merchant list based on user input.
+   */
+  filterMerchants(event: any): void {
+    const query: any = event.query.toLowerCase();
+    this.filteredMerchants.set(
+      this.merchants().filter((m: Merchant): boolean => m.cleanName.toLowerCase().includes(query))
+    );
+  }
+
+  /**
+   * Validates and submits the form data.
+   */
   onSubmit(): void {
     this.form.markAllAsTouched();
-    this.errorMessage.set(null);
+    if (this.form.invalid) return;
 
-    if (this.form.invalid) {
-      this.errorMessage.set('Please fill in all required fields');
-      return;
-    }
-
-    const { type, date, account, amount, description, merchantName, category } = this.form.getRawValue();
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (date > today) {
-      this.errorMessage.set('Transaction date cannot be in the future');
-      return;
-    }
-
-    // Resolve merchant: use original if name unchanged, otherwise create partial merchant
-    let merchant: Merchant | undefined;
-    if (merchantName.trim()) {
-      merchant = this.originalMerchant?.cleanName === merchantName.trim()
-        ? this.originalMerchant
-        : { id: 0, user: null as any, originalName: merchantName.trim(), cleanName: merchantName.trim() };
-    } else {
-      merchant = this.originalMerchant;
-    }
-
-    const formData: TransactionFormData = {
-      id: this.transaction()?.id,
-      date: this.toISODate(date),
-      type: type!,
-      account: account!,
-      amount: amount!,
-      description: description || undefined,
-      merchant,
-      category: category ?? undefined
-    };
-
-    this.save.emit(formData);
-  }
-
-  get isEditMode(): boolean {
-    return this.transaction() !== null;
-  }
-
-  get drawerTitle(): string {
-    return this.isEditMode ? 'Edit Transaction' : 'Create Transaction';
-  }
-
-  get drawerIcon(): string {
-    return this.isEditMode ? 'pi-pencil' : 'pi-plus';
-  }
-
-  get maxDate(): Date {
-    return new Date();
-  }
-
-  private toISODate(date: Date): string {
-    return date.toISOString().split('T')[0];
+    const val = this.form.getRawValue();
+    this.save.emit();
   }
 }
