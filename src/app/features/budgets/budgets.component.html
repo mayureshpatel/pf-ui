@@ -1,12 +1,12 @@
-<div class="p-4">
+<div class="p-6 bg-surface-50 dark:bg-surface-950 min-h-screen">
   <!-- Page Header -->
-  <app-screen-toolbar>
+  <app-screen-toolbar class="mb-6">
     <div toolbarTitle>
-      <h1 class="text-3xl font-bold text-color">Budgets</h1>
-      <p class="text-muted-color mt-1">Set monthly spending limits and track progress</p>
+      <h1 class="text-4xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight">Budgets</h1>
+      <p class="text-muted-color mt-1 text-lg">Set monthly spending limits and track your financial health</p>
     </div>
 
-    <div toolbarFilters>
+    <div toolbarFilters class="flex items-center gap-4">
       <!-- Mode Selection -->
       <p-selectButton
         [(ngModel)]="viewMode"
@@ -14,36 +14,35 @@
         optionLabel="label"
         optionValue="value"
         (onChange)="onToggleView()"
-        styleClass="shadow-sm"
+        class="shadow-sm"
       >
-        <ng-template pTemplate="item" let-item>
+        <ng-template #item let-item>
           <div class="flex items-center gap-2 px-1">
             <i [class]="item.icon"></i>
-            <span>{{ item.label }}</span>
+            <span class="font-medium">{{ item.label }}</span>
           </div>
         </ng-template>
       </p-selectButton>
 
-      <!-- Period Filters -->
+      <!-- Period Filters (Conditional) -->
       @if (viewMode() === 'monthly') {
-        <div class="flex items-center p-1.5 rounded-lg border border-surface-200 dark:border-surface-700 shadow-sm">
+        <div
+          class="flex items-center p-1 bg-surface-0 dark:bg-surface-900 rounded-xl border border-surface-200 dark:border-surface-800 shadow-sm ring-1 ring-surface-100 dark:ring-surface-800">
           <p-select
             [(ngModel)]="selectedMonth"
             [options]="monthOptions"
             optionLabel="label"
             optionValue="value"
             (onChange)="onPeriodChange()"
-            variant="filled"
             class="w-36 border-none bg-transparent"
           />
-          <div class="w-px h-6 bg-surface-300 dark:bg-surface-600 mx-1"></div>
+          <div class="w-px h-6 bg-surface-200 dark:bg-surface-700 mx-2"></div>
           <p-select
             [(ngModel)]="selectedYear"
             [options]="yearOptions"
             optionLabel="label"
             optionValue="value"
             (onChange)="onPeriodChange()"
-            variant="filled"
             class="w-24 border-none bg-transparent"
           />
         </div>
@@ -56,125 +55,171 @@
         icon="pi pi-plus"
         (onClick)="openSetBudgetDialog()"
         severity="primary"
-        class="shadow-sm"
+        [raised]="true"
       />
     </div>
   </app-screen-toolbar>
 
   @if (loading()) {
-    <div class="flex justify-center items-center py-12">
-      <p-progressSpinner class="w-16 h-16"/>
+    <div class="flex flex-col justify-center items-center py-24 gap-4">
+      <p-progressSpinner strokeWidth="4"/>
+      <span class="text-muted-color font-medium animate-pulse">Loading budget data...</span>
     </div>
   } @else {
     @if (viewMode() === 'monthly') {
       <!-- Summary Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <p-card class="shadow-sm border-l-4 border-primary">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <!-- Budgeted -->
+        <p-card class="shadow-sm border-none ring-1 ring-surface-200 dark:ring-surface-800">
           <div class="flex flex-col gap-1">
-            <span class="text-xs font-semibold text-muted-color uppercase">Total Budgeted</span>
-            <span class="text-2xl font-bold text-color">{{ totalBudgeted() | formatCurrency }}</span>
+            <span class="text-xs font-bold uppercase tracking-widest text-surface-500">Total Budgeted</span>
+            <span class="text-3xl font-black text-surface-900 dark:text-surface-0 font-mono">
+              {{ totalBudgeted() | formatCurrency }}
+            </span>
           </div>
         </p-card>
-        <p-card class="shadow-sm border-l-4 border-red-500">
+
+        <!-- Spent -->
+        <p-card class="shadow-sm border-none ring-1 ring-surface-200 dark:ring-surface-800">
           <div class="flex flex-col gap-1">
-            <span class="text-xs font-semibold text-muted-color uppercase">Total Spent</span>
-            <span class="text-2xl font-bold text-color">{{ totalSpent() | formatCurrency }}</span>
+            <span class="text-xs font-bold uppercase tracking-widest text-surface-500">Total Spent</span>
+            <span class="text-3xl font-black text-rose-600 dark:text-rose-400 font-mono">
+              {{ totalSpent() | formatCurrency }}
+            </span>
           </div>
         </p-card>
-        <p-card
-          [class]="'shadow-sm border-l-4 ' + (totalRemaining() >= 0 ? 'border-green-500' : 'border-red-500')">
+
+        <!-- Remaining -->
+        <p-card class="shadow-sm border-none ring-1 ring-surface-200 dark:ring-surface-800">
           <div class="flex flex-col gap-1">
-            <span class="text-xs font-semibold text-muted-color uppercase">Remaining</span>
-            <span [class]="'text-2xl font-bold ' + (totalRemaining() >= 0 ? 'text-green-500' : 'text-red-500')">
+            <span class="text-xs font-bold uppercase tracking-widest text-surface-500">Remaining</span>
+            <span class="text-3xl font-black font-mono"
+                  [class.text-emerald-600]="totalRemaining() >= 0"
+                  [class.text-rose-600]="totalRemaining() < 0">
               {{ totalRemaining() | formatCurrency }}
             </span>
           </div>
         </p-card>
+
+        <!-- Overall Progress -->
+        <p-card class="shadow-sm border-none ring-1 ring-surface-200 dark:ring-surface-800">
+          <div class="flex flex-col gap-3">
+            <div class="flex justify-between items-center">
+              <span class="text-xs font-bold uppercase tracking-widest text-surface-500">Budget Usage</span>
+              <span class="text-sm font-bold font-mono">{{ totalSpentPercentage().toFixed(0) }}%</span>
+            </div>
+            <p-progressBar
+              [value]="totalSpentPercentage()"
+              [showValue]="false"
+              [class]="'h-3 rounded-full ' + getProgressBarTailwind(totalSpentPercentage())"
+            />
+          </div>
+        </p-card>
       </div>
 
-      <!-- Budget Status List (Monthly) -->
-      <p-card class="shadow-sm">
+      <!-- Budget Status Table -->
+      <p-card class="shadow-sm border-none ring-1 ring-surface-200 dark:ring-surface-800 overflow-hidden">
         <p-table
           [value]="budgetStatuses()"
-          class="p-datatable-sm">
+          [stripedRows]="true"
+          size="small"
+          responsiveLayout="stack"
+          [breakpoint]="'960px'">
 
-          <ng-template pTemplate="header">
-            <tr>
-              <th style="width: 50px"></th>
-              <th>Category</th>
-              <th class="text-right">Budgeted</th>
-              <th class="text-right">Spent</th>
-              <th style="width: 30%">Progress</th>
-              <th class="text-right">Remaining</th>
+          <ng-template #header>
+            <tr class="bg-surface-50 dark:bg-surface-900/50">
+              <th id="category" colspan="2" class="py-4 font-bold text-surface-700 dark:text-surface-200">Category</th>
+              <th id="budgeted" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-right">Budgeted</th>
+              <th id="spent" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-right">Spent</th>
+              <th id="progress" class="py-4 font-bold text-surface-700 dark:text-surface-200" style="width: 25%">
+                Progress
+              </th>
+              <th id="remaining" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-right">Remaining</th>
             </tr>
           </ng-template>
 
-          <ng-template pTemplate="body" let-status>
-            <tr>
-              <td>
+          <ng-template #body let-status>
+            <tr class="hover:bg-surface-100/50 dark:hover:bg-surface-800/30 transition-colors duration-200">
+              <td class="w-12 py-4">
                 <div
-                  [class]="(status.color || getCategoryColor(status.categoryName)) + ' w-8 h-8 rounded-full flex items-center justify-center text-white'">
-                  @if (status.icon) {
-                    <i [class]="'pi ' + status.icon + ' text-xs'"></i>
-                  }
+                  [class]="getCategoryColor(status.categoryName) + ' w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm'">
+                  <i [class]="'pi ' + (status.icon || 'pi-tag') + ' text-lg'"></i>
                 </div>
               </td>
-              <td class="font-medium">{{ status.categoryName }}</td>
-              <td class="text-right">{{ status.budgetedAmount | formatCurrency }}</td>
-              <td class="text-right text-red-500">{{ status.spentAmount | formatCurrency }}</td>
-              <td>
+              <td class="font-bold text-surface-900 dark:text-surface-0">{{ status.categoryName }}</td>
+              <td class="text-right font-mono font-bold">{{ status.budgetedAmount | formatCurrency }}</td>
+              <td class="text-right font-mono font-bold text-rose-600 dark:text-rose-400">
+                {{ status.spentAmount | formatCurrency }}
+              </td>
+              <td class="py-4">
                 <div class="flex flex-col gap-1">
                   <p-progressBar
                     [value]="status.percentageUsed"
                     [showValue]="false"
-                    [class]="'h-2 ' + getProgressBarTailwind(status.percentageUsed)">
+                    [class]="'h-2 rounded-full ' + getProgressBarTailwind(status.percentageUsed)">
                   </p-progressBar>
-                  <span class="text-xs text-muted-color text-right">
-                    {{ status.percentageUsed.toFixed(0) }}% used
+                  <span class="text-xs font-bold text-muted-color text-right font-mono">
+                    {{ status.percentageUsed.toFixed(0) }}%
                   </span>
                 </div>
               </td>
-              <td
-                [class]="'text-right font-semibold ' + (status.remainingAmount >= 0 ? 'text-green-500' : 'text-red-500')">
-                {{ status.remainingAmount | formatCurrency }}
+              <td class="text-right py-4">
+                <span class="font-mono font-black text-lg"
+                      [class.text-emerald-600]="status.remainingAmount >= 0"
+                      [class.text-rose-600]="status.remainingAmount < 0">
+                  {{ status.remainingAmount | formatCurrency }}
+                </span>
               </td>
             </tr>
           </ng-template>
 
-          <ng-template pTemplate="emptymessage">
+          <ng-template #emptymessage>
             <tr>
-              <td colspan="6" class="text-center py-8 text-muted-color">
-                No budgets set for this period. Click "Set Budget" to get started.
+              <td colspan="6" class="text-center py-16">
+                <div class="flex flex-col items-center gap-4">
+                  <i class="pi pi-calendar-plus text-6xl text-surface-300"></i>
+                  <div class="flex flex-col gap-1">
+                    <h3 class="text-xl font-bold text-surface-900 dark:text-surface-0">No budgets for this month</h3>
+                    <p class="text-muted-color">Start tracking your spending by setting your first budget limit.</p>
+                  </div>
+                  <p-button label="Set Budget" icon="pi pi-plus" [text]="true" (onClick)="openSetBudgetDialog()"/>
+                </div>
               </td>
             </tr>
           </ng-template>
         </p-table>
       </p-card>
     } @else {
-      <!-- All Budgets List -->
-      <p-card class="shadow-sm">
+      <!-- Manage All Budgets Table -->
+      <p-card class="shadow-sm border-none ring-1 ring-surface-200 dark:ring-surface-800 overflow-hidden">
         <p-table
           [value]="allBudgets()"
-          class="p-datatable-sm"
+          [stripedRows]="true"
+          size="small"
           [paginator]="true"
-          [rows]="20">
+          [rows]="20"
+          responsiveLayout="stack">
 
-          <ng-template pTemplate="header">
-            <tr>
-              <th>Period</th>
-              <th>Category</th>
-              <th class="text-right">Amount</th>
-              <th class="text-center" style="width: 100px">Action</th>
+          <ng-template #header>
+            <tr class="bg-surface-50 dark:bg-surface-900/50">
+              <th id="period" class="py-4 font-bold text-surface-700 dark:text-surface-200">Period</th>
+              <th id="all-category" class="py-4 font-bold text-surface-700 dark:text-surface-200">Category</th>
+              <th id="amount" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-right">Amount</th>
+              <th id="actions" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-center"
+                  style="width: 100px">Action
+              </th>
             </tr>
           </ng-template>
 
-          <ng-template pTemplate="body" let-budget>
-            <tr>
-              <td>
-                <span class="font-medium">{{ getMonthName(budget.month) }} {{ budget.year }}</span>
+          <ng-template #body let-budget>
+            <tr class="hover:bg-surface-100/50 dark:hover:bg-surface-800/30 transition-colors duration-200">
+              <td class="py-4">
+                <span class="font-bold text-surface-600 dark:text-surface-400">
+                  {{ getMonthName(budget.month) }} {{ budget.year }}
+                </span>
               </td>
-              <td>{{ budget.categoryName }}</td>
-              <td class="text-right font-semibold text-primary">
+              <td class="font-bold text-surface-900 dark:text-surface-0">{{ budget.categoryName }}</td>
+              <td class="text-right font-mono font-black text-primary text-lg">
                 {{ budget.amount | formatCurrency }}
               </td>
               <td class="text-center">
@@ -191,10 +236,11 @@
             </tr>
           </ng-template>
 
-          <ng-template pTemplate="emptymessage">
+          <ng-template #emptymessage>
             <tr>
-              <td colspan="4" class="text-center py-8 text-muted-color">
-                No budgets found.
+              <td colspan="4" class="text-center py-16">
+                <i class="pi pi-inbox text-5xl text-surface-300 mb-3 block"></i>
+                <span class="text-muted-color">No budgets have been created yet.</span>
               </td>
             </tr>
           </ng-template>
@@ -203,10 +249,9 @@
     }
   }
 
-  <!-- Set Budget Dialog -->
+  <!-- Budget Form Dialog -->
   <app-budget-form-dialog
-    [visible]="showDialog()"
-    (visibleChange)="showDialog.set($event)"
+    [(visible)]="showDialog"
     [categories]="categories()"
     [month]="selectedMonth()"
     [year]="selectedYear()"
