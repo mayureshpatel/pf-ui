@@ -6,13 +6,13 @@ import {TableModule} from 'primeng/table';
 import {CardModule} from 'primeng/card';
 import {TooltipModule} from 'primeng/tooltip';
 import {ConfirmationService} from 'primeng/api';
-import {Account, AccountFormData, AccountType} from '@models/account.model';
+import {Account, AccountCreateRequest, AccountType, AccountUpdateRequest} from '@models/account.model';
 import {AccountApiService} from './services/account-api.service';
 import {AccountSummaryCardsComponent} from './components/account-summary-cards/account-summary-cards.component';
 import {AccountFormDrawerComponent} from './components/account-form-drawer/account-form-drawer.component';
 import {ToastService} from '@core/services/toast.service';
 import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-toolbar';
-import {finalize} from 'rxjs';
+import {finalize, forkJoin} from 'rxjs';
 import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
 
 @Component({
@@ -32,23 +32,22 @@ import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
   templateUrl: './accounts.component.html'
 })
 export class AccountsComponent implements OnInit {
-  // injected services
   private readonly accountApi: AccountApiService = inject(AccountApiService);
-  private readonly accountTypeApi: AccountApiService = inject(AccountApiService);
   private readonly toast: ToastService = inject(ToastService);
   private readonly confirmationService: ConfirmationService = inject(ConfirmationService);
   private readonly destroyRef: DestroyRef = inject(DestroyRef);
 
-  // signals
   accounts: WritableSignal<Account[]> = signal([]);
   accountTypes: WritableSignal<AccountType[]> = signal([]);
   loading: WritableSignal<boolean> = signal(false);
   showDialog: WritableSignal<boolean> = signal(false);
   selectedAccount: WritableSignal<Account | null> = signal(null);
 
-  // computed signals
   isEmpty: Signal<boolean> = computed((): boolean => this.accounts().length === 0 && !this.loading());
 
+  /**
+   * Lifecycle hook that initializes the component.
+   */
   ngOnInit(): void {
     this.loadAccounts();
   }
@@ -59,36 +58,23 @@ export class AccountsComponent implements OnInit {
   loadAccounts(): void {
     this.loading.set(true);
 
-    this.accountTypeApi.getAccountTypes()
+    forkJoin({
+      accounts: this.accountApi.getAccounts(),
+      accountTypes: this.accountApi.getAccountTypes()
+    })
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize((): void => this.loading.set(false))
-      )
-      .subscribe({
-        next: (accountTypes: AccountType[]): void => {
-          this.accountTypes.set(accountTypes);
-        },
-        error: (error: any): void => {
-          console.error("Error loading account types: ", error);
-          this.toast.error("Failed to load account types");
-        }
-      });
-
-
-    this.accountApi.getAccounts()
-      .pipe(
-        takeUntilDestroyed(this.destroyRef),
-        finalize((): void => this.loading.set(false))
-      )
-      .subscribe({
-        next: (accounts: Account[]): void => {
-          this.accounts.set(accounts);
-        },
-        error: (error: any): void => {
-          console.error('Error loading accounts:', error);
-          this.toast.error('Failed to load accounts');
-        }
-      });
+      ).subscribe({
+      next: ({accounts, accountTypes}): void => {
+        this.accounts.set(accounts);
+        this.accountTypes.set(accountTypes);
+      },
+      error: (error: any): void => {
+        console.error('Error loading accounts:', error);
+        this.toast.error('Failed to load accounts');
+      }
+    });
   }
 
   /**
@@ -108,17 +94,21 @@ export class AccountsComponent implements OnInit {
     this.showDialog.set(true);
   }
 
-  onSave(formData: AccountFormData): void {
+  onSave(formData: AccountCreateRequest | AccountUpdateRequest): void {
     const account: Account | null = this.selectedAccount();
 
     if (account) {
-      this.editAccount(account, formData);
+      this.editAccount(account, formData as AccountUpdateRequest);
     } else {
-      this.createAccount(formData);
+      this.createAccount(formData as AccountCreateRequest);
     }
   }
 
-  private createAccount(data: AccountFormData): void {
+  /**
+   * Handles the creation of a new account.
+   * @param data The account data to create.
+   */
+  private createAccount(data: AccountCreateRequest): void {
     this.accountApi.create(data)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -134,8 +124,13 @@ export class AccountsComponent implements OnInit {
       });
   }
 
-  private editAccount(existingAccount: Account, data: AccountFormData): void {
-    this.accountApi.update(existingAccount.id, data, existingAccount.version!)
+  /**
+   * Handles the editing of an existing account.
+   * @param existingAccount The account to edit.
+   * @param data The updated account data.
+   */
+  private editAccount(existingAccount: Account, data: AccountUpdateRequest): void {
+    this.accountApi.update(existingAccount.id, data)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (): void => {

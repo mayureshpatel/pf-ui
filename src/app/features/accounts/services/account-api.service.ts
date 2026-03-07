@@ -2,7 +2,13 @@ import {inject, Injectable} from '@angular/core';
 import {HttpClient} from '@angular/common/http';
 import {Observable} from 'rxjs';
 import {environment} from '@env';
-import {Account, AccountFormData, AccountType} from '@models/account.model';
+import {
+  Account,
+  AccountCreateRequest,
+  AccountReconcileRequest,
+  AccountType,
+  AccountUpdateRequest
+} from '@models/account.model';
 
 @Injectable({
   providedIn: 'root'
@@ -16,29 +22,16 @@ export class AccountApiService {
     return this.http.get<Account[]>(this.apiUrl);
   }
 
-  create(data: AccountFormData): Observable<number> {
-    return this.http.post<number>(this.apiUrl, {
-      name: data.accountName,
-      type: data.accountType!.code,
-      startingBalance: data.currentBalance,
-      currencyCode: 'USD',
-      bankName: data.bankName ?? undefined
-    });
+  create(data: AccountCreateRequest): Observable<number> {
+    return this.http.post<number>(this.apiUrl, data);
   }
 
-  update(id: number, data: AccountFormData, version: number): Observable<number> {
-    return this.http.put<number>(this.apiUrl, {
-      id,
-      name: data.accountName,
-      type: data.accountType!.code,
-      currencyCode: 'USD',
-      bankName: data.bankName ?? undefined,
-      version
-    });
+  update(id: number, data: AccountUpdateRequest): Observable<number> {
+    return this.http.put<number>(this.apiUrl, data);
   }
 
-  reconcile(accountId: number, newBalance: number, version: number): Observable<number> {
-    return this.http.post<number>(`${this.apiUrl}/reconcile`, {accountId, newBalance, version});
+  reconcile(data: AccountReconcileRequest): Observable<number> {
+    return this.http.post<number>(`${this.apiUrl}/reconcile`, data);
   }
 
   delete(id: number): Observable<void> {
