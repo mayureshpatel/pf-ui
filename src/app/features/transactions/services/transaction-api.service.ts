@@ -9,8 +9,9 @@ import {
   TransactionUpdateRequest,
   PageRequest,
   PageResponse,
-  TransferSuggestion, CategoryTransactionCount
+  TransferSuggestion
 } from '@models/transaction.model';
+import {CategoryTransactionCount} from '@models/category.model';
 
 @Injectable({
   providedIn: 'root'
@@ -39,8 +40,8 @@ export class TransactionApiService {
     if (filter.merchant) params = params.set('vendorName', filter.merchant);
     if (filter.minAmount) params = params.set('minAmount', filter.minAmount.toString());
     if (filter.maxAmount) params = params.set('maxAmount', filter.maxAmount.toString());
-    if (filter.startDate) params = params.set('startDate', filter.startDate);
-    if (filter.endDate) params = params.set('endDate', filter.endDate);
+    if (filter.startDate) params = params.set('startDate', filter.startDate.toDateString());
+    if (filter.endDate) params = params.set('endDate', filter.endDate.toDateString());
 
     return this.http.get<PageResponse<Transaction>>(this.apiUrl, { params });
   }

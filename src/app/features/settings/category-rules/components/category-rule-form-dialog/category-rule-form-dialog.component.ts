@@ -23,6 +23,7 @@ import {CategoryRuleApiService} from '../../services/category-rule-api.service';
 import {CategoryApiService} from '@features/categories/services/category-api.service';
 import {ToastService} from '@core/services/toast.service';
 import {Category, CategoryGroup} from '@models/category.model';
+import {CategoryRuleCreateRequest} from '@models/category-rule.model';
 
 /**
  * Dialog component for creating new transaction categorization rules.
@@ -129,7 +130,13 @@ export class CategoryRuleFormDialogComponent {
     this.loading.set(true);
     this.errorMessage.set(null);
 
-    this.api.createRule({keyword, categoryId: category.id, priority})
+    const request = {
+      keyword,
+      categoryId: category.id,
+      priority
+    } as CategoryRuleCreateRequest
+
+    this.api.createRule(request)
       .pipe(finalize((): void => this.loading.set(false)))
       .subscribe({
         next: (): void => {
