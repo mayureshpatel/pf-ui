@@ -26,7 +26,7 @@ export class AccountApiService {
     return this.http.post<number>(this.apiUrl, data);
   }
 
-  update(id: number, data: AccountUpdateRequest): Observable<number> {
+  update(data: AccountUpdateRequest): Observable<number> {
     return this.http.put<number>(this.apiUrl, data);
   }
 

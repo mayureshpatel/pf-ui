@@ -98,7 +98,7 @@ export class AccountsComponent implements OnInit {
     const account: Account | null = this.selectedAccount();
 
     if (account) {
-      this.editAccount(account, formData as AccountUpdateRequest);
+      this.editAccount(formData as AccountUpdateRequest);
     } else {
       this.createAccount(formData as AccountCreateRequest);
     }
@@ -126,11 +126,10 @@ export class AccountsComponent implements OnInit {
 
   /**
    * Handles the editing of an existing account.
-   * @param existingAccount The account to edit.
    * @param data The updated account data.
    */
-  private editAccount(existingAccount: Account, data: AccountUpdateRequest): void {
-    this.accountApi.update(existingAccount.id, data)
+  private editAccount(data: AccountUpdateRequest): void {
+    this.accountApi.update(data)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (): void => {
