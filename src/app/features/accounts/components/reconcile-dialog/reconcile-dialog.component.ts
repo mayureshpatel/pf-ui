@@ -1,14 +1,33 @@
-import {Component, inject, input, InputSignal, output, OutputEmitterRef, signal, WritableSignal} from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  InputSignal,
+  model,
+  ModelSignal,
+  output, OutputEmitterRef, Signal,
+  signal, WritableSignal
+} from '@angular/core';
 import {CommonModule} from '@angular/common';
-import {ReactiveFormsModule, FormGroup, FormControl, Validators} from '@angular/forms';
+import {FormControl, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
+import {toSignal} from '@angular/core/rxjs-interop';
 import {DialogModule} from 'primeng/dialog';
 import {ButtonModule} from 'primeng/button';
 import {InputNumberModule} from 'primeng/inputnumber';
 import {MessageModule} from 'primeng/message';
-import {Account} from '@models/account.model';
+import {Account, AccountReconcileRequest} from '@models/account.model';
 import {AccountApiService} from '@features/accounts/services/account-api.service';
 import {ToastService} from '@core/services/toast.service';
 
+/**
+ * Component for reconciling an account balance.
+ *
+ * Allows the user to enter the actual bank balance and calculates the difference
+ * from the system balance. If a difference exists, the backend will create an
+ * adjustment transaction.
+ */
 @Component({
   selector: 'app-reconcile-dialog',
   standalone: true,
@@ -26,48 +45,92 @@ export class ReconcileDialogComponent {
   private readonly accountService = inject(AccountApiService);
   private readonly toast = inject(ToastService);
 
-  // input signals
-  visible: InputSignal<boolean> = input.required<boolean>();
+  /**
+   * Two-way binding for the dialog visibility.
+   */
+  visible: ModelSignal<boolean> = model<boolean>(false);
+
+  /**
+   * The account being reconciled.
+   */
   account: InputSignal<Account> = input.required<Account>();
 
-  // output signals
-  visibleChange: OutputEmitterRef<boolean> = output<boolean>();
+  /**
+   * Emitted when the reconciliation process completes successfully.
+   */
   reconciled: OutputEmitterRef<void> = output<void>();
 
-  // signals
+  /**
+   * Indicates if the reconciliation request is currently in progress.
+   */
   saving: WritableSignal<boolean> = signal(false);
-  errorMessage: WritableSignal<string | null> = signal(null);
 
+  /**
+   * Holds any error message returned from the API.
+   */
+  errorMessage: WritableSignal<string | null> = signal<string | null>(null);
+
+  /**
+   * Reactive form for capturing the target balance.
+   */
   form = new FormGroup({
-    targetBalance: new FormControl<number | null>(null, { validators: [Validators.required] })
+    targetBalance: new FormControl<number | null>(null, {
+      validators: [Validators.required]
+    })
   });
 
-  protected readonly Math = Math;
+  /**
+   * Signal that tracks the current form value for reactive calculations.
+   */
+  private readonly formValue = toSignal(this.form.valueChanges, {
+    initialValue: this.form.getRawValue()
+  });
 
-  get difference(): number {
-    const target = this.form.value.targetBalance;
+  /**
+   * Reactively calculates the difference between the target balance and the current system balance.
+   */
+  difference: Signal<number> = computed(() => {
+    const target: number | null | undefined = this.formValue().targetBalance;
     if (target === null || target === undefined) return 0;
     return target - this.account().currentBalance;
+  });
+
+  constructor() {
+    /**
+     * Effect to handle cleanup and state resetting when the dialog is closed.
+     */
+    effect((): void => {
+      if (!this.visible()) {
+        this.form.reset();
+        this.errorMessage.set(null);
+      }
+    });
   }
 
-  onHide(): void {
-    this.visibleChange.emit(false);
-    this.form.reset();
-    this.errorMessage.set(null);
-  }
-
+  /**
+   * Submits the reconciliation request to the API.
+   */
   submit(): void {
-    if (this.form.invalid || this.saving()) return;
+    if (this.form.invalid || this.saving()) {
+      this.form.markAllAsTouched();
+      return;
+    }
 
-    const target = this.form.value.targetBalance!;
+    const target: number = this.form.value.targetBalance!;
     this.saving.set(true);
     this.errorMessage.set(null);
 
-    this.accountService.reconcile(this.account().id, target, this.account().version!).subscribe({
+    const request: AccountReconcileRequest = {
+      id: this.account().id,
+      newBalance: target,
+      version: this.account().version
+    };
+
+    this.accountService.reconcile(request).subscribe({
       next: (): void => {
         this.toast.success('Account reconciled successfully');
         this.reconciled.emit();
-        this.onHide();
+        this.visible.set(false);
         this.saving.set(false);
       },
       error: (error: any): void => {
@@ -77,4 +140,13 @@ export class ReconcileDialogComponent {
       }
     });
   }
+
+  /**
+   * Closes the dialog.
+   */
+  onCancel(): void {
+    this.visible.set(false);
+  }
+
+  protected readonly Math = Math;
 }
