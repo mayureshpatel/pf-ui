@@ -22,35 +22,47 @@ describe('CsvImportDialogComponent', () => {
     error: vi.fn()
   };
 
-  const mockAccounts: Account[] = [
+  const mockAccounts = [
     {
       id: 1,
       name: 'Discover Card',
-      type: AccountType.CREDIT_CARD,
+      type: { code: 'CREDIT_CARD' },
       currentBalance: 0,
-      bankName: BankName.DISCOVER
-    },
+      bank: BankName.DISCOVER,
+      user: { id: 1 },
+      currency: { code: 'USD' },
+      version: 1
+    } as any,
     {
       id: 2,
       name: 'Checking',
-      type: AccountType.CHECKING,
+      type: { code: 'CHECKING' },
       currentBalance: 1000,
-      bankName: BankName.CAPITAL_ONE
-    },
+      bank: BankName.CAPITAL_ONE,
+      user: { id: 1 },
+      currency: { code: 'USD' },
+      version: 1
+    } as any,
     {
       id: 3,
       name: 'Savings',
-      type: AccountType.SAVINGS,
+      type: { code: 'SAVINGS' },
       currentBalance: 5000,
-      bankName: BankName.CAPITAL_ONE // Duplicate format
-    },
+      bank: BankName.CAPITAL_ONE,
+      user: { id: 1 },
+      currency: { code: 'USD' },
+      version: 1
+    } as any,
     {
       id: 4,
       name: 'Cash',
-      type: AccountType.CASH,
-      currentBalance: 200
-      // No bank format
-    }
+      type: { code: 'CASH' },
+      currentBalance: 200,
+      bank: BankName.STANDARD,
+      user: { id: 1 },
+      currency: { code: 'USD' },
+      version: 1
+    } as any
   ];
 
   beforeEach(async () => {
@@ -131,7 +143,7 @@ describe('CsvImportDialogComponent', () => {
       component.importItems.set([{
         id: '1',
         file: file,
-        accountId: null,
+        accountId: 0 as any,
         bankName: null,
         previews: [],
         status: 'pending'
