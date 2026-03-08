@@ -54,7 +54,7 @@
           optionLabel="label"
           dataKey="code"
           placeholder="Select account type"
-          showClear="true"
+          [showClear]="true"
           class="w-full"
         >
           <ng-template #item let-option>
@@ -96,10 +96,10 @@
         formControlName="bankName"
         [options]="bankOptions"
         optionLabel="label"
-        dataKey="value"
+        optionValue="value"
         placeholder="Select a bank"
         class="w-full"
-        showClear="true"
+        [showClear]="true"
       />
     </div>
 
