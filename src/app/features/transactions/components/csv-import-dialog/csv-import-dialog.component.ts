@@ -14,8 +14,8 @@ import {
 } from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {FormsModule} from '@angular/forms';
-import {forkJoin, of} from 'rxjs';
-import {catchError, map} from 'rxjs/operators';
+import {forkJoin, from, of} from 'rxjs';
+import {catchError, concatMap, finalize, map, toArray} from 'rxjs/operators';
 import {DialogModule} from 'primeng/dialog';
 import {ButtonModule} from 'primeng/button';
 import {Select} from 'primeng/select';
@@ -26,13 +26,7 @@ import {ProgressSpinnerModule} from 'primeng/progressspinner';
 import {TagModule} from 'primeng/tag';
 import {TooltipModule} from 'primeng/tooltip';
 
-import {
-  BankOption,
-  CsvTransactionData,
-  SaveTransactionRequest,
-  TransactionPreview,
-  TransactionType
-} from '@models/transaction.model';
+import {BankOption, SaveTransactionRequest, TransactionPreview, TransactionType} from '@models/transaction.model';
 import {Account, BankName} from '@models/account.model';
 import {TransactionImportService} from '@features/transactions/services/transaction-import.service';
 import {ToastService} from '@core/services/toast.service';
@@ -229,7 +223,7 @@ export class CsvImportDialogComponent {
   /**
    * Uploads all files in parallel and retrieves transaction previews.
    */
-  async uploadAndPreview(): Promise<void> {
+  uploadAndPreview(): void {
     if (!this.canProceedToPreview()) return;
 
     this.uploading.set(true);
@@ -251,8 +245,11 @@ export class CsvImportDialogComponent {
       )
     );
 
-    forkJoin(tasks).subscribe({
+    forkJoin(tasks).pipe(
+      finalize((): void => this.uploading.set(false))
+    ).subscribe({
       next: (results): void => {
+        console.log('Upload results:', results);
         this.importItems.update((items: BatchImportItem[]) =>
           items.map((i: BatchImportItem) => ({...i, ...results.find(r => r.id === i.id)}))
         );
@@ -262,73 +259,74 @@ export class CsvImportDialogComponent {
         } else {
           this.generalMessage.set({severity: 'error', text: 'All files failed to parse. Verify bank formats.'});
         }
-        this.uploading.set(false);
-      },
-      error: (): void => this.uploading.set(false)
+      }
     });
   }
 
   /**
    * Finalizes the import by calculating hashes and persisting data to the ledger.
    */
-  async saveTransactions(): Promise<void> {
+  saveTransactions(): void {
     if (!this.canSave()) return;
 
     this.saving.set(true);
     const itemsToSave: BatchImportItem[] = this.importItems().filter((i: BatchImportItem): boolean => i.status === 'ready');
 
-    let successCount: number = 0;
-    let failCount: number = 0;
-
-    for (const item of itemsToSave) {
-      try {
+    from(itemsToSave).pipe(
+      concatMap((item: BatchImportItem) => {
         item.status = 'saving';
-        const fileHash: string = await this.importService.calculateFileHash(item.file);
+        return from(this.importService.calculateFileHash(item.file)).pipe(
+          concatMap((fileHash: string) => {
+            const transactions: any[] = item.previews.map((p: TransactionPreview) => ({
+              date: p.date,
+              postDate: p.postDate,
+              type: p.type,
+              amount: Math.abs(p.amount),
+              description: p.description,
+              merchant: p.suggestedMerchant,
+              category: p.suggestedCategory
+            }));
 
-        const transactions: CsvTransactionData[] = item.previews.map((p: TransactionPreview) => ({
-          date: p.date.toDateString(),
-          postDate: p.postDate?.toDateString(),
-          type: p.type,
-          account: item.accountId,
-          amount: Math.abs(p.amount),
-          description: p.description,
-          vendorName: p.suggestedMerchant.originalName,
-          categoryName: p.suggestedCategory.name
-        }));
+            const request: SaveTransactionRequest = {
+              transactions: transactions as any,
+              fileName: item.file.name,
+              fileHash
+            };
 
-        const request: SaveTransactionRequest = {transactions, fileName: item.file.name, fileHash};
+            return this.importService.saveTransactions(item.accountId, request).pipe(
+              map((): boolean => {
+                item.status = 'success';
+                return true;
+              }),
+              catchError((): any => {
+                item.status = 'error';
+                return of(false);
+              })
+            );
+          }),
+          catchError((): any => {
+            item.status = 'error';
+            return of(false);
+          })
+        );
+      }),
+      toArray(),
+      finalize((): void => this.saving.set(false))
+    ).subscribe((results) => {
+      const successCount: number = results.filter(r => r).length;
+      const failCount: number = results.filter(r => !r).length;
 
-        await new Promise<void>((res): void => {
-          this.importService.saveTransactions(item.accountId, request).subscribe({
-            next: (): void => {
-              successCount++;
-              item.status = 'success';
-              res();
-            },
-            error: (): void => {
-              failCount++;
-              item.status = 'error';
-              res();
-            }
-          });
+      if (failCount === 0) {
+        this.toast.success(`Batch complete: ${successCount} files imported.`);
+        this.importComplete.emit();
+        this.onHide();
+      } else {
+        this.generalMessage.set({
+          severity: 'warn',
+          text: `Import partially successful. Succeeded: ${successCount}, Failed: ${failCount}`
         });
-      } catch {
-        failCount++;
-        item.status = 'error';
       }
-    }
-
-    this.saving.set(false);
-    if (failCount === 0) {
-      this.toast.success(`Batch complete: ${successCount} files imported.`);
-      this.importComplete.emit();
-      this.onHide();
-    } else {
-      this.generalMessage.set({
-        severity: 'warn',
-        text: `Import partially successful. Succeeded: ${successCount}, Failed: ${failCount}`
-      });
-    }
+    });
   }
 
   /**
