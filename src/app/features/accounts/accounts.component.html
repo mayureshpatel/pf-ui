@@ -54,15 +54,17 @@
             <!-- Account Type -->
             <td class="py-4">
               <div class="flex items-center gap-3">
-                <div class="flex items-center justify-center w-8 h-8 rounded-lg">
-                  <i [class]="'pi ' + account.type.icon + ' ' + account.type.color"></i>
-                </div>
+                @if (account.type.icon) {
+                  <div class="flex items-center justify-center w-8 h-8 rounded-lg">
+                    <i [class]="'pi ' + account.type.icon + ' ' + account.type.color"></i>
+                  </div>
+                }
                 <span class="text-surface-600 font-medium">{{ account.type.code }}</span>
               </div>
             </td>
 
             <!-- Current Balance -->
-            <td class="text-right py-4 px-6">
+            <td class="py-4 px-6">
               <span
                 class="font-mono text-lg font-bold"
                 [class.text-emerald-600]="account.currentBalance > 0"
