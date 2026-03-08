@@ -52,9 +52,10 @@
           formControlName="type"
           [options]="accountTypes()"
           optionLabel="label"
+          dataKey="code"
           placeholder="Select account type"
+          showClear="true"
           class="w-full"
-          appendTo="body"
         >
           <ng-template #item let-option>
             <div class="flex items-center gap-3">
@@ -95,10 +96,9 @@
         formControlName="bankName"
         [options]="bankOptions"
         optionLabel="label"
-        optionValue="value"
+        dataKey="value"
         placeholder="Select a bank"
         class="w-full"
-        appendTo="body"
         showClear="true"
       />
     </div>
