@@ -96,17 +96,17 @@ export class TransactionFormDrawerComponent {
    */
   readonly form = new FormGroup({
     id: new FormControl<number | null>({value: null, disabled: true}),
-    accountId: new FormControl<number>({value: 0, disabled: true}, {nonNullable: true, validators: [Validators.required]}),
+    accountId: new FormControl<number>(0, {nonNullable: true, validators: [Validators.required]}),
     amount: new FormControl<number>(0, {nonNullable: true, validators: [Validators.required, Validators.min(0.01)]}),
     transactionDate: new FormControl<string>('', {nonNullable: true, validators: [Validators.required]}),
-    description: new FormControl<string>(''),
+    description: new FormControl<string>('', {nonNullable: true}),
     type: new FormControl<TransactionType>(TransactionType.EXPENSE, {
       nonNullable: true,
       validators: [Validators.required]
     }),
-    categoryId: new FormControl<number | null>(null),
+    category: new FormControl<Category | null>(null, {validators: [Validators.required]}),
     postDate: new FormControl<string | null>(null),
-    merchantId: new FormControl<number | null>(null)
+    merchant: new FormControl<Merchant | null>(null)
   });
 
   /** Indicates if the component is in edit mode. */
@@ -114,6 +114,9 @@ export class TransactionFormDrawerComponent {
 
   /** Title displayed in the drawer header. */
   readonly drawerTitle: Signal<string> = computed((): string => this.isEditMode() ? 'Edit Transaction' : 'New Transaction');
+
+  /** Reactive signal bridge for the merchant form control value. */
+  private readonly selectedMerchant: WritableSignal<Merchant | null> = signal<Merchant | null>(null);
 
   constructor() {
     /**
@@ -131,8 +134,8 @@ export class TransactionFormDrawerComponent {
             amount: Math.abs(txn.amount),
             description: txn.description,
             type: txn.type,
-            categoryId: txn.category.id,
-            merchantId: txn.merchant.id,
+            category: txn.category,
+            merchant: txn.merchant,
             accountId: txn.account.id
           });
         } else {
@@ -140,9 +143,22 @@ export class TransactionFormDrawerComponent {
             transactionDate: new Date().toISOString().split('T')[0],
             amount: 0,
             type: TransactionType.EXPENSE,
-            description: ''
+            description: '',
+            category: null,
+            merchant: null
           });
         }
+      }
+    });
+
+    /**
+     * Declarative sync for description based on merchant selection.
+     */
+    effect((): void => {
+      const merchant: Merchant | null = this.selectedMerchant();
+
+      if (merchant && 'originalName' in merchant) {
+        this.form.controls.description.setValue(merchant.originalName, {emitEvent: false});
       }
     });
   }
@@ -194,9 +210,9 @@ export class TransactionFormDrawerComponent {
         transactionDate: rawValue.transactionDate,
         description: rawValue.description ?? '',
         type: rawValue.type,
-        categoryId: rawValue.categoryId!,
+        categoryId: rawValue.category?.id!,
         postDate: rawValue.postDate!,
-        merchantId: rawValue.merchantId!
+        merchantId: rawValue.merchant?.id!
       }
 
       this.save.emit(updateRequest);
@@ -207,9 +223,9 @@ export class TransactionFormDrawerComponent {
         transactionDate: rawValue.transactionDate,
         description: rawValue.description ?? '',
         type: rawValue.type,
-        categoryId: rawValue.categoryId!,
+        categoryId: rawValue.category?.id!,
         postDate: rawValue.postDate!,
-        merchantId: rawValue.merchantId!
+        merchantId: rawValue.merchant?.id!
       }
 
       this.save.emit(createRequest);

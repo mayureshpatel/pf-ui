@@ -117,11 +117,11 @@
     <!-- Target Account -->
     <div class="flex flex-col gap-2">
       <label for="account" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
-        Source Account
+        Target Account
       </label>
       <p-select
         id="account"
-        formControlName="account"
+        formControlName="accountId"
         [options]="accounts()"
         optionLabel="name"
         optionValue="id"
