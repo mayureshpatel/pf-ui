@@ -108,6 +108,9 @@ export class AccountFormDrawerComponent {
   }
 
   onShow(): void {
+    this.form.reset();
+    this.errorMessage.set(null);
+
     const account: Account | null = this.account();
 
     if (account) {
@@ -131,11 +134,6 @@ export class AccountFormDrawerComponent {
       });
       this.form.controls.currentBalance.enable();
     }
-  }
-
-  onHide(): void {
-    this.form.reset();
-    this.errorMessage.set(null);
   }
 
   openReconcileDialog(): void {

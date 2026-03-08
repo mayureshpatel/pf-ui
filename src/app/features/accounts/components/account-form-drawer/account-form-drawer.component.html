@@ -5,7 +5,6 @@
   [saving]="saving()"
   [saveLabel]="isEditMode() ? 'Update' : 'Create'"
   (saveEmitterRef)="onSubmit()"
-  (cancelEmitterRef)="onHide()"
   (showEmitterRef)="onShow()"
 >
   <form [formGroup]="form" class="flex flex-col gap-6 py-4">
