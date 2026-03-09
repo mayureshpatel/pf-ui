@@ -114,6 +114,6 @@
   }
   
   .card-soft-hover {
-    @apply card-soft transition-shadow duration-300 hover:shadow-soft-lg cursor-pointer;
+    @apply bg-surface-card rounded-lg shadow-soft border border-gray-100 p-6 transition-shadow duration-300 hover:shadow-soft-lg cursor-pointer;
   }
 }
