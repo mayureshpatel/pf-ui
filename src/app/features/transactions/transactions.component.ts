@@ -51,6 +51,7 @@ import {CsvImportDialogComponent} from './components/csv-import-dialog/csv-impor
 import {
   TransferMatchingDialogComponent
 } from './components/transfer-matching-dialog/transfer-matching-dialog.component';
+import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
 
 /**
  * Encapsulates the entire UI and filter state for the transaction ledger.
@@ -91,6 +92,7 @@ interface TransactionState {
     TransferMatchingDialogComponent,
     FormatTransactionTypeAmountPipe
   ],
+  providers: [FormatCurrencyPipe, FormatTransactionTypeAmountPipe],
   templateUrl: './transactions.component.html'
 })
 export class TransactionsComponent implements OnInit, OnDestroy {
