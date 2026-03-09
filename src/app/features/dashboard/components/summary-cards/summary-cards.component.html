@@ -1,21 +1,21 @@
 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
   <!-- Total Income -->
-  <p-card class="shadow-sm">
+  <p-card class="card-soft">
     <div class="flex items-center justify-between">
       <div>
         <p class="text-muted-color text-sm mb-1">Total Income</p>
-        <p class="text-2xl font-semibold text-green-600">
+        <p class="text-2xl font-semibold text-primary-600">
           {{ data()!.totalIncome | formatCurrency }}
         </p>
       </div>
-      <div class="bg-green-100 dark:bg-green-900 p-3 rounded-full">
-        <i class="pi pi-arrow-up text-green-600 dark:text-green-300 text-xl"></i>
+      <div class="bg-primary-100 dark:bg-primary-900 p-3 rounded-full">
+        <i class="pi pi-arrow-up text-primary-600 dark:text-primary-300 text-xl"></i>
       </div>
     </div>
   </p-card>
 
   <!-- Total Expenses -->
-  <p-card class="shadow-sm">
+  <p-card class="card-soft">
     <div class="flex items-center justify-between">
       <div>
         <p class="text-muted-color text-sm mb-1">Total Expenses</p>
@@ -30,13 +30,13 @@
   </p-card>
 
   <!-- Net Savings -->
-  <p-card class="shadow-sm">
+  <p-card class="card-soft">
     <div class="flex items-center justify-between">
       <div>
         <p class="text-muted-color text-sm mb-1">Net Savings</p>
         <p class="text-2xl font-semibold"
            [ngClass]="{
-             'text-green-600': data() && data()!.netSavings >= 0,
+             'text-primary-600': data() && data()!.netSavings >= 0,
              'text-red-600': data() && data()!.netSavings < 0
            }">
           {{ data()!.netSavings | formatCurrency }}

@@ -13,7 +13,7 @@
         (onClick)="openApplyPreview()"
         severity="secondary"
         [outlined]="true"
-        class="shadow-sm"
+        class="card-soft"
       />
       <p-button
         label="New Rule"
@@ -27,7 +27,7 @@
 
   <!-- Rules Ledger -->
   @if (!isEmpty()) {
-    <p-card class="shadow-sm border-none ring-1 ring-surface-200 dark:ring-surface-800 overflow-hidden">
+    <p-card class="overflow-hidden card-soft">
       <p-table
         [value]="rules()"
         [loading]="loading()"
@@ -73,7 +73,7 @@
             <td>
               <div class="flex items-center gap-3">
                 <div
-                  [class]="'w-8 h-8 rounded-lg flex items-center justify-center text-white shadow-sm ' + (rule.category.color || 'bg-surface-400')">
+                  [class]="'w-8 h-8 flex items-center justify-center text-white card-soft' + (rule.category.color || 'bg-surface-400')">
                   <i [class]="'pi ' + (rule.category.icon || 'pi-tag') + ' text-xs'"></i>
                 </div>
                 <span class="font-bold text-surface-700 dark:text-surface-200">{{ rule.category.name }}</span>

@@ -1,4 +1,4 @@
-<p-card class="h-full shadow-sm border-none ring-1 ring-surface-200 dark:ring-surface-800">
+<p-card class="h-full card-soft">
   <div class="flex flex-col gap-6">
     <!-- Header -->
     <div class="flex items-center justify-between">
@@ -48,9 +48,9 @@
           {{ avgSavingsRate().toFixed(1) }}%
         </span>
       </div>
-      <div class="h-2.5 w-full bg-surface-100 rounded-full overflow-hidden shadow-inner">
+      <div class="h-2.5 w-full rounded-full overflow-hidden card-soft">
         <div
-          class="bg-primary h-full rounded-full transition-all duration-1000 ease-out shadow-sm"
+          class="bg-primary h-full rounded-full duration-1000 ease-out card-soft"
           [style.width.%]="Math.min(Math.max(avgSavingsRate(), 0), 100)">
         </div>
       </div>

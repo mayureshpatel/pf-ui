@@ -9,7 +9,7 @@
     <div toolbarFilters>
       <!-- Period Filters Container -->
       <div
-        class="flex flex-wrap gap-4 items-center p-1.5 bg-surface-0 rounded-2xl border border-surface-200 dark:border-surface-800 shadow-sm ring-1 ring-surface-100 dark:ring-surface-800">
+        class="flex flex-wrap gap-4 items-center card-soft">
         <p-selectButton
           [(ngModel)]="selectedPreset"
           [options]="presetOptions"
@@ -102,7 +102,7 @@
 
       <!-- Merchant Velocity (Engagement) -->
       <div class="lg:col-span-1">
-        <p-card class="h-full shadow-sm border-none ring-1 ring-surface-200 dark:ring-surface-800">
+        <p-card class="h-full card-soft">
           <ng-template pTemplate="title">
             <div class="flex items-center gap-2 mb-2">
               <i class="pi pi-shop text-primary"></i>

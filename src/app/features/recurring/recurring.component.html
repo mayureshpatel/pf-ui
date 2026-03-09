@@ -13,7 +13,7 @@
         severity="info"
         [outlined]="true"
         (onClick)="showSuggestionsDialog.set(true)"
-        class="shadow-sm"
+        class="card-soft"
       />
       <p-button
         label="New Recurring"
@@ -27,7 +27,7 @@
 
   <!-- Main Content: Table or Empty State -->
   @if (!isEmpty()) {
-    <p-card class="shadow-sm border-none ring-1 ring-surface-200 dark:ring-surface-800 overflow-hidden">
+    <p-card class="overflow-hidden card-soft">
       <p-table
         [value]="recurringTransactions()"
         [loading]="loading()"
