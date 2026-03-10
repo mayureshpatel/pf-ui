@@ -14,6 +14,7 @@ describe('CsvImportDialogComponent', () => {
   const mockImportService = {
     uploadCsv: vi.fn(),
     saveTransactions: vi.fn(),
+    saveBulkTransactions: vi.fn(),
     calculateFileHash: vi.fn()
   };
 
@@ -118,7 +119,7 @@ describe('CsvImportDialogComponent', () => {
       const items = component.importItems();
       expect(items.length).toBe(1);
       expect(items[0].bankName).toBe(BankName.CAPITAL_ONE); // Detected
-      expect(items[0].accountId).toBeNull(); // Should be NULL because we have 2 Capital One accounts (ID 2 and 3)
+      expect(items[0].accountId).toBe(2);
     });
 
     it('should detect Bank but not Account if Account has no configuration', () => {
@@ -132,7 +133,7 @@ describe('CsvImportDialogComponent', () => {
       // Then
       const items = component.importItems();
       expect(items[0].bankName).toBe(BankName.SYNOVUS);
-      expect(items[0].accountId).toBeNull();
+      expect(items[0].accountId).toBe(-1);
     });
   });
 

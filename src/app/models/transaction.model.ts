@@ -174,6 +174,7 @@ export interface SaveTransactionRequest {
   transactions: CsvTransactionData[];
   fileName: string;
   fileHash: string;
+  accountId: number;
 }
 
 /**

@@ -273,57 +273,47 @@ export class CsvImportDialogComponent {
     const itemsToSave: BatchImportItem[] = this.importItems().filter((i: BatchImportItem): boolean => i.status === 'ready');
 
     from(itemsToSave).pipe(
-      concatMap((item: BatchImportItem) => {
-        item.status = 'saving';
-        return from(this.importService.calculateFileHash(item.file)).pipe(
-          concatMap((fileHash: string) => {
-            const transactions: any[] = item.previews.map((p: TransactionPreview) => ({
-              date: p.date,
-              postDate: p.postDate,
-              type: p.type,
-              amount: Math.abs(p.amount),
-              description: p.description,
-              merchant: p.suggestedMerchant,
-              category: p.suggestedCategory
-            }));
+      concatMap((item: BatchImportItem) => from(this.importService.calculateFileHash(item.file)).pipe(
+        map((fileHash: string) => {
+          item.status = 'saving';
+          const transactions: any[] = item.previews.map((p: TransactionPreview) => ({
+            date: p.date,
+            postDate: p.postDate,
+            type: p.type,
+            amount: Math.abs(p.amount),
+            description: p.description,
+            merchant: p.suggestedMerchant,
+            category: p.suggestedCategory
+          }));
 
-            const request: SaveTransactionRequest = {
-              transactions: transactions as any,
-              fileName: item.file.name,
-              fileHash
-            };
-
-            return this.importService.saveTransactions(item.accountId, request).pipe(
-              map((): boolean => {
-                item.status = 'success';
-                return true;
-              }),
-              catchError((): any => {
-                item.status = 'error';
-                return of(false);
-              })
-            );
-          }),
-          catchError((): any => {
-            item.status = 'error';
-            return of(false);
-          })
+          return {
+            transactions: transactions as any,
+            fileName: item.file.name,
+            fileHash,
+            accountId: item.accountId
+          } as SaveTransactionRequest;
+        })
+      )),
+      toArray(),
+      concatMap((requests: SaveTransactionRequest[]) => {
+        if (requests.length === 0) return of(true);
+        return this.importService.saveBulkTransactions(requests).pipe(
+          map(() => true),
+          catchError(() => of(false))
         );
       }),
-      toArray(),
       finalize((): void => this.saving.set(false))
-    ).subscribe((results) => {
-      const successCount: number = results.filter(r => r).length;
-      const failCount: number = results.filter(r => !r).length;
-
-      if (failCount === 0) {
-        this.toast.success(`Batch complete: ${successCount} files imported.`);
+    ).subscribe((success) => {
+      if (success) {
+        this.importItems.update(items => items.map(item => ({...item, status: 'success'})));
+        this.toast.success(`Batch complete: ${itemsToSave.length} files imported.`);
         this.importComplete.emit();
         this.onHide();
       } else {
+        this.importItems.update(items => items.map(item => ({...item, status: 'error'})));
         this.generalMessage.set({
           severity: 'warn',
-          text: `Import partially successful. Succeeded: ${successCount}, Failed: ${failCount}`
+          text: `Import failed to process the transaction batch. Please review and try again.`
         });
       }
     });

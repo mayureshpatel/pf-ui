@@ -38,6 +38,16 @@ export class TransactionImportService {
     );
   }
 
+  saveBulkTransactions(
+    requests: SaveTransactionRequest[]
+  ): Observable<string> {
+    return this.http.post<string>(
+      `${this.apiUrl}/transactions/bulk`,
+      requests,
+      {responseType: 'text' as 'json'}
+    );
+  }
+
   calculateFileHash(file: File): Promise<string> {
     return new Promise((resolve, reject): void => {
       const reader = new FileReader();
