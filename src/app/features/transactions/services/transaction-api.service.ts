@@ -37,11 +37,11 @@ export class TransactionApiService {
     if (filter.type) params = params.set('type', filter.type);
     if (filter.description) params = params.set('description', filter.description);
     if (filter.categoryName) params = params.set('categoryName', filter.categoryName);
-    if (filter.merchant) params = params.set('vendorName', filter.merchant);
+    if (filter.merchant) params = params.set('merchantCleanName', filter.merchant);
     if (filter.minAmount) params = params.set('minAmount', filter.minAmount.toString());
     if (filter.maxAmount) params = params.set('maxAmount', filter.maxAmount.toString());
-    if (filter.startDate) params = params.set('startDate', filter.startDate.toDateString());
-    if (filter.endDate) params = params.set('endDate', filter.endDate.toDateString());
+    if (filter.startDate) params = params.set('startDate', filter.startDate.toLocaleDateString('en-US'));
+    if (filter.endDate) params = params.set('endDate', filter.endDate.toLocaleDateString('en-US'));
 
     return this.http.get<PageResponse<Transaction>>(this.apiUrl, { params });
   }

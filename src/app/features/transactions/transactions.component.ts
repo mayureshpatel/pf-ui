@@ -235,7 +235,7 @@ export class TransactionsComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (res: PageResponse<Transaction>): void => {
           this.transactions.set(res.content);
-          this.totalRecords.set(res.totalElements);
+          this.totalRecords.set(res.page.totalElements);
           this.selectedTransactions.set([]);
         },
         error: (err: any): void => {
@@ -258,16 +258,22 @@ export class TransactionsComponent implements OnInit, OnDestroy {
       categoryName: params['categoryName'] || undefined,
       minAmount: params['minAmount'] !== undefined ? Number(params['minAmount']) : undefined,
       maxAmount: params['maxAmount'] !== undefined ? Number(params['maxAmount']) : undefined,
-      startDate: params['startDate'] || undefined,
-      endDate: params['endDate'] || undefined
+      startDate: params['startDate'] ? new Date(params['startDate']) : undefined,
+      endDate: params['endDate'] ? new Date(params['endDate']) : undefined
     };
 
-    this.state.set({
-      filter,
-      page: params['page'] ? Number(params['page']) : 0,
-      size: params['size'] ? Number(params['size']) : 20,
-      sort: params['sort'] || 'date,desc'
-    });
+    const page: number = params['page'] ? Number(params['page']) : 0;
+    const size: number = params['size'] ? Number(params['size']) : 20;
+    const sort: string = params['sort'] || 'date,desc';
+
+    const currentState: TransactionState = this.state();
+    if (JSON.stringify(filter) !== JSON.stringify(currentState.filter) ||
+        page !== currentState.page ||
+        size !== currentState.size ||
+        sort !== currentState.sort) {
+
+      this.state.set({ filter, page, size, sort });
+    }
 
     if (this.activeFilterCount() > 0) {
       this.showAdvancedFilters.set(true);
@@ -321,22 +327,40 @@ export class TransactionsComponent implements OnInit, OnDestroy {
       .subscribe((data: Merchant[]): void => this.merchants.set(data));
   }
 
-  onPageChange(event: any): void {
-    const page: number = event.first / event.rows;
-    this.state.update((s: TransactionState) => ({...s, page, size: event.rows}));
-  }
+  onLazyLoad(event: any): void {
+    const rows: number = event.rows ?? 20;
+    const page: number = Math.floor((event.first ?? 0) / rows);
+    let sort: string = this.state().sort;
 
-  onSort(event: any): void {
-    const dir: string = event.sortOrder === 1 ? 'asc' : 'desc';
-    this.state.update((s: TransactionState) => ({...s, sort: `${event.sortField},${dir}`, page: 0}));
+    if (event.sortField) {
+      const dir: string = event.sortOrder === 1 ? 'asc' : 'desc';
+      sort = `${event.sortField},${dir}`;
+    }
+
+    const currentState: TransactionState = this.state();
+    if (page !== currentState.page || rows !== currentState.size || sort !== currentState.sort) {
+      this.state.update((s: TransactionState) => ({
+        ...s,
+        page,
+        size: rows,
+        sort
+      }));
+    }
   }
 
   onFilterUpdate(partialFilter: Partial<TransactionFilter>): void {
-    this.state.update((s: TransactionState) => ({
-      ...s,
-      filter: {...s.filter, ...partialFilter},
-      page: 0
-    }));
+    const currentState: TransactionState = this.state();
+    const hasChange: boolean = Object.entries(partialFilter).some(([key, value]) =>
+      (currentState.filter as any)[key] !== value
+    );
+
+    if (hasChange) {
+      this.state.update((s: TransactionState) => ({
+        ...s,
+        filter: {...s.filter, ...partialFilter},
+        page: 0
+      }));
+    }
   }
 
   clearFilters(): void {

@@ -94,12 +94,12 @@ export interface PageRequest {
  */
 export interface PageResponse<T> {
   content: T[];
-  totalElements: number;
-  totalPages: number;
-  number: number;
-  size: number;
-  first: boolean;
-  last: boolean;
+  page: {
+    totalElements: number;
+    totalPages: number;
+    number: number;
+    size: number;
+  };
 }
 
 /**
