@@ -67,7 +67,7 @@ export class AccountFormDrawerComponent {
       nonNullable: true, validators: [Validators.required, Validators.maxLength(100)]
     }),
     type: new FormControl<AccountType | null>(null, {validators: [Validators.required]}),
-    currencyCode: new FormControl(this.defaultCurrency, {
+    currencyCode: new FormControl({value: this.defaultCurrency, disabled: true}, {
       nonNullable: true, validators: [Validators.required]
     }),
     currentBalance: new FormControl(0, {nonNullable: true, validators: [Validators.required]}),

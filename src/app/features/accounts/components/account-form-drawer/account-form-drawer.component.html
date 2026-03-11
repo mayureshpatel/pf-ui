@@ -53,9 +53,17 @@
           optionLabel="label"
           dataKey="code"
           placeholder="Select account type"
-          [showClear]="true"
           class="w-full"
         >
+          <ng-template #selectedItem let-selectedOption>
+            @if (selectedOption) {
+              <div class="flex items-center gap-2">
+                <i [class]="'pi ' + selectedOption.icon + ' ' + selectedOption.color"></i>
+                <span>{{ selectedOption.label }}</span>
+              </div>
+            }
+          </ng-template>
+
           <ng-template #item let-option>
             <div class="flex items-center gap-3">
               <i [class]="'pi ' + option.icon + ' ' + option.color"></i>
@@ -80,8 +88,6 @@
           pInputText
           id="currency"
           formControlName="currencyCode"
-          [disabled]="true"
-          class="w-full py-3"
         />
       </div>
     </div>
@@ -98,7 +104,6 @@
         optionValue="value"
         placeholder="Select a bank"
         class="w-full"
-        [showClear]="true"
       />
     </div>
 
