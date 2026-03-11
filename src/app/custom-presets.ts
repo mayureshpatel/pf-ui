@@ -73,66 +73,6 @@ export const FinancePreset: Preset = definePreset(Aura, {
         }
       }
     }
-  },
-  components: {
-    card: {
-      colorScheme: {
-        light: {
-          root: {
-            borderRadius: '1.25rem',
-            shadow: '0 10px 25px -5px rgba(0, 0, 0, 0.03), 0 8px 10px -6px rgba(0, 0, 0, 0.02)'
-          }
-        },
-        dark: {
-          root: {
-            borderRadius: '1.25rem',
-            shadow: '0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1)'
-          }
-        }
-      }
-    },
-    button: {
-      colorScheme: {
-        light: {
-          root: {
-            borderRadius: '0.75rem'
-          }
-        },
-        dark: {
-          root: {
-            borderRadius: '0.75rem'
-          }
-        }
-      }
-    },
-    inputtext: {
-      colorScheme: {
-        light: {
-          root: {
-            borderRadius: '0.75rem'
-          }
-        },
-        dark: {
-          root: {
-            borderRadius: '0.75rem'
-          }
-        }
-      }
-    },
-    dropdown: {
-      colorScheme: {
-        light: {
-          root: {
-            borderRadius: '0.75rem'
-          }
-        },
-        dark: {
-          root: {
-            borderRadius: '0.75rem'
-          }
-        }
-      }
-    }
   }
 });
 
