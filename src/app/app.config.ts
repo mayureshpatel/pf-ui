@@ -7,10 +7,8 @@ import {ConfirmationService, MessageService} from 'primeng/api';
 import {routes} from './app.routes';
 import {jwtInterceptor} from '@core/auth/jwt.interceptor';
 import {errorInterceptor} from '@core/auth/error.interceptor';
-import Aura from '@primeuix/themes/aura';
-import Lara from '@primeuix/themes/lara';
-import Material from '@primeuix/themes/material';
-import {MidnightOceanPreset} from './custom-presets';
+import {FinancePreset} from './custom-presets';
+
 /**
  * Fixes an issue with PrimeNG animations where elements are not hidden properly after leaving animations.
  *
@@ -43,7 +41,7 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(withInterceptors([jwtInterceptor, errorInterceptor])),
     providePrimeNG({
       theme: {
-        preset: MidnightOceanPreset,
+        preset: FinancePreset,
         options: {
           darkModeSelector: '.my-app-dark',
           cssLayer: {
