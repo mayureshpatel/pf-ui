@@ -15,8 +15,8 @@ import {
 })
 export class AccountApiService {
   private readonly http: HttpClient = inject(HttpClient);
-  private readonly apiUrl = `${environment.apiUrl}/accounts`;
-  private readonly accountTypeApiUrl = `${environment.apiUrl}/account-types`;
+  private readonly apiUrl: string = `${environment.apiUrl}/accounts`;
+  private readonly accountTypeApiUrl: string = `${environment.apiUrl}/account-types`;
 
   getAccounts(): Observable<Account[]> {
     return this.http.get<Account[]>(this.apiUrl);
