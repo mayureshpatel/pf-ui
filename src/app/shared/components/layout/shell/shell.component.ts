@@ -28,7 +28,8 @@ import {Tooltip} from 'primeng/tooltip';
     RippleModule,
     Tooltip
   ],
-  templateUrl: './shell.component.html'
+  templateUrl: './shell.component.html',
+  styleUrl: './shell.component.css'
 })
 export class ShellComponent {
   private readonly authService: AuthService = inject(AuthService);
