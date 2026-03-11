@@ -1,75 +1,65 @@
-<div class="min-h-screen grid grid-cols-5 grid-rows-[auto_1fr]">
+<div class="grid grid-cols-5 grid-rows-[auto_1fr] min-h-screen">
   <!-- Header -->
-  <div class="h-14 col-span-5 border-b-2 border-b-surface-300">
-    <div class="flex items-center justify-between h-full px-4">
-      <div class="flex items-center gap-4">
-        <p-button
-          icon="pi pi-bars"
-          [text]="true"
-          severity="secondary"
-          (onClick)="toggleSidebar()"
-          class="lg:hidden"
-        />
+  <header class="col-span-5 flex items-center justify-between h-16 border-b-2 border-b-surface-300">
+    <div class="flex items-center gap-4 px-4">
+      <p-button
+        icon="pi pi-bars"
+        [text]="true"
+        severity="secondary"
+        (onClick)="toggleSidebar()"
+        class="lg:hidden"
+      />
 
-        <i class="pi pi-wallet text-2xl text-primary"></i>
-        <h1 class="text-2xl font-bold">Personal Finance</h1>
-      </div>
-
-      <div class="flex items-center justify-between px-4 py-3">
-        <div class="flex items-center gap-4">
-          <p-button
-            icon="pi pi-bars"
-            [text]="true"
-            severity="secondary"
-            (onClick)="toggleSidebar()"
-            class="lg:hidden"
-          />
-        </div>
-        <div class="flex items-center gap-4">
-          <span class="text-muted-color hidden sm:block">{{ username() }}</span>
-          <p-avatar
-            [label]="username().charAt(0).toUpperCase()"
-            shape="circle"
-            class="bg-primary text-white cursor-pointer"
-          />
-          <p-menu #userMenu [model]="userMenuItems" [popup]="true" appendTo="body"/>
-          <p-button
-            icon="pi pi-sign-out"
-            [text]="true"
-            severity="secondary"
-            (onClick)="logout()"
-            pTooltip="Logout"
-          />
-        </div>
-      </div>
-
-      <!-- Drawer for mobile -->
-      <p-drawer [(visible)]="sidebarVisible" [modal]="true" styleClass="w-64">
-        <ng-template pTemplate="header">
-          <div class="flex items-center gap-2">
-            <i class="pi pi-wallet text-2xl text-primary"></i>
-            <span class="text-xl font-semibold text-color">Finance</span>
-          </div>
-        </ng-template>
-        <nav aria-label="Main Navigation" class="flex flex-col gap-1 mt-4">
-          @for (item of navItems; track item.label) {
-            <a
-              [routerLink]="item.routerLink"
-              routerLinkActive="bg-primary-100 text-primary-700"
-              class="flex items-center gap-3 px-4 py-3 rounded-lg text-color hover:bg-surface-100 transition-colors"
-              (click)="sidebarVisible.set(false)"
-            >
-              <i [class]="item.icon"></i>
-              <span>{{ item.label }}</span>
-            </a>
-          }
-        </nav>
-      </p-drawer>
+      <i class="pi pi-wallet text-2xl text-primary"></i>
+      <h1 class="text-2xl font-bold">Personal Finance</h1>
     </div>
-  </div>
+
+    <div class="flex items-center px-4">
+      <span class="text-muted-color hidden sm:block">{{ username() }}</span>
+      <p-avatar
+        [label]="username().charAt(0).toUpperCase()"
+        shape="circle"
+        class="bg-primary text-white cursor-pointer"
+      />
+
+      <p-menu #userMenu [model]="userMenuItems" [popup]="true" appendTo="body"/>
+
+      <p-button
+        icon="pi pi-sign-out"
+        [text]="true"
+        severity="secondary"
+        (onClick)="logout()"
+        pTooltip="Logout"
+      />
+    </div>
+  </header>
 
   <!-- Left Navigation -->
-  <div class="border-r-2 border-r-surface-300">
+  <div class="hidden lg:block border-r-2 border-r-surface-300">
+    <!-- Drawer for mobile -->
+    <p-drawer [(visible)]="sidebarVisible" [modal]="true" class="lg:hidden">
+      <ng-template pTemplate="header">
+        <div class="flex items-center gap-2">
+          <i class="pi pi-wallet text-2xl text-primary"></i>
+          <span class="text-xl font-semibold text-color">Finance</span>
+        </div>
+      </ng-template>
+      <nav aria-label="Main Navigation" class="flex flex-col gap-1 mt-4">
+        @for (item of navItems; track item.label) {
+          <a
+            [routerLink]="item.routerLink"
+            routerLinkActive="bg-primary-100 text-primary-700"
+            class="flex items-center gap-3 px-4 py-3 rounded-lg text-color hover:bg-surface-100 transition-colors"
+            (click)="sidebarVisible.set(false)"
+          >
+            <i [class]="item.icon"></i>
+            <span>{{ item.label }}</span>
+          </a>
+        }
+      </nav>
+    </p-drawer>
+
+    <!-- Sidebar for desktop -->
     <nav aria-label="Main Navigation" class="flex flex-col gap-1 p-4 flex-1">
       @for (item of navItems; track item.label) {
         <a
@@ -85,7 +75,7 @@
   </div>
 
   <!-- Main Content -->
-  <main class="col-span-4 flex-1 w-full p-4 md:p-6 lg:p-8 max-w-[100vw] overflow-x-hidden">
+  <main class="col-span-5 lg:col-span-4 flex-1 w-full p-4 md:p-6 lg:p-8 max-w-[100vw] overflow-x-hidden">
     <router-outlet/>
   </main>
 </div>
