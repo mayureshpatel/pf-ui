@@ -9,6 +9,7 @@ import {
   AccountType,
   AccountUpdateRequest
 } from '@models/account.model';
+import {Currency} from '@models/currency.model';
 
 @Injectable({
   providedIn: 'root'
@@ -17,6 +18,7 @@ export class AccountApiService {
   private readonly http: HttpClient = inject(HttpClient);
   private readonly apiUrl: string = `${environment.apiUrl}/accounts`;
   private readonly accountTypeApiUrl: string = `${environment.apiUrl}/account-types`;
+  private readonly currencyApiUrl: string = `${environment.apiUrl}/currency`;
 
   getAccounts(): Observable<Account[]> {
     return this.http.get<Account[]>(this.apiUrl);
@@ -40,5 +42,9 @@ export class AccountApiService {
 
   getAccountTypes(): Observable<AccountType[]> {
     return this.http.get<AccountType[]>(this.accountTypeApiUrl);
+  }
+
+  getCurrencies(): Observable<Currency[]> {
+    return this.http.get<Currency[]>(this.currencyApiUrl);
   }
 }
