@@ -68,6 +68,21 @@ export interface TransactionFilter {
 }
 
 /**
+ * Represents the state of the transaction ledger, including filter, pagination, and sorting.
+ *
+ * @property filter - The current transaction filter.
+ * @property page - The current page number.
+ * @property size - The number of items per page.
+ * @property sort - The sorting criteria (e.g., "date,desc").
+ */
+export interface TransactionState {
+  filter: TransactionFilter;
+  page: number;
+  size: number;
+  sort: string;
+}
+
+/**
  * Represents a request for pagination.
  *
  * @property page - The page number to retrieve.
