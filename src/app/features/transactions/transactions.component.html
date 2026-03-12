@@ -2,182 +2,18 @@
   <!-- Page Header -->
   <app-screen-toolbar class="mb-6">
     <div toolbarTitle>
-      <h1 class="text-4xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight">Ledger</h1>
-      <p class="text-muted-color mt-1 text-lg">Detailed audit trail of all financial movements</p>
-    </div>
-
-    <div toolbarActions class="flex gap-3">
-      <p-button
-        label="Import CSV"
-        icon="pi pi-upload"
-        severity="secondary"
-        [outlined]="true"
-        (onClick)="showImportDialog.set(true)"
-        class="card-soft"
-      />
-      <p-button
-        label="Add Transaction"
-        icon="pi pi-plus"
-        (onClick)="openCreateDialog()"
-        severity="primary"
-        [raised]="true"
-      />
+      <h1 class="text-4xl font-extrabold text-surface-900 tracking-tight">Ledger</h1>
     </div>
   </app-screen-toolbar>
 
-  <!-- Filter & Action Command Center -->
-  <div class="flex flex-col gap-4 mb-6">
-    <!-- Quick Filters Bar -->
-    <div
-      class="flex flex-wrap items-center gap-4 card-soft">
-
-      <!-- Search Input -->
-      <div class="relative w-full md:w-72">
-        <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-muted-color"></i>
-        <input
-          pInputText
-          placeholder="Search descriptions..."
-          class="w-full pl-10 bg-transparent border-none focus:ring-0 text-sm font-bold"
-          [ngModel]="state().filter.description"
-          (ngModelChange)="onFilterUpdate({description: $event})"
-        />
-      </div>
-
-      <div class="hidden md:block w-px h-6 bg-surface-200"></div>
-
-      <!-- Quick Account Select -->
-      <p-select
-        [options]="accountOptions()"
-        [ngModel]="state().filter.accountId"
-        (ngModelChange)="onFilterUpdate({accountId: $event})"
-        optionLabel="label"
-        optionValue="value"
-        placeholder="All Accounts"
-        class="w-48 border-none bg-transparent"
-      />
-
-      <!-- Quick Type Select -->
-      <p-select
-        [options]="transactionTypes"
-        [ngModel]="state().filter.type"
-        (ngModelChange)="onFilterUpdate({type: $event})"
-        optionLabel="label"
-        optionValue="value"
-        placeholder="All Types"
-        class="w-40 border-none bg-transparent"
-      />
-
-      <div class="flex-1"></div>
-
-      <!-- Advanced Filter Toggle & Clear -->
-      <div class="flex items-center gap-2 pr-2">
-        @if (activeFilterCount() > 0) {
-          <p-button
-            label="Clear"
-            icon="pi pi-filter-slash"
-            [text]="true"
-            severity="danger"
-            size="small"
-            (onClick)="clearFilters()"
-          />
-        }
-        <p-button
-          [label]="showAdvancedFilters() ? 'Hide Filters' : 'Filters'"
-          [icon]="showAdvancedFilters() ? 'pi pi-chevron-up' : 'pi pi-filter'"
-          [badge]="activeFilterCount() > 0 ? activeFilterCount().toString() : ''"
-          [outlined]="!showAdvancedFilters()"
-          severity="secondary"
-          size="small"
-          (onClick)="showAdvancedFilters.set(!showAdvancedFilters())"
-        />
-      </div>
-    </div>
-
-    <!-- Advanced Filters Drawer -->
-    @if (showAdvancedFilters()) {
-      <div
-        class="animate-in slide-in-from-top-4 card-soft">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <!-- Merchant Autocomplete -->
-          <div class="flex flex-col gap-2">
-            <label class="text-[10px] font-black uppercase tracking-widest text-surface-400">Merchant</label>
-            <input
-              pInputText
-              placeholder="Filter by vendor..."
-              class="w-full text-sm font-bold"
-              [ngModel]="state().filter.merchant"
-              (ngModelChange)="onFilterUpdate({merchant: $event})"
-            />
-          </div>
-
-          <!-- Date Range Picker -->
-          <div class="flex flex-col gap-2">
-            <label class="text-[10px] font-black uppercase tracking-widest text-surface-400">Date Range</label>
-            <p-datePicker
-              selectionMode="range"
-              placeholder="Select dates..."
-              [showIcon]="true"
-              styleClass="w-full"
-              [ngModel]="[state().filter.startDate, state().filter.endDate]"
-              (ngModelChange)="onFilterUpdate({startDate: $event?.[0], endDate: $event?.[1]})"
-            />
-          </div>
-
-          <!-- Amount Range -->
-          <div class="flex flex-col gap-2 md:col-span-2">
-            <label class="text-[10px] font-black uppercase tracking-widest text-surface-400">Amount Range</label>
-            <div class="flex items-center gap-3">
-              <p-inputNumber
-                placeholder="Min"
-                mode="currency"
-                currency="USD"
-                class="flex-1"
-                [ngModel]="state().filter.minAmount"
-                (ngModelChange)="onFilterUpdate({minAmount: $event || undefined})"
-              />
-              <span class="text-surface-300">to</span>
-              <p-inputNumber
-                placeholder="Max"
-                mode="currency"
-                currency="USD"
-                class="flex-1"
-                [ngModel]="state().filter.maxAmount"
-                (ngModelChange)="onFilterUpdate({maxAmount: $event || undefined})"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-    }
-  </div>
-
-  <!-- Bulk Action Toolbar -->
-  @if (selectedTransactions().length > 0) {
-    <div
-      class="sticky top-4 z-50 mb-6 flex items-center justify-between bg-surface-900 text-white animate-in zoom-in-95 card-soft">
-      <div class="flex items-center gap-4">
-        <div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center font-black">
-          {{ selectedTransactions().length }}
-        </div>
-        <span class="font-bold tracking-tight">Transactions Selected</span>
-      </div>
-      <div class="flex gap-2">
-        <p-button label="Edit" icon="pi pi-pencil" [text]="true" styleClass="text-white hover:bg-white/10"/>
-        <p-button label="Delete" icon="pi pi-trash" [text]="true" severity="danger" (onClick)="bulkDelete()"/>
-        <div class="w-px h-6 bg-white/20 mx-2"></div>
-        <p-button icon="pi pi-times" [text]="true" styleClass="text-white hover:bg-white/10"
-                  (onClick)="selectedTransactions.set([])"/>
-      </div>
-    </div>
-  }
-
   <!-- Main Ledger Table -->
   @if (!isEmpty()) {
-    <p-card class="overflow-hidden card-soft">
+    <p-card class="overflow-hidden">
       <p-table
         [value]="transactions()"
-        [lazy]="true"
-        (onLazyLoad)="onLazyLoad($event)"
+        dataKey="id"
+        [(selection)]="selectedTransactions"
+        [loading]="loading()"
         [paginator]="true"
         [rows]="state().size"
         [first]="state().page * state().size"
@@ -185,40 +21,104 @@
         [showCurrentPageReport]="true"
         currentPageReportTemplate="Showing {first} to {last} of {totalRecords} entries"
         [rowsPerPageOptions]="[10, 20, 50, 100]"
-        [loading]="loading()"
         [sortField]="state().sort.split(',')[0]"
         [sortOrder]="state().sort.split(',')[1] === 'asc' ? 1 : -1"
         [stripedRows]="true"
-        size="small"
         selectionMode="multiple"
-        [(selection)]="selectedTransactions"
-        dataKey="id"
-        responsiveLayout="stack"
+        size="small"
         [breakpoint]="'960px'">
 
-        <ng-template #header>
+        <ng-template pTemplate="caption">
+          <div class="flex justify-between items-center">
+            <!-- Table filters -->
+            <div class="flex items-center gap-4">
+              <p-button
+                label="Clear"
+                icon="pi pi-filter-slash"
+                [text]="true"
+                severity="secondary"
+                (onClick)="clearFilters()"
+                pTooltip="Clear Filters"
+              />
+              <p-button
+                icon="pi pi-filter"
+                [text]="true"
+                severity="secondary"
+                pTooltip="Toggle Filters"
+              />
+            </div>
+
+            <!-- Table actions -->
+            <div class="flex items-center gap-4">
+              <p-button
+                label="Import CSV"
+                icon="pi pi-upload"
+                severity="secondary"
+                [outlined]="true"
+                (onClick)="showImportDialog.set(true)"
+              />
+              <p-button
+                label="Add Transaction"
+                icon="pi pi-plus"
+                (onClick)="openCreateDialog()"
+                severity="primary"
+                [raised]="true"
+              />
+            </div>
+          </div>
+        </ng-template>
+
+        <ng-template pTemplate="header">
           <tr>
-            <th style="width: 4rem"></th>
-            <th id="txn-date" pSortableColumn="date" class="py-4 font-bold text-surface-700 dark:text-surface-200">
-              Date
-              <p-sortIcon field="date"/>
+            <th id="txn-select" class="w-12">
+              <p-tableHeaderCheckbox/>
             </th>
-            <th id="txn-merchant" class="py-4 font-bold text-surface-700 dark:text-surface-200">Merchant / Description
+
+            <!-- Date -->
+            <th id="txn-date" pSortableColumn="date" class="py-4 font-semibold text-surface-700">
+              <div class="flex items-center gap-2">
+                Date
+                <p-sortIcon field="date"/>
+                <p-columnFilter type="date" field="date" display="menu"></p-columnFilter>
+              </div>
             </th>
-            <th id="txn-category" class="py-4 font-bold text-surface-700 dark:text-surface-200">Category</th>
-            <th id="txn-account" class="py-4 font-bold text-surface-700 dark:text-surface-200">Account</th>
-            <th id="txn-amount" pSortableColumn="amount"
-                class="py-4 font-bold text-surface-700 dark:text-surface-200 text-right">
-              Amount
-              <p-sortIcon field="amount"/>
+
+            <!-- Merchant / Description -->
+            <th id="txn-merchant" class="py-4 font-semibold text-surface-700">
+              <div class="flex items-center gap-2">
+                Merchant / Description
+              </div>
             </th>
-            <th id="txn-actions" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-center w-24">
+
+            <!-- Category -->
+            <th id="txn-category" class="py-4 font-semibold text-surface-700">
+              <div class="flex items-center gap-2">
+                Category
+              </div>
+            </th>
+
+            <!-- Account -->
+            <th id="txn-account" class="py-4 font-semibold text-surface-700">
+              <div class="flex items-center gap-2">
+                Account
+              </div>
+            </th>
+
+            <!-- Amount -->
+            <th id="txn-amount" pSortableColumn="amount" class="py-4 font-semibold text-surface-700 text-right">
+              <div class="flex items-center justify-end gap-2">
+                Amount
+                <p-sortIcon field="amount"/>
+              </div>
+            </th>
+
+            <th id="txn-actions" class="py-4 font-semibold text-surface-700 text-center w-24">
               Actions
             </th>
           </tr>
         </ng-template>
 
-        <ng-template #body let-txn>
+        <ng-template pTemplate="body" let-txn>
           <tr class="hover:bg-surface-100/50 dark:hover:bg-surface-800/30 transition-colors duration-200 group">
             <td class="text-center">
               <p-tableCheckbox [value]="txn"/>
@@ -237,7 +137,7 @@
             <td>
               <div class="flex items-center gap-3">
                 <div
-                  class="w-10 h-10 flex items-center justify-center shrink-0 card-soft">
+                  class="w-10 h-10 flex items-center justify-center shrink-0">
                   <i class="pi pi-receipt text-surface-400 group-hover:text-primary transition-colors"></i>
                 </div>
                 <div class="flex flex-col truncate max-w-[250px]">
@@ -301,7 +201,7 @@
           </tr>
         </ng-template>
 
-        <ng-template #emptymessage>
+        <ng-template pTemplate="emptymessage">
           <tr>
             <td colspan="7" class="text-center py-16 text-muted-color italic">
               No transactions match your current filtering criteria.

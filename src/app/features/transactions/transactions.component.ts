@@ -20,10 +20,8 @@ import {ButtonModule} from 'primeng/button';
 import {TableModule} from 'primeng/table';
 import {CardModule} from 'primeng/card';
 import {TooltipModule} from 'primeng/tooltip';
-import {Select} from 'primeng/select';
 import {CheckboxModule} from 'primeng/checkbox';
 import {TagModule} from 'primeng/tag';
-import {DatePicker} from 'primeng/datepicker';
 import {InputNumberModule} from 'primeng/inputnumber';
 import {InputTextModule} from 'primeng/inputtext';
 import {ConfirmationService} from 'primeng/api';
@@ -34,6 +32,7 @@ import {
   Transaction,
   TransactionCreateRequest,
   TransactionFilter,
+  TransactionState,
   TransactionType,
   TransactionUpdateRequest
 } from '@models/transaction.model';
@@ -54,16 +53,6 @@ import {
 import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
 
 /**
- * Encapsulates the entire UI and filter state for the transaction ledger.
- */
-interface TransactionState {
-  filter: TransactionFilter;
-  page: number;
-  size: number;
-  sort: string;
-}
-
-/**
  * Component for managing and auditing the master transaction ledger.
  *
  * Provides high-fidelity filtering, bulk operations, CSV imports, and
@@ -79,10 +68,8 @@ interface TransactionState {
     TableModule,
     CardModule,
     TooltipModule,
-    Select,
     CheckboxModule,
     TagModule,
-    DatePicker,
     InputNumberModule,
     InputTextModule,
     ContextMenuModule,
@@ -131,12 +118,19 @@ export class TransactionsComponent implements OnInit, OnDestroy {
   /** Indicates if a single transaction is currently being saved. */
   readonly savingTransaction: WritableSignal<boolean> = signal(false);
 
-  // --- Signals: UI Control ---
-
+  /** Indicates if the transaction form drawer is currently open. */
   readonly showDialog: WritableSignal<boolean> = signal(false);
+
+  /** Indicates if the import dialog is currently open. */
   readonly showImportDialog: WritableSignal<boolean> = signal(false);
+
+  /** Indicates if the bulk edit dialog is currently open. */
   readonly showBulkEditDialog: WritableSignal<boolean> = signal(false);
+
+  /** Indicates if the transfer matching dialog is currently open. */
   readonly showTransferDialog: WritableSignal<boolean> = signal(false);
+
+  /** Indicates if the advanced filters dialog is currently open. */
   readonly showAdvancedFilters: WritableSignal<boolean> = signal(false);
 
   /** User selection state for bulk actions. */
@@ -158,7 +152,7 @@ export class TransactionsComponent implements OnInit, OnDestroy {
 
   /** Calculates the number of active filters for UI badges. */
   readonly activeFilterCount: Signal<number> = computed((): number => {
-    const {filter} = this.state();
+    const filter: TransactionFilter = this.state().filter;
     let count: number = 0;
     if (filter.accountId) count++;
     if (filter.type) count++;
@@ -180,8 +174,7 @@ export class TransactionsComponent implements OnInit, OnDestroy {
     {label: 'Transfer Out', value: TransactionType.TRANSFER_OUT}
   ];
 
-  readonly accountOptions: Signal<{ label: string, value: number | null }[]> = computed(() => [
-    {label: 'All Accounts', value: null},
+  readonly accountOptions: Signal<{ label: string, value: number }[]> = computed(() => [
     ...this.accounts().map((a: Account) => ({label: a.name, value: a.id}))
   ]);
 
@@ -268,11 +261,11 @@ export class TransactionsComponent implements OnInit, OnDestroy {
 
     const currentState: TransactionState = this.state();
     if (JSON.stringify(filter) !== JSON.stringify(currentState.filter) ||
-        page !== currentState.page ||
-        size !== currentState.size ||
-        sort !== currentState.sort) {
+      page !== currentState.page ||
+      size !== currentState.size ||
+      sort !== currentState.sort) {
 
-      this.state.set({ filter, page, size, sort });
+      this.state.set({filter, page, size, sort});
     }
 
     if (this.activeFilterCount() > 0) {
