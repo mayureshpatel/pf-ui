@@ -81,6 +81,16 @@
             <td class="text-center py-2">
               <div class="flex justify-center gap-1">
                 <p-button
+                  icon="pi pi-sync"
+                  [text]="true"
+                  [rounded]="true"
+                  severity="info"
+                  (onClick)="openReconcileDrawer(account)"
+                  pTooltip="Reconcile Account"
+                  tooltipPosition="top"
+                />
+
+                <p-button
                   icon="pi pi-pencil"
                   [text]="true"
                   [rounded]="true"
@@ -135,6 +145,14 @@
     [account]="selectedAccount()"
     [saving]="loading()"
     (save)="onSave($event)"
-    (reconcile)="loadAccounts()"
   />
+
+  <!-- Reconcile Drawer -->
+  @if (selectedAccount()) {
+    <app-reconcile-drawer
+      [(visible)]="showReconcileDrawer"
+      [account]="selectedAccount()!"
+      (reconciled)="loadAccounts()"
+    />
+  }
 </div>

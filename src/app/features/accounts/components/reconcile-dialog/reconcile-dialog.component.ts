@@ -13,40 +13,36 @@ import {
 import {CommonModule} from '@angular/common';
 import {FormControl, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
 import {toSignal} from '@angular/core/rxjs-interop';
-import {DialogModule} from 'primeng/dialog';
 import {ButtonModule} from 'primeng/button';
 import {InputNumberModule} from 'primeng/inputnumber';
 import {MessageModule} from 'primeng/message';
 import {Account, AccountReconcileRequest} from '@models/account.model';
 import {AccountApiService} from '@features/accounts/services/account-api.service';
 import {ToastService} from '@core/services/toast.service';
+import {DrawerComponent} from '@shared/components/drawer/drawer.component';
 
 /**
  * Component for reconciling an account balance.
- *
- * Allows the user to enter the actual bank balance and calculates the difference
- * from the system balance. If a difference exists, the backend will create an
- * adjustment transaction.
  */
 @Component({
-  selector: 'app-reconcile-dialog',
+  selector: 'app-reconcile-drawer',
   standalone: true,
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    DialogModule,
     ButtonModule,
     InputNumberModule,
-    MessageModule
+    MessageModule,
+    DrawerComponent
   ],
   templateUrl: './reconcile-dialog.component.html'
 })
-export class ReconcileDialogComponent {
-  private readonly accountService = inject(AccountApiService);
-  private readonly toast = inject(ToastService);
+export class ReconcileDrawerComponent {
+  private readonly accountService: AccountApiService = inject(AccountApiService);
+  private readonly toast: ToastService = inject(ToastService);
 
   /**
-   * Two-way binding for the dialog visibility.
+   * Two-way binding for the drawer visibility.
    */
   visible: ModelSignal<boolean> = model<boolean>(false);
 
@@ -97,7 +93,7 @@ export class ReconcileDialogComponent {
 
   constructor() {
     /**
-     * Effect to handle cleanup and state resetting when the dialog is closed.
+     * Effect to handle cleanup and state resetting when the drawer is closed.
      */
     effect((): void => {
       if (!this.visible()) {
@@ -142,7 +138,7 @@ export class ReconcileDialogComponent {
   }
 
   /**
-   * Closes the dialog.
+   * Closes the drawer.
    */
   onCancel(): void {
     this.visible.set(false);

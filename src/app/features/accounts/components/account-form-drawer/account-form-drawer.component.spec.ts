@@ -199,12 +199,4 @@ describe('AccountFormDrawerComponent', () => {
       }));
     });
   });
-
-  describe('openReconcileDialog', () => {
-    it('should set showReconcileDialog to true', () => {
-      expect(component.showReconcileDialog()).toBe(false);
-      component.openReconcileDialog();
-      expect(component.showReconcileDialog()).toBe(true);
-    });
-  });
 });

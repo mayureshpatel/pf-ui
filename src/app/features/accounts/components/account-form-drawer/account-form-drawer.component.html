@@ -128,25 +128,10 @@
       } @else {
         <div class="flex justify-between items-center">
           <span class="text-3x1 font-mono font-black text-surface-900">
-            {{ form.value.currentBalance | currency: form.controls.currencyCode.value }}
+            {{ form.controls.currentBalance.value | currency: form.controls.currencyCode.value }}
           </span>
-          <p-button
-            label="Reconcile"
-            icon="pi pi-sync"
-            [text]="true"
-            size="small"
-            (onClick)="openReconcileDialog()"
-          />
         </div>
       }
     </div>
   </form>
-
-  @if (account(); as activeAccount) {
-    <app-reconcile-dialog
-      [account]="activeAccount"
-      [(visible)]="showReconcileDialog"
-      (reconciled)="reconcile.emit()"
-    ></app-reconcile-dialog>
-  }
 </app-drawer>

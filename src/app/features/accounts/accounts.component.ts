@@ -10,6 +10,7 @@ import {Account, AccountCreateRequest, AccountType, AccountUpdateRequest} from '
 import {AccountApiService} from './services/account-api.service';
 import {AccountSummaryCardsComponent} from './components/account-summary-cards/account-summary-cards.component';
 import {AccountFormDrawerComponent} from './components/account-form-drawer/account-form-drawer.component';
+import {ReconcileDrawerComponent} from './components/reconcile-dialog/reconcile-dialog.component';
 import {ToastService} from '@core/services/toast.service';
 import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-toolbar';
 import {finalize, forkJoin} from 'rxjs';
@@ -27,6 +28,7 @@ import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
     ScreenToolbarComponent,
     AccountSummaryCardsComponent,
     AccountFormDrawerComponent,
+    ReconcileDrawerComponent,
     FormatCurrencyPipe
   ],
   templateUrl: './accounts.component.html'
@@ -41,6 +43,7 @@ export class AccountsComponent implements OnInit {
   accountTypes: WritableSignal<AccountType[]> = signal([]);
   loading: WritableSignal<boolean> = signal(false);
   showDialog: WritableSignal<boolean> = signal(false);
+  showReconcileDrawer: WritableSignal<boolean> = signal(false);
   selectedAccount: WritableSignal<Account | null> = signal(null);
 
   isEmpty: Signal<boolean> = computed((): boolean => this.accounts().length === 0 && !this.loading());
@@ -92,6 +95,15 @@ export class AccountsComponent implements OnInit {
   openEditDialog(account: Account): void {
     this.selectedAccount.set(account);
     this.showDialog.set(true);
+  }
+
+  /**
+   * Opens the account reconcile drawer for the selected account.
+   * @param account The account to reconcile.
+   */
+  openReconcileDrawer(account: Account): void {
+    this.selectedAccount.set(account);
+    this.showReconcileDrawer.set(true);
   }
 
   onSave(formData: AccountCreateRequest | AccountUpdateRequest): void {

@@ -21,7 +21,6 @@ import {MessageModule} from 'primeng/message';
 import {Account, AccountCreateRequest, AccountType, AccountUpdateRequest, BankName} from '@models/account.model';
 import {DrawerComponent} from '@shared/components/drawer/drawer.component';
 import {BankOption} from '@models/transaction.model';
-import {ReconcileDialogComponent} from '@features/accounts/components/reconcile-dialog/reconcile-dialog.component';
 
 @Component({
   selector: 'app-account-form-drawer',
@@ -33,8 +32,7 @@ import {ReconcileDialogComponent} from '@features/accounts/components/reconcile-
     Select,
     InputNumberModule,
     MessageModule,
-    DrawerComponent,
-    ReconcileDialogComponent
+    DrawerComponent
   ],
   templateUrl: './account-form-drawer.component.html'
 })
@@ -45,10 +43,8 @@ export class AccountFormDrawerComponent {
   saving: InputSignal<boolean> = input<boolean>(false);
 
   save: OutputEmitterRef<AccountUpdateRequest | AccountCreateRequest> = output<AccountUpdateRequest | AccountCreateRequest>();
-  reconcile: OutputEmitterRef<void> = output<void>();
 
   errorMessage: WritableSignal<string | null> = signal(null);
-  showReconcileDialog: WritableSignal<boolean> = signal(false);
 
   isEditMode: Signal<boolean> = computed((): boolean => this.account() !== null);
   drawerTitle: Signal<string> = computed((): string => this.isEditMode() ? 'Edit Account' : 'Create Account');
@@ -113,7 +109,6 @@ export class AccountFormDrawerComponent {
   onShow(): void {
     this.form.reset();
     this.errorMessage.set(null);
-    this.showReconcileDialog.set(false);
 
     const account: Account | null = this.account();
 
@@ -138,9 +133,5 @@ export class AccountFormDrawerComponent {
       });
       this.form.controls.currentBalance.enable();
     }
-  }
-
-  openReconcileDialog(): void {
-    this.showReconcileDialog.set(true);
   }
 }

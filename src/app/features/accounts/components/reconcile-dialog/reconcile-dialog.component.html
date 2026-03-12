@@ -1,109 +1,99 @@
-<p-dialog
-  [header]="'Reconcile: ' + account().name"
+<app-drawer
   [(visible)]="visible"
-  [modal]="true"
-  [draggable]="false"
-  [resizable]="false"
-  [style]="{ width: '450px' }"
-  [breakpoints]="{ '960px': '75vw', '640px': '95vw' }"
-  class="p-fluid">
-
-  <form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-6 py-2">
-    <p class="text-muted-color text-sm leading-relaxed">
-      Enter the current balance from your bank statement. If it differs from our records, an adjustment will be made
-      automatically.
-    </p>
-
-    @if (errorMessage()) {
-      <p-message severity="error" variant="simple" class="w-full">
-        {{ errorMessage() }}
-      </p-message>
-    }
-
-    <!-- Balance Comparison Section -->
-    <div
-      class="grid grid-cols-2 gap-4 p-5 rounded-2xl border border-surface-200 dark:border-surface-800 ring-1 ring-surface-100 dark:ring-surface-800">
-      <div class="flex flex-col gap-1">
-        <span class="text-xs font-bold uppercase tracking-widest text-surface-500">System</span>
-        <span class="text-2xl font-mono font-black text-surface-900 dark:text-surface-0">
-          {{ account().currentBalance | currency }}
+  [title]="'Reconcile ' + account().name"
+  icon="pi-sync"
+  [saving]="saving()"
+  saveLabel="Reconcile"
+  (saveEmitterRef)="submit()"
+  (cancelEmitterRef)="onCancel()"
+>
+  <div class="flex flex-col gap-6 py-4">
+    <!-- Account Information Summary -->
+    <div class="p-4 rounded-xl bg-surface-50 border border-surface-200 flex flex-col gap-3">
+      <div class="flex justify-between items-center">
+        <span class="text-sm font-medium text-surface-500 uppercase tracking-wider">Current System Balance</span>
+        <span class="text-lg font-mono font-bold text-surface-900">
+          {{ account().currentBalance | currency: account().currency.code }}
         </span>
       </div>
-      <div class="flex flex-col gap-1 text-right border-l border-surface-200 dark:border-surface-800 pl-4">
-        <span class="text-xs font-bold uppercase tracking-widest text-surface-500">Actual</span>
-        <span class="text-2xl font-mono font-black text-primary">
-          {{ form.value.targetBalance !== null ? (form.value.targetBalance | currency) : '---' }}
+
+      <div class="h-px bg-surface-200"></div>
+
+      <div class="flex justify-between items-center">
+        <span class="text-sm font-medium text-surface-500 uppercase tracking-wider">Adjustment Needed</span>
+        <span
+          class="text-lg font-mono font-bold"
+          [class.text-emerald-600]="difference() > 0"
+          [class.text-rose-600]="difference() < 0"
+          [class.text-surface-400]="difference() === 0"
+        >
+          {{ difference() > 0 ? '+' : '' }}{{ difference() | currency: account().currency.code }}
         </span>
       </div>
     </div>
 
-    <!-- Actual Balance Input -->
-    <div class="flex flex-col gap-2">
-      <label for="target" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
-        Bank Statement Balance
-      </label>
-      <p-inputNumber
-        id="target"
-        formControlName="targetBalance"
-        mode="currency"
-        currency="USD"
-        locale="en-US"
-        [minFractionDigits]="2"
-        [maxFractionDigits]="2"
-        class="w-full"
-        inputStyleClass="w-full font-mono text-3xl font-black p-4 text-center"
-        [autofocus]="true"
-        placeholder="$0.00"
-      />
-    </div>
-
-    <!-- Difference & Adjustment Summary -->
-    @if (form.value.targetBalance !== null) {
-      <div class="p-5 rounded-2xl border transition-all duration-500 animate-in fade-in slide-in-from-bottom-2"
-           [class]="difference() === 0 ? 'bg-surface-100 border-surface-200 text-surface-600' :
-                    difference() > 0 ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 text-emerald-900' :
-                    'bg-rose-50 border-rose-200 dark:bg-rose-950/20 text-rose-900'">
-
-        <div class="flex justify-between items-center mb-3">
-          <span class="font-bold text-xs uppercase tracking-wider opacity-70">Calculated Adjustment</span>
-          <span class="font-mono font-black text-xl"
-                [class]="difference() === 0 ? 'text-surface-700' :
-                         difference() > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'">
-            {{ difference() | currency }}
-          </span>
-        </div>
-
-        <p class="text-sm leading-tight opacity-80">
-          @if (difference() > 0) {
-            An <strong>income</strong> transaction of
-            <strong>{{ difference() | currency }}</strong> will be added to the ledger.
-          } @else if (difference() < 0) {
-            An <strong>expense</strong> transaction of
-            <strong>{{ Math.abs(difference()) | currency }}</strong> will be deducted from the ledger.
-          } @else {
-            The balances match exactly. No adjustment will be created.
-          }
+    <form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-6">
+      <!-- Target Balance Input -->
+      <div class="flex flex-col gap-2">
+        <label for="targetBalance" class="text-sm font-bold text-surface-900 tracking-wide uppercase">
+          Actual Bank Balance
+        </label>
+        <p-inputNumber
+          id="targetBalance"
+          formControlName="targetBalance"
+          mode="currency"
+          [currency]="account().currency.code"
+          locale="en-US"
+          [minFractionDigits]="2"
+          [maxFractionDigits]="2"
+          [autofocus]="true"
+          class="w-full"
+          inputStyleClass="w-full py-4 text-2xl font-mono font-bold"
+          placeholder="0.00"
+          (onKeyDown)="submit()"
+        />
+        <p class="text-xs text-muted-color italic">
+          Enter the balance exactly as it appears on your bank statement.
         </p>
-      </div>
-    }
-  </form>
 
-  <ng-template #footer>
-    <div class="flex justify-end gap-3 pt-4 border-t border-surface-100 dark:border-surface-800">
-      <p-button
-        label="Cancel"
-        [text]="true"
-        severity="secondary"
-        (onClick)="onCancel()"
-        [disabled]="saving()"
-      />
-      <p-button
-        label="Confirm & Reconcile"
-        icon="pi pi-check"
-        (onClick)="submit()"
-        [loading]="saving()"
-        [disabled]="form.invalid || saving()"
-      />
-    </div>
-  </ng-template>
-</p-dialog>
+        @if (form.controls.targetBalance.invalid && form.controls.targetBalance.touched) {
+          <small class="text-rose-500 font-medium flex items-center gap-1">
+            <i class="pi pi-times-circle text-xs"></i>
+            Actual balance is required to reconcile
+          </small>
+        }
+      </div>
+
+      <!-- Difference Logic Explanation -->
+      @if (difference() !== 0) {
+        <div class="p-4 rounded-lg border border-blue-100 bg-blue-50/50 flex gap-3">
+          <i class="pi pi-info-circle text-blue-500 mt-1"></i>
+          <div class="flex flex-col gap-1">
+            <span class="text-sm font-semibold text-blue-900">Adjustment Transaction</span>
+            <p class="text-xs text-blue-700 leading-relaxed">
+              We will create a
+              <strong>{{ difference() > 0 ? 'Balance Adjustment (Income)' : 'Balance Adjustment (Expense)' }}</strong>
+              of <strong>{{ Math.abs(difference()) | currency: account().currency.code }}</strong>
+              to match your actual bank balance.
+            </p>
+          </div>
+        </div>
+      } @else if (form.controls.targetBalance.value !== null) {
+        <div class="p-4 rounded-lg border border-emerald-100 bg-emerald-50/50 flex gap-3">
+          <i class="pi pi-check-circle text-emerald-500 mt-1"></i>
+          <div class="flex flex-col gap-1">
+            <span class="text-sm font-semibold text-emerald-900">Balanced!</span>
+            <p class="text-xs text-emerald-700 leading-relaxed">
+              Your actual balance matches the system balance perfectly. No adjustment needed.
+            </p>
+          </div>
+        </div>
+      }
+
+      <!-- Error Message -->
+      @if (errorMessage()) {
+        <p-message severity="error" class="w-full">{{ errorMessage() }}</p-message>
+      }
+    </form>
+  </div>
+</app-drawer>
