@@ -113,6 +113,7 @@ export class AccountFormDrawerComponent {
   onShow(): void {
     this.form.reset();
     this.errorMessage.set(null);
+    this.showReconcileDialog.set(false);
 
     const account: Account | null = this.account();
 
