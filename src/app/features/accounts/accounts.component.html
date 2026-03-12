@@ -39,23 +39,23 @@
 
         <ng-template pTemplate="header">
           <tr>
-            <th id="account-name" class="py-4 font-semibold text-surface-700">Account Name</th>
-            <th id="account-type" class="py-4 font-semibold text-surface-700">Account Type</th>
-            <th id="account-balance" class="py-4 font-semibold text-surface-700">Account Balance</th>
-            <th id="account-actions" class="py-4 font-semibold text-surface-700">Actions</th>
+            <th id="account-name" class="font-semibold text-surface-700">Account Name</th>
+            <th id="account-type" class="font-semibold text-surface-700">Account Type</th>
+            <th id="account-balance" class="font-semibold text-surface-700">Account Balance</th>
+            <th id="account-actions" class="font-semibold text-surface-700">Actions</th>
           </tr>
         </ng-template>
 
         <ng-template pTemplate="body" let-account>
           <tr class="hover:bg-surface-100/50 transition-colors duration-200">
             <!-- Account Name -->
-            <td class="py-4">
+            <td class="px-4">
               <span class="font-semibold text-surface-900">{{ account.name }}</span>
             </td>
 
             <!-- Account Type -->
-            <td class="py-4">
-              <div class="flex items-center gap-3">
+            <td class="px-4">
+              <div class="flex items-center">
                 @if (account.type.icon) {
                   <div class="flex items-center justify-center w-8 h-8 rounded-lg">
                     <i [class]="'pi ' + account.type.icon + ' ' + account.type.color"></i>
@@ -66,7 +66,7 @@
             </td>
 
             <!-- Current Balance -->
-            <td class="py-4 px-6">
+            <td class="px-4">
               <span
                 class="font-mono text-lg font-bold"
                 [class.text-emerald-600]="account.currentBalance > 0"
@@ -78,8 +78,8 @@
             </td>
 
             <!-- Actions -->
-            <td class="text-center py-2">
-              <div class="flex justify-center gap-1">
+            <td class="px-4">
+              <div class="flex gap-1">
                 <p-button
                   icon="pi pi-sync"
                   [text]="true"
