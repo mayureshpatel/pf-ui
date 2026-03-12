@@ -141,4 +141,12 @@
       }
     </div>
   </form>
+
+  @if (account(); as activeAccount) {
+    <app-reconcile-dialog
+      [account]="activeAccount"
+      [(visible)]="showReconcileDialog"
+      (reconciled)="reconcile.emit()"
+    ></app-reconcile-dialog>
+  }
 </app-drawer>

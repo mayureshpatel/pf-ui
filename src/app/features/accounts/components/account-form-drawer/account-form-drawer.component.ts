@@ -21,6 +21,7 @@ import {MessageModule} from 'primeng/message';
 import {Account, AccountCreateRequest, AccountType, AccountUpdateRequest, BankName} from '@models/account.model';
 import {DrawerComponent} from '@shared/components/drawer/drawer.component';
 import {BankOption} from '@models/transaction.model';
+import {ReconcileDialogComponent} from '@features/accounts/components/reconcile-dialog/reconcile-dialog.component';
 
 @Component({
   selector: 'app-account-form-drawer',
@@ -32,7 +33,8 @@ import {BankOption} from '@models/transaction.model';
     Select,
     InputNumberModule,
     MessageModule,
-    DrawerComponent
+    DrawerComponent,
+    ReconcileDialogComponent
   ],
   templateUrl: './account-form-drawer.component.html'
 })
@@ -43,6 +45,7 @@ export class AccountFormDrawerComponent {
   saving: InputSignal<boolean> = input<boolean>(false);
 
   save: OutputEmitterRef<AccountUpdateRequest | AccountCreateRequest> = output<AccountUpdateRequest | AccountCreateRequest>();
+  reconcile: OutputEmitterRef<void> = output<void>();
 
   errorMessage: WritableSignal<string | null> = signal(null);
   showReconcileDialog: WritableSignal<boolean> = signal(false);
