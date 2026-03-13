@@ -9,7 +9,6 @@ import {
   Signal,
   signal,
   untracked,
-  viewChild,
   WritableSignal
 } from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
@@ -160,7 +159,7 @@ export class TransactionsComponent implements OnInit, OnDestroy {
     const filter: TransactionFilter = this.state().filter;
     const filters: { [key: string]: FilterMetadata | FilterMetadata[] } = {
       date: [{value: null, matchMode: 'dateIs', operator: 'and'}],
-      merchantAndDesc: [{value: {merchant: null, description: null}, matchMode: 'custom', operator: 'and'}]
+      merchantAndDesc: [{value: null, matchMode: 'custom', operator: 'and'}]
     };
 
     if (filter.startDate || filter.endDate) {
@@ -421,6 +420,25 @@ export class TransactionsComponent implements OnInit, OnDestroy {
 
   clearFilters(): void {
     this.state.update((s: TransactionState) => ({...s, filter: {}, page: 0}));
+  }
+
+  updateMerchantFilter(filterConstraint: any, merchant: string | null): void {
+    const currentDescription = filterConstraint.value?.description || null;
+    if (!merchant && !currentDescription) {
+      filterConstraint.value = null;
+    } else {
+      filterConstraint.value = {merchant, description: currentDescription};
+    }
+  }
+
+  updateDescriptionFilter(filterConstraint: any, description: string | null): void {
+    const currentMerchant = filterConstraint.value?.merchant || null;
+    const desc = description?.trim() || null;
+    if (!desc && !currentMerchant) {
+      filterConstraint.value = null;
+    } else {
+      filterConstraint.value = {merchant: currentMerchant, description: desc};
+    }
   }
 
   openCreateDialog(): void {

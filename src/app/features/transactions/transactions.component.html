@@ -103,7 +103,8 @@
                         <label for="merchant-filter" class="text-xs font-bold uppercase text-surface-500">Merchant</label>
                         <p-select
                           id="merchant-filter"
-                          [(ngModel)]="filterConstraint.value.merchant"
+                          [ngModel]="filterConstraint.value?.merchant"
+                          (ngModelChange)="updateMerchantFilter(filterConstraint, $event)"
                           [options]="uniqueMerchantNames()"
                           placeholder="Select Merchant"
                           [showClear]="true"
@@ -116,7 +117,8 @@
                         <input
                           id="transaction-description-filter"
                           pInputText
-                          [(ngModel)]="filterConstraint.value.description"
+                          [ngModel]="filterConstraint.value?.description"
+                          (ngModelChange)="updateDescriptionFilter(filterConstraint, $event)"
                           placeholder="Search description..."
                           class="w-full"
                         />
