@@ -8,7 +8,7 @@ import {
   OnInit,
   Signal,
   signal,
-  untracked,
+  untracked, viewChild,
   WritableSignal
 } from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
@@ -17,7 +17,7 @@ import {FormsModule} from '@angular/forms';
 import {ActivatedRoute, Params, Router} from '@angular/router';
 import {finalize, Observable, skip} from 'rxjs';
 import {ButtonModule} from 'primeng/button';
-import {TableModule} from 'primeng/table';
+import {Table, TableModule} from 'primeng/table';
 import {CardModule} from 'primeng/card';
 import {TooltipModule} from 'primeng/tooltip';
 import {CheckboxModule} from 'primeng/checkbox';
@@ -142,10 +142,15 @@ export class TransactionsComponent implements OnInit, OnDestroy {
   /** The total number of records matching the current filter (for pagination). */
   readonly totalRecords: WritableSignal<number> = signal(0);
 
+  transactionTable = viewChild('transactionTable');
+
   /** Maps internal transaction state to PrimeNG filter metadata for UI synchronization. */
   readonly tableFilters: Signal<{ [key: string]: FilterMetadata | FilterMetadata[] }> = computed(() => {
     const filter: TransactionFilter = this.state().filter;
     const filters: { [key: string]: FilterMetadata | FilterMetadata[] } = {};
+
+    console.log("TransactionFilters: ", filter);
+    console.log("FilterMetadata: ", filters);
 
     if (filter.startDate || filter.endDate) {
       const dateFilters: FilterMetadata[] = [];
@@ -187,19 +192,6 @@ export class TransactionsComponent implements OnInit, OnDestroy {
     if (filter.maxAmount !== undefined) count++;
     return count;
   });
-
-  readonly transactionTypes = [
-    {label: 'All Types', value: null},
-    {label: 'Income', value: TransactionType.INCOME},
-    {label: 'Expense', value: TransactionType.EXPENSE},
-    {label: 'Transfer', value: TransactionType.TRANSFER},
-    {label: 'Transfer In', value: TransactionType.TRANSFER_IN},
-    {label: 'Transfer Out', value: TransactionType.TRANSFER_OUT}
-  ];
-
-  readonly accountOptions: Signal<{ label: string, value: number }[]> = computed(() => [
-    ...this.accounts().map((a: Account) => ({label: a.name, value: a.id}))
-  ]);
 
   constructor() {
     /**
@@ -398,23 +390,10 @@ export class TransactionsComponent implements OnInit, OnDestroy {
     }
   }
 
-  onFilterUpdate(partialFilter: Partial<TransactionFilter>): void {
-    const currentState: TransactionState = this.state();
-    const hasChange: boolean = Object.entries(partialFilter).some(([key, value]) =>
-      (currentState.filter as any)[key] !== value
-    );
-
-    if (hasChange) {
-      this.state.update((s: TransactionState) => ({
-        ...s,
-        filter: {...s.filter, ...partialFilter},
-        page: 0
-      }));
-    }
-  }
-
-  clearFilters(): void {
+  clearFilters(table: Table): void {
     this.state.update((s: TransactionState) => ({...s, filter: {}, page: 0}));
+    console.log("Clearing filters: ", table.filters);
+    table.clear();
   }
 
   openCreateDialog(): void {
@@ -488,32 +467,9 @@ export class TransactionsComponent implements OnInit, OnDestroy {
     });
   }
 
-  toggleSelectAll(): void {
-    this.selectedTransactions.set(this.allSelected() ? [] : [...this.transactions()]);
-  }
-
-  bulkDelete(): void {
-    const ids = this.selectedTransactions().map(t => t.id);
-    this.confirmationService.confirm({
-      header: `Delete ${ids.length} Transactions?`,
-      message: 'This bulk action cannot be undone. Continue?',
-      acceptLabel: 'Delete',
-      acceptButtonStyleClass: 'p-button-danger',
-      accept: (): void => {
-        this.transactionApi.bulkDeleteTransactions(ids).subscribe({
-          next: (): void => {
-            this.toast.success(`${ids.length} records removed`);
-            this.loadTransactions();
-          },
-          error: (): void => this.toast.error('Bulk delete failed.')
-        });
-      }
-    });
-  }
-
   onImportComplete(): void {
     this.showImportDialog.set(false);
-    this.showTransferDialog.set(true); // Open matcher after import
+    this.showTransferDialog.set(true);
     this.loadTransactions();
   }
 }

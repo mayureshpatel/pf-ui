@@ -10,6 +10,7 @@
   @if (!isEmpty()) {
     <p-card class="overflow-hidden">
       <p-table
+        #transactionTable
         [value]="transactions()"
         dataKey="id"
         [(selection)]="selectedTransactions"
@@ -29,7 +30,8 @@
         [stripedRows]="true"
         selectionMode="multiple"
         size="small"
-        [breakpoint]="'960px'">
+        [breakpoint]="'960px'"
+      >
 
         <ng-template pTemplate="caption">
           <div class="flex justify-between items-center">
@@ -40,14 +42,8 @@
                 icon="pi pi-filter-slash"
                 [text]="true"
                 severity="secondary"
-                (onClick)="clearFilters()"
+                (onClick)="clearFilters(transactionTable)"
                 pTooltip="Clear Filters"
-              />
-              <p-button
-                icon="pi pi-filter"
-                [text]="true"
-                severity="secondary"
-                pTooltip="Toggle Filters"
               />
             </div>
 

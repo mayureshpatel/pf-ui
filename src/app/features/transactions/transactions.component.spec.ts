@@ -142,4 +142,26 @@ describe('TransactionsComponent', () => {
     expect(state.filter.startDate).toBeUndefined();
     expect(state.filter.endDate).toBeUndefined();
   });
+
+  it('should handle onLazyLoad with merchant and description filters', () => {
+    // arrange
+    const event = {
+      first: 0,
+      rows: 20,
+      filters: {
+        merchantAndDesc: [{
+          value: { merchant: 'Amazon', description: 'cloud' },
+          matchMode: 'custom'
+        }]
+      }
+    };
+
+    // act
+    component.onLazyLoad(event);
+
+    // assert & verify
+    const state = component.state();
+    expect(state.filter.merchant).toBe('Amazon');
+    expect(state.filter.description).toBe('cloud');
+  });
 });
