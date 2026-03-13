@@ -8,7 +8,8 @@ import {
   OnInit,
   Signal,
   signal,
-  untracked, viewChild,
+  untracked,
+  viewChild,
   WritableSignal
 } from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
@@ -17,7 +18,7 @@ import {FormsModule} from '@angular/forms';
 import {ActivatedRoute, Params, Router} from '@angular/router';
 import {finalize, Observable, skip} from 'rxjs';
 import {ButtonModule} from 'primeng/button';
-import {Table, TableModule} from 'primeng/table';
+import {TableModule} from 'primeng/table';
 import {CardModule} from 'primeng/card';
 import {TooltipModule} from 'primeng/tooltip';
 import {CheckboxModule} from 'primeng/checkbox';
@@ -146,13 +147,20 @@ export class TransactionsComponent implements OnInit, OnDestroy {
   /** The total number of records matching the current filter (for pagination). */
   readonly totalRecords: WritableSignal<number> = signal(0);
 
-  transactionTable = viewChild('transactionTable');
+  /** Unique merchant names for filtering. */
+  readonly uniqueMerchantNames: Signal<string[]> = computed((): string[] => {
+    const names: string[] = this.merchants()
+      .map((m: Merchant): string => m.cleanName)
+      .filter((name: string): name is string => !!name);
+    return [...new Set(names)].sort(((a: string, b: string): number => a.localeCompare(b)));
+  });
 
   /** Maps internal transaction state to PrimeNG filter metadata for UI synchronization. */
   readonly tableFilters: Signal<{ [key: string]: FilterMetadata | FilterMetadata[] }> = computed(() => {
     const filter: TransactionFilter = this.state().filter;
     const filters: { [key: string]: FilterMetadata | FilterMetadata[] } = {
-      date: [{value: null, matchMode: 'dateIs', operator: 'and'}]
+      date: [{value: null, matchMode: 'dateIs', operator: 'and'}],
+      merchantAndDesc: [{value: {merchant: null, description: null}, matchMode: 'custom', operator: 'and'}]
     };
 
     if (filter.startDate || filter.endDate) {
@@ -168,6 +176,14 @@ export class TransactionsComponent implements OnInit, OnDestroy {
         }
       }
       filters['date'] = dateFilters;
+    }
+
+    if (filter.merchant || filter.description) {
+      filters['merchantAndDesc'] = [{
+        value: {merchant: filter.merchant || null, description: filter.description || null},
+        matchMode: 'custom',
+        operator: 'and'
+      }];
     }
 
     return filters;
@@ -375,6 +391,16 @@ export class TransactionsComponent implements OnInit, OnDestroy {
         // If date filter is cleared in the UI
         filter.startDate = undefined;
         filter.endDate = undefined;
+      }
+
+      const merchantAndDescFilter = event.filters['merchantAndDesc'];
+      if (merchantAndDescFilter) {
+        const metadata = Array.isArray(merchantAndDescFilter) ? merchantAndDescFilter[0] : merchantAndDescFilter;
+        filter.merchant = metadata.value?.merchant || undefined;
+        filter.description = metadata.value?.description || undefined;
+      } else {
+        filter.merchant = undefined;
+        filter.description = undefined;
       }
     }
 

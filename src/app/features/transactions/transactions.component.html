@@ -96,6 +96,34 @@
             <th id="txn-merchant" class="py-4 font-semibold text-surface-700">
               <div class="flex items-center gap-2">
                 Merchant / Description
+                <p-columnFilter field="merchantAndDesc" display="menu" [showMatchModes]="false" [showOperator]="false" [showAddButton]="false">
+                  <ng-template pTemplate="filter" let-filterConstraint="filterConstraint">
+                    <div class="flex flex-col gap-4 w-64">
+                      <div class="flex flex-col gap-2">
+                        <label for="merchant-filter" class="text-xs font-bold uppercase text-surface-500">Merchant</label>
+                        <p-select
+                          id="merchant-filter"
+                          [(ngModel)]="filterConstraint.value.merchant"
+                          [options]="uniqueMerchantNames()"
+                          placeholder="Select Merchant"
+                          [showClear]="true"
+                          [filter]="true"
+                          appendTo="body"
+                        />
+                      </div>
+                      <div class="flex flex-col gap-2">
+                        <label for="transaction-description-filter" class="text-xs font-bold uppercase text-surface-500">Description</label>
+                        <input
+                          id="transaction-description-filter"
+                          pInputText
+                          [(ngModel)]="filterConstraint.value.description"
+                          placeholder="Search description..."
+                          class="w-full"
+                        />
+                      </div>
+                    </div>
+                  </ng-template>
+                </p-columnFilter>
               </div>
             </th>
 
