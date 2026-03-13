@@ -147,10 +147,9 @@ export class TransactionsComponent implements OnInit, OnDestroy {
   /** Maps internal transaction state to PrimeNG filter metadata for UI synchronization. */
   readonly tableFilters: Signal<{ [key: string]: FilterMetadata | FilterMetadata[] }> = computed(() => {
     const filter: TransactionFilter = this.state().filter;
-    const filters: { [key: string]: FilterMetadata | FilterMetadata[] } = {};
-
-    console.log("TransactionFilters: ", filter);
-    console.log("FilterMetadata: ", filters);
+    const filters: { [key: string]: FilterMetadata | FilterMetadata[] } = {
+      date: [{value: null, matchMode: 'dateIs', operator: 'and'}]
+    };
 
     if (filter.startDate || filter.endDate) {
       const dateFilters: FilterMetadata[] = [];
@@ -390,10 +389,8 @@ export class TransactionsComponent implements OnInit, OnDestroy {
     }
   }
 
-  clearFilters(table: Table): void {
+  clearFilters(): void {
     this.state.update((s: TransactionState) => ({...s, filter: {}, page: 0}));
-    console.log("Clearing filters: ", table.filters);
-    table.clear();
   }
 
   openCreateDialog(): void {
