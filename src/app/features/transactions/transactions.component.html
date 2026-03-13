@@ -78,7 +78,17 @@
               <div class="flex items-center gap-2">
                 Date
                 <p-sortIcon field="date"/>
-                <p-columnFilter type="date" field="date" display="menu"></p-columnFilter>
+                <p-columnFilter type="date" field="date" display="menu">
+                  <ng-template pTemplate="filter" let-filterConstraint="filterConstraint">
+                    <p-datePicker
+                      [(ngModel)]="filterConstraint.value"
+                      [showIcon]="true"
+                      dateFormat="mm/dd/yy"
+                      placeholder="mm/dd/yyyy"
+                      appendTo="body"
+                    />
+                  </ng-template>
+                </p-columnFilter>
               </div>
             </th>
 

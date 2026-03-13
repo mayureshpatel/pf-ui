@@ -26,6 +26,8 @@ import {InputNumberModule} from 'primeng/inputnumber';
 import {InputTextModule} from 'primeng/inputtext';
 import {ConfirmationService, FilterMetadata} from 'primeng/api';
 import {ContextMenuModule} from 'primeng/contextmenu';
+import {DatePicker} from 'primeng/datepicker';
+import {SelectModule} from 'primeng/select';
 
 import {
   PageResponse,
@@ -73,6 +75,8 @@ import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
     InputNumberModule,
     InputTextModule,
     ContextMenuModule,
+    DatePicker,
+    SelectModule,
     ScreenToolbarComponent,
     TransactionFormDrawerComponent,
     CsvImportDialogComponent,
