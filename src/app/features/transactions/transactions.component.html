@@ -181,6 +181,38 @@
               <div class="flex items-center justify-end gap-2">
                 Amount
                 <p-sortIcon field="amount"/>
+                <p-columnFilter field="amount" display="menu" [showMatchModes]="false" [showOperator]="false" [showAddButton]="false">
+                  <ng-template pTemplate="filter" let-filterConstraint="filterConstraint">
+                    <div class="flex flex-col gap-4 w-64">
+                      <div class="flex flex-col gap-2">
+                        <label for="min-amount-filter" class="text-xs font-bold uppercase text-surface-500">Min Amount</label>
+                        <p-inputNumber
+                          id="min-amount-filter"
+                          [ngModel]="filterConstraint.value?.min"
+                          (ngModelChange)="updateMinAmountFilter(filterConstraint, $event)"
+                          mode="currency"
+                          currency="USD"
+                          locale="en-US"
+                          placeholder="Min amount"
+                          class="w-full"
+                        />
+                      </div>
+                      <div class="flex flex-col gap-2">
+                        <label for="max-amount-filter" class="text-xs font-bold uppercase text-surface-500">Max Amount</label>
+                        <p-inputNumber
+                          id="max-amount-filter"
+                          [ngModel]="filterConstraint.value?.max"
+                          (ngModelChange)="updateMaxAmountFilter(filterConstraint, $event)"
+                          mode="currency"
+                          currency="USD"
+                          locale="en-US"
+                          placeholder="Max amount"
+                          class="w-full"
+                        />
+                      </div>
+                    </div>
+                  </ng-template>
+                </p-columnFilter>
               </div>
             </th>
 

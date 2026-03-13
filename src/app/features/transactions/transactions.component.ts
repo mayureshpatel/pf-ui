@@ -193,7 +193,8 @@ export class TransactionsComponent implements OnInit, OnDestroy {
       date: [{value: null, matchMode: 'dateIs', operator: 'and'}],
       merchantAndDesc: [{value: null, matchMode: 'custom', operator: 'and'}],
       categoryName: [{value: filter.categoryName || null, matchMode: 'equals', operator: 'and'}],
-      accountId: [{value: filter.accountId || null, matchMode: 'equals', operator: 'and'}]
+      accountId: [{value: filter.accountId || null, matchMode: 'equals', operator: 'and'}],
+      amount: [{value: null, matchMode: 'custom', operator: 'and'}]
     };
 
     if (filter.startDate || filter.endDate) {
@@ -214,6 +215,14 @@ export class TransactionsComponent implements OnInit, OnDestroy {
     if (filter.merchant || filter.description) {
       filters['merchantAndDesc'] = [{
         value: {merchant: filter.merchant || null, description: filter.description || null},
+        matchMode: 'custom',
+        operator: 'and'
+      }];
+    }
+
+    if (filter.minAmount !== undefined || filter.maxAmount !== undefined) {
+      filters['amount'] = [{
+        value: {min: filter.minAmount ?? null, max: filter.maxAmount ?? null},
         matchMode: 'custom',
         operator: 'and'
       }];
@@ -451,6 +460,16 @@ export class TransactionsComponent implements OnInit, OnDestroy {
       } else {
         filter.accountId = undefined;
       }
+
+      const amountFilter = event.filters['amount'];
+      if (amountFilter) {
+        const metadata = Array.isArray(amountFilter) ? amountFilter[0] : amountFilter;
+        filter.minAmount = metadata.value?.min ?? undefined;
+        filter.maxAmount = metadata.value?.max ?? undefined;
+      } else {
+        filter.minAmount = undefined;
+        filter.maxAmount = undefined;
+      }
     }
 
     const currentState: TransactionState = this.state();
@@ -488,6 +507,24 @@ export class TransactionsComponent implements OnInit, OnDestroy {
       filterConstraint.value = null;
     } else {
       filterConstraint.value = {merchant: currentMerchant, description: desc};
+    }
+  }
+
+  updateMinAmountFilter(filterConstraint: any, min: number | null): void {
+    const currentMax = filterConstraint.value?.max ?? null;
+    if (min === null && currentMax === null) {
+      filterConstraint.value = null;
+    } else {
+      filterConstraint.value = {min, max: currentMax};
+    }
+  }
+
+  updateMaxAmountFilter(filterConstraint: any, max: number | null): void {
+    const currentMin = filterConstraint.value?.min ?? null;
+    if (max === null && currentMin === null) {
+      filterConstraint.value = null;
+    } else {
+      filterConstraint.value = {min: currentMin, max};
     }
   }
 
