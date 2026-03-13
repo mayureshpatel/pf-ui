@@ -159,6 +159,20 @@
             <th id="txn-account" class="py-4 font-semibold text-surface-700">
               <div class="flex items-center gap-2">
                 Account
+                <p-columnFilter field="accountId" display="menu" [showMatchModes]="false" [showOperator]="false" [showAddButton]="false">
+                  <ng-template pTemplate="filter" let-filterConstraint="filterConstraint">
+                    <p-select
+                      [(ngModel)]="filterConstraint.value"
+                      [options]="accounts()"
+                      optionLabel="name"
+                      optionValue="id"
+                      placeholder="Select Account"
+                      [showClear]="true"
+                      [filter]="true"
+                      class="w-64"
+                    />
+                  </ng-template>
+                </p-columnFilter>
               </div>
             </th>
 

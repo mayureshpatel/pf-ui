@@ -192,7 +192,8 @@ export class TransactionsComponent implements OnInit, OnDestroy {
     const filters: { [key: string]: FilterMetadata | FilterMetadata[] } = {
       date: [{value: null, matchMode: 'dateIs', operator: 'and'}],
       merchantAndDesc: [{value: null, matchMode: 'custom', operator: 'and'}],
-      categoryName: [{value: filter.categoryName || null, matchMode: 'equals', operator: 'and'}]
+      categoryName: [{value: filter.categoryName || null, matchMode: 'equals', operator: 'and'}],
+      accountId: [{value: filter.accountId || null, matchMode: 'equals', operator: 'and'}]
     };
 
     if (filter.startDate || filter.endDate) {
@@ -441,6 +442,14 @@ export class TransactionsComponent implements OnInit, OnDestroy {
         filter.categoryName = metadata.value || undefined;
       } else {
         filter.categoryName = undefined;
+      }
+
+      const accountFilter = event.filters['accountId'];
+      if (accountFilter) {
+        const metadata = Array.isArray(accountFilter) ? accountFilter[0] : accountFilter;
+        filter.accountId = metadata.value || undefined;
+      } else {
+        filter.accountId = undefined;
       }
     }
 
