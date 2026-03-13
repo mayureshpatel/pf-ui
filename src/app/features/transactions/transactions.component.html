@@ -92,9 +92,10 @@
             </th>
 
             <!-- Merchant / Description -->
-            <th id="txn-merchant" class="py-4 font-semibold text-surface-700">
+            <th id="txn-merchant" pSortableColumn="description" class="py-4 font-semibold text-surface-700">
               <div class="flex items-center gap-2">
                 Merchant / Description
+                <p-sortIcon field="description"/>
                 <p-columnFilter field="merchantAndDesc" display="menu" [showMatchModes]="false" [showOperator]="false" [showAddButton]="false">
                   <ng-template pTemplate="filter" let-filterConstraint="filterConstraint">
                     <div class="flex flex-col gap-4 w-64">
@@ -128,9 +129,10 @@
             </th>
 
             <!-- Category -->
-            <th id="txn-category" class="py-4 font-semibold text-surface-700">
+            <th id="txn-category" pSortableColumn="category.name" class="py-4 font-semibold text-surface-700">
               <div class="flex items-center gap-2">
                 Category
+                <p-sortIcon field="category.name"/>
                 <p-columnFilter field="categoryName" display="menu" [showMatchModes]="false" [showOperator]="false" [showAddButton]="false">
                   <ng-template pTemplate="filter" let-filterConstraint="filterConstraint">
                     <p-select
@@ -156,9 +158,10 @@
             </th>
 
             <!-- Account -->
-            <th id="txn-account" class="py-4 font-semibold text-surface-700">
+            <th id="txn-account" pSortableColumn="account.name" class="py-4 font-semibold text-surface-700">
               <div class="flex items-center gap-2">
                 Account
+                <p-sortIcon field="account.name"/>
                 <p-columnFilter field="accountId" display="menu" [showMatchModes]="false" [showOperator]="false" [showAddButton]="false">
                   <ng-template pTemplate="filter" let-filterConstraint="filterConstraint">
                     <p-select
