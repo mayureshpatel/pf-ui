@@ -85,7 +85,6 @@
                       [showIcon]="true"
                       dateFormat="mm/dd/yy"
                       placeholder="mm/dd/yyyy"
-                      appendTo="body"
                     />
                   </ng-template>
                 </p-columnFilter>
@@ -109,8 +108,7 @@
                           placeholder="Select Merchant"
                           [showClear]="true"
                           [filter]="true"
-                          appendTo="body"
-                        />
+                            />
                       </div>
                       <div class="flex flex-col gap-2">
                         <label for="transaction-description-filter" class="text-xs font-bold uppercase text-surface-500">Description</label>
@@ -144,7 +142,6 @@
                       placeholder="Select Category"
                       [showClear]="true"
                       [filter]="true"
-                      appendTo="body"
                       class="w-64"
                     >
                       <ng-template pTemplate="group" let-group>
