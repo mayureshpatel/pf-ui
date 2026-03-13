@@ -1,15 +1,15 @@
-import { vi } from 'vitest';
-import {ComponentFixture, TestBed, fakeAsync, tick} from '@angular/core/testing';
-import {ReconcileDialogComponent} from './reconcile-dialog.component';
+import {vi} from 'vitest';
+import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {ReconcileDrawerComponent} from './reconcile-dialog.component';
 import {AccountApiService} from '@features/accounts/services/account-api.service';
 import {ToastService} from '@core/services/toast.service';
 import {Account} from '@models/account.model';
 import {of, throwError} from 'rxjs';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 
-describe('ReconcileDialogComponent', () => {
-  let component: ReconcileDialogComponent;
-  let fixture: ComponentFixture<ReconcileDialogComponent>;
+describe('ReconcileDrawerComponent', () => {
+  let component: ReconcileDrawerComponent;
+  let fixture: ComponentFixture<ReconcileDrawerComponent>;
   let mockAccountApiService: any;
   let mockToastService: any;
 
@@ -20,18 +20,18 @@ describe('ReconcileDialogComponent', () => {
   } as Account;
 
   beforeEach(async () => {
-    mockAccountApiService = { reconcile: vi.fn() };
-    mockToastService = { success: vi.fn(), error: vi.fn() };
+    mockAccountApiService = {reconcile: vi.fn()};
+    mockToastService = {success: vi.fn(), error: vi.fn()};
 
     await TestBed.configureTestingModule({
-      imports: [ReconcileDialogComponent, NoopAnimationsModule],
+      imports: [ReconcileDrawerComponent, NoopAnimationsModule],
       providers: [
         {provide: AccountApiService, useValue: mockAccountApiService},
         {provide: ToastService, useValue: mockToastService}
       ]
     }).compileComponents();
 
-    fixture = TestBed.createComponent(ReconcileDialogComponent);
+    fixture = TestBed.createComponent(ReconcileDrawerComponent);
     component = fixture.componentInstance;
     fixture.componentRef.setInput('account', mockAccount);
     fixture.componentRef.setInput('visible', true);
@@ -44,21 +44,21 @@ describe('ReconcileDialogComponent', () => {
 
   it('should calculate difference correctly', () => {
     fixture.detectChanges();
-    
+
     // Initial state, form value is null, difference should be 0
     expect(component.difference()).toBe(0);
 
     // Set target balance
     component.form.controls.targetBalance.setValue(150);
     fixture.detectChanges();
-    
+
     // target(150) - current(100) = 50
     expect(component.difference()).toBe(50);
 
     // Set lower target balance
     component.form.controls.targetBalance.setValue(80);
     fixture.detectChanges();
-    
+
     // target(80) - current(100) = -20
     expect(component.difference()).toBe(-20);
   });
@@ -66,7 +66,7 @@ describe('ReconcileDialogComponent', () => {
   it('should not submit if form is invalid', () => {
     fixture.detectChanges();
     vi.spyOn(component.form, 'markAllAsTouched');
-    
+
     component.form.controls.targetBalance.setValue(null);
     component.submit();
 
@@ -76,7 +76,7 @@ describe('ReconcileDialogComponent', () => {
 
   it('should not submit if already saving', () => {
     fixture.detectChanges();
-    
+
     component.form.controls.targetBalance.setValue(150);
     component.saving.set(true);
     component.submit();
@@ -105,7 +105,7 @@ describe('ReconcileDialogComponent', () => {
 
   it('should handle submit error', () => {
     fixture.detectChanges();
-    const errorResponse = { error: { detail: 'Backend error' } };
+    const errorResponse = {error: {detail: 'Backend error'}};
     mockAccountApiService.reconcile.mockReturnValue(throwError(() => errorResponse));
 
     component.form.controls.targetBalance.setValue(150);
@@ -137,7 +137,7 @@ describe('ReconcileDialogComponent', () => {
     fixture.detectChanges();
     component.form.controls.targetBalance.setValue(150);
     component.errorMessage.set('Some error');
-    
+
     fixture.componentRef.setInput('visible', false);
     fixture.detectChanges();
     await fixture.whenStable();

@@ -24,7 +24,7 @@ import {CheckboxModule} from 'primeng/checkbox';
 import {TagModule} from 'primeng/tag';
 import {InputNumberModule} from 'primeng/inputnumber';
 import {InputTextModule} from 'primeng/inputtext';
-import {ConfirmationService} from 'primeng/api';
+import {ConfirmationService, FilterMetadata} from 'primeng/api';
 import {ContextMenuModule} from 'primeng/contextmenu';
 
 import {
@@ -141,6 +141,29 @@ export class TransactionsComponent implements OnInit, OnDestroy {
 
   /** The total number of records matching the current filter (for pagination). */
   readonly totalRecords: WritableSignal<number> = signal(0);
+
+  /** Maps internal transaction state to PrimeNG filter metadata for UI synchronization. */
+  readonly tableFilters: Signal<{ [key: string]: FilterMetadata | FilterMetadata[] }> = computed(() => {
+    const filter: TransactionFilter = this.state().filter;
+    const filters: { [key: string]: FilterMetadata | FilterMetadata[] } = {};
+
+    if (filter.startDate || filter.endDate) {
+      const dateFilters: FilterMetadata[] = [];
+      if (filter.startDate && filter.endDate && filter.startDate.getTime() === filter.endDate.getTime()) {
+        dateFilters.push({value: filter.startDate, matchMode: 'dateIs', operator: 'and'});
+      } else {
+        if (filter.startDate) {
+          dateFilters.push({value: filter.startDate, matchMode: 'dateAfter', operator: 'and'});
+        }
+        if (filter.endDate) {
+          dateFilters.push({value: filter.endDate, matchMode: 'dateBefore', operator: 'and'});
+        }
+      }
+      filters['date'] = dateFilters;
+    }
+
+    return filters;
+  });
 
   /** Indicates if the current dataset is empty. */
   readonly isEmpty: Signal<boolean> = computed((): boolean => this.transactions().length === 0 && !this.loading());
@@ -322,7 +345,8 @@ export class TransactionsComponent implements OnInit, OnDestroy {
 
   onLazyLoad(event: any): void {
     const rows: number = event.rows ?? 20;
-    const page: number = Math.floor((event.first ?? 0) / rows);
+    const first: number = event.first ?? 0;
+    const page: number = Math.floor(first / rows);
     let sort: string = this.state().sort;
 
     if (event.sortField) {
@@ -330,14 +354,47 @@ export class TransactionsComponent implements OnInit, OnDestroy {
       sort = `${event.sortField},${dir}`;
     }
 
+    // Extract filters from PrimeNG event
+    const filter: TransactionFilter = {...this.state().filter};
+    if (event.filters) {
+      const dateFilter = event.filters['date'];
+      if (dateFilter) {
+        const metadatas = Array.isArray(dateFilter) ? dateFilter : [dateFilter];
+        filter.startDate = undefined;
+        filter.endDate = undefined;
+
+        metadatas.forEach((m: FilterMetadata): void => {
+          if (m.value) {
+            const dateValue = new Date(m.value);
+            if (m.matchMode === 'dateIs') {
+              filter.startDate = dateValue;
+              filter.endDate = dateValue;
+            } else if (m.matchMode === 'dateAfter') {
+              filter.startDate = dateValue;
+            } else if (m.matchMode === 'dateBefore') {
+              filter.endDate = dateValue;
+            }
+          }
+        });
+      } else {
+        // If date filter is cleared in the UI
+        filter.startDate = undefined;
+        filter.endDate = undefined;
+      }
+    }
+
     const currentState: TransactionState = this.state();
-    if (page !== currentState.page || rows !== currentState.size || sort !== currentState.sort) {
-      this.state.update((s: TransactionState) => ({
-        ...s,
+    if (page !== currentState.page ||
+      rows !== currentState.size ||
+      sort !== currentState.sort ||
+      JSON.stringify(filter) !== JSON.stringify(currentState.filter)) {
+
+      this.state.set({
+        filter,
         page,
         size: rows,
         sort
-      }));
+      });
     }
   }
 
