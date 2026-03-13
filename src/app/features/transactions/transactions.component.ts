@@ -176,16 +176,23 @@ export class TransactionsComponent implements OnInit, OnDestroy {
       });
     });
 
-    return Array.from(groups.values()).sort(((a: any, b: any): number => a.label.localeCompare(b.label)));
-  });
+    const result = Array.from(groups.values()).sort(((a: any, b: any): number => a.label.localeCompare(b.label)));
+    result.unshift({
+      label: 'Special',
+      value: -1,
+      items: [{ label: 'Uncategorized', value: '__UNDEFINED__' }]
+    });
 
-  /** Maps internal transaction state to PrimeNG filter metadata for UI synchronization. */
-  readonly tableFilters: Signal<{ [key: string]: FilterMetadata | FilterMetadata[] }> = computed(() => {
+    return result;
+    });
+
+    /** Maps internal transaction state to PrimeNG filter metadata for UI synchronization. */
+    readonly tableFilters: Signal<{ [key: string]: FilterMetadata | FilterMetadata[] }> = computed(() => {
     const filter: TransactionFilter = this.state().filter;
     const filters: { [key: string]: FilterMetadata | FilterMetadata[] } = {
       date: [{value: null, matchMode: 'dateIs', operator: 'and'}],
       merchantAndDesc: [{value: null, matchMode: 'custom', operator: 'and'}],
-      categoryName: [{value: null, matchMode: 'equals', operator: 'and'}]
+      categoryName: [{value: filter.categoryName || null, matchMode: 'equals', operator: 'and'}]
     };
 
     if (filter.startDate || filter.endDate) {
