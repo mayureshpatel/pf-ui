@@ -154,12 +154,38 @@ export class TransactionsComponent implements OnInit, OnDestroy {
     return [...new Set(names)].sort(((a: string, b: string): number => a.localeCompare(b)));
   });
 
+  /** Grouped categories for filtering, only including sub-categories. */
+  readonly groupedCategories: Signal<any[]> = computed((): any[] => {
+    const categories: Category[] = this.categories();
+    const subCategories: Category[] = categories.filter((c: Category): boolean => !!c.parent);
+
+    const groups: Map<number, any> = new Map();
+
+    subCategories.forEach((cat: Category): void => {
+      const parentId: number = cat.parent!.id;
+      if (!groups.has(parentId)) {
+        groups.set(parentId, {
+          label: cat.parent!.name,
+          value: parentId,
+          items: []
+        });
+      }
+      groups.get(parentId).items.push({
+        label: cat.name,
+        value: cat.name
+      });
+    });
+
+    return Array.from(groups.values()).sort(((a: any, b: any): number => a.label.localeCompare(b.label)));
+  });
+
   /** Maps internal transaction state to PrimeNG filter metadata for UI synchronization. */
   readonly tableFilters: Signal<{ [key: string]: FilterMetadata | FilterMetadata[] }> = computed(() => {
     const filter: TransactionFilter = this.state().filter;
     const filters: { [key: string]: FilterMetadata | FilterMetadata[] } = {
       date: [{value: null, matchMode: 'dateIs', operator: 'and'}],
-      merchantAndDesc: [{value: null, matchMode: 'custom', operator: 'and'}]
+      merchantAndDesc: [{value: null, matchMode: 'custom', operator: 'and'}],
+      categoryName: [{value: null, matchMode: 'equals', operator: 'and'}]
     };
 
     if (filter.startDate || filter.endDate) {
@@ -400,6 +426,14 @@ export class TransactionsComponent implements OnInit, OnDestroy {
       } else {
         filter.merchant = undefined;
         filter.description = undefined;
+      }
+
+      const categoryFilter = event.filters['categoryName'];
+      if (categoryFilter) {
+        const metadata = Array.isArray(categoryFilter) ? categoryFilter[0] : categoryFilter;
+        filter.categoryName = metadata.value || undefined;
+      } else {
+        filter.categoryName = undefined;
       }
     }
 

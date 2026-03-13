@@ -133,6 +133,28 @@
             <th id="txn-category" class="py-4 font-semibold text-surface-700">
               <div class="flex items-center gap-2">
                 Category
+                <p-columnFilter field="categoryName" display="menu" [showMatchModes]="false" [showOperator]="false" [showAddButton]="false">
+                  <ng-template pTemplate="filter" let-filterConstraint="filterConstraint">
+                    <p-select
+                      [(ngModel)]="filterConstraint.value"
+                      [options]="groupedCategories()"
+                      optionLabel="label"
+                      optionValue="value"
+                      [group]="true"
+                      placeholder="Select Category"
+                      [showClear]="true"
+                      [filter]="true"
+                      appendTo="body"
+                      class="w-64"
+                    >
+                      <ng-template pTemplate="group" let-group>
+                        <div class="flex items-center gap-2 font-bold text-primary">
+                          <span>{{ group.label }}</span>
+                        </div>
+                      </ng-template>
+                    </p-select>
+                  </ng-template>
+                </p-columnFilter>
               </div>
             </th>
 
