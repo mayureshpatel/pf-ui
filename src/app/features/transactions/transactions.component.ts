@@ -488,7 +488,12 @@ export class TransactionsComponent implements OnInit, OnDestroy {
   }
 
   clearFilters(): void {
-    this.state.update((s: TransactionState) => ({...s, filter: {}, page: 0}));
+    this.state.update((s: TransactionState) => ({
+      ...s,
+      filter: {},
+      page: 0,
+      sort: 'date,desc'
+    }));
   }
 
   updateMerchantFilter(filterConstraint: any, merchant: string | null): void {
