@@ -146,6 +146,14 @@ export class TransactionsComponent implements OnInit, OnDestroy {
   /** The total number of records matching the current filter (for pagination). */
   readonly totalRecords: WritableSignal<number> = signal(0);
 
+  /** Available transaction types for filtering. */
+  readonly transactionTypeOptions: { label: string, value: string }[] = [
+    { label: 'Income', value: 'INCOME' },
+    { label: 'Expense', value: 'EXPENSE' },
+    { label: 'Transfer', value: 'TRANSFER' },
+    { label: 'Adjustment', value: 'ADJUSTMENT' }
+  ];
+
   /** Unique merchant names for filtering. */
   readonly uniqueMerchantNames: Signal<string[]> = computed((): string[] => {
     const names: string[] = this.merchants()
@@ -220,9 +228,9 @@ export class TransactionsComponent implements OnInit, OnDestroy {
       }];
     }
 
-    if (filter.minAmount !== undefined || filter.maxAmount !== undefined) {
+    if (filter.minAmount !== undefined || filter.maxAmount !== undefined || filter.type) {
       filters['amount'] = [{
-        value: {min: filter.minAmount ?? null, max: filter.maxAmount ?? null},
+        value: {min: filter.minAmount ?? null, max: filter.maxAmount ?? null, type: filter.type ?? null},
         matchMode: 'custom',
         operator: 'and'
       }];
@@ -466,9 +474,11 @@ export class TransactionsComponent implements OnInit, OnDestroy {
         const metadata = Array.isArray(amountFilter) ? amountFilter[0] : amountFilter;
         filter.minAmount = metadata.value?.min ?? undefined;
         filter.maxAmount = metadata.value?.max ?? undefined;
+        filter.type = metadata.value?.type ?? undefined;
       } else {
         filter.minAmount = undefined;
         filter.maxAmount = undefined;
+        filter.type = undefined;
       }
     }
 
@@ -517,19 +527,31 @@ export class TransactionsComponent implements OnInit, OnDestroy {
 
   updateMinAmountFilter(filterConstraint: any, min: number | null): void {
     const currentMax = filterConstraint.value?.max ?? null;
-    if (min === null && currentMax === null) {
+    const currentType = filterConstraint.value?.type ?? null;
+    if (min === null && currentMax === null && currentType === null) {
       filterConstraint.value = null;
     } else {
-      filterConstraint.value = {min, max: currentMax};
+      filterConstraint.value = {min, max: currentMax, type: currentType};
     }
   }
 
   updateMaxAmountFilter(filterConstraint: any, max: number | null): void {
     const currentMin = filterConstraint.value?.min ?? null;
-    if (max === null && currentMin === null) {
+    const currentType = filterConstraint.value?.type ?? null;
+    if (max === null && currentMin === null && currentType === null) {
       filterConstraint.value = null;
     } else {
-      filterConstraint.value = {min: currentMin, max};
+      filterConstraint.value = {min: currentMin, max, type: currentType};
+    }
+  }
+
+  updateTypeFilter(filterConstraint: any, type: string | null): void {
+    const currentMin = filterConstraint.value?.min ?? null;
+    const currentMax = filterConstraint.value?.max ?? null;
+    if (type === null && currentMin === null && currentMax === null) {
+      filterConstraint.value = null;
+    } else {
+      filterConstraint.value = {min: currentMin, max: currentMax, type};
     }
   }
 

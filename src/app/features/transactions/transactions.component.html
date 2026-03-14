@@ -188,6 +188,18 @@
                   <ng-template pTemplate="filter" let-filterConstraint="filterConstraint">
                     <div class="flex flex-col gap-4 w-64">
                       <div class="flex flex-col gap-2">
+                        <label for="type-filter" class="text-xs font-bold uppercase text-surface-500">Type</label>
+                        <p-select
+                          id="type-filter"
+                          [ngModel]="filterConstraint.value?.type"
+                          (ngModelChange)="updateTypeFilter(filterConstraint, $event)"
+                          [options]="transactionTypeOptions"
+                          placeholder="Select Type"
+                          [showClear]="true"
+                          class="w-full"
+                        />
+                      </div>
+                      <div class="flex flex-col gap-2">
                         <label for="min-amount-filter" class="text-xs font-bold uppercase text-surface-500">Min Amount</label>
                         <p-inputNumber
                           id="min-amount-filter"
