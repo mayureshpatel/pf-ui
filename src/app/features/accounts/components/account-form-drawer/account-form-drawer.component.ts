@@ -15,7 +15,7 @@ import {CommonModule} from '@angular/common';
 import {FormControl, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
 import {ButtonModule} from 'primeng/button';
 import {InputTextModule} from 'primeng/inputtext';
-import {Select} from 'primeng/select';
+import {SelectModule} from 'primeng/select';
 import {InputNumberModule} from 'primeng/inputnumber';
 import {MessageModule} from 'primeng/message';
 import {Account, AccountCreateRequest, AccountType, AccountUpdateRequest, BankName} from '@models/account.model';
@@ -29,7 +29,7 @@ import {BankOption} from '@models/transaction.model';
     ReactiveFormsModule,
     ButtonModule,
     InputTextModule,
-    Select,
+    SelectModule,
     InputNumberModule,
     MessageModule,
     DrawerComponent
