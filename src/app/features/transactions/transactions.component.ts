@@ -148,10 +148,10 @@ export class TransactionsComponent implements OnInit, OnDestroy {
 
   /** Available transaction types for filtering. */
   readonly transactionTypeOptions: { label: string, value: string }[] = [
-    { label: 'Income', value: 'INCOME' },
-    { label: 'Expense', value: 'EXPENSE' },
-    { label: 'Transfer', value: 'TRANSFER' },
-    { label: 'Adjustment', value: 'ADJUSTMENT' }
+    {label: 'Income', value: 'INCOME'},
+    {label: 'Expense', value: 'EXPENSE'},
+    {label: 'Transfer', value: 'TRANSFER'},
+    {label: 'Adjustment', value: 'ADJUSTMENT'}
   ];
 
   /** Unique merchant names for filtering. */
@@ -188,14 +188,14 @@ export class TransactionsComponent implements OnInit, OnDestroy {
     result.unshift({
       label: 'Special',
       value: -1,
-      items: [{ label: 'Uncategorized', value: '__UNDEFINED__' }]
+      items: [{label: 'Uncategorized', value: '__UNDEFINED__'}]
     });
 
     return result;
-    });
+  });
 
-    /** Maps internal transaction state to PrimeNG filter metadata for UI synchronization. */
-    readonly tableFilters: Signal<{ [key: string]: FilterMetadata | FilterMetadata[] }> = computed(() => {
+  /** Maps internal transaction state to PrimeNG filter metadata for UI synchronization. */
+  readonly tableFilters: Signal<{ [key: string]: FilterMetadata | FilterMetadata[] }> = computed(() => {
     const filter: TransactionFilter = this.state().filter;
     const filters: { [key: string]: FilterMetadata | FilterMetadata[] } = {
       date: [{value: null, matchMode: 'dateIs', operator: 'and'}],
