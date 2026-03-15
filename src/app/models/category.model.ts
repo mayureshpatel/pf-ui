@@ -10,6 +10,7 @@
  * @property parent - The parent category, if any.
  * @property icon - The icon associated with the category.
  * @property color - The color associated with the category.
+ * @property transactionCount - The number of transactions associated with the category, if any.
  */
 export interface Category {
   id: number;
@@ -19,6 +20,8 @@ export interface Category {
   parent: Category | null;
   icon: string;
   color: string;
+
+  transactionCount?: number;
 }
 
 /**
@@ -36,7 +39,6 @@ export enum CategoryType {
 /**
  * Represents a request to create a new category.
  *
- * @property userId - The ID of the user creating the category.
  * @property name - The name of the category.
  * @property type - The type of the category (income, expense, both, or transfer).
  * @property icon - The icon associated with the category.
@@ -44,11 +46,10 @@ export enum CategoryType {
  * @property parentId - The ID of the parent category, if any.
  */
 export interface CategoryCreateRequest {
-  userId: number;
   name: string;
   type: string;
-  icon: string;
-  color: string;
+  icon?: string;
+  color?: string;
   parentId?: number;
 }
 
@@ -56,7 +57,6 @@ export interface CategoryCreateRequest {
  * Represents a request to update an existing category.
  *
  * @property id - The ID of the category to update.
- * @property userId - The ID of the user updating the category.
  * @property name - The new name of the category.
  * @property type - The new type of the category (income, expense, both, or transfer).
  * @property icon - The new icon associated with the category.
@@ -65,51 +65,34 @@ export interface CategoryCreateRequest {
  */
 export interface CategoryUpdateRequest {
   id: number;
-  userId: number;
   name: string;
   type: string;
-  color: string;
-  icon: string;
+  color?: string;
+  icon?: string;
   parentId?: number;
-}
-
-/**
- * Represents a category with the number of transactions it is associated with.
- *
- * @property transactionCount - The number of transactions associated with the category.
- * @extends Category
- *
- */
-export interface CategoryTransactionCount extends Category {
-  transactionCount: number;
 }
 
 /**
  * Represents a category view model with additional usage information.
  *
- * @property groupName - The name of the group the category belongs to.
  * @property budgetedAmount - The budgeted amount for the category, if any.
  * @property remainingAmount - The remaining amount for the category, if any.
  * @property percentageUsed - The percentage of the budget used by the category, if any.
- * @extends CategoryTransactionCount
+ * @extends Category
  */
-export interface CategoryBudgetGroup extends CategoryTransactionCount {
-  groupName: string;
+export interface CategoryBudget extends Category {
   budgetedAmount?: number;
   remainingAmount?: number;
   percentageUsed?: number;
 }
 
 /**
- * Represents a parent category and all its child categories; where the group id and name
- * are the parent category id and name.
+ * Represents a parent category and all its child categories.
  *
- * @property groupLabel - The label of the group the parent category belongs to.
- * @property groupId - The ID of the parent category.
+ * @property parent - The parent category.
  * @property items - The list of child categories of the parent category.
  */
 export interface CategoryGroup {
-  groupLabel: string;
-  groupId: number;
+  parent: Category;
   items: Category[];
 }
