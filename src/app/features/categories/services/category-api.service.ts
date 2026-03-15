@@ -16,22 +16,25 @@ export class CategoryApiService {
   private readonly transactionApiUrl = `${environment.apiUrl}/transactions`;
 
   getCategories(): Observable<Category[]> {
-    return this.http.get<Category[]>(`${this.apiUrl}/grouped`);
+    return this.http.get<Category[]>(`${this.apiUrl}`);
   }
 
   getGroupedCategories(): Observable<CategoryGroup[]> {
-    return this.http.get<Category[]>(`${this.apiUrl}/grouped`).pipe(
+    return this.http.get<Category[]>(`${this.apiUrl}`).pipe(
       map((response: Category[]): CategoryGroup[] => {
         const categories: Category[] = Array.isArray(response) ? response : [];
         const parents: Category[] = categories.filter((c: Category): boolean => !c.parent);
 
         return parents.map((parent: Category): CategoryGroup => ({
-          groupId: parent.id,
-          groupLabel: parent.name,
-          items: categories.filter((c: Category) => c.parent?.id === parent.id)
+          parent,
+          items: categories.filter((c: Category): boolean => c.parent?.id === parent.id)
         }));
       })
     );
+  }
+
+  getParentCategories(): Observable<Category[]> {
+    return this.http.get<Category[]>(`${this.apiUrl}/parents`);
   }
 
   getChildCategories(): Observable<Category[]> {
