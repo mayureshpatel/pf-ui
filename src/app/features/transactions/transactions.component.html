@@ -42,7 +42,7 @@
                 icon="pi pi-filter-slash"
                 [text]="true"
                 severity="secondary"
-                (onClick)="clearFilters(transactionTable)"
+                (onClick)="clearFilters()"
                 pTooltip="Clear Filters"
               />
             </div>
@@ -78,28 +78,104 @@
               <div class="flex items-center gap-2">
                 Date
                 <p-sortIcon field="date"/>
-                <p-columnFilter type="date" field="date" display="menu"></p-columnFilter>
+                <p-columnFilter type="date" field="date" display="menu">
+                  <ng-template pTemplate="filter" let-filterConstraint="filterConstraint">
+                    <p-datePicker
+                      [(ngModel)]="filterConstraint.value"
+                      [showIcon]="true"
+                      dateFormat="mm/dd/yy"
+                      placeholder="mm/dd/yyyy"
+                    />
+                  </ng-template>
+                </p-columnFilter>
               </div>
             </th>
 
             <!-- Merchant / Description -->
-            <th id="txn-merchant" class="py-4 font-semibold text-surface-700">
+            <th id="txn-merchant" pSortableColumn="description" class="py-4 font-semibold text-surface-700">
               <div class="flex items-center gap-2">
                 Merchant / Description
+                <p-sortIcon field="description"/>
+                <p-columnFilter field="merchantAndDesc" display="menu" [showMatchModes]="false" [showOperator]="false" [showAddButton]="false">
+                  <ng-template pTemplate="filter" let-filterConstraint="filterConstraint">
+                    <div class="flex flex-col gap-4 w-64">
+                      <div class="flex flex-col gap-2">
+                        <label for="merchant-filter" class="text-xs font-bold uppercase text-surface-500">Merchant</label>
+                        <p-select
+                          id="merchant-filter"
+                          [ngModel]="filterConstraint.value?.merchant"
+                          (ngModelChange)="updateMerchantFilter(filterConstraint, $event)"
+                          [options]="uniqueMerchantNames()"
+                          placeholder="Select Merchant"
+                          [showClear]="true"
+                          [filter]="true"
+                            />
+                      </div>
+                      <div class="flex flex-col gap-2">
+                        <label for="transaction-description-filter" class="text-xs font-bold uppercase text-surface-500">Description</label>
+                        <input
+                          id="transaction-description-filter"
+                          pInputText
+                          [ngModel]="filterConstraint.value?.description"
+                          (ngModelChange)="updateDescriptionFilter(filterConstraint, $event)"
+                          placeholder="Search description..."
+                          class="w-full"
+                        />
+                      </div>
+                    </div>
+                  </ng-template>
+                </p-columnFilter>
               </div>
             </th>
 
             <!-- Category -->
-            <th id="txn-category" class="py-4 font-semibold text-surface-700">
+            <th id="txn-category" pSortableColumn="category.name" class="py-4 font-semibold text-surface-700">
               <div class="flex items-center gap-2">
                 Category
+                <p-sortIcon field="category.name"/>
+                <p-columnFilter field="categoryName" display="menu" [showMatchModes]="false" [showOperator]="false" [showAddButton]="false">
+                  <ng-template pTemplate="filter" let-filterConstraint="filterConstraint">
+                    <p-select
+                      [(ngModel)]="filterConstraint.value"
+                      [options]="groupedCategories()"
+                      optionLabel="label"
+                      optionValue="value"
+                      [group]="true"
+                      placeholder="Select Category"
+                      [showClear]="true"
+                      [filter]="true"
+                      class="w-64"
+                    >
+                      <ng-template pTemplate="group" let-group>
+                        <div class="flex items-center gap-2 font-bold text-primary">
+                          <span>{{ group.label }}</span>
+                        </div>
+                      </ng-template>
+                    </p-select>
+                  </ng-template>
+                </p-columnFilter>
               </div>
             </th>
 
             <!-- Account -->
-            <th id="txn-account" class="py-4 font-semibold text-surface-700">
+            <th id="txn-account" pSortableColumn="account.name" class="py-4 font-semibold text-surface-700">
               <div class="flex items-center gap-2">
                 Account
+                <p-sortIcon field="account.name"/>
+                <p-columnFilter field="accountId" display="menu" [showMatchModes]="false" [showOperator]="false" [showAddButton]="false">
+                  <ng-template pTemplate="filter" let-filterConstraint="filterConstraint">
+                    <p-select
+                      [(ngModel)]="filterConstraint.value"
+                      [options]="accounts()"
+                      optionLabel="name"
+                      optionValue="id"
+                      placeholder="Select Account"
+                      [showClear]="true"
+                      [filter]="true"
+                      class="w-64"
+                    />
+                  </ng-template>
+                </p-columnFilter>
               </div>
             </th>
 
@@ -108,6 +184,50 @@
               <div class="flex items-center justify-end gap-2">
                 Amount
                 <p-sortIcon field="amount"/>
+                <p-columnFilter field="amount" display="menu" [showMatchModes]="false" [showOperator]="false" [showAddButton]="false">
+                  <ng-template pTemplate="filter" let-filterConstraint="filterConstraint">
+                    <div class="flex flex-col gap-4 w-64">
+                      <div class="flex flex-col gap-2">
+                        <label for="type-filter" class="text-xs font-bold uppercase text-surface-500">Type</label>
+                        <p-select
+                          id="type-filter"
+                          [ngModel]="filterConstraint.value?.type"
+                          (ngModelChange)="updateTypeFilter(filterConstraint, $event)"
+                          [options]="transactionTypeOptions"
+                          placeholder="Select Type"
+                          [showClear]="true"
+                          class="w-full"
+                        />
+                      </div>
+                      <div class="flex flex-col gap-2">
+                        <label for="min-amount-filter" class="text-xs font-bold uppercase text-surface-500">Min Amount</label>
+                        <p-inputNumber
+                          id="min-amount-filter"
+                          [ngModel]="filterConstraint.value?.min"
+                          (ngModelChange)="updateMinAmountFilter(filterConstraint, $event)"
+                          mode="currency"
+                          currency="USD"
+                          locale="en-US"
+                          placeholder="Min amount"
+                          class="w-full"
+                        />
+                      </div>
+                      <div class="flex flex-col gap-2">
+                        <label for="max-amount-filter" class="text-xs font-bold uppercase text-surface-500">Max Amount</label>
+                        <p-inputNumber
+                          id="max-amount-filter"
+                          [ngModel]="filterConstraint.value?.max"
+                          (ngModelChange)="updateMaxAmountFilter(filterConstraint, $event)"
+                          mode="currency"
+                          currency="USD"
+                          locale="en-US"
+                          placeholder="Max amount"
+                          class="w-full"
+                        />
+                      </div>
+                    </div>
+                  </ng-template>
+                </p-columnFilter>
               </div>
             </th>
 
@@ -178,14 +298,13 @@
 
             <!-- Inline Actions -->
             <td class="text-center">
-              <div class="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div class="flex justify-center gap-1">
                 <p-button
                   icon="pi pi-pencil"
                   [text]="true"
                   [rounded]="true"
                   severity="secondary"
                   (onClick)="openEditDialog(txn)"
-                  pTooltip="Edit Entry"
                 />
                 <p-button
                   icon="pi pi-trash"
@@ -193,7 +312,6 @@
                   [rounded]="true"
                   severity="danger"
                   (onClick)="deleteTransaction(txn)"
-                  pTooltip="Remove Record"
                 />
               </div>
             </td>

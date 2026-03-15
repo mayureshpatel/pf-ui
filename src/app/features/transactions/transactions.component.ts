@@ -8,7 +8,7 @@ import {
   OnInit,
   Signal,
   signal,
-  untracked, viewChild,
+  untracked,
   WritableSignal
 } from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
@@ -17,7 +17,7 @@ import {FormsModule} from '@angular/forms';
 import {ActivatedRoute, Params, Router} from '@angular/router';
 import {finalize, Observable, skip} from 'rxjs';
 import {ButtonModule} from 'primeng/button';
-import {Table, TableModule} from 'primeng/table';
+import {TableModule} from 'primeng/table';
 import {CardModule} from 'primeng/card';
 import {TooltipModule} from 'primeng/tooltip';
 import {CheckboxModule} from 'primeng/checkbox';
@@ -26,6 +26,8 @@ import {InputNumberModule} from 'primeng/inputnumber';
 import {InputTextModule} from 'primeng/inputtext';
 import {ConfirmationService, FilterMetadata} from 'primeng/api';
 import {ContextMenuModule} from 'primeng/contextmenu';
+import {DatePicker} from 'primeng/datepicker';
+import {SelectModule} from 'primeng/select';
 
 import {
   PageResponse,
@@ -73,6 +75,8 @@ import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
     InputNumberModule,
     InputTextModule,
     ContextMenuModule,
+    DatePicker,
+    SelectModule,
     ScreenToolbarComponent,
     TransactionFormDrawerComponent,
     CsvImportDialogComponent,
@@ -142,15 +146,64 @@ export class TransactionsComponent implements OnInit, OnDestroy {
   /** The total number of records matching the current filter (for pagination). */
   readonly totalRecords: WritableSignal<number> = signal(0);
 
-  transactionTable = viewChild('transactionTable');
+  /** Available transaction types for filtering. */
+  readonly transactionTypeOptions: { label: string, value: string }[] = [
+    { label: 'Income', value: 'INCOME' },
+    { label: 'Expense', value: 'EXPENSE' },
+    { label: 'Transfer', value: 'TRANSFER' },
+    { label: 'Adjustment', value: 'ADJUSTMENT' }
+  ];
 
-  /** Maps internal transaction state to PrimeNG filter metadata for UI synchronization. */
-  readonly tableFilters: Signal<{ [key: string]: FilterMetadata | FilterMetadata[] }> = computed(() => {
+  /** Unique merchant names for filtering. */
+  readonly uniqueMerchantNames: Signal<string[]> = computed((): string[] => {
+    const names: string[] = this.merchants()
+      .map((m: Merchant): string => m.cleanName)
+      .filter((name: string): name is string => !!name);
+    return [...new Set(names)].sort(((a: string, b: string): number => a.localeCompare(b)));
+  });
+
+  /** Grouped categories for filtering, only including sub-categories. */
+  readonly groupedCategories: Signal<any[]> = computed((): any[] => {
+    const categories: Category[] = this.categories();
+    const subCategories: Category[] = categories.filter((c: Category): boolean => !!c.parent);
+
+    const groups: Map<number, any> = new Map();
+
+    subCategories.forEach((cat: Category): void => {
+      const parentId: number = cat.parent!.id;
+      if (!groups.has(parentId)) {
+        groups.set(parentId, {
+          label: cat.parent!.name,
+          value: parentId,
+          items: []
+        });
+      }
+      groups.get(parentId).items.push({
+        label: cat.name,
+        value: cat.name
+      });
+    });
+
+    const result = Array.from(groups.values()).sort(((a: any, b: any): number => a.label.localeCompare(b.label)));
+    result.unshift({
+      label: 'Special',
+      value: -1,
+      items: [{ label: 'Uncategorized', value: '__UNDEFINED__' }]
+    });
+
+    return result;
+    });
+
+    /** Maps internal transaction state to PrimeNG filter metadata for UI synchronization. */
+    readonly tableFilters: Signal<{ [key: string]: FilterMetadata | FilterMetadata[] }> = computed(() => {
     const filter: TransactionFilter = this.state().filter;
-    const filters: { [key: string]: FilterMetadata | FilterMetadata[] } = {};
-
-    console.log("TransactionFilters: ", filter);
-    console.log("FilterMetadata: ", filters);
+    const filters: { [key: string]: FilterMetadata | FilterMetadata[] } = {
+      date: [{value: null, matchMode: 'dateIs', operator: 'and'}],
+      merchantAndDesc: [{value: null, matchMode: 'custom', operator: 'and'}],
+      categoryName: [{value: filter.categoryName || null, matchMode: 'equals', operator: 'and'}],
+      accountId: [{value: filter.accountId || null, matchMode: 'equals', operator: 'and'}],
+      amount: [{value: null, matchMode: 'custom', operator: 'and'}]
+    };
 
     if (filter.startDate || filter.endDate) {
       const dateFilters: FilterMetadata[] = [];
@@ -165,6 +218,22 @@ export class TransactionsComponent implements OnInit, OnDestroy {
         }
       }
       filters['date'] = dateFilters;
+    }
+
+    if (filter.merchant || filter.description) {
+      filters['merchantAndDesc'] = [{
+        value: {merchant: filter.merchant || null, description: filter.description || null},
+        matchMode: 'custom',
+        operator: 'and'
+      }];
+    }
+
+    if (filter.minAmount !== undefined || filter.maxAmount !== undefined || filter.type) {
+      filters['amount'] = [{
+        value: {min: filter.minAmount ?? null, max: filter.maxAmount ?? null, type: filter.type ?? null},
+        matchMode: 'custom',
+        operator: 'and'
+      }];
     }
 
     return filters;
@@ -373,6 +442,44 @@ export class TransactionsComponent implements OnInit, OnDestroy {
         filter.startDate = undefined;
         filter.endDate = undefined;
       }
+
+      const merchantAndDescFilter = event.filters['merchantAndDesc'];
+      if (merchantAndDescFilter) {
+        const metadata = Array.isArray(merchantAndDescFilter) ? merchantAndDescFilter[0] : merchantAndDescFilter;
+        filter.merchant = metadata.value?.merchant || undefined;
+        filter.description = metadata.value?.description || undefined;
+      } else {
+        filter.merchant = undefined;
+        filter.description = undefined;
+      }
+
+      const categoryFilter = event.filters['categoryName'];
+      if (categoryFilter) {
+        const metadata = Array.isArray(categoryFilter) ? categoryFilter[0] : categoryFilter;
+        filter.categoryName = metadata.value || undefined;
+      } else {
+        filter.categoryName = undefined;
+      }
+
+      const accountFilter = event.filters['accountId'];
+      if (accountFilter) {
+        const metadata = Array.isArray(accountFilter) ? accountFilter[0] : accountFilter;
+        filter.accountId = metadata.value || undefined;
+      } else {
+        filter.accountId = undefined;
+      }
+
+      const amountFilter = event.filters['amount'];
+      if (amountFilter) {
+        const metadata = Array.isArray(amountFilter) ? amountFilter[0] : amountFilter;
+        filter.minAmount = metadata.value?.min ?? undefined;
+        filter.maxAmount = metadata.value?.max ?? undefined;
+        filter.type = metadata.value?.type ?? undefined;
+      } else {
+        filter.minAmount = undefined;
+        filter.maxAmount = undefined;
+        filter.type = undefined;
+      }
     }
 
     const currentState: TransactionState = this.state();
@@ -390,10 +497,62 @@ export class TransactionsComponent implements OnInit, OnDestroy {
     }
   }
 
-  clearFilters(table: Table): void {
-    this.state.update((s: TransactionState) => ({...s, filter: {}, page: 0}));
-    console.log("Clearing filters: ", table.filters);
-    table.clear();
+  clearFilters(): void {
+    this.state.update((s: TransactionState) => ({
+      ...s,
+      filter: {},
+      page: 0,
+      sort: 'date,desc'
+    }));
+  }
+
+  updateMerchantFilter(filterConstraint: any, merchant: string | null): void {
+    const currentDescription = filterConstraint.value?.description || null;
+    if (!merchant && !currentDescription) {
+      filterConstraint.value = null;
+    } else {
+      filterConstraint.value = {merchant, description: currentDescription};
+    }
+  }
+
+  updateDescriptionFilter(filterConstraint: any, description: string | null): void {
+    const currentMerchant = filterConstraint.value?.merchant || null;
+    const desc = description?.trim() || null;
+    if (!desc && !currentMerchant) {
+      filterConstraint.value = null;
+    } else {
+      filterConstraint.value = {merchant: currentMerchant, description: desc};
+    }
+  }
+
+  updateMinAmountFilter(filterConstraint: any, min: number | null): void {
+    const currentMax = filterConstraint.value?.max ?? null;
+    const currentType = filterConstraint.value?.type ?? null;
+    if (min === null && currentMax === null && currentType === null) {
+      filterConstraint.value = null;
+    } else {
+      filterConstraint.value = {min, max: currentMax, type: currentType};
+    }
+  }
+
+  updateMaxAmountFilter(filterConstraint: any, max: number | null): void {
+    const currentMin = filterConstraint.value?.min ?? null;
+    const currentType = filterConstraint.value?.type ?? null;
+    if (max === null && currentMin === null && currentType === null) {
+      filterConstraint.value = null;
+    } else {
+      filterConstraint.value = {min: currentMin, max, type: currentType};
+    }
+  }
+
+  updateTypeFilter(filterConstraint: any, type: string | null): void {
+    const currentMin = filterConstraint.value?.min ?? null;
+    const currentMax = filterConstraint.value?.max ?? null;
+    if (type === null && currentMin === null && currentMax === null) {
+      filterConstraint.value = null;
+    } else {
+      filterConstraint.value = {min: currentMin, max: currentMax, type};
+    }
   }
 
   openCreateDialog(): void {

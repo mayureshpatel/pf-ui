@@ -36,7 +36,10 @@ export class TransactionApiService {
     if (filter.accountId) params = params.set('accountId', filter.accountId.toString());
     if (filter.type) params = params.set('type', filter.type);
     if (filter.description) params = params.set('description', filter.description);
-    if (filter.categoryName) params = params.set('categoryName', filter.categoryName);
+    if (filter.categoryName) {
+      const categoryVal: string = filter.categoryName === '__UNDEFINED__' ? '' : filter.categoryName;
+      params = params.set('categoryName', categoryVal);
+    }
     if (filter.merchant) params = params.set('merchantCleanName', filter.merchant);
     if (filter.minAmount) params = params.set('minAmount', filter.minAmount.toString());
     if (filter.maxAmount) params = params.set('maxAmount', filter.maxAmount.toString());
