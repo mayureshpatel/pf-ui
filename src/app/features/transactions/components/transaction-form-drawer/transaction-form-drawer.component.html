@@ -5,7 +5,11 @@
   [saving]="saving()"
   [saveLabel]="isEditMode() ? 'Update Record' : 'Post Transaction'"
   (saveEmitterRef)="onSubmit()"
-  (cancelEmitterRef)="onHide()">
+  (showEmitterRef)="onShow()">
+
+  @if (loading()) {
+    <p-progress-spinner></p-progress-spinner>
+  }
 
   <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-8 py-4">
     <!-- Transaction Type -->
@@ -73,16 +77,15 @@
           formControlName="merchant"
           [suggestions]="filteredMerchants()"
           (completeMethod)="filterMerchants($event)"
-          field="cleanName"
           [dropdown]="true"
           placeholder="Search for a merchant..."
-          styleClass="w-full"
-          inputStyleClass="w-full py-3"
-          appendTo="body">
+          optionLabel="originalName"
+          dataKey="merchant"
+        >
           <ng-template #item let-merchant>
             <div class="flex items-center gap-2">
               <i class="pi pi-shop text-surface-400"></i>
-              <span class="font-medium">{{ merchant.cleanName }}</span>
+              <span class="font-medium">{{ merchant.originalName }}</span>
             </div>
           </ng-template>
         </p-autoComplete>
@@ -98,12 +101,12 @@
           formControlName="category"
           [suggestions]="filteredCategories()"
           (completeMethod)="filterCategories($event)"
-          field="name"
           [dropdown]="true"
+          optionLabel="category.name"
+          dataKey="category"
           placeholder="Select a category..."
-          styleClass="w-full"
           inputStyleClass="w-full py-3"
-          appendTo="body">
+        >
           <ng-template #item let-category>
             <div class="flex items-center gap-2">
               <div [class]="'w-2 h-2 rounded-full ' + (category.color || 'bg-surface-300')"></div>

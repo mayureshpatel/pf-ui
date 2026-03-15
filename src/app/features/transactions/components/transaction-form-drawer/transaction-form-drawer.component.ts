@@ -1,7 +1,7 @@
 import {
   Component,
   computed,
-  effect,
+  inject,
   input,
   InputSignal,
   model,
@@ -32,6 +32,12 @@ import {Account} from '@models/account.model';
 import {Category} from '@models/category.model';
 import {Merchant} from '@models/merchant.model';
 import {DrawerComponent} from '@shared/components/drawer/drawer.component';
+import {finalize, forkJoin} from 'rxjs';
+import {CategoryApiService} from '@features/categories/services/category-api.service';
+import {AccountApiService} from '@features/accounts/services/account-api.service';
+import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
+import {MerchantApiService} from '@features/merchants/services/merchant-api.service';
+import {ProgressSpinner} from 'primeng/progressspinner';
 
 /**
  * Drawer component for creating or editing individual ledger transactions.
@@ -52,31 +58,42 @@ import {DrawerComponent} from '@shared/components/drawer/drawer.component';
     SelectModule,
     DatePicker,
     MessageModule,
-    DrawerComponent
+    DrawerComponent,
+    ProgressSpinner
   ],
   templateUrl: './transaction-form-drawer.component.html'
 })
 export class TransactionFormDrawerComponent {
+  private readonly categoryApi: CategoryApiService = inject(CategoryApiService);
+  private readonly accountApi: AccountApiService = inject(AccountApiService);
+  private readonly merchantApi: MerchantApiService = inject(MerchantApiService);
+
   /** Two-way binding for drawer visibility. */
   readonly visible: ModelSignal<boolean> = model.required<boolean>();
 
   /** The transaction being edited, or null for creation mode. */
   readonly transaction: InputSignal<Transaction | null> = input<Transaction | null>(null);
 
-  /** Available bank accounts for transaction association. */
-  readonly accounts: InputSignal<Account[]> = input.required<Account[]>();
-
-  /** Available categories for classification. */
-  readonly categories: InputSignal<Category[]> = input.required<Category[]>();
-
-  /** Known merchants for autocomplete suggestions. */
-  readonly merchants: InputSignal<Merchant[]> = input.required<Merchant[]>();
-
   /** Indicates if a save operation is in flight. */
   readonly saving: InputSignal<boolean> = input(false);
 
+  /** Indicates if the drawer is currently loading data. */
+  readonly loading: WritableSignal<boolean> = signal(false);
+
   /** Emitted when the form is validated and ready for persistence. */
   readonly save: OutputEmitterRef<TransactionCreateRequest | TransactionUpdateRequest> = output<TransactionCreateRequest | TransactionUpdateRequest>();
+
+  /** Available bank accounts for transaction association. */
+  readonly accounts: WritableSignal<Account[]> = signal<Account[]>([]);
+
+  /** Available categories for classification. */
+  readonly categories: WritableSignal<Category[]> = signal<Category[]>([]);
+
+  /** Known merchants for autocomplete suggestions. */
+  readonly merchants: WritableSignal<Merchant[]> = signal<Merchant[]>([]);
+
+  /** Error message to display. */
+  readonly errorMessage: WritableSignal<string | null> = signal(null);
 
   /** Filtered suggestions for the category autocomplete. */
   readonly filteredCategories: WritableSignal<Category[]> = signal([]);
@@ -119,55 +136,34 @@ export class TransactionFormDrawerComponent {
   private readonly selectedMerchant: WritableSignal<Merchant | null> = signal<Merchant | null>(null);
 
   constructor() {
-    /**
-     * Core effect to synchronize the form state whenever the input transaction changes
-     * or the drawer is opened.
-     */
-    effect((): void => {
-      const txn: Transaction | null = this.transaction();
-      const isVisible: boolean = this.visible();
-
-      if (isVisible) {
-        if (txn) {
-          this.form.patchValue({
-            transactionDate: txn.date instanceof Date ? txn.date.toISOString().split('T')[0] : txn.date,
-            amount: Math.abs(txn.amount),
-            description: txn.description,
-            type: txn.type,
-            category: txn.category,
-            merchant: txn.merchant,
-            accountId: txn.account.id
-          });
-        } else {
-          this.form.reset({
-            transactionDate: new Date().toISOString().split('T')[0],
-            amount: 0,
-            type: TransactionType.EXPENSE,
-            description: '',
-            category: null,
-            merchant: null
-          });
-        }
-      }
-    });
-
-    /**
-     * Declarative sync for description based on merchant selection.
-     */
-    effect((): void => {
-      const merchant: Merchant | null = this.selectedMerchant();
-
-      if (merchant && 'originalName' in merchant) {
-        this.form.controls.description.setValue(merchant.originalName, {emitEvent: false});
-      }
-    });
+    this.loadData();
   }
 
-  /**
-   * Closes the drawer.
-   */
-  onHide(): void {
-    this.visible.set(false);
+  loadData(): void {
+    this.loading.set(true);
+
+    forkJoin({
+      categories: this.categoryApi.getCategories(),
+      accounts: this.accountApi.getAccounts(),
+      merchants: this.merchantApi.getMerchants(),
+    })
+      .pipe(
+        takeUntilDestroyed(),
+        finalize(() => this.loading.set(false))
+      )
+      .subscribe({
+        next: ({categories, accounts, merchants}) => {
+          this.categories.set(categories);
+          this.accounts.set(accounts);
+          this.merchants.set(merchants);
+
+          this.filteredCategories.set(categories);
+          this.filteredMerchants.set(merchants);
+        },
+        error: (error) => {
+          console.error('Error loading data:', error);
+        }
+      });
   }
 
   /**
@@ -188,6 +184,35 @@ export class TransactionFormDrawerComponent {
     this.filteredMerchants.set(
       this.merchants().filter((m: Merchant): boolean => m.cleanName.toLowerCase().includes(query))
     );
+  }
+
+  onShow(): void {
+    this.form.reset();
+    this.errorMessage.set(null);
+
+    const transaction: Transaction | null = this.transaction();
+
+    if (transaction) {
+      this.form.patchValue({
+        transactionDate: transaction.date instanceof Date ? transaction.date.toISOString().split('T')[0] : transaction.date,
+        amount: Math.abs(transaction.amount),
+        description: transaction.description,
+        type: transaction.type,
+        category: transaction.category,
+        merchant: transaction.merchant,
+        accountId: transaction.account.id
+      });
+    } else {
+      this.form.patchValue({
+        transactionDate: new Date().toISOString().split('T')[0],
+        amount: 0,
+        description: '',
+        type: TransactionType.EXPENSE,
+        category: null,
+        merchant: null,
+        accountId: 0
+      });
+    }
   }
 
   /**
