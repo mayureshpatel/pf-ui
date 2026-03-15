@@ -135,7 +135,7 @@ export class BulkEditDialogComponent {
     this.categoryApi.getGroupedCategories().subscribe({
       next: (groups: CategoryGroup[]): void => {
         const selectGroups = groups.map((g: CategoryGroup) => ({
-          label: g.groupLabel,
+          label: g.parent.name ?? 'Uncategorized',
           items: g.items.map((c: Category) => ({label: c.name, value: c}))
         }));
         this.categoryGroups.set(selectGroups);
