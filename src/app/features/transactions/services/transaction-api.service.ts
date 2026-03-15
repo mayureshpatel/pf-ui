@@ -11,7 +11,7 @@ import {
   PageResponse,
   TransferSuggestion
 } from '@models/transaction.model';
-import {CategoryTransactionCount} from '@models/category.model';
+import {Category} from '@models/category.model';
 
 @Injectable({
   providedIn: 'root'
@@ -74,7 +74,7 @@ export class TransactionApiService {
     return this.http.post<void>(`${this.apiUrl}/mark-as-transfer`, ids);
   }
 
-  getCountsByCategory(): Observable<CategoryTransactionCount[]> {
-    return this.http.get<CategoryTransactionCount[]>(`${this.apiUrl}/count-by-category`);
+  getCountsByCategory(): Observable<Category[]> {
+    return this.http.get<Category[]>(`${this.apiUrl}/count-by-category`);
   }
 }
