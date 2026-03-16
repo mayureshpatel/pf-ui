@@ -38,6 +38,7 @@ import {AccountApiService} from '@features/accounts/services/account-api.service
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {MerchantApiService} from '@features/merchants/services/merchant-api.service';
 import {ProgressSpinner} from 'primeng/progressspinner';
+import {Tooltip} from 'primeng/tooltip';
 
 /**
  * Drawer component for creating or editing individual ledger transactions.
@@ -59,7 +60,8 @@ import {ProgressSpinner} from 'primeng/progressspinner';
     DatePicker,
     MessageModule,
     DrawerComponent,
-    ProgressSpinner
+    ProgressSpinner,
+    Tooltip
   ],
   templateUrl: './transaction-form-drawer.component.html'
 })
@@ -152,7 +154,10 @@ export class TransactionFormDrawerComponent {
         finalize(() => this.loading.set(false))
       )
       .subscribe({
-        next: ({categories, accounts, merchants}) => {
+        next: ({categories, accounts, merchants}: any): void => {
+          accounts.sort((a: Account, b: Account): number => a.name.localeCompare(b.name));
+          merchants.sort((a: Merchant, b: Merchant): number => a.originalName.localeCompare(b.originalName));
+
           this.categories.set(categories);
           this.accounts.set(accounts);
           this.merchants.set(merchants);
@@ -160,7 +165,7 @@ export class TransactionFormDrawerComponent {
           this.filteredCategories.set(categories);
           this.filteredMerchants.set(merchants);
         },
-        error: (error) => {
+        error: (error: any): void => {
           console.error('Error loading data:', error);
         }
       });
@@ -182,7 +187,7 @@ export class TransactionFormDrawerComponent {
   filterMerchants(event: any): void {
     const query: any = event.query.toLowerCase();
     this.filteredMerchants.set(
-      this.merchants().filter((m: Merchant): boolean => m.cleanName.toLowerCase().includes(query))
+      this.merchants().filter((m: Merchant): boolean => m.originalName.toLowerCase().includes(query))
     );
   }
 

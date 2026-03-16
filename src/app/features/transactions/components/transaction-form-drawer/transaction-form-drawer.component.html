@@ -14,8 +14,9 @@
   <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-8 py-4">
     <!-- Transaction Type -->
     <div class="flex flex-col gap-3">
-      <label class="text-[10px] font-black uppercase tracking-[0.2em] text-surface-400">Transaction
-        Classification</label>
+      <label class="text-[10px] font-black uppercase tracking-[0.2em] text-surface-400">
+        Transaction Classification
+      </label>
       <div class="grid grid-cols-3 gap-3">
         @for (option of typeOptions; track option.value) {
           <button
@@ -77,16 +78,24 @@
           formControlName="merchant"
           [suggestions]="filteredMerchants()"
           (completeMethod)="filterMerchants($event)"
-          [dropdown]="true"
           placeholder="Search for a merchant..."
-          optionLabel="originalName"
           dataKey="id"
+          optionLabel="originalName"
+          panelStyleClass="max-w-2xs"
+          inputStyleClass="w-full"
         >
           <ng-template #item let-merchant>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2" [pTooltip]="tooltipContent" tooltipPosition="top">
               <i class="pi pi-shop text-surface-400"></i>
-              <span class="font-medium">{{ merchant.originalName }}</span>
+              <span class="font-medium truncate">{{ merchant.originalName }}</span>
             </div>
+            <ng-template #tooltipContent>
+              <div class="flex flex-col gap-1">
+                <span class="text-xs">ID: {{ merchant.id }}</span>
+                <span class="font-medium">{{ merchant.originalName }}</span>
+                <span class="text-xs text-surface-500">{{ merchant.cleanName }}</span>
+              </div>
+            </ng-template>
           </ng-template>
         </p-autoComplete>
       </div>
@@ -103,14 +112,15 @@
           (completeMethod)="filterCategories($event)"
           [dropdown]="true"
           optionLabel="category.name"
-          dataKey="category"
+          dataKey="id"
           placeholder="Select a category..."
-          inputStyleClass="w-full py-3"
+          panelStyleClass="max-w-2xs"
+          inputStyleClass="w-full"
         >
           <ng-template #item let-category>
             <div class="flex items-center gap-2">
               <div [class]="'w-2 h-2 rounded-full ' + (category.color || 'bg-surface-300')"></div>
-              <span class="font-medium">{{ category.name }}</span>
+              <span class="font-medium truncate">{{ category.name }}</span>
             </div>
           </ng-template>
         </p-autoComplete>
