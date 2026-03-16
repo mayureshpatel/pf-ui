@@ -39,6 +39,7 @@ import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {MerchantApiService} from '@features/merchants/services/merchant-api.service';
 import {ProgressSpinner} from 'primeng/progressspinner';
 import {Tooltip} from 'primeng/tooltip';
+import {SelectItemGroup} from 'primeng/api';
 
 /**
  * Drawer component for creating or editing individual ledger transactions.
@@ -89,7 +90,7 @@ export class TransactionFormDrawerComponent {
   readonly accounts: WritableSignal<Account[]> = signal<Account[]>([]);
 
   /** Available categories for classification. */
-  readonly categories: WritableSignal<Category[]> = signal<Category[]>([]);
+  readonly groupedCategories: WritableSignal<SelectItemGroup[]> = signal<SelectItemGroup[]>([]);
 
   /** Known merchants for autocomplete suggestions. */
   readonly merchants: WritableSignal<Merchant[]> = signal<Merchant[]>([]);
@@ -157,10 +158,9 @@ export class TransactionFormDrawerComponent {
         next: ({categories, accounts, merchants}: any): void => {
           accounts.sort((a: Account, b: Account): number => a.name.localeCompare(b.name));
           merchants.sort((a: Merchant, b: Merchant): number => a.originalName.localeCompare(b.originalName));
-
-          this.categories.set(categories);
           this.accounts.set(accounts);
           this.merchants.set(merchants);
+          this.groupedCategories.set(this.getGroupedCategories(categories));
 
           this.filteredCategories.set(categories);
           this.filteredMerchants.set(merchants);
@@ -171,14 +171,51 @@ export class TransactionFormDrawerComponent {
       });
   }
 
-  /**
-   * Filters the category list based on user input.
-   */
-  filterCategories(event: any): void {
-    const query: any = event.query.toLowerCase();
-    this.filteredCategories.set(
-      this.categories().filter((c: Category): any => c.name.toLowerCase().includes(query))
-    );
+  getGroupedCategories(categories: Category[]): SelectItemGroup[] {
+    categories.sort((a: Category, b: Category): number => {
+      // if both are parents, sort by name
+      if (!a.parent && !b.parent) {
+        return a.name.localeCompare(b.name);
+      }
+      // if both are children, sort by name
+      else if (a.parent && b.parent) {
+        return a.name.localeCompare(b.name);
+      }
+      // if a is a parent and b is a child
+      else if (a.parent && !b.parent) {
+        return 1;
+      }
+      // if b is a parent and a is a child
+      else if (!a.parent && b.parent) {
+        return -1;
+      }
+
+      return 0;
+    });
+
+    const groupedCategoriesMap = new Map<number, SelectItemGroup>();
+    categories.forEach((category: Category): void => {
+      if (!category.parent) {
+        let header = {
+          label: category.name,
+          value: category,
+          items: []
+        };
+        groupedCategoriesMap.set(category.id, header);
+      } else {
+        let parentId = category.parent.id;
+        let parentHeader = groupedCategoriesMap.get(parentId);
+
+        if (parentHeader) {
+          parentHeader.items.push({
+            label: category.name,
+            value: category
+          });
+        }
+      }
+    });
+
+    return Array.from(groupedCategoriesMap.values());
   }
 
   /**
