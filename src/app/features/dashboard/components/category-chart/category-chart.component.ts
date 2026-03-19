@@ -3,7 +3,7 @@ import {CommonModule} from '@angular/common';
 import {CardModule} from 'primeng/card';
 import {ChartModule} from 'primeng/chart';
 import {CategoryBreakdown} from '@models/dashboard.model';
-import {getCategoryColorHex} from '@shared/utils/category.utils';
+import {getCategoryColor} from '@shared/utils/category.utils';
 
 /**
  * Component for visualizing spending distribution across categories.
@@ -68,10 +68,10 @@ export class CategoryChartComponent {
         {
           label: 'Total Spent',
           data: topItems.map((item: CategoryBreakdown): number => Math.abs(item.total)),
-          backgroundColor: topItems.map((item: CategoryBreakdown): string => getCategoryColorHex(item.category?.color || '')),
+          backgroundColor: topItems.map((item: CategoryBreakdown): string => getCategoryColor(item.category?.color || '')),
           borderRadius: 8,
           barThickness: 32,
-          hoverBackgroundColor: topItems.map((item: CategoryBreakdown): string => getCategoryColorHex(item.category?.color || ''))
+          hoverBackgroundColor: topItems.map((item: CategoryBreakdown): string => getCategoryColor(item.category?.color || ''))
         }
       ]
     });

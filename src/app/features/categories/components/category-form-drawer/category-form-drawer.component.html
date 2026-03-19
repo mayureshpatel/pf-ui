@@ -20,7 +20,10 @@
              class="text-[10px] font-black uppercase tracking-[0.2em] text-surface-400">Preview</label>
       <div id="live-preview" class="flex items-center gap-4">
         <div
-          [class]="previewColor() + ' w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow-lg ring-2 ring-white/20 animate-in zoom-in-75 duration-300'">
+          class="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg ring-2 ring-white/20 animate-in zoom-in-75 duration-300"
+          [style.background-color]="form.value.color || '#dddddd'"
+          [style.color]="form.value.color ? 'white' : 'black'"
+        >
           <i [class]="'pi ' + (form.value.icon || 'pi-tag') + ' text-2xl'"></i>
         </div>
         <div class="flex flex-col">
@@ -92,12 +95,15 @@
           <button
             type="button"
             (click)="selectColor(color)"
-            [class]="color + ' w-8 h-8 rounded-full transition-all duration-200 hover:scale-110 active:scale-95 shadow-sm'"
+            class="w-8 h-8 rounded-full transition-all duration-200 hover:scale-110 active:scale-95 shadow-sm"
+            [style.background-color]="color"
             [class.ring-4]="form.value.color === color"
             [class.ring-offset-2]="form.value.color === color"
             [class.ring-primary]="form.value.color === color"
-            [pTooltip]="color.replace('bg-', '').replace('-500', '')"
-            tooltipPosition="top">
+          >
+            @if (form.value.color === color) {
+              <i class="pi pi-check text-xs text-white"></i>
+            }
           </button>
         }
       </div>
@@ -109,17 +115,16 @@
         Category Icon
       </label>
       <div id="icon-picker"
-           class="grid grid-cols-5 sm:grid-cols-10 gap-2 p-3 rounded-2xl border border-surface-200">
+           class="grid grid-cols-5 sm:grid-cols-10 gap-2 p-3 rounded-2xl border border-surface-300">
         @for (icon of iconOptions; track icon) {
           <button
             type="button"
             (click)="selectIcon(icon)"
-            class="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 hover:bg-white hover:shadow-md group"
+            class="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 group"
             [class.bg-primary]="form.value.icon === icon"
             [class.text-white]="form.value.icon === icon"
             [class.text-surface-400]="form.value.icon !== icon"
-            [pTooltip]="getIconLabel(icon)"
-            tooltipPosition="top">
+          >
             <i [class]="'pi ' + icon + ' text-lg transition-transform group-hover:scale-110'"></i>
           </button>
         }

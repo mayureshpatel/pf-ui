@@ -213,9 +213,14 @@ export class CategoryFormDrawerComponent {
 
   /**
    * Direct selection handler for the color picker grid.
-   * @param color - The Tailwind background color class.
+   * @param color - The hex color code.
    */
   selectColor(color: string): void {
+    if (this.form.controls.color.value === color) {
+      this.form.controls.color.setValue('');
+      return;
+    }
+
     this.form.patchValue({color});
   }
 

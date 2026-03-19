@@ -7,7 +7,7 @@ import {TableModule} from 'primeng/table';
 import {Transaction} from '@models/transaction.model';
 import {ReportsDataService} from '../../services/reports-data.service';
 import {CategoryReportData} from '../../models/reports.model';
-import {getCategoryColorHex} from '@shared/utils/category.utils';
+import {getCategoryColor} from '@shared/utils/category.utils';
 import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
 
 /**
@@ -48,10 +48,10 @@ export class CategoryReportComponent {
       datasets: [{
         label: 'Total Spent',
         data: data.map((c: CategoryReportData): number => c.total),
-        backgroundColor: data.map((c: CategoryReportData): string => getCategoryColorHex(c.category.color)),
+        backgroundColor: data.map((c: CategoryReportData): string => getCategoryColor(c.category.color)),
         borderRadius: 8,
         barThickness: 32,
-        hoverBackgroundColor: data.map((c: CategoryReportData): string => getCategoryColorHex(c.category.color))
+        hoverBackgroundColor: data.map((c: CategoryReportData): string => getCategoryColor(c.category.color))
       }]
     };
   });
