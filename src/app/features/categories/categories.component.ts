@@ -1,7 +1,7 @@
 import {Component, computed, DestroyRef, inject, OnInit, Signal, signal, WritableSignal} from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {CommonModule} from '@angular/common';
-import {Router, RouterLink} from '@angular/router';
+import {Router} from '@angular/router';
 import {finalize, forkJoin, Observable} from 'rxjs';
 import {ButtonModule} from 'primeng/button';
 import {TableModule} from 'primeng/table';
@@ -34,8 +34,7 @@ import {Category, CategoryCreateRequest, CategoryGroup, CategoryUpdateRequest} f
     CardModule,
     TooltipModule,
     ScreenToolbarComponent,
-    CategoryFormDrawerComponent,
-    RouterLink
+    CategoryFormDrawerComponent
   ],
   templateUrl: './categories.component.html'
 })
@@ -50,26 +49,13 @@ export class CategoriesComponent implements OnInit {
   /** The enriched and grouped list of categories. */
   readonly categories: WritableSignal<CategoryGroup[]> = signal([]);
 
+  /** Controls which rows are expanded in the table. Initialized to empty to start collapsed. */
+  readonly expandedRows: WritableSignal<{ [key: number]: boolean }> = signal({});
+
   /** Flattened list of all categories for the form drawer. */
   readonly allCategories: Signal<Category[]> = computed(() =>
     this.categories().flatMap(g => [g.parent, ...g.items])
   );
-
-  /**
-   * Flattened list of categories specifically for the PrimeNG table.
-   * Ensures every row has a parent reference for subheader grouping.
-   */
-  readonly tableData: Signal<Category[]> = computed(() => {
-    const data: Category[] = [];
-    this.categories().forEach(group => {
-      if (group.items.length > 0) {
-        group.items.forEach(item => data.push({...item, parent: group.parent}));
-      } else {
-        data.push({...group.parent, parent: group.parent});
-      }
-    });
-    return data;
-  });
 
   /** Global loading state for API operations. */
   readonly loading: WritableSignal<boolean> = signal(false);
@@ -145,6 +131,26 @@ export class CategoriesComponent implements OnInit {
     });
 
     return groups.sort((a, b) => a.parent.name.localeCompare(b.parent.name));
+  }
+
+  /**
+   * Expands all parent category groups.
+   */
+  expandAll(): void {
+    const expanded: { [key: number]: boolean } = {};
+    this.categories().forEach(g => {
+      if (g.items.length > 0) {
+        expanded[g.parent.id] = true;
+      }
+    });
+    this.expandedRows.set(expanded);
+  }
+
+  /**
+   * Collapses all parent category groups.
+   */
+  collapseAll(): void {
+    this.expandedRows.set({});
   }
 
   /**

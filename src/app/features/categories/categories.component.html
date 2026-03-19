@@ -20,113 +20,144 @@
   @if (!isEmpty()) {
     <p-card class="overflow-hidden">
       <p-table
-        [value]="tableData()"
+        [value]="categories()"
+        dataKey="parent.id"
+        [expandedRowKeys]="expandedRows()"
         [loading]="loading()"
         [paginator]="false"
         [stripedRows]="true"
         size="small"
-        rowGroupMode="subheader"
-        groupRowsBy="parent.name"
-        sortField="parent.name"
-        sortMode="single"
         [scrollable]="true"
         scrollHeight="calc(100vh - 280px)"
-        [breakpoint]="'960px'">
+        [breakpoint]="'960px'"
+      >
+        <!-- Table Caption -->
+        <ng-template #caption>
+          <div class="flex flex-wrap justify-end gap-2">
+            <p-button label="Expand All" icon="pi pi-plus" [text]="true" (onClick)="expandAll()"/>
+            <p-button label="Collapse All" icon="pi pi-minus" [text]="true" (onClick)="collapseAll()"/>
+          </div>
+        </ng-template>
 
         <!-- Table Header -->
         <ng-template #header>
           <tr>
-            <th id="category-icon" style="width: 60px"></th>
-            <th id="category-name" class="py-4 font-bold text-surface-700">Category Name</th>
-            <th id="usage" class="py-4 font-bold text-surface-700 text-center"
-                style="width: 150px">Usage
-            </th>
-            <th id="actions" class="py-4 font-bold text-surface-700 text-center"
-                style="width: 120px">Actions
-            </th>
+            <th id="indent-spacer" style="width: 4rem"></th>
+            <th id="category-name" class="py-4 font-bold text-surface-700">Category</th>
+            <th id="usage" class="py-4 font-bold text-surface-700 text-center" style="width: 150px">Usage</th>
+            <th id="actions" class="py-4 font-bold text-surface-700 text-center" style="width: 120px">Actions</th>
           </tr>
         </ng-template>
 
-        <!-- Group Header (Parent Categories) -->
-        <ng-template #groupheader let-category>
-          <tr pRowGroupHeader>
-            <td colspan="6" class="py-3 px-4">
-              <div class="flex items-center justify-between w-full">
-                <div class="flex items-center gap-3">
-                  <span
-                    class="text-lg font-black text-surface-900 tracking-tight uppercase">{{ category.parent.name }}</span>
-                </div>
-                <div class="flex items-center gap-2 text-sm font-bold text-muted-color">
-                  <span>{{ category.parent.transactionCount || 0 }} transactions in group</span>
-                </div>
-              </div>
-            </td>
-          </tr>
-        </ng-template>
-
-        <!-- Data Rows -->
-        <ng-template #body let-category let-rowIndex="rowIndex">
+        <!-- Parent Row (2 Columns) -->
+        <ng-template #body let-group let-expanded="expanded">
           <tr class="hover:bg-surface-100/50 transition-colors duration-200">
-            <!-- Color Badge / Icon -->
-            <td class="py-4" [class.pl-8]="category.parent.id !== category.id">
-              <div class="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm text-white"
-                   [class]="category.color || 'bg-surface-300'"
+            <td colspan="2" class="py-4 px-4">
+              <div class="flex items-center gap-4">
+                <!-- Row Expand Toggle -->
+                <div class="flex justify-center">
+                  @if (group.items.length > 0) {
+                    <p-button
+                      type="button"
+                      [pRowToggler]="group"
+                      [text]="true"
+                      severity="secondary"
+                      [rounded]="true"
+                      [icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'"
+                    />
+                  }
+                </div>
+
+                <!-- Icon -->
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm"
+                     [class]="group.parent.color + ' text-white'"
+                >
+                  <i [class]="'pi ' + (group.parent.icon || 'pi-tag') + ' text-lg'"
+                     [style.color]="group.parent.color"
+                  ></i>
+                </div>
+
+                <!-- Name & Description -->
+                <div class="flex flex-col">
+                  <span class="font-bold text-lg text-surface-900">{{ group.parent.name }}</span>
+                  <span class="text-xs font-bold text-muted-color uppercase tracking-tighter opacity-70">
+                    {{ group.parent.type }}
+                  </span>
+                </div>
+              </div>
+            </td>
+
+            <!-- Transaction Count -->
+            <td colspan="2" class="text-center py-4">
+              <button
+                (click)="viewTransactions(group.parent)"
+                class="flex items-center gap-2 mx-auto px-3 py-1 rounded-lg hover:bg-primary/10 text-primary font-bold transition-all group cursor-pointer"
               >
-                <i [class]="'pi ' + (category.icon || 'pi-tag') + ' text-lg'"></i>
-              </div>
+                <span class="font-mono text-lg">{{ group.parent.transactionCount }}</span>
+              </button>
             </td>
+          </tr>
+        </ng-template>
 
-            <!-- Category Name & Type -->
-            <td class="py-4">
-              <div class="flex flex-col">
-                <span class="font-bold text-surface-900">{{ category.name }}</span>
-                <span class="text-xs font-bold text-muted-color uppercase tracking-tighter opacity-70">
-                  {{ category.type }}
-                </span>
-              </div>
-            </td>
+        <!-- Child Rows -->
+        <ng-template #expandedrow let-group>
+          <tr>
+            <td colspan="4" class="p-0">
+              <div class="bg-surface-50/50 pb-2">
+                <p-table [value]="group.items" [stripedRows]="false" size="small" class="w-full">
+                  <ng-template #body let-item>
+                    <tr class="hover:bg-surface-100/30 transition-colors duration-200 border-none!">
+                      <td style="width: 4rem"></td>
 
-            <!-- Usage Count -->
-            <td class="text-center py-4">
-              @if (category.transactionCount === 0) {
-                <span class="text-muted-color">No transactions</span>
-              } @else {
-                <a class="flex items-center gap-2 mx-auto px-3 py-1 rounded-lg hover:bg-primary/10 transition-all"
-                   [routerLink]="['/transactions']"
-                   [queryParams]="{ category: category.name }">
-                  <span class="text-primary font-bold">{{ category.transactionCount }} transactions</span>
-                </a>
+                      <!-- Name/Description -->
+                      <td class="py-3 px-4">
+                        <div class="flex items-center gap-4">
+                          <div class="w-8 h-8 rounded-lg flex items-center justify-center shadow-xs bg-surface-200">
+                            <i [class]="'pi ' + (item.icon || 'pi-tag') + ' text-sm'"></i>
+                          </div>
+                          <div class="flex flex-col">
+                            <span class="text-surface-800 font-semibold">{{ item.name }}</span>
+                            <span class="text-[10px] font-bold text-muted-color uppercase opacity-60">
+                              {{ item.type }}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
 
-                <button
-                  (click)="viewTransactions(category)"
-                  class="flex items-center gap-2 mx-auto px-3 py-1 rounded-lg hover:bg-primary/10 text-primary font-bold transition-all group"
-                  [pTooltip]="'View transactions for ' + category.name">
-                  <span class="font-mono">{{ category.transactionCount }}</span>
-                  <i class="pi pi-external-link text-[10px] opacity-0 group-hover:opacity-100 transition-opacity"></i>
-                </button>
-              }
-            </td>
+                      <!-- Transaction Count -->
+                      <td class="text-center py-3" style="width: 150px">
+                        <button
+                          (click)="viewTransactions(item)"
+                          class="flex items-center gap-2 mx-auto px-3 py-1 rounded-lg hover:bg-primary/10 text-primary font-bold transition-all group cursor-pointer">
+                          <span class="font-mono text-sm">{{ item.transactionCount }}</span>
+                        </button>
+                      </td>
 
-            <!-- Actions -->
-            <td class="text-center py-2">
-              <div class="flex justify-center gap-1">
-                <p-button
-                  icon="pi pi-pencil"
-                  [text]="true"
-                  [rounded]="true"
-                  severity="secondary"
-                  (onClick)="openEditDialog(category)"
-                  pTooltip="Edit Category"
-                />
-                <p-button
-                  icon="pi pi-trash"
-                  [text]="true"
-                  [rounded]="true"
-                  severity="danger"
-                  (onClick)="deleteCategory(category)"
-                  [disabled]="(category.transactionCount || 0) > 0"
-                  [pTooltip]="(category.transactionCount || 0) > 0 ? 'Cannot delete categories with transactions' : 'Delete Category'"
-                />
+                      <!-- Actions -->
+                      <td class="text-center py-1" style="width: 120px">
+                        <div class="flex justify-center gap-1">
+                          <p-button
+                            icon="pi pi-pencil"
+                            [text]="true"
+                            [rounded]="true"
+                            severity="secondary"
+                            size="small"
+                            (onClick)="openEditDialog(item)"
+                          />
+                          <p-button
+                            icon="pi pi-trash"
+                            [text]="true"
+                            [rounded]="true"
+                            severity="danger"
+                            size="small"
+                            (onClick)="deleteCategory(item)"
+                            [disabled]="(item.transactionCount || 0) > 0"
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  </ng-template>
+                </p-table>
               </div>
             </td>
           </tr>
@@ -134,7 +165,7 @@
 
         <ng-template #emptymessage>
           <tr>
-            <td colspan="6" class="text-center py-16 text-muted-color">
+            <td colspan="4" class="text-center py-16 text-muted-color">
               <i class="pi pi-search text-4xl mb-3 block opacity-20"></i>
               No categories found matching your criteria.
             </td>
