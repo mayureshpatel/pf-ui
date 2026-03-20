@@ -90,13 +90,12 @@
       >
         <ng-template #item let-merchant>
           <div class="flex items-center gap-2" [pTooltip]="tooltipContent" tooltipPosition="top">
-            <i class="pi pi-shop text-surface-400"></i>
-            <span class="font-medium truncate">{{ merchant.originalName }}</span>
+            <span class="text-sm truncate">{{ merchant.originalName }}</span>
           </div>
           <ng-template #tooltipContent>
             <div class="flex flex-col gap-1">
               <span class="text-xs">ID: {{ merchant.id }}</span>
-              <span class="font-medium">{{ merchant.originalName }}</span>
+              <span class="text-sm">{{ merchant.originalName }}</span>
               <span class="text-xs text-surface-500">{{ merchant.cleanName }}</span>
             </div>
           </ng-template>
@@ -107,7 +106,7 @@
     <!-- Category -->
     <div class="flex flex-col gap-2">
       <label for="category" class="text-sm font-bold uppercase tracking-wide text-surface-700">
-        Classification
+        Category
       </label>
       <p-select
         id="category"
@@ -118,8 +117,8 @@
         optionValue="value"
         placeholder="Select a category..."
       >
-        <ng-template #groupHeader let-group>
-          <div class="flex items-center gap-2 font-black text-[10px] uppercase tracking-widest text-surface-400 py-1">
+        <ng-template #group let-group>
+          <div class="flex items-center gap-2 uppercase tracking-wide">
             <i [class]="'pi ' + group.value.icon"></i>
             <span>{{ group.label }}</span>
           </div>
@@ -128,7 +127,9 @@
         <ng-template #item let-item>
           <div class="flex items-center gap-3">
             <div class="w-2.5 h-2.5 rounded-full shadow-xs"
-                 [style.backgroundColor]="item.value.color || '#94a3b8'"></div>
+                 [style.background-color]="item.value.color || '#ffffff'"
+            >
+            </div>
             <span class="font-medium truncate">{{ item.value.name }}</span>
           </div>
         </ng-template>
