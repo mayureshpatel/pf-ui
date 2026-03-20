@@ -37,7 +37,7 @@
             [class.hover:-translate-y-1]="form.value.type !== option.value"
           >
             <i
-              [class]="option.icon + ' text-2xl mb-2 transition-transform group-hover:scale-110 ' + (form.value.type === option.value ? 'text-primary' : option.color)"></i>
+              [class]="'pi ' + option.icon + ' text-2xl mb-2 transition-transform group-hover:scale-110 ' + (form.value.type === option.value ? 'text-primary' : option.color)"></i>
             <span
               [class]="'text-[10px] font-black uppercase tracking-widest ' + (form.value.type === option.value ? 'text-primary' : 'text-surface-500')">
               {{ option.label }}
@@ -132,7 +132,7 @@
 
           <ng-template #item let-item>
             <div class="flex items-center gap-3">
-              <div class="w-2.5 h-2.5 rounded-full shadow-xs" 
+              <div class="w-2.5 h-2.5 rounded-full shadow-xs"
                    [style.backgroundColor]="item.value.color || '#94a3b8'"></div>
               <span class="font-medium truncate">{{ item.value.name }}</span>
             </div>
