@@ -199,7 +199,7 @@ export class CsvImportDialogComponent {
   private detectBankName(fileName: string): BankName | null {
     const name: string = fileName.toLowerCase();
     if (name.includes('discover')) return BankName.DISCOVER;
-    if (name.includes('capital') && name.includes('one')) return BankName.CAPITAL_ONE;
+    if (name.includes('capital')) return BankName.CAPITAL_ONE;
     if (name.includes('synovus')) return BankName.SYNOVUS;
     return null;
   }
