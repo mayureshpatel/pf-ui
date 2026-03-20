@@ -52,6 +52,7 @@
         <!-- Parent Row (2 Columns) -->
         <ng-template #body let-group let-expanded="expanded">
           <tr class="hover:bg-surface-100/50 transition-colors duration-200">
+            <!-- Expand/Name/Description -->
             <td colspan="2" class="py-4 px-4">
               <div class="flex items-center gap-4">
                 <!-- Row Expand Toggle -->
@@ -88,13 +89,36 @@
             </td>
 
             <!-- Transaction Count -->
-            <td colspan="2" class="text-center py-4">
+            <td class="text-center py-4">
               <button
                 (click)="viewTransactions(group.parent)"
                 class="flex items-center gap-2 mx-auto px-3 py-1 rounded-lg hover:bg-primary/10 text-primary font-bold transition-all group cursor-pointer"
               >
                 <span class="font-mono text-lg">{{ group.parent.transactionCount }}</span>
               </button>
+            </td>
+
+            <!-- Actions -->
+            <td class="text-center py-1" style="width: 120px">
+              <div class="flex justify-center gap-1">
+                <p-button
+                  icon="pi pi-pencil"
+                  [text]="true"
+                  [rounded]="true"
+                  severity="secondary"
+                  size="small"
+                  (onClick)="openEditDialog(group.parent)"
+                />
+                <p-button
+                  icon="pi pi-trash"
+                  [text]="true"
+                  [rounded]="true"
+                  severity="danger"
+                  size="small"
+                  (onClick)="deleteCategory(group.parent)"
+                  [disabled]="(group.parent.transactionCount || 0) > 0"
+                />
+              </div>
             </td>
           </tr>
         </ng-template>
