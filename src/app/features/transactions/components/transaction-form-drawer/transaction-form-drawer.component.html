@@ -14,13 +14,14 @@
   <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-8 py-4">
     <!-- Transaction Type -->
     <div class="flex flex-col gap-3">
-      <label class="text-[10px] font-black uppercase tracking-[0.2em] text-surface-400">
+      <label for="type-options" class="text-[10px] font-black uppercase tracking-[0.2em] text-surface-400">
         Transaction Classification
       </label>
-      <div class="grid grid-cols-3 gap-3">
+      <div id="type-options" class="flex flex-row justify-center gap-3">
         @for (option of typeOptions; track option.value) {
           <button
             type="button"
+            id="type-option-{{ option.value }}"
             (click)="form.patchValue({type: option.value})"
             class="flex flex-col items-center justify-center p-4 rounded-2xl border transition-all duration-300 group"
             [class.bg-primary]="form.value.type === option.value"
