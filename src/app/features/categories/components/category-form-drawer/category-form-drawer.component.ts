@@ -229,6 +229,11 @@ export class CategoryFormDrawerComponent {
    * @param icon - The PrimeIcon class name.
    */
   selectIcon(icon: string): void {
+    if (this.form.controls.icon.value === icon) {
+      this.form.controls.icon.setValue('');
+      return;
+    }
+
     this.form.patchValue({icon});
   }
 

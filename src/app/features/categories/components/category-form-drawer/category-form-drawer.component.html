@@ -124,8 +124,11 @@
             [class.bg-primary]="form.value.icon === icon"
             [class.text-white]="form.value.icon === icon"
             [class.text-surface-400]="form.value.icon !== icon"
+            [class.hover:bg-surface-100]="form.value.icon !== icon"
+            [class.hover:shadow-xl]="form.value.icon !== icon"
           >
-            <i [class]="'pi ' + icon + ' text-lg transition-transform group-hover:scale-110'"></i>
+            <i [class]="'pi ' + icon + ' text-lg transition-transform'"
+               [class.group-hover:scale-110]="form.value.icon !== icon"></i>
           </button>
         }
       </div>
