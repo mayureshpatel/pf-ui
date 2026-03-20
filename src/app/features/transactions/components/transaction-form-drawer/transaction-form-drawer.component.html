@@ -14,7 +14,7 @@
   <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-8 py-4">
     <!-- Transaction Type -->
     <div class="flex flex-col gap-3">
-      <label for="type-options" class="text-[10px] font-black uppercase tracking-[0.2em] text-surface-400">
+      <label for="type-options" class="text-sm font-bold uppercase tracking-wide text-surface-700">
         Transaction Classification
       </label>
       <div id="type-options" class="flex flex-row justify-center gap-3">
@@ -48,31 +48,28 @@
       </div>
     </div>
 
-    <!-- Amount and Date -->
-    <div
-      class="grid grid-cols-2 gap-6 p-6 rounded-2xl border border-surface-100 bg-surface-50/30 shadow-sm ring-1 ring-surface-100">
-      <div class="flex flex-col gap-2">
-        <label for="amount" class="text-[10px] font-black uppercase tracking-widest text-surface-400">Amount</label>
-        <p-inputNumber
-          id="amount"
-          formControlName="amount"
-          mode="currency"
-          currency="USD"
-          placeholder="$0.00"
-          [autofocus]="!isEditMode()"
-          inputStyleClass="text-2xl font-mono font-black bg-transparent border-none p-0 focus:ring-0"
-        />
-      </div>
-      <div class="flex flex-col gap-2 border-l border-surface-200 pl-6">
-        <label for="date" class="text-[10px] font-black uppercase tracking-widest text-surface-400">Date</label>
-        <p-datePicker
-          id="date"
-          formControlName="transactionDate"
-          dateFormat="yy-mm-dd"
-          styleClass="w-full"
-          inputStyleClass="text-sm font-bold bg-transparent border-none p-0 focus:ring-0"
-        />
-      </div>
+    <!-- Amount -->
+    <div class="flex flex-col gap-2">
+      <label for="amount" class="text-sm font-bold uppercase tracking-wide text-surface-700">Amount</label>
+      <p-inputNumber
+        id="amount"
+        formControlName="amount"
+        mode="currency"
+        currency="USD"
+        placeholder="$0.00"
+        [autofocus]="!isEditMode()"
+        inputStyleClass="font-mono font-black"
+      />
+    </div>
+
+    <!-- Date -->
+    <div class="flex flex-col gap-2">
+      <label for="date" class="text-sm font-bold uppercase tracking-wide text-surface-700">Date</label>
+      <p-datePicker
+        id="date"
+        formControlName="transactionDate"
+        dateFormat="yy-mm-dd"
+      />
     </div>
 
     <!-- Merchant -->
