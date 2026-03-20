@@ -22,13 +22,22 @@
           <button
             type="button"
             (click)="form.patchValue({type: option.value})"
-            [class]="'flex flex-col items-center justify-center p-4 rounded-2xl border transition-all duration-300 ' +
-                     (form.value.type === option.value ?
-                      'bg-primary/5 border-primary shadow-sm ring-1 ring-primary/20' :
-                      'bg-surface-0 border-surface-200 dark:border-surface-800 opacity-60 hover:opacity-100')"
+            class="flex flex-col items-center justify-center p-4 rounded-2xl border transition-all duration-300 group"
+            [class.bg-primary]="form.value.type === option.value"
+            [class.bg-primary-50]="form.value.type === option.value"
+            [class.border-primary]="form.value.type === option.value"
+            [class.shadow-md]="form.value.type === option.value"
+            [class.ring-1]="form.value.type === option.value"
+            [class.ring-primary-200]="form.value.type === option.value"
+            [class.bg-surface-0]="form.value.type !== option.value"
+            [class.border-surface-200]="form.value.type !== option.value"
+            [class.opacity-60]="form.value.type !== option.value"
+            [class.hover:opacity-100]="form.value.type !== option.value"
+            [class.hover:shadow-xl]="form.value.type !== option.value"
+            [class.hover:-translate-y-1]="form.value.type !== option.value"
           >
             <i
-              [class]="option.icon + ' text-2xl mb-2 ' + (form.value.type === option.value ? 'text-primary' : option.color)"></i>
+              [class]="option.icon + ' text-2xl mb-2 transition-transform group-hover:scale-110 ' + (form.value.type === option.value ? 'text-primary' : option.color)"></i>
             <span
               [class]="'text-[10px] font-black uppercase tracking-widest ' + (form.value.type === option.value ? 'text-primary' : 'text-surface-500')">
               {{ option.label }}
@@ -40,7 +49,7 @@
 
     <!-- Amount and Date -->
     <div
-      class="grid grid-cols-2 gap-6 p-6 rounded-2xl border border-surface-200 dark:border-surface-800 ring-1 ring-surface-100 dark:ring-surface-800">
+      class="grid grid-cols-2 gap-6 p-6 rounded-2xl border border-surface-100 bg-surface-50/30 shadow-sm ring-1 ring-surface-100">
       <div class="flex flex-col gap-2">
         <label for="amount" class="text-[10px] font-black uppercase tracking-widest text-surface-400">Amount</label>
         <p-inputNumber
@@ -53,7 +62,7 @@
           inputStyleClass="text-2xl font-mono font-black bg-transparent border-none p-0 focus:ring-0"
         />
       </div>
-      <div class="flex flex-col gap-2 border-l border-surface-200 dark:border-surface-700 pl-6">
+      <div class="flex flex-col gap-2 border-l border-surface-200 pl-6">
         <label for="date" class="text-[10px] font-black uppercase tracking-widest text-surface-400">Date</label>
         <p-datePicker
           id="date"
@@ -70,7 +79,7 @@
     <div class="flex flex-col gap-6">
       <!-- Merchant Autocomplete -->
       <div class="flex flex-col gap-2">
-        <label for="merchant" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
+        <label for="merchant" class="text-sm font-bold uppercase tracking-wide text-surface-700">
           Merchant / Payee
         </label>
         <p-autoComplete
@@ -102,7 +111,7 @@
 
       <!-- Category Autocomplete -->
       <div class="flex flex-col gap-2">
-        <label for="category" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
+        <label for="category" class="text-sm font-bold uppercase tracking-wide text-surface-700">
           Classification
         </label>
         <p-select
@@ -114,16 +123,17 @@
           optionValue="value"
           placeholder="Select a category..."
         >
-          <ng-template #group let-group>
-            <div class="flex items-center gap-2 font-bold">
+          <ng-template #groupHeader let-group>
+            <div class="flex items-center gap-2 font-black text-[10px] uppercase tracking-widest text-surface-400 py-1">
               <i [class]="'pi ' + group.value.icon"></i>
               <span>{{ group.label }}</span>
             </div>
           </ng-template>
 
           <ng-template #item let-item>
-            <div class="flex items-center gap-2">
-              <div [class]="'w-2 h-2 rounded-full ' + (item.value.color || 'bg-surface-300')"></div>
+            <div class="flex items-center gap-3">
+              <div class="w-2.5 h-2.5 rounded-full shadow-xs" 
+                   [style.backgroundColor]="item.value.color || '#94a3b8'"></div>
               <span class="font-medium truncate">{{ item.value.name }}</span>
             </div>
           </ng-template>
@@ -133,7 +143,7 @@
 
     <!-- Target Account -->
     <div class="flex flex-col gap-2">
-      <label for="account" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
+      <label for="account" class="text-sm font-bold uppercase tracking-wide text-surface-700">
         Target Account
       </label>
       <p-select
@@ -150,7 +160,7 @@
 
     <!-- Description -->
     <div class="flex flex-col gap-2">
-      <label for="description" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
+      <label for="description" class="text-sm font-bold uppercase tracking-wide text-surface-700">
         Description / Notes
       </label>
       <textarea
@@ -159,7 +169,7 @@
         formControlName="description"
         rows="3"
         placeholder="Add any additional details or memos here..."
-        class="w-full p-3 text-sm font-medium leading-relaxed border-surface-200 dark:border-surface-800"
+        class="w-full p-3 text-sm font-medium leading-relaxed border-surface-200"
       ></textarea>
     </div>
   </form>
