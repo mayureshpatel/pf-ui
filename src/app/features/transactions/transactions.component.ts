@@ -330,8 +330,8 @@ export class TransactionsComponent implements OnInit {
       description: params["description"] || undefined,
       merchant: params["merchant"] || undefined,
       categoryName: params["categoryName"] || undefined,
-      minAmount: Number(params["minAmount"] ?? undefined),
-      maxAmount: Number(params["maxAmount"] ?? undefined),
+      minAmount: params['minAmount'] === undefined ? undefined : Number(params['minAmount']),
+      maxAmount: params['maxAmount'] === undefined ? undefined : Number(params['maxAmount']),
       startDate: params["startDate"] ? new Date(params["startDate"]) : undefined,
       endDate: params["endDate"] ? new Date(params["endDate"]) : undefined
     };
