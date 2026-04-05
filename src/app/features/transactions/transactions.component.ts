@@ -383,18 +383,32 @@ export class TransactionsComponent implements OnInit {
     });
   }
 
+  /**
+   * Loads all the accounts for the current user.
+   * @private
+   */
   private loadAccounts(): void {
     this.accountApi.getAccounts()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((data: Account[]): void => this.accounts.set(data));
   }
 
+  /**
+   * Loads all the categories for the current user.
+   * @private
+   */
   private loadCategories(): void {
     this.categoryApi.getCategoriesWithTransactions()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((data: Category[]): void => this.categories.set(data));
   }
 
+  /**
+   * Loads all the merchants associated with the current user.
+   * <br><br>
+   * Gets distinct merchant names from all transactions for the current user.
+   * @private
+   */
   private loadMerchants(): void {
     this.categoryApi.getMerchantsWithTransactions()
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -412,71 +426,7 @@ export class TransactionsComponent implements OnInit {
       sort = `${event.sortField},${dir}`;
     }
 
-    const filter: TransactionFilter = {...this.state().filter};
-    if (event.filters) {
-      const dateFilter = event.filters["date"];
-      if (dateFilter) {
-        const metadata = Array.isArray(dateFilter) ? dateFilter : [dateFilter];
-        filter.startDate = undefined;
-        filter.endDate = undefined;
-
-        metadata.forEach((m: FilterMetadata): void => {
-          if (m.value) {
-            const dateValue = new Date(m.value);
-            if (m.matchMode === "dateIs") {
-              filter.startDate = dateValue;
-              filter.endDate = dateValue;
-            } else if (m.matchMode === "dateAfter") {
-              filter.startDate = dateValue;
-            } else if (m.matchMode === "dateBefore") {
-              filter.endDate = dateValue;
-            }
-          }
-        });
-      } else {
-        filter.startDate = undefined;
-        filter.endDate = undefined;
-      }
-
-      const merchantAndDescFilter = event.filters["merchantAndDesc"];
-      if (merchantAndDescFilter) {
-        const metadata = Array.isArray(merchantAndDescFilter) ? merchantAndDescFilter[0] : merchantAndDescFilter;
-        filter.merchant = metadata.value?.merchant || undefined;
-        filter.description = metadata.value?.description || undefined;
-      } else {
-        filter.merchant = undefined;
-        filter.description = undefined;
-      }
-
-      const categoryFilter = event.filters["categoryName"];
-      if (categoryFilter) {
-        const metadata = Array.isArray(categoryFilter) ? categoryFilter[0] : categoryFilter;
-        filter.categoryName = metadata.value || undefined;
-      } else {
-        filter.categoryName = undefined;
-      }
-
-      const accountFilter = event.filters["accountId"];
-      if (accountFilter) {
-        const metadata = Array.isArray(accountFilter) ? accountFilter[0] : accountFilter;
-        filter.accountId = metadata.value || undefined;
-      } else {
-        filter.accountId = undefined;
-      }
-
-      const amountFilter = event.filters["amount"];
-      if (amountFilter) {
-        const metadata = Array.isArray(amountFilter) ? amountFilter[0] : amountFilter;
-        filter.minAmount = metadata.value?.min ?? undefined;
-        filter.maxAmount = metadata.value?.max ?? undefined;
-        filter.type = metadata.value?.type ?? undefined;
-      } else {
-        filter.minAmount = undefined;
-        filter.maxAmount = undefined;
-        filter.type = undefined;
-      }
-    }
-
+    const filter: TransactionFilter = this.hydrateFilters(event.filters);
     const currentState: TransactionState = this.state();
     if (
       page !== currentState.page ||
@@ -493,6 +443,120 @@ export class TransactionsComponent implements OnInit {
     }
   }
 
+  hydrateFilters(filterEvent: any): TransactionFilter {
+    const stateFilter: TransactionFilter = {...this.state().filter};
+
+    if (filterEvent) {
+      this.setDateFilter(filterEvent["date"], stateFilter);
+      this.setMerchantFilter(filterEvent["merchantAndDesc"], stateFilter);
+      this.setCategoryFilter(filterEvent["categoryName"], stateFilter);
+      this.setAccountIdFilter(filterEvent["accountId"], stateFilter);
+      this.setAmountFilter(filterEvent["amount"], stateFilter);
+    }
+
+    return stateFilter;
+  }
+
+  /**
+   * Sets the date filter for the current transaction filter state.
+   * @param dateFilter the date filter object; from the event
+   * @param stateFilter the transaction filter state object
+   * @private
+   */
+  private setDateFilter(dateFilter: any, stateFilter: TransactionFilter): void {
+    if (dateFilter) {
+      const metadata = Array.isArray(dateFilter) ? dateFilter : [dateFilter];
+      stateFilter.startDate = undefined;
+      stateFilter.endDate = undefined;
+
+      metadata.forEach((m: FilterMetadata): void => {
+        if (m.value) {
+          const dateValue = new Date(m.value);
+          if (m.matchMode === "dateIs") {
+            stateFilter.startDate = dateValue;
+            stateFilter.endDate = dateValue;
+          } else if (m.matchMode === "dateAfter") {
+            stateFilter.startDate = dateValue;
+          } else if (m.matchMode === "dateBefore") {
+            stateFilter.endDate = dateValue;
+          }
+        }
+      });
+    } else {
+      stateFilter.startDate = undefined;
+      stateFilter.endDate = undefined;
+    }
+  }
+
+  /**
+   * Sets the merchant filter for the current transaction filter state.
+   * @param merchantFilter the merchant filter object from the event; contains the merchant name and description
+   * @param stateFilter the transaction filter state object
+   * @private
+   */
+  private setMerchantFilter(merchantFilter: any, stateFilter: TransactionFilter): void {
+    if (merchantFilter) {
+      const metadata = Array.isArray(merchantFilter) ? merchantFilter[0] : merchantFilter;
+      stateFilter.merchant = metadata.value?.merchant || undefined;
+      stateFilter.description = metadata.value?.description || undefined;
+    } else {
+      stateFilter.merchant = undefined;
+      stateFilter.description = undefined;
+    }
+  }
+
+  /**
+   * Sets the category filter for the current transaction filter state.
+   * @param categoryFilter the category filter object from the event; contains the category name
+   * @param stateFilter the transaction filter state object
+   * @private
+   */
+  private setCategoryFilter(categoryFilter: any, stateFilter: TransactionFilter): void {
+    if (categoryFilter) {
+      const metadata = Array.isArray(categoryFilter) ? categoryFilter[0] : categoryFilter;
+      stateFilter.categoryName = metadata.value || undefined;
+    } else {
+      stateFilter.categoryName = undefined;
+    }
+  }
+
+  /**
+   * Sets the account ID filter for the current transaction filter state.
+   * @param accountFilter the account filter object from the event; contains the account ID
+   * @param stateFilter the transaction filter state object
+   * @private
+   */
+  private setAccountIdFilter(accountFilter: any, stateFilter: TransactionFilter): void {
+    if (accountFilter) {
+      const metadata = Array.isArray(accountFilter) ? accountFilter[0] : accountFilter;
+      stateFilter.accountId = metadata.value || undefined;
+    } else {
+      stateFilter.accountId = undefined;
+    }
+  }
+
+  /**
+   * Sets the amount filter for the current transaction filter state.
+   * @param amountFilter the amount filter object from the event; contains min, max, and type
+   * @param stateFilter the transaction filter state object
+   * @private
+   */
+  private setAmountFilter(amountFilter: any, stateFilter: TransactionFilter): void {
+    if (amountFilter) {
+      const metadata = Array.isArray(amountFilter) ? amountFilter[0] : amountFilter;
+      stateFilter.minAmount = metadata.value?.min ?? undefined;
+      stateFilter.maxAmount = metadata.value?.max ?? undefined;
+      stateFilter.type = metadata.value?.type ?? undefined;
+    } else {
+      stateFilter.minAmount = undefined;
+      stateFilter.maxAmount = undefined;
+      stateFilter.type = undefined;
+    }
+  }
+
+  /**
+   * Clears the current transaction filter state.
+   */
   clearFilters(): void {
     this.state.update((s: TransactionState) => ({
       ...s,
@@ -502,6 +566,11 @@ export class TransactionsComponent implements OnInit {
     }));
   }
 
+  /**
+   * Updates the merchant filter state.
+   * @param filterConstraint the new filter constraint
+   * @param merchant the new merchant name
+   */
   updateMerchantFilter(filterConstraint: any, merchant: string | null): void {
     const currentDescription = filterConstraint.value?.description || null;
     if (!merchant && !currentDescription) {
@@ -511,6 +580,11 @@ export class TransactionsComponent implements OnInit {
     }
   }
 
+  /**
+   * Updates the description filter state.
+   * @param filterConstraint the new filter constraint
+   * @param description the new description
+   */
   updateDescriptionFilter(filterConstraint: any, description: string | null): void {
     const currentMerchant = filterConstraint.value?.merchant || null;
     const desc = description?.trim() || null;
@@ -521,6 +595,11 @@ export class TransactionsComponent implements OnInit {
     }
   }
 
+  /**
+   * Updates the minimum amount filter state.
+   * @param filterConstraint the new filter constraint
+   * @param min the new minimum amount
+   */
   updateMinAmountFilter(filterConstraint: any, min: number | null): void {
     const currentMax = filterConstraint.value?.max ?? null;
     const currentType = filterConstraint.value?.type ?? null;
@@ -531,6 +610,11 @@ export class TransactionsComponent implements OnInit {
     }
   }
 
+  /**
+   * Updates the maximum amount filter state.
+   * @param filterConstraint the new filter constraint
+   * @param max the new maximum amount
+   */
   updateMaxAmountFilter(filterConstraint: any, max: number | null): void {
     const currentMin = filterConstraint.value?.min ?? null;
     const currentType = filterConstraint.value?.type ?? null;
@@ -541,6 +625,11 @@ export class TransactionsComponent implements OnInit {
     }
   }
 
+  /**
+   * Updates the transaction type filter state.
+   * @param filterConstraint the new filter constraint
+   * @param type the new transaction type
+   */
   updateTypeFilter(filterConstraint: any, type: string | null): void {
     const currentMin = filterConstraint.value?.min ?? null;
     const currentMax = filterConstraint.value?.max ?? null;
@@ -551,21 +640,32 @@ export class TransactionsComponent implements OnInit {
     }
   }
 
+  /**
+   * Opens the create transaction dialog.
+   */
   openCreateDialog(): void {
     this.selectedTransaction.set(null);
     this.showDialog.set(true);
   }
 
+  /**
+   * Opens the edit transaction dialog.
+   * @param txn the transaction to edit
+   */
   openEditDialog(txn: Transaction): void {
     this.selectedTransaction.set(txn);
     this.showDialog.set(true);
   }
 
+  /**
+   * Saves the transaction form data. Handles saving either a new transaction or updating an existing one.
+   * @param formData the form data to save
+   */
   onSave(formData: TransactionCreateRequest | TransactionUpdateRequest): void {
     const existing: Transaction | null = this.selectedTransaction();
     this.savingTransaction.set(true);
 
-    let payload;
+    let payload: TransactionCreateRequest | TransactionUpdateRequest;
     if (existing) {
       payload = {
         id: existing.id,
@@ -602,6 +702,10 @@ export class TransactionsComponent implements OnInit {
     });
   }
 
+  /**
+   * Deletes a transaction.
+   * @param txn the transaction to delete
+   */
   deleteTransaction(txn: Transaction): void {
     this.confirmationService.confirm({
       header: "Delete Transaction?",
@@ -610,17 +714,22 @@ export class TransactionsComponent implements OnInit {
       rejectLabel: "Cancel",
       acceptButtonStyleClass: "p-button-danger",
       accept: (): void => {
-        this.transactionApi.deleteTransaction(txn.id).subscribe({
-          next: (): void => {
-            this.toast.success("Transaction deleted");
-            this.loadTransactions();
-          },
-          error: (err: any): void => this.toast.error("Failed to delete transaction.")
-        });
+        this.transactionApi.deleteTransaction(txn.id)
+          .pipe(finalize((): void => this.savingTransaction.set(false)))
+          .subscribe({
+            next: (): void => {
+              this.toast.success("Transaction deleted");
+              this.loadTransactions();
+            },
+            error: (err: any): void => this.toast.error("Failed to delete transaction.")
+          });
       }
     });
   }
 
+  /**
+   * Handles the completion of the import process.
+   */
   onImportComplete(): void {
     this.showImportDialog.set(false);
     this.showTransferDialog.set(true);
