@@ -6,8 +6,8 @@
   [resizable]="false"
   [style]="{ width: '1000px' }"
   [breakpoints]="{ '960px': '95vw' }"
-  class="p-fluid">
-
+  class="p-fluid"
+>
   <div class="flex flex-col gap-6 py-2">
     <!-- Process Status Message -->
     @if (generalMessage()) {
@@ -16,25 +16,27 @@
       </p-message>
     }
 
-    <!-- STEP 1: Configuration & File Selection -->
+    <!-- Configuration & File Selection -->
     @if (currentStep() === 0) {
       <div class="flex flex-col gap-6">
-
         <!-- Bulk Management Card -->
-        <div
-          class="card-soft">
+        <div class="card-soft">
           <div class="flex items-center gap-2 mb-4">
             <i class="pi pi-bolt text-primary"></i>
-            <span
-              class="text-[10px] font-black uppercase tracking-[0.2em] text-surface-400">Bulk Batch Configuration</span>
+            <span class="text-[10px] font-black uppercase tracking-[0.2em] text-surface-400"
+            >Bulk Batch Configuration</span
+            >
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
             <div class="md:col-span-5 flex flex-col gap-2">
-              <label class="text-xs font-bold text-surface-700 dark:text-surface-200 uppercase">Default Account</label>
+              <label class="text-xs font-bold text-surface-700 dark:text-surface-200 uppercase"
+              >Default Account</label
+              >
               <p-select
                 [options]="accountOptions()"
-                [(ngModel)]="globalAccountId"
+                [ngModel]="globalAccountId()"
+                (ngModelChange)="globalAccountId.set($event)"
                 optionLabel="label"
                 optionValue="value"
                 placeholder="Target Account"
@@ -42,10 +44,13 @@
               />
             </div>
             <div class="md:col-span-5 flex flex-col gap-2">
-              <label class="text-xs font-bold text-surface-700 dark:text-surface-200 uppercase">Bank Format</label>
+              <label class="text-xs font-bold text-surface-700 dark:text-surface-200 uppercase"
+              >Bank Format</label
+              >
               <p-select
                 [options]="bankOptions"
-                [(ngModel)]="globalBankName"
+                [ngModel]="globalBankName()"
+                (ngModelChange)="globalBankName.set($event)"
                 optionLabel="label"
                 optionValue="value"
                 placeholder="Statement Format"
@@ -55,7 +60,7 @@
             <div class="md:col-span-2">
               <p-button
                 label="Sync All"
-                (onClick)="applyGlobalAccount(); applyGlobalBank();"
+                (onClick)="applyGlobalAccount(); applyGlobalBank()"
                 [disabled]="!hasItems() || (!globalAccountId() && !globalBankName())"
                 severity="secondary"
                 [raised]="true"
@@ -68,30 +73,45 @@
         <div class="flex flex-col gap-3">
           <div class="flex justify-between items-end px-1">
             <div class="flex flex-col">
-              <span class="text-lg font-black text-surface-900 dark:text-surface-0 tracking-tight">Source Files</span>
-              <span
-                class="text-[10px] font-bold text-muted-color uppercase tracking-widest">CSV Export from your bank</span>
+							<span class="text-lg font-black text-surface-900 dark:text-surface-0 tracking-tight"
+              >Source Files</span
+              >
+              <span class="text-[10px] font-bold text-muted-color uppercase tracking-widest"
+              >CSV Export from your bank</span
+              >
             </div>
             @if (hasItems()) {
-              <p-button label="Clear Batch" icon="pi pi-trash" [text]="true" severity="danger" size="small"
-                        (onClick)="importItems.set([])"/>
+              <p-button
+                label="Clear Batch"
+                icon="pi pi-trash"
+                [text]="true"
+                severity="danger"
+                size="small"
+                (onClick)="importItems.set([])"
+              />
             }
           </div>
 
           @if (!hasItems()) {
             <!-- Empty Dropzone -->
             <div
-              class="group relative overflow-hidden border-2 border-dashed border-surface-200 dark:border-surface-800 rounded-2xl p-12 text-center bg-surface-0 transition-all duration-500 hover:border-primary/50">
+              class="group relative overflow-hidden border-2 border-dashed border-surface-200 dark:border-surface-800 rounded-2xl p-12 text-center bg-surface-0 transition-all duration-500 hover:border-primary/50"
+            >
               <div
-                class="absolute -inset-24 bg-primary/5 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                class="absolute -inset-24 bg-primary/5 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity"
+              ></div>
               <div class="relative flex flex-col items-center">
-                <div class="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6 animate-pulse">
+                <div
+                  class="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6 animate-pulse"
+                >
                   <i class="pi pi-upload text-4xl text-primary"></i>
                 </div>
-                <h3 class="text-xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight mb-2">Ready to
-                  Synchronize?</h3>
-                <p class="text-muted-color text-sm mb-8 max-w-sm mx-auto">Select one or more CSV files exported from
-                  your bank statements.</p>
+                <h3 class="text-xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight mb-2">
+                  Ready to Synchronize?
+                </h3>
+                <p class="text-muted-color text-sm mb-8 max-w-sm mx-auto">
+                  Select one or more CSV files exported from your bank statements.
+                </p>
 
                 <p-fileupload
                   mode="basic"
@@ -100,7 +120,7 @@
                   [maxFileSize]="5000000"
                   [auto]="true"
                   [customUpload]="true"
-                  (uploadHandler)="onFilesSelect($event)"
+                  (onSelect)="onFilesSelect($event)"
                   chooseLabel="Browse CSV Files"
                 />
               </div>
@@ -108,14 +128,18 @@
           } @else {
             <!-- Batch File Ledger -->
             <div class="flex flex-col gap-2">
-              <p-table [value]="importItems()" size="small"
-                       class="overflow-hidden card-soft">
+              <p-table [value]="importItems()" size="small" class="overflow-hidden card-soft">
                 <ng-template #header>
                   <tr>
-                    <th id="file-name" class="py-3 font-bold text-surface-700 dark:text-surface-200">File Details</th>
-                    <th id="file-account" class="py-3 font-bold text-surface-700 dark:text-surface-200">Target Account
+                    <th id="file-name" class="py-3 font-bold text-surface-700 dark:text-surface-200">
+                      File Details
                     </th>
-                    <th id="file-format" class="py-3 font-bold text-surface-700 dark:text-surface-200">Bank Format</th>
+                    <th id="file-account" class="py-3 font-bold text-surface-700 dark:text-surface-200">
+                      Target Account
+                    </th>
+                    <th id="file-format" class="py-3 font-bold text-surface-700 dark:text-surface-200">
+                      Bank Format
+                    </th>
                     <th style="width: 60px"></th>
                   </tr>
                 </ng-template>
@@ -123,20 +147,24 @@
                   <tr class="hover:bg-surface-100/50 dark:hover:bg-surface-800/30">
                     <td class="py-3">
                       <div class="flex flex-col">
-                        <span class="font-bold text-surface-900 dark:text-surface-0">{{ item.file.name }}</span>
-                        <span
-                          class="text-[10px] font-mono text-muted-color uppercase">{{ (item.file.size / 1024).toFixed(1) }}
-                          KB</span>
+												<span class="font-bold text-surface-900 dark:text-surface-0">{{
+                            item.file.name
+                          }}</span>
+                        <span class="text-[10px] font-mono text-muted-color uppercase"
+                        >{{ (item.file.size / 1024).toFixed(1) }} KB</span
+                        >
                         @if (item.error) {
-                          <span class="text-[10px] font-black text-rose-500 uppercase mt-1">{{ item.error }}</span>
+                          <span class="text-[10px] font-black text-rose-500 uppercase mt-1">{{
+                              item.error
+                            }}</span>
                         }
                       </div>
                     </td>
                     <td>
                       <p-select
                         [options]="accountOptions()"
-                        [(ngModel)]="item.accountId"
-                        (onChange)="onAccountChange(i, $event.value)"
+                        [ngModel]="item.accountId"
+                        (ngModelChange)="onAccountChange(i, $event)"
                         optionLabel="label"
                         optionValue="value"
                         placeholder="Select..."
@@ -147,7 +175,8 @@
                     <td>
                       <p-select
                         [options]="bankOptions"
-                        [(ngModel)]="item.bankName"
+                        [ngModel]="item.bankName"
+                        (ngModelChange)="onBankChange(i, $event)"
                         optionLabel="label"
                         optionValue="value"
                         placeholder="Select..."
@@ -156,8 +185,13 @@
                       />
                     </td>
                     <td class="text-right">
-                      <p-button icon="pi pi-times" [text]="true" [rounded]="true" severity="danger"
-                                (onClick)="removeItem(i)"/>
+                      <p-button
+                        icon="pi pi-times"
+                        [text]="true"
+                        [rounded]="true"
+                        severity="danger"
+                        (onClick)="removeItem(i)"
+                      />
                     </td>
                   </tr>
                 </ng-template>
@@ -170,7 +204,7 @@
                   accept=".csv"
                   [auto]="true"
                   [customUpload]="true"
-                  (uploadHandler)="onFilesSelect($event)"
+                  (onSelect)="onFilesSelect($event)"
                   chooseLabel="Add Files"
                   chooseIcon="pi pi-plus"
                   size="small"
@@ -182,15 +216,15 @@
       </div>
     }
 
-    <!-- STEP 2: Intelligent Preview -->
+    <!-- Intelligent Preview -->
     @if (currentStep() === 1) {
       <div class="flex flex-col gap-6 animate-in fade-in duration-500">
         <div class="flex items-center justify-between px-1">
           <div class="flex flex-col">
             <h2 class="text-2xl font-black text-surface-900 dark:text-surface-0 tracking-tight">Data Preview</h2>
             <span class="text-[10px] font-bold text-muted-color uppercase tracking-widest">
-              {{ allPreviews().length }} transactions from {{ importItems().length }} file(s)
-            </span>
+							{{ allPreviews().length }} transactions from {{ importItems().length }} file(s)
+						</span>
           </div>
         </div>
 
@@ -218,7 +252,10 @@
               <td colspan="4" class="py-2 px-4">
                 <div class="flex items-center gap-2">
                   <i class="pi pi-file text-xs text-muted-color"></i>
-                  <span class="text-[10px] font-black uppercase tracking-widest text-surface-600 dark:text-surface-300">File: {{ preview._sourceFile }}</span>
+                  <span
+                    class="text-[10px] font-black uppercase tracking-widest text-surface-600 dark:text-surface-300"
+                  >File: {{ preview._sourceFile }}</span
+                  >
                 </div>
               </td>
             </tr>
@@ -229,23 +266,25 @@
               <td class="py-3 font-mono text-xs font-bold">{{ preview.date | date: 'MM/dd/yyyy' }}</td>
               <td class="py-3">
                 <div class="flex flex-col max-w-[300px]">
-                  <span
-                    class="text-sm font-bold text-surface-900 dark:text-surface-0 truncate">{{ preview.suggestedMerchant || 'General Payee' }}</span>
+									<span class="text-sm font-bold text-surface-900 dark:text-surface-0 truncate">{{
+                      preview.suggestedMerchant?.cleanName || preview.suggestedMerchant?.originalName || 'General Payee'
+                    }}</span>
                   <span class="text-[10px] text-muted-color truncate italic">{{ preview.description }}</span>
                 </div>
               </td>
               <td>
                 <div
-                  class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-surface-100 ring-1 ring-surface-200 dark:ring-surface-700">
-                  <span class="text-[10px] font-black uppercase text-surface-600 dark:text-surface-300">
-                    {{ preview.suggestedCategory || 'Uncategorized' }}
-                  </span>
+                  class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-surface-100 ring-1 ring-surface-200 dark:ring-surface-700"
+                >
+									<span class="text-[10px] font-black uppercase text-surface-600 dark:text-surface-300">
+										{{ preview.suggestedCategory?.name || 'Uncategorized' }}
+									</span>
                 </div>
               </td>
               <td class="text-right">
-                <span [class]="getTransactionTypeStyles(preview.type) + ' px-2 py-1 rounded font-mono font-black'">
-                  {{ preview.amount | currency }}
-                </span>
+								<span [class]="getTransactionTypeStyles(preview.type) + ' px-2 py-1 rounded font-mono font-black'">
+									{{ preview.amount | currency }}
+								</span>
               </td>
             </tr>
           </ng-template>
@@ -258,21 +297,44 @@
     <div class="flex items-center justify-between pt-4 border-t border-surface-100 dark:border-surface-800">
       <div>
         @if (currentStep() === 1) {
-          <p-button label="Back to Setup" icon="pi pi-arrow-left" (onClick)="goBack()" [text]="true"
-                    severity="secondary" [disabled]="saving()"/>
+          <p-button
+            label="Back to Setup"
+            icon="pi pi-arrow-left"
+            (onClick)="goBack()"
+            [text]="true"
+            severity="secondary"
+            [disabled]="saving()"
+          />
         }
       </div>
 
       <div class="flex gap-3">
-        <p-button label="Cancel" severity="secondary" [text]="true" (onClick)="onHide()"
-                  [disabled]="uploading() || saving()"/>
+        <p-button
+          label="Cancel"
+          severity="secondary"
+          [text]="true"
+          (onClick)="onHide()"
+          [disabled]="uploading() || saving()"
+        />
 
         @if (currentStep() === 0) {
-          <p-button label="Analyze Files" icon="pi pi-bolt" (onClick)="uploadAndPreview()" [loading]="uploading()"
-                    [disabled]="!canProceedToPreview()" [raised]="true"/>
+          <p-button
+            label="Analyze Files"
+            icon="pi pi-bolt"
+            (onClick)="uploadAndPreview()"
+            [loading]="uploading()"
+            [disabled]="!canProceedToPreview()"
+            [raised]="true"
+          />
         } @else {
-          <p-button label="Import Ledger" icon="pi pi-check" (onClick)="saveTransactions()" [loading]="saving()"
-                    [disabled]="!canSave()" [raised]="true"/>
+          <p-button
+            label="Import Ledger"
+            icon="pi pi-check"
+            (onClick)="saveTransactions()"
+            [loading]="saving()"
+            [disabled]="!canSave()"
+            [raised]="true"
+          />
         }
       </div>
     </div>

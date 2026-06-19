@@ -11,25 +11,32 @@ import {
   Signal,
   signal,
   WritableSignal
-} from '@angular/core';
-import {CommonModule} from '@angular/common';
-import {FormsModule} from '@angular/forms';
-import {forkJoin, from, of} from 'rxjs';
-import {catchError, concatMap, finalize, map, toArray} from 'rxjs/operators';
-import {DialogModule} from 'primeng/dialog';
-import {ButtonModule} from 'primeng/button';
-import {Select} from 'primeng/select';
-import {FileUpload} from 'primeng/fileupload';
-import {TableModule} from 'primeng/table';
-import {MessageModule} from 'primeng/message';
-import {ProgressSpinnerModule} from 'primeng/progressspinner';
-import {TagModule} from 'primeng/tag';
-import {TooltipModule} from 'primeng/tooltip';
+} from "@angular/core";
+import {CommonModule} from "@angular/common";
+import {FormsModule} from "@angular/forms";
+import {HttpErrorResponse} from "@angular/common/http";
+import {forkJoin, from, of} from "rxjs";
+import {catchError, concatMap, finalize, map, toArray} from "rxjs/operators";
+import {DialogModule} from "primeng/dialog";
+import {ButtonModule} from "primeng/button";
+import {Select} from "primeng/select";
+import {TableModule} from "primeng/table";
+import {MessageModule} from "primeng/message";
+import {ProgressSpinnerModule} from "primeng/progressspinner";
+import {TagModule} from "primeng/tag";
+import {TooltipModule} from "primeng/tooltip";
 
-import {BankOption, SaveTransactionRequest, TransactionPreview, TransactionType} from '@models/transaction.model';
-import {Account, BankName} from '@models/account.model';
-import {TransactionImportService} from '@features/transactions/services/transaction-import.service';
-import {ToastService} from '@core/services/toast.service';
+import {
+  BankOption,
+  SaveTransactionRequest,
+  TransactionDto,
+  TransactionPreview,
+  TransactionType
+} from "@models/transaction.model";
+import {Account, BankName} from "@models/account.model";
+import {TransactionImportService} from "@features/transactions/services/transaction-import.service";
+import {ToastService} from "@core/services/toast.service";
+import {FileSelectEvent, FileUpload} from 'primeng/fileupload';
 
 /**
  * Represents a single file in a multi-file import batch.
@@ -40,7 +47,7 @@ interface BatchImportItem {
   accountId: number;
   bankName: BankName | null;
   previews: TransactionPreview[];
-  status: 'pending' | 'uploading' | 'ready' | 'saving' | 'success' | 'error';
+  status: "pending" | "uploading" | "ready" | "saving" | "success" | "error";
   error?: string;
 }
 
@@ -51,7 +58,7 @@ interface BatchImportItem {
  * and a comprehensive preview ledger before final persistence.
  */
 @Component({
-  selector: 'app-csv-import-dialog',
+  selector: "app-csv-import-dialog",
   standalone: true,
   imports: [
     CommonModule,
@@ -59,16 +66,16 @@ interface BatchImportItem {
     DialogModule,
     ButtonModule,
     Select,
-    FileUpload,
     TableModule,
     MessageModule,
     ProgressSpinnerModule,
     TagModule,
-    TooltipModule
+    TooltipModule,
+    FileUpload
   ],
-  templateUrl: './csv-import-dialog.component.html'
+  templateUrl: "./csv-import-dialog.component.html"
 })
-export class CsvImportDialogComponent {
+export class CsvImportDialog {
   private readonly importService: TransactionImportService = inject(TransactionImportService);
   private readonly toast: ToastService = inject(ToastService);
 
@@ -96,21 +103,19 @@ export class CsvImportDialogComponent {
 
   /** System-wide feedback message for the import process. */
   readonly generalMessage: WritableSignal<{
-    severity: 'success' | 'info' | 'warn' | 'error',
-    text: string
+    severity: "success" | "info" | "warn" | "error";
+    text: string;
   } | null> = signal(null);
 
   readonly bankOptions: BankOption[] = [
-    {label: 'Standard CSV', value: BankName.STANDARD, description: 'Generic format (Date, Description, Amount)'},
-    {label: 'Capital One', value: BankName.CAPITAL_ONE, description: 'Official bank export format'},
-    {label: 'Discover', value: BankName.DISCOVER, description: 'Official card export format'},
-    {label: 'Synovus', value: BankName.SYNOVUS, description: 'Official bank export format'},
-    {label: 'Universal CSV', value: BankName.UNIVERSAL, description: 'Intelligent auto-detection'}
+    {label: "Standard CSV", value: BankName.STANDARD, description: "Generic format (Date, Description, Amount)"},
+    {label: "Capital One", value: BankName.CAPITAL_ONE, description: "Official bank export format"},
+    {label: "Discover", value: BankName.DISCOVER, description: "Official card export format"},
+    {label: "Synovus", value: BankName.SYNOVUS, description: "Official bank export format"},
+    {label: "Universal CSV", value: BankName.UNIVERSAL, description: "Intelligent auto-detection"}
   ];
 
-  readonly accountOptions = computed(() =>
-    this.accounts().map((a: Account) => ({label: a.name, value: a.id}))
-  );
+  readonly accountOptions = computed(() => this.accounts().map((a: Account) => ({label: a.name, value: a.id})));
 
   readonly canProceedToPreview: Signal<boolean> = computed((): boolean => {
     const items: BatchImportItem[] = this.importItems();
@@ -118,7 +123,7 @@ export class CsvImportDialogComponent {
   });
 
   readonly canSave: Signal<boolean> = computed((): boolean =>
-    this.importItems().some((i: BatchImportItem): boolean => i.status === 'ready' && i.previews.length > 0)
+    this.importItems().some((i: BatchImportItem): boolean => i.status === "ready" && i.previews.length > 0)
   );
 
   readonly hasItems: Signal<boolean> = computed((): boolean => this.importItems().length > 0);
@@ -141,15 +146,15 @@ export class CsvImportDialogComponent {
   /**
    * Processes file selection and attempts automatic metadata detection.
    */
-  onFilesSelect(event: any): void {
-    const files = event.files || event.currentFiles;
+  onFilesSelect(event: FileSelectEvent): void {
+    const files: File[] = event.files;
     if (!files?.length) return;
 
     const newItems: BatchImportItem[] = [];
     for (const file of files) {
       if (!this.importItems().some((i: BatchImportItem): boolean => i.file.name === file.name)) {
         const detectedBank: BankName | null = this.detectBankName(file.name);
-        let suggestedAccountId: number = -1;
+        let suggestedAccountId = -1;
 
         if (detectedBank) {
           const match: Account | undefined = this.accounts().find((a: Account): boolean => a.bank === detectedBank);
@@ -162,7 +167,7 @@ export class CsvImportDialogComponent {
           accountId: suggestedAccountId,
           bankName: detectedBank,
           previews: [],
-          status: 'pending'
+          status: "pending"
         });
       }
     }
@@ -187,10 +192,26 @@ export class CsvImportDialogComponent {
   }
 
   /**
+   * Synchronizes per-file bank selection.
+   */
+  onBankChange(index: number, bankName: BankName): void {
+    this.importItems.update((items: BatchImportItem[]): BatchImportItem[] => {
+      const updated: BatchImportItem[] = [...items];
+      updated[index] = {
+        ...updated[index],
+        bankName
+      };
+      return updated;
+    });
+  }
+
+  /**
    * Removes a file from the current batch.
    */
   removeItem(index: number): void {
-    this.importItems.update((items: BatchImportItem[]): BatchImportItem[] => items.filter((_: BatchImportItem, i: number): boolean => i !== index));
+    this.importItems.update((items: BatchImportItem[]): BatchImportItem[] =>
+      items.filter((_: BatchImportItem, i: number): boolean => i !== index)
+    );
   }
 
   /**
@@ -198,26 +219,32 @@ export class CsvImportDialogComponent {
    */
   private detectBankName(fileName: string): BankName | null {
     const name: string = fileName.toLowerCase();
-    if (name.includes('discover')) return BankName.DISCOVER;
-    if (name.includes('capital')) return BankName.CAPITAL_ONE;
-    if (name.includes('synovus')) return BankName.SYNOVUS;
+    if (name.includes("discover")) return BankName.DISCOVER;
+    if (name.includes("capital")) return BankName.CAPITAL_ONE;
+    if (name.includes("synovus")) return BankName.SYNOVUS;
     return null;
   }
 
   applyGlobalAccount(): void {
     const id: number | null = this.globalAccountId();
-    if (id) this.importItems.update((items: BatchImportItem[]) => items.map((i: BatchImportItem) => ({
-      ...i,
-      accountId: id
-    })));
+    if (id)
+      this.importItems.update((items: BatchImportItem[]) =>
+        items.map((i: BatchImportItem) => ({
+          ...i,
+          accountId: id
+        }))
+      );
   }
 
   applyGlobalBank(): void {
     const bank: BankName | null = this.globalBankName();
-    if (bank) this.importItems.update((items: BatchImportItem[]) => items.map((i: BatchImportItem) => ({
-      ...i,
-      bankName: bank
-    })));
+    if (bank)
+      this.importItems.update((items: BatchImportItem[]) =>
+        items.map((i: BatchImportItem) => ({
+          ...i,
+          bankName: bank
+        }))
+      );
   }
 
   /**
@@ -227,40 +254,43 @@ export class CsvImportDialogComponent {
     if (!this.canProceedToPreview()) return;
 
     this.uploading.set(true);
-    this.importItems.update((items: BatchImportItem[]) => items.map((i: BatchImportItem) => ({
-      ...i,
-      status: 'uploading',
-      error: undefined
-    })));
+    this.importItems.update((items: BatchImportItem[]) =>
+      items.map((i: BatchImportItem) => ({
+        ...i,
+        status: "uploading",
+        error: undefined
+      }))
+    );
 
     const tasks = this.importItems().map((item: BatchImportItem) =>
       this.importService.uploadCsv(item.accountId, item.file, item.bankName!).pipe(
-        map((previews: TransactionPreview[]) => ({id: item.id, status: 'ready' as const, previews})),
-        catchError((err: any) => of({
-          id: item.id,
-          status: 'error' as const,
-          previews: [],
-          error: err.error?.detail || 'Format Mismatch'
-        }))
+        map((previews: TransactionPreview[]) => ({id: item.id, status: "ready" as const, previews})),
+        catchError((err: HttpErrorResponse) =>
+          of({
+            id: item.id,
+            status: "error" as const,
+            previews: [],
+            error: err.error?.detail || "Format Mismatch"
+          })
+        )
       )
     );
 
-    forkJoin(tasks).pipe(
-      finalize((): void => this.uploading.set(false))
-    ).subscribe({
-      next: (results): void => {
-        console.log('Upload results:', results);
-        this.importItems.update((items: BatchImportItem[]) =>
-          items.map((i: BatchImportItem) => ({...i, ...results.find(r => r.id === i.id)}))
-        );
+    forkJoin(tasks)
+      .pipe(finalize((): void => this.uploading.set(false)))
+      .subscribe({
+        next: (results): void => {
+          this.importItems.update((items: BatchImportItem[]) =>
+            items.map((i: BatchImportItem) => ({...i, ...results.find((r) => r.id === i.id)}))
+          );
 
-        if (results.some(r => r.status === 'ready')) {
-          this.currentStep.set(1);
-        } else {
-          this.generalMessage.set({severity: 'error', text: 'All files failed to parse. Verify bank formats.'});
+          if (results.some((r) => r.status === "ready")) {
+            this.currentStep.set(1);
+          } else {
+            this.generalMessage.set({severity: "error", text: "All files failed to parse. Verify bank formats."});
+          }
         }
-      }
-    });
+      });
   }
 
   /**
@@ -270,53 +300,60 @@ export class CsvImportDialogComponent {
     if (!this.canSave()) return;
 
     this.saving.set(true);
-    const itemsToSave: BatchImportItem[] = this.importItems().filter((i: BatchImportItem): boolean => i.status === 'ready');
+    const itemsToSave: BatchImportItem[] = this.importItems().filter((i: BatchImportItem): boolean => i.status === "ready");
 
-    from(itemsToSave).pipe(
-      concatMap((item: BatchImportItem) => from(this.importService.calculateFileHash(item.file)).pipe(
-        map((fileHash: string) => {
-          item.status = 'saving';
-          const transactions: any[] = item.previews.map((p: TransactionPreview) => ({
-            date: p.date,
-            postDate: p.postDate,
-            type: p.type,
-            amount: Math.abs(p.amount),
-            description: p.description,
-            merchant: p.suggestedMerchant,
-            category: p.suggestedCategory
-          }));
+    from(itemsToSave)
+      .pipe(
+        concatMap((item: BatchImportItem) =>
+          from(this.importService.calculateFileHash(item.file)).pipe(
+            map((fileHash: string) => {
+              item.status = "saving";
+              const transactions: TransactionDto[] = item.previews.map(
+                (p: TransactionPreview) =>
+                  ({
+                    date: p.date,
+                    postDate: p.postDate,
+                    type: p.type,
+                    amount: Math.abs(p.amount),
+                    description: p.description,
+                    merchant: p.suggestedMerchant,
+                    category: p.suggestedCategory
+                  }) as TransactionDto
+              );
 
-          return {
-            transactions: transactions as any,
-            fileName: item.file.name,
-            fileHash,
-            accountId: item.accountId
-          } as SaveTransactionRequest;
-        })
-      )),
-      toArray(),
-      concatMap((requests: SaveTransactionRequest[]) => {
-        if (requests.length === 0) return of(true);
-        return this.importService.saveBulkTransactions(requests).pipe(
-          map(() => true),
-          catchError(() => of(false))
-        );
-      }),
-      finalize((): void => this.saving.set(false))
-    ).subscribe((success) => {
-      if (success) {
-        this.importItems.update(items => items.map(item => ({...item, status: 'success'})));
-        this.toast.success(`Batch complete: ${itemsToSave.length} files imported.`);
-        this.importComplete.emit();
-        this.onHide();
-      } else {
-        this.importItems.update(items => items.map(item => ({...item, status: 'error'})));
-        this.generalMessage.set({
-          severity: 'warn',
-          text: `Import failed to process the transaction batch. Please review and try again.`
-        });
-      }
-    });
+              return {
+                transactions,
+                fileName: item.file.name,
+                fileHash,
+                accountId: item.accountId
+              } as SaveTransactionRequest;
+            })
+          )
+        ),
+        toArray(),
+        concatMap((requests: SaveTransactionRequest[]) => {
+          if (requests.length === 0) return of(true);
+          return this.importService.saveBulkTransactions(requests).pipe(
+            map(() => true),
+            catchError(() => of(false))
+          );
+        }),
+        finalize((): void => this.saving.set(false))
+      )
+      .subscribe((success) => {
+        if (success) {
+          this.importItems.update((items) => items.map((item) => ({...item, status: "success"})));
+          this.toast.success(`Batch complete: ${itemsToSave.length} files imported.`);
+          this.importComplete.emit();
+          this.onHide();
+        } else {
+          this.importItems.update((items) => items.map((item) => ({...item, status: "error"})));
+          this.generalMessage.set({
+            severity: "warn",
+            text: `Import failed to process the transaction batch. Please review and try again.`
+          });
+        }
+      });
   }
 
   /**
@@ -340,11 +377,11 @@ export class CsvImportDialogComponent {
   getTransactionTypeStyles(type: TransactionType): string {
     switch (type) {
       case TransactionType.INCOME:
-        return 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20';
+        return "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20";
       case TransactionType.EXPENSE:
-        return 'text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/20';
+        return "text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/20";
       default:
-        return 'text-surface-500 bg-surface-100';
+        return "text-surface-500 bg-surface-100";
     }
   }
 }
