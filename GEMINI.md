@@ -1,18 +1,22 @@
-# pf-ui Instructions
+# Frontend (`pf-ui`) Instructions
 
-This document outlines the specific rules, commands, and structures for the Angular frontend service. It acts as an extension to the root `GEMINI.md` file.
+## Framework & Tooling
+- **Framework:** Angular v21 (Signals-based).
+- **Styling:** Tailwind CSS v4 and PrimeNg v21. 
+	- **Theme:** "Soft & Friendly" (rounded corners, earthy/calm primary colors).
+	- **Customization:** Configured in `src/styles.css` using CSS variables.
+- **State Management:** Strictly use **Signals**. Avoid RxJS where Signals are more appropriate.
 
-## Build and Run Commands
-When modifying or interacting with the frontend, utilize the following Angular CLI commands:
-- **Run locally:** `ng serve`
-- **Run on local network:** `ng serve --configuration local-net`
-- **Build the project:** `ng build`
-- **Run tests:** `ng test`
+## Components & Naming
+- **File Naming:** Use `<feature-name>.component.[ts|html|css]`.
+- **Class Naming:** Use **PascalCase without the "Component" suffix** (e.g., `export class UserProfile`).
+- **Formatting:** Ensure all code is formatted using **Prettier**.
 
-## Folder Structure
-The UI application code is housed under the `src/app` directory. Strictly enforce the following folder organization:
+## Error Handling & Feedback
+- **Global Handling:** Use Global Angular Error Handlers and HTTP Interceptors.
+- **User Feedback:** Use **Toast** notifications for safely vague error information.
+- **Logging:** Keep frontend logging to an absolute minimum.
 
-- **`core/`**: Authentication services, application-wide singletons, and core infrastructure logic.
-- **`features/`**: Specific, module-bound application features and views.
-- **`models/`**: TypeScript interfaces, types, and application models.
-- **`shared/`**: Pipes, directives, UI components, and generic services used across multiple features throughout the application.
+## Testing Mandate
+- **Bug Fixes (TDD):** Adhere strictly to Test-Driven Development for bugs. You must write a failing test that reproduces the issue *before* applying the fix.
+- **Architecture:** Tests must test *behavior*, not internal implementation details, and reside in a `/test/` directory mirroring the production code structure.
