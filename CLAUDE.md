@@ -9,7 +9,9 @@
 
 ## Components & Naming
 - **File Naming:** Use `<feature-name>.component.[ts|html|css]`.
-- **Class Naming:** Use **PascalCase without the "Component" suffix** (e.g., `export class UserProfile`).
+- **Class Naming:** Class names MUST use PascalCase WITH the "Component" suffix (e.g.,
+  `export class UserProfileComponent`), matching Angular CLI conventions and 35 of 36
+  `.component.ts` files in this codebase.
 - **Formatting:** Ensure all code is formatted using **Prettier**.
 
 ## Error Handling & Feedback
@@ -19,4 +21,7 @@
 
 ## Testing Mandate
 - **Bug Fixes (TDD):** Adhere strictly to Test-Driven Development for bugs. You must write a failing test that reproduces the issue *before* applying the fix.
-- **Architecture:** Tests must test *behavior*, not internal implementation details, and reside in a `/test/` directory mirroring the production code structure.
+- **Architecture:** Tests must test *behavior*, not internal implementation details.
+- **Test Co-location:** Unit test files (`.spec.ts`) are co-located alongside the source file they
+  test (e.g., `accounts.component.spec.ts` lives next to `accounts.component.ts`). Maintain this
+  convention for all new tests — there is no separate `/test/` directory.
