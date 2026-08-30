@@ -16,3 +16,6 @@ This skill guides the creation of robust DOM and interaction tests for Angular c
 - Avoid deep component trees; use Mock components or ignore child elements to maintain unit isolation.
 - Verify that UI interactions successfully mutate the underlying Signal state.
 - Follow the AAA (Arrange, Act, Assert) pattern.
+- **Test Co-location**: place the spec file alongside the component it tests (e.g.,
+  `accounts.component.spec.ts` next to `accounts.component.ts`). Do not create a separate `/test/`
+  directory.

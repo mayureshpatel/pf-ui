@@ -11,7 +11,7 @@ This skill governs the creation of the presentation layer in the frontend.
 - **Frameworks**: Strictly use Angular 21, Tailwind CSS v4, and PrimeNG v21. Do NOT use Angular Material, Bootstrap, or legacy frameworks.
 - **Standalone**: All components MUST be `standalone: true`.
 - **Theme**: Adhere to the "Soft & Friendly" design system (rounded corners, earthy primary colors) mapped via CSS variables in `styles.css`.
-- **Naming**: Use PascalCase without the "Component" suffix for class names (e.g., `export class UserProfile`).
+- **Naming**: Use PascalCase WITH the "Component" suffix for class names (e.g., `export class UserProfileComponent`), matching Angular CLI conventions and the existing codebase.
 
 ## 🛠 Procedural Workflow
 1. **Logic (TS)**: Use `inject()` for dependency injection instead of constructors.
