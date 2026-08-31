@@ -12,7 +12,9 @@
 - **Class Naming:** Class names MUST use PascalCase WITH the "Component" suffix (e.g.,
   `export class UserProfileComponent`), matching Angular CLI conventions and 35 of 36
   `.component.ts` files in this codebase.
-- **Formatting:** Ensure all code is formatted using **Prettier**.
+- **Formatting:** Ensure all code is formatted using **Prettier** — configured in
+  `package.json` (`singleQuote: true`, `printWidth: 100`). Single quotes, not double, is the
+  correct, enforced convention; there is no project-wide double-quote rule.
 
 ## Error Handling & Feedback
 - **Global Handling:** Use Global Angular Error Handlers and HTTP Interceptors.
