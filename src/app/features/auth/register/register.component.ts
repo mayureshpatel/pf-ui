@@ -83,7 +83,9 @@ export class RegisterComponent {
     confirmPassword: new FormControl<string>('', {
       nonNullable: true,
       validators: [Validators.required]
-    })
+    }),
+    /** Honeypot -- rendered off-screen; a real user never sees or fills this. */
+    website: new FormControl<string>('', {nonNullable: true})
   }, {validators: passwordMatchValidator});
 
   /**
@@ -112,9 +114,9 @@ export class RegisterComponent {
     this.isSubmitting.set(true);
     this.errorMessage.set(null);
 
-    const {username, email, password} = this.form.getRawValue();
+    const {username, email, password, website} = this.form.getRawValue();
 
-    this.authService.register({username, email, password})
+    this.authService.register({username, email, password, website})
       .pipe(finalize((): void => this.isSubmitting.set(false)))
       .subscribe({
         error: (err: Error): void => {

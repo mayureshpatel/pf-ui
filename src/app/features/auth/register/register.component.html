@@ -17,6 +17,21 @@
         </p-message>
       }
 
+      <!-- Honeypot: off-screen, not display:none (some bots specifically skip that), not
+           visible or reachable to a sighted or assistive-tech user. A real person never fills
+           this; anything here means the submission is an unsophisticated bot. -->
+      <div class="absolute -left-[9999px] w-px h-px overflow-hidden" aria-hidden="true">
+        <label for="website">Website</label>
+        <input
+          pInputText
+          id="website"
+          formControlName="website"
+          type="text"
+          tabindex="-1"
+          autocomplete="off"
+        />
+      </div>
+
       <!-- Username -->
       <div class="flex flex-col gap-2">
         <label for="username" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">

@@ -15,11 +15,15 @@ export interface AuthRequest {
  * @property username - The username of the user.
  * @property email - The email address of the user.
  * @property password - The password of the user.
+ * @property website - Honeypot field. Always empty for a real user -- the form renders it
+ *   off-screen, where no human ever sees or fills it. A non-empty value signals an
+ *   unsophisticated bot and the backend rejects the request.
  */
 export interface RegistrationRequest {
   username: string;
   email: string;
   password: string;
+  website: string;
 }
 
 /**

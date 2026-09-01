@@ -1,9 +1,8 @@
 import {expect, test} from '@playwright/test';
 
 /**
- * Registration is excluded from this flow: POST /auth/register requires ROLE_ADMIN, so the
- * frontend's own public "Create account" link 403s for any real user today (see PF-115). Once
- * that's fixed, a registration step belongs here too.
+ * Registration has its own spec (registration.spec.ts, added for PF-183) -- this file covers
+ * logging in with a pre-existing user only.
  */
 test.describe('Login -> Dashboard', () => {
   test.use({storageState: {cookies: [], origins: []}});

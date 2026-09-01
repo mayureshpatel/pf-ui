@@ -33,4 +33,46 @@ describe('RegisterComponent', () => {
   it('should create the component', () => {
     expect(component).toBeTruthy();
   });
+
+  describe('honeypot field', () => {
+    const fillRealFields = (): void => {
+      component.form.setValue({
+        username: 'testuser',
+        email: 'test@example.com',
+        password: 'Password1!',
+        confirmPassword: 'Password1!',
+        website: ''
+      });
+    };
+
+    it('should submit successfully with an empty honeypot (a real user)', () => {
+      fillRealFields();
+
+      component.onSubmit();
+
+      expect(authService.register).toHaveBeenCalledWith(
+        expect.objectContaining({website: ''})
+      );
+    });
+
+    it('should not require the honeypot field to be filled', () => {
+      fillRealFields();
+
+      expect(component.form.valid).toBe(true);
+    });
+
+    it('should include a filled honeypot value in the submitted request (backend rejects it)', () => {
+      fillRealFields();
+      component.form.controls.website.setValue('http://spam.example.com');
+
+      component.onSubmit();
+
+      // The frontend doesn't second-guess a filled honeypot itself -- it's not shown to real
+      // users at all, so there's nothing to validate client-side. Rejection is the backend's
+      // job (RegistrationService.register()); this just confirms the value round-trips.
+      expect(authService.register).toHaveBeenCalledWith(
+        expect.objectContaining({website: 'http://spam.example.com'})
+      );
+    });
+  });
 });
