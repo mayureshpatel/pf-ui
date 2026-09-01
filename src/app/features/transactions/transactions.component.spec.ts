@@ -3,6 +3,7 @@ import {TransactionsComponent} from './transactions.component';
 import {TransactionApiService} from './services/transaction-api.service';
 import {AccountApiService} from '@features/accounts/services/account-api.service';
 import {CategoryApiService} from '@features/categories/services/category-api.service';
+import {MerchantApiService} from '@features/merchants/services/merchant-api.service';
 import {ToastService} from '@core/services/toast.service';
 import {ConfirmationService, MessageService} from 'primeng/api';
 import {ActivatedRoute, Router} from '@angular/router';
@@ -16,6 +17,7 @@ describe('TransactionsComponent', () => {
   let mockTransactionApi: any;
   let mockAccountApi: any;
   let mockCategoryApi: any;
+  let mockMerchantApi: any;
   let mockToast: any;
   let mockConfirmationService: any;
   let mockRouter: any;
@@ -32,8 +34,12 @@ describe('TransactionsComponent', () => {
       getAccounts: vi.fn().mockReturnValue(of([]))
     };
     mockCategoryApi = {
+      getCategories: vi.fn().mockReturnValue(of([])),
       getCategoriesWithTransactions: vi.fn().mockReturnValue(of([])),
       getMerchantsWithTransactions: vi.fn().mockReturnValue(of([]))
+    };
+    mockMerchantApi = {
+      getMerchants: vi.fn().mockReturnValue(of([]))
     };
     mockToast = {
       success: vi.fn(),
@@ -56,6 +62,7 @@ describe('TransactionsComponent', () => {
         {provide: TransactionApiService, useValue: mockTransactionApi},
         {provide: AccountApiService, useValue: mockAccountApi},
         {provide: CategoryApiService, useValue: mockCategoryApi},
+        {provide: MerchantApiService, useValue: mockMerchantApi},
         {provide: ToastService, useValue: mockToast},
         {provide: ConfirmationService, useValue: mockConfirmationService},
         {provide: MessageService, useValue: {}},

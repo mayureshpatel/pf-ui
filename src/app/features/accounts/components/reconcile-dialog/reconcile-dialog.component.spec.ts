@@ -15,7 +15,9 @@ describe('ReconcileDrawerComponent', () => {
 
   const mockAccount = {
     id: 1,
+    name: 'Checking',
     currentBalance: 100,
+    currency: {code: 'USD', name: 'US Dollar', symbol: '$', isActive: true},
     version: 1
   } as Account;
 
