@@ -17,3 +17,7 @@ This skill enforces the use of modern Signals for state management over legacy R
 2. **Derived State**: Use `computed(() => ...)` to automatically calculate aggregations (e.g., Total Balance) without manual recalculation triggers.
 3. **Side Effects**: Use `effect(() => ...)` sparingly, primarily for syncing state to `localStorage` or triggering external APIs.
 4. **HTTP Interop**: When calling `HttpClient`, immediately convert the Observable response to a Signal using `toSignal()`.
+
+## 📚 References
+- [Signal Store Gold-Source](references/signal-store-gold-source.ts) — `toSignal()` is the *only*
+  RxJS touch-point in the whole file; everything downstream is Signals/`computed()`/`effect()`.
