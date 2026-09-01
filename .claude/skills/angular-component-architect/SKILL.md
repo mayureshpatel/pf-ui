@@ -17,3 +17,8 @@ This skill governs the creation of the presentation layer in the frontend.
 1. **Logic (TS)**: Use `inject()` for dependency injection instead of constructors.
 2. **Template (HTML)**: Use modern Angular Control Flow (`@if`, `@for`) instead of `*ngIf` and `*ngFor`.
 3. **Styling (CSS)**: Rely on Tailwind utility classes inline. Only write custom CSS for complex animations or overrides.
+
+## 📚 References
+See `references/angular-component-gold-source.ts` (paired with the matching `.html`) for a real
+component demonstrating `standalone: true`, `inject()`, `@if` control flow, and Tailwind utility
+classes with no inline styles.
