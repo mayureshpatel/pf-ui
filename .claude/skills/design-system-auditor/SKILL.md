@@ -16,5 +16,7 @@ This skill prevents "UX Drift" by ensuring all UI developers (AI or human) stric
 2. **Scan for Violations:**
    - Use regex or semantic parsing to flag any `style=` attributes.
    - Flag any brackets `[]` used inside Tailwind class strings that indicate hardcoded arbitrary values.
-3. **Cross-Reference Theme:** Review `tailwind.config.ts` (if applicable) or the core CSS file to find the correct thematic variable that should replace the hardcoded value.
+3. **Cross-Reference Theme:** Review `src/styles.css` for `@layer`, `@custom-variant`, and CSS
+   custom property definitions (e.g., `--primary`) to find the correct thematic variable that
+   should replace the hardcoded value. Tailwind v4 does NOT use `tailwind.config.ts`.
 4. **Refactor:** Output the refactored, cleanly-styled component template.
