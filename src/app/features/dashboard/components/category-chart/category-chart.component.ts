@@ -68,10 +68,10 @@ export class CategoryChartComponent {
         {
           label: 'Total Spent',
           data: topItems.map((item: CategoryBreakdown): number => Math.abs(item.total)),
-          backgroundColor: topItems.map((item: CategoryBreakdown): string => getCategoryColor(item.category?.color || '')),
+          backgroundColor: topItems.map((item: CategoryBreakdown): string => item.category?.color || getCategoryColor(item.category?.name || '')),
           borderRadius: 8,
           barThickness: 32,
-          hoverBackgroundColor: topItems.map((item: CategoryBreakdown): string => getCategoryColor(item.category?.color || ''))
+          hoverBackgroundColor: topItems.map((item: CategoryBreakdown): string => item.category?.color || getCategoryColor(item.category?.name || ''))
         }
       ]
     });
