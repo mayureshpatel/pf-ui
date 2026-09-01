@@ -13,6 +13,10 @@ export class MerchantApiService {
   private readonly authService: AuthService = inject(AuthService);
   private readonly apiUrl: string = `${environment.apiUrl}/merchants`;
 
+  /**
+   * Gets all merchants for the current user.
+   * @returns the list of merchants.
+   */
   getMerchants(): Observable<Merchant[]> {
     return this.http.get<Merchant[]>(this.apiUrl);
   }
