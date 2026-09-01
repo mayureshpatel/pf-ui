@@ -7,9 +7,10 @@ import {MerchantApiService} from '@features/merchants/services/merchant-api.serv
 import {ToastService} from '@core/services/toast.service';
 import {ConfirmationService, MessageService} from 'primeng/api';
 import {ActivatedRoute, Router} from '@angular/router';
-import {of} from 'rxjs';
+import {of, throwError} from 'rxjs';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {vi} from 'vitest';
+import {Transaction} from '@models/transaction.model';
 
 describe('TransactionsComponent', () => {
   let component: TransactionsComponent;
@@ -28,7 +29,8 @@ describe('TransactionsComponent', () => {
       getTransactions: vi.fn().mockReturnValue(of({
         content: [],
         page: {totalElements: 0, totalPages: 0, number: 0, size: 20}
-      }))
+      })),
+      deleteTransaction: vi.fn()
     };
     mockAccountApi = {
       getAccounts: vi.fn().mockReturnValue(of([]))
@@ -170,5 +172,69 @@ describe('TransactionsComponent', () => {
     const state = component.state();
     expect(state.filter.merchant).toBe('Amazon');
     expect(state.filter.description).toBe('cloud');
+  });
+
+  describe('deleteTransaction', () => {
+    const txnToDelete = {id: 1, description: 'Coffee', amount: 5} as Transaction;
+    const remainingTxn = {id: 2, description: 'Groceries', amount: 50} as Transaction;
+
+    beforeEach(() => {
+      // auto-accept the confirmation dialog, matching AccountsComponent's spec pattern
+      mockConfirmationService.confirm.mockImplementation((config: any) => {
+        if (config.accept) {
+          config.accept();
+        }
+        return mockConfirmationService;
+      });
+    });
+
+    it('should remove the deleted transaction from the transactions signal after reload', () => {
+      // arrange -- the post-delete reload returns the list without the deleted transaction
+      mockTransactionApi.deleteTransaction.mockReturnValue(of(undefined));
+      mockTransactionApi.getTransactions.mockReturnValue(of({
+        content: [remainingTxn],
+        page: {totalElements: 1, totalPages: 1, number: 0, size: 20}
+      }));
+
+      // act
+      component.deleteTransaction(txnToDelete);
+
+      // assert & verify
+      expect(mockTransactionApi.deleteTransaction).toHaveBeenCalledWith(txnToDelete.id);
+      expect(mockTransactionApi.getTransactions).toHaveBeenCalledTimes(2); // initial load + post-delete reload
+      expect(component.transactions()).toEqual([remainingTxn]);
+      expect(component.transactions().some(t => t.id === txnToDelete.id)).toBe(false);
+    });
+
+    it('should show a success toast and not alter the signal on successful delete with an empty result', () => {
+      // arrange
+      mockTransactionApi.deleteTransaction.mockReturnValue(of(undefined));
+      mockTransactionApi.getTransactions.mockReturnValue(of({
+        content: [],
+        page: {totalElements: 0, totalPages: 0, number: 0, size: 20}
+      }));
+
+      // act
+      component.deleteTransaction(txnToDelete);
+
+      // assert & verify
+      expect(mockToast.success).toHaveBeenCalledWith('Transaction deleted');
+      expect(component.transactions()).toEqual([]);
+    });
+
+    it('should show an error toast and leave the signal unchanged when delete fails', () => {
+      // arrange -- component.transactions() starts as [] from the initial mocked load
+      mockTransactionApi.deleteTransaction.mockReturnValue(
+        throwError(() => new Error('Network error'))
+      );
+
+      // act
+      component.deleteTransaction(txnToDelete);
+
+      // assert & verify
+      expect(mockToast.error).toHaveBeenCalledWith('Failed to delete transaction.');
+      expect(mockTransactionApi.getTransactions).toHaveBeenCalledTimes(1); // no reload attempted
+      expect(component.transactions()).toEqual([]);
+    });
   });
 });

@@ -81,6 +81,16 @@ describe('AccountsComponent', () => {
     expect(component.loading()).toBe(false);
   });
 
+  it('should compute isEmpty as true when there are no accounts and loading has finished', () => {
+    mockAccountApi.getAccounts.mockReturnValue(of([]));
+
+    fixture.detectChanges();
+
+    expect(component.accounts()).toEqual([]);
+    expect(component.loading()).toBe(false);
+    expect(component.isEmpty()).toBe(true);
+  });
+
   describe('dialog operations', () => {
     beforeEach(() => {
       fixture.detectChanges();
