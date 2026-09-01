@@ -99,7 +99,7 @@ describe('AccountApiService', () => {
   describe('reconcile', () => {
     it('should POST reconcile data and return ID', () => {
       const reconcileReq: AccountReconcileRequest = {
-        id: 1,
+        accountId: 1,
         newBalance: 500,
         version: 1
       };

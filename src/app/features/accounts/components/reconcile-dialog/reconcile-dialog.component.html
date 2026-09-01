@@ -50,7 +50,7 @@
           class="w-full"
           inputStyleClass="w-full py-4 text-2xl font-mono font-bold"
           placeholder="0.00"
-          (onKeyDown)="submit()"
+          (onKeyDown)="onBalanceKeyDown($event)"
         />
         <p class="text-xs text-muted-color italic">
           Enter the balance exactly as it appears on your bank statement.

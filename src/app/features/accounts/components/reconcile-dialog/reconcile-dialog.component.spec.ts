@@ -96,13 +96,34 @@ describe('ReconcileDrawerComponent', () => {
 
     expect(component.saving()).toBe(false);
     expect(mockAccountApiService.reconcile).toHaveBeenCalledWith({
-      id: mockAccount.id,
+      accountId: mockAccount.id,
       newBalance: 150,
       version: mockAccount.version
     });
     expect(mockToastService.success).toHaveBeenCalledWith('Account reconciled successfully');
     expect(component.reconciled.emit).toHaveBeenCalled();
     expect(component.visible()).toBe(false);
+  });
+
+  describe('onBalanceKeyDown', () => {
+    it('should submit on Enter', () => {
+      fixture.detectChanges();
+      mockAccountApiService.reconcile.mockReturnValue(of(1));
+      component.form.controls.targetBalance.setValue(150);
+
+      component.onBalanceKeyDown({key: 'Enter'} as KeyboardEvent);
+
+      expect(mockAccountApiService.reconcile).toHaveBeenCalled();
+    });
+
+    it('should not submit on other keys, e.g. a digit being typed', () => {
+      fixture.detectChanges();
+      component.form.controls.targetBalance.setValue(150);
+
+      component.onBalanceKeyDown({key: '1'} as KeyboardEvent);
+
+      expect(mockAccountApiService.reconcile).not.toHaveBeenCalled();
+    });
   });
 
   it('should handle submit error', () => {
