@@ -104,12 +104,23 @@ describe('CategoryChartComponent', () => {
       expect(component.chartData().labels).toContain('Uncategorized');
     });
 
-    it('should leave chartData at its initial value when categories is empty', () => {
-      // arrange & act -- the effect only calls updateChartData() when data.length > 0
+    it('should return an empty-but-shaped chart when categories is empty (PF-189)', () => {
+      // arrange & act -- computed() always returns a fully-shaped value, matching every
+      // sibling chart component (CashFlowTrendComponent, category-report.component.ts)
       setCategories([]);
 
       // assert & verify
-      expect(component.chartData()).toEqual({});
+      expect(component.chartData()).toEqual({
+        labels: [],
+        datasets: [{
+          label: 'Total Spent',
+          data: [],
+          backgroundColor: [],
+          borderRadius: 8,
+          barThickness: 32,
+          hoverBackgroundColor: []
+        }]
+      });
     });
 
     describe('bar color', () => {
@@ -131,6 +142,19 @@ describe('CategoryChartComponent', () => {
         expect(component.chartData().datasets[0].backgroundColor[2]).toBe(expected);
         expect(component.chartData().datasets[0].hoverBackgroundColor[2]).toBe(expected);
       });
+    });
+  });
+
+  describe('chartOptions binding (PF-189)', () => {
+    it('should pass p-chart a real options object, not a signal function', () => {
+      // arrange & act -- the template binds [options]="chartOptions" with no (), so if
+      // chartOptions were still a WritableSignal, p-chart would receive the function itself
+      setCategories(mockBreakdown);
+      const pChart = fixture.debugElement.query((de: any): boolean => de.name === 'p-chart');
+
+      // assert & verify
+      expect(typeof pChart.componentInstance.options).toBe('object');
+      expect(pChart.componentInstance.options.indexAxis).toBe('y');
     });
   });
 });
