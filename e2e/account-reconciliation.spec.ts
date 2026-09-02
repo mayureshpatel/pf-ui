@@ -7,15 +7,27 @@ import {createTestAccount} from './helpers/api';
  * creates a balance-adjustment transaction if the stated balance differs -- verified below.
  */
 test.describe('Account Reconciliation', () => {
+  test('reconcile, edit, and delete buttons expose an accessible name (PF-186)', async ({page}) => {
+    await page.goto('/accounts');
+    const account = await createTestAccount(page, 'E2E Accessible Name');
+
+    await page.reload();
+    const row = page.getByRole('row', {name: new RegExp(account.name)});
+
+    await expect(row.getByRole('button', {name: 'Reconcile Account'})).toBeVisible();
+    await expect(row.getByRole('button', {name: 'Edit Account'})).toBeVisible();
+    await expect(row.getByRole('button', {name: 'Delete Account'})).toBeVisible();
+  });
+
   test('reconciling to a different balance updates the account via an adjustment transaction', async ({page}) => {
     await page.goto('/accounts');
     const account = await createTestAccount(page, 'E2E Reconcile');
 
     await page.reload();
     const row = page.getByRole('row', {name: new RegExp(account.name)});
-    // The reconcile/edit/delete buttons are icon-only with a pTooltip, which PrimeNG doesn't
-    // wire up as an accessible name -- they all render as role=button with name "". Target by
-    // icon class instead.
+    // These buttons do have an accessible name now (PF-186's fix, verified by the first test
+    // above) -- kept on the pre-existing icon-class locator here since it's unrelated to what
+    // this test actually verifies.
     await row.locator('button:has(.pi-sync)').click();
 
     // app-drawer renders PrimeNG's p-drawer (a side panel), which uses role="complementary",
@@ -44,9 +56,9 @@ test.describe('Account Reconciliation', () => {
 
     await page.reload();
     const row = page.getByRole('row', {name: new RegExp(account.name)});
-    // The reconcile/edit/delete buttons are icon-only with a pTooltip, which PrimeNG doesn't
-    // wire up as an accessible name -- they all render as role=button with name "". Target by
-    // icon class instead.
+    // These buttons do have an accessible name now (PF-186's fix, verified by the first test
+    // above) -- kept on the pre-existing icon-class locator here since it's unrelated to what
+    // this test actually verifies.
     await row.locator('button:has(.pi-sync)').click();
 
     // app-drawer renders PrimeNG's p-drawer (a side panel), which uses role="complementary",

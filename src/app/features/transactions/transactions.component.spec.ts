@@ -82,6 +82,29 @@ describe('TransactionsComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('should give the Clear Filters button an accessible name (PF-186)', () => {
+    // arrange -- the table (and its Clear button) only renders when !isEmpty(); set the
+    // signal directly since the initial fetch already resolved (empty) in beforeEach
+    component.transactions.set([{
+      id: 1,
+      account: {name: 'Checking'},
+      category: null,
+      amount: -10,
+      date: new Date('2026-01-15'),
+      description: 'test',
+      type: 'EXPENSE',
+      merchant: {originalName: 'Test'}
+    } as unknown as Transaction]);
+
+    // act
+    fixture.detectChanges();
+
+    // assert & verify -- already has a visible "Clear" label, but "Clear Filters" is
+    // the clearer, more specific accessible name (matches the pTooltip text)
+    const button: HTMLButtonElement = fixture.nativeElement.querySelector('button:has(.pi-filter-slash)');
+    expect(button.getAttribute('aria-label')).toBe('Clear Filters');
+  });
+
   it('should handle onLazyLoad with dateIs filter', () => {
     // arrange
     const testDate = new Date('2026-03-12');

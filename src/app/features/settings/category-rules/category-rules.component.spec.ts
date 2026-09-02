@@ -56,4 +56,13 @@ describe('CategoryRulesComponent', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('Uncategorized');
   });
+
+  it('should give the delete button an accessible name (PF-186)', () => {
+    // act
+    fixture.detectChanges();
+
+    // assert & verify
+    const button: HTMLButtonElement = fixture.nativeElement.querySelector('button:has(.pi-trash)');
+    expect(button.getAttribute('aria-label')).toBe('Permanently remove this rule');
+  });
 });
