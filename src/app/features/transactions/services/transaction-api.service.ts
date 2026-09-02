@@ -12,6 +12,7 @@ import {
   TransferSuggestion
 } from '@models/transaction.model';
 import {Category} from '@models/category.model';
+import {toLocalDateString} from '@shared/utils/transaction.utils';
 
 @Injectable({
   providedIn: 'root'
@@ -49,8 +50,8 @@ export class TransactionApiService {
     if (filter.merchant) params = params.set('merchantCleanName', filter.merchant);
     if (filter.minAmount) params = params.set('minAmount', filter.minAmount.toString());
     if (filter.maxAmount) params = params.set('maxAmount', filter.maxAmount.toString());
-    if (filter.startDate) params = params.set('startDate', filter.startDate.toISOString().split('T')[0]);
-    if (filter.endDate) params = params.set('endDate', filter.endDate.toISOString().split('T')[0]);
+    if (filter.startDate) params = params.set('startDate', toLocalDateString(filter.startDate));
+    if (filter.endDate) params = params.set('endDate', toLocalDateString(filter.endDate));
 
     return this.http.get<PageResponse<Transaction>>(this.apiUrl, { params });
   }

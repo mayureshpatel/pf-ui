@@ -32,6 +32,7 @@ import {Account} from '@models/account.model';
 import {Category} from '@models/category.model';
 import {Merchant} from '@models/merchant.model';
 import {DrawerComponent} from '@shared/components/drawer/drawer.component';
+import {toLocalDateString} from '@shared/utils/transaction.utils';
 import {finalize, forkJoin} from 'rxjs';
 import {CategoryApiService} from '@features/categories/services/category-api.service';
 import {AccountApiService} from '@features/accounts/services/account-api.service';
@@ -236,7 +237,7 @@ export class TransactionFormDrawerComponent {
 
     if (transaction) {
       this.form.patchValue({
-        transactionDate: transaction.date instanceof Date ? transaction.date.toISOString().split('T')[0] : transaction.date,
+        transactionDate: transaction.date instanceof Date ? toLocalDateString(transaction.date) : transaction.date,
         amount: Math.abs(transaction.amount),
         description: transaction.description,
         type: transaction.type,
@@ -246,7 +247,7 @@ export class TransactionFormDrawerComponent {
       });
     } else {
       this.form.patchValue({
-        transactionDate: new Date().toISOString().split('T')[0],
+        transactionDate: toLocalDateString(new Date()),
         amount: 0,
         description: '',
         type: TransactionType.EXPENSE,
