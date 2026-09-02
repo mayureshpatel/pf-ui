@@ -32,10 +32,6 @@ export class CashFlowTrendComponent {
       return date.toLocaleString('default', {month: 'short', year: '2-digit'});
     });
 
-    // Determine if we are in dark mode to adjust grid/text colors
-    const isDark: boolean = document.documentElement.classList.contains('dark');
-    const surface400 = '#94a3b8';
-
     return {
       labels,
       datasets: [
