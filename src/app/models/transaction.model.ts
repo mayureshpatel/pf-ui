@@ -21,11 +21,11 @@ export interface Transaction {
   account: Account;
   category: Category;
   amount: number;
-  date: Date;
+  date: string;
   description: string;
   type: TransactionType;
   merchant: Merchant;
-  postDate?: Date;
+  postDate?: string;
 }
 
 /**
@@ -142,8 +142,8 @@ export interface TransferSuggestion {
  * @property suggestedMerchant - The suggested merchant for the transaction.
  */
 export interface TransactionPreview {
-  date: Date;
-  postDate: Date;
+  date: string;
+  postDate: string;
   description: string;
   amount: number;
   type: TransactionType;
@@ -173,10 +173,10 @@ export interface TransactionDto {
   account?: any;
   category?: Category | null;
   amount: number;
-  date: Date | string;
+  date: string;
   description: string;
   type: TransactionType;
-  postDate?: Date | string | null;
+  postDate?: string | null;
   merchant?: Merchant | null;
 }
 

@@ -55,20 +55,16 @@ describe('TransactionFormDrawerComponent', () => {
     }
   });
 
-  it('should preload an edited transaction\'s local calendar date, not a UTC-shifted one, when its date is a real Date instance (PF-199)', () => {
-    // Arrange -- a moment where the local calendar date (March 15) differs from the UTC one
-    // (March 14); mocked on this one specific Date instance, toISOString left un-mocked.
-    const transactionDate = new Date(Date.UTC(2026, 2, 14, 15, 30, 0));
-    vi.spyOn(transactionDate, 'getFullYear').mockReturnValue(2026);
-    vi.spyOn(transactionDate, 'getMonth').mockReturnValue(2);
-    vi.spyOn(transactionDate, 'getDate').mockReturnValue(15);
-
+  it("should preload an edited transaction's date as its own plain YYYY-MM-DD portion (PF-213)", () => {
+    // Arrange -- transaction.date is always a plain ISO string at runtime (Angular's HttpClient
+    // never constructs a real Date from JSON), midnight-UTC-anchored per this app's own backend
+    // convention -- no Date object, no timezone conversion, just the string's own first 10 chars.
     fixture.componentRef.setInput('transaction', {
       id: 1,
       account: {id: 1, name: 'Checking'},
       category: null,
       amount: 42.5,
-      date: transactionDate,
+      date: '2026-03-15T00:00:00Z',
       description: 'Test',
       type: 'EXPENSE',
       merchant: null
@@ -78,7 +74,7 @@ describe('TransactionFormDrawerComponent', () => {
     // Act
     component.onShow();
 
-    // Assert -- must match the local getters (2026-03-15), not toISOString's UTC date
+    // Assert
     expect(component.form.get('transactionDate')?.value).toBe('2026-03-15');
   });
 });

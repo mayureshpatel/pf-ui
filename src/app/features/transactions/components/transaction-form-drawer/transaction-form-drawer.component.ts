@@ -237,7 +237,7 @@ export class TransactionFormDrawerComponent {
 
     if (transaction) {
       this.form.patchValue({
-        transactionDate: transaction.date instanceof Date ? toLocalDateString(transaction.date) : transaction.date,
+        transactionDate: transaction.date.substring(0, 10),
         amount: Math.abs(transaction.amount),
         description: transaction.description,
         type: transaction.type,

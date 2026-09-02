@@ -20,7 +20,7 @@ describe('CategoryReportComponent', () => {
       account: {} as Transaction['account'],
       category: cat,
       amount,
-      date: new Date('2026-01-15'),
+      date: '2026-01-15T00:00:00Z',
       description: 'test',
       type: TransactionType.EXPENSE,
       merchant: {} as Transaction['merchant']

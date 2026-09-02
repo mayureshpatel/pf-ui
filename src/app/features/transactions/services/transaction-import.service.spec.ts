@@ -36,8 +36,8 @@ describe('TransactionImportService', () => {
     const mockBankName = BankName.CAPITAL_ONE;
     const mockResponse: TransactionPreview[] = [
       {
-        date: new Date('2023-01-01'),
-        postDate: new Date('2023-01-02'),
+        date: '2023-01-01T00:00:00Z',
+        postDate: '2023-01-02T00:00:00Z',
         amount: 100,
         description: 'Test transaction',
         type: TransactionType.EXPENSE,
