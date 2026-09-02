@@ -2,11 +2,8 @@ import {inject, Injectable} from '@angular/core';
 import {HttpClient} from '@angular/common/http';
 import {Observable} from 'rxjs';
 import {environment} from '@env';
-import {CategoryRule, CategoryRuleCreateRequest} from '@models/category-rule.model';
+import {CategoryRule, CategoryRuleCreateRequest, RuleChangePreview} from '@models/category-rule.model';
 import {AuthService} from '@core/auth/auth.service';
-import {
-  RuleChangePreview
-} from '@features/settings/vendor-rules/components/apply-rules-dialog/apply-rules-dialog.component';
 
 /**
  * Service for managing automated category assignment rules.
