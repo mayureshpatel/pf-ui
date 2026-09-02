@@ -108,7 +108,7 @@
     </div>
 
     <!-- Balance Section -->
-    <div class="p-4 rounded-x1 border border-surface-200">
+    <div class="p-4 rounded-xl border border-surface-200">
       <label for="balance" class="text-sm font-bold text-muted-color uppercase mb-2 block">
         {{ isEditMode() ? 'Current Balance' : 'Initial Balance' }}
       </label>
@@ -123,11 +123,11 @@
           [maxFractionDigits]="2"
           [inputId]="'current-balance'"
           class="w-full"
-          inputStyleClass="text-2x1 font-mono font-bold gb-transparent border-none p-0 focus:ring-0"
+          inputStyleClass="text-2xl font-mono font-bold bg-transparent border-none p-0 focus:ring-0"
         />
       } @else {
         <div class="flex justify-between items-center">
-          <span class="text-3x1 font-mono font-black text-surface-900">
+          <span class="text-3xl font-mono font-black text-surface-900">
             {{ form.controls.currentBalance.value | currency: form.controls.currencyCode.value }}
           </span>
         </div>
