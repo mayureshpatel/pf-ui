@@ -16,7 +16,9 @@ This skill prevents "UX Drift" by ensuring all UI developers (AI or human) stric
 2. **Scan for Violations:**
    - Use regex or semantic parsing to flag any `style=` attributes.
    - Flag any brackets `[]` used inside Tailwind class strings that indicate hardcoded arbitrary values.
-3. **Cross-Reference Theme:** Review `src/styles.css` for `@layer`, `@custom-variant`, and CSS
-   custom property definitions (e.g., `--primary`) to find the correct thematic variable that
-   should replace the hardcoded value. Tailwind v4 does NOT use `tailwind.config.ts`.
+3. **Cross-Reference Theme:** The color source of truth is `FinancePreset` in
+   `src/app/custom-presets.ts` (PrimeNG's JS-based theming) — check there for the correct semantic
+   token (e.g. `primary`, `surface`) to replace a hardcoded value with. `src/styles.css` only
+   defines the `@custom-variant dark` selector and Tailwind's own utility layer; no `--primary` or
+   other color custom property is defined there. Tailwind v4 does NOT use `tailwind.config.ts`.
 4. **Refactor:** Output the refactored, cleanly-styled component template.

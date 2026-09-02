@@ -4,7 +4,12 @@
 - **Framework:** Angular v21 (Signals-based).
 - **Styling:** Tailwind CSS v4 and PrimeNg v21. 
 	- **Theme:** "Soft & Friendly" (rounded corners, earthy/calm primary colors).
-	- **Customization:** Configured in `src/styles.css` using CSS variables.
+	- **Customization:** The color source of truth is `FinancePreset` in `src/app/custom-presets.ts`
+	  (PrimeNG's JS-based theming), not `src/styles.css` — `styles.css` only defines the
+	  `@custom-variant dark` selector (`.my-app-dark`) and Tailwind's own utility layer. Known gap
+	  (PF-EPIC-031): `FinancePreset`'s `colorScheme.dark.surface` is currently an exact copy of
+	  `.light.surface`, and nothing in the app toggles `.my-app-dark` at all, so dark mode has no
+	  effect today regardless of theme.
 - **State Management:** Strictly use **Signals**. Avoid RxJS where Signals are more appropriate.
 
 ## Components & Naming

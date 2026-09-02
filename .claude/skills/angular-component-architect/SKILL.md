@@ -10,7 +10,7 @@ This skill governs the creation of the presentation layer in the frontend.
 ## 🚨 Architectural Constraints
 - **Frameworks**: Strictly use Angular 21, Tailwind CSS v4, and PrimeNG v21. Do NOT use Angular Material, Bootstrap, or legacy frameworks.
 - **Standalone**: All components MUST be `standalone: true`.
-- **Theme**: Adhere to the "Soft & Friendly" design system (rounded corners, earthy primary colors) mapped via CSS variables in `styles.css`.
+- **Theme**: Adhere to the "Soft & Friendly" design system (rounded corners, earthy primary colors). The color source of truth is `FinancePreset` in `src/app/custom-presets.ts` (PrimeNG's JS-based theming) — `styles.css` only defines the `@custom-variant dark` selector and Tailwind's utility layer, not the color palette.
 - **Naming**: Use PascalCase WITH the "Component" suffix for class names (e.g., `export class UserProfileComponent`), matching Angular CLI conventions and the existing codebase.
 
 ## 🛠 Procedural Workflow
