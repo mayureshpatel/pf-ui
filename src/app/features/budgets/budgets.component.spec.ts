@@ -31,9 +31,17 @@ describe('BudgetsComponent', () => {
 
   const mockBudget: Budget = {id: 1, userId: 1, category, amount: 1000, month: 1, year: 2026};
 
+  const mockBudgetStatus = {
+    category,
+    budgetedAmount: 1000,
+    spentAmount: 400,
+    remainingAmount: 600,
+    percentageUsed: 40
+  };
+
   beforeEach(async () => {
     mockBudgetApi = {
-      getBudgetStatus: vi.fn().mockReturnValue(of([])),
+      getBudgetStatus: vi.fn().mockReturnValue(of([mockBudgetStatus])),
       getAllBudgets: vi.fn().mockReturnValue(of([mockBudget])),
       deleteBudget: vi.fn().mockReturnValue(of(undefined))
     };
@@ -54,11 +62,6 @@ describe('BudgetsComponent', () => {
     fixture = TestBed.createComponent(BudgetsComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
-
-    // "Manage All" view (where the Delete Budget button lives) only renders in viewMode 'all'
-    component.viewMode.set('all');
-    component.allBudgets.set([mockBudget]);
-    fixture.detectChanges();
   });
 
   it('should create', () => {
@@ -66,7 +69,53 @@ describe('BudgetsComponent', () => {
   });
 
   it('should give the Delete Budget button an accessible name (PF-186)', () => {
+    // "Manage All" view (where the Delete Budget button lives) only renders in viewMode 'all'
+    component.viewMode.set('all');
+    component.allBudgets.set([mockBudget]);
+    fixture.detectChanges();
+
     const button: HTMLButtonElement = fixture.nativeElement.querySelector('button:has(.pi-trash)');
     expect(button.getAttribute('aria-label')).toBe('Delete Budget');
+  });
+
+  describe('category display (PF-216)', () => {
+    it('should show the category name in the Monthly Status view', () => {
+      // arrange & act -- default viewMode is 'monthly', budgetStatuses already populated
+      component.budgetStatuses.set([mockBudgetStatus as any]);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(fixture.nativeElement.textContent).toContain('Rent');
+    });
+
+    it('should show the category name in the Manage All view', () => {
+      // arrange & act
+      component.viewMode.set('all');
+      component.allBudgets.set([mockBudget]);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(fixture.nativeElement.textContent).toContain('Rent');
+    });
+
+    it("should color the Monthly Status icon with the category's own color", () => {
+      // arrange & act
+      component.budgetStatuses.set([mockBudgetStatus as any]);
+      fixture.detectChanges();
+
+      // assert & verify -- selected by its stable shape classes, not the icon glyph itself
+      // (which is a separate bug under test elsewhere in this describe block)
+      const icon: HTMLElement = fixture.nativeElement.querySelector('.rounded-xl');
+      expect(icon.style.backgroundColor).toBe('rgb(59, 130, 246)'); // #3B82F6
+    });
+
+    it("should show the category's own icon glyph in the Monthly Status view", () => {
+      // arrange & act
+      component.budgetStatuses.set([mockBudgetStatus as any]);
+      fixture.detectChanges();
+
+      // assert & verify -- category.icon is 'pi-home', not the 'pi-tag' fallback
+      expect(fixture.nativeElement.querySelector('.pi-home')).toBeTruthy();
+    });
   });
 });
