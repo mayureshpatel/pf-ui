@@ -48,10 +48,10 @@ export class CategoryReportComponent {
       datasets: [{
         label: 'Total Spent',
         data: data.map((c: CategoryReportData): number => c.total),
-        backgroundColor: data.map((c: CategoryReportData): string => getCategoryColor(c.category.color)),
+        backgroundColor: data.map((c: CategoryReportData): string => c.category.color || getCategoryColor(c.category.name)),
         borderRadius: 8,
         barThickness: 32,
-        hoverBackgroundColor: data.map((c: CategoryReportData): string => getCategoryColor(c.category.color))
+        hoverBackgroundColor: data.map((c: CategoryReportData): string => c.category.color || getCategoryColor(c.category.name))
       }]
     };
   });
