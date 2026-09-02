@@ -112,6 +112,16 @@ export class ReconcileDrawerComponent {
   }
 
   /**
+   * Submits on Enter. Was previously bound to every keydown, which submitted the field's
+   * partial value after the very first digit typed.
+   */
+  onBalanceKeyDown(event: KeyboardEvent): void {
+    if (event.key === 'Enter') {
+      this.submit();
+    }
+  }
+
+  /**
    * Submits the reconciliation request to the API.
    */
   submit(): void {
@@ -125,7 +135,7 @@ export class ReconcileDrawerComponent {
     this.errorMessage.set(null);
 
     const request: AccountReconcileRequest = {
-      id: this.account().id,
+      accountId: this.account().id,
       newBalance: target,
       version: this.account().version
     };
