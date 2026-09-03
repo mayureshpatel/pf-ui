@@ -18,6 +18,17 @@ This skill enforces the use of modern Signals for state management over legacy R
 3. **Side Effects**: Use `effect(() => ...)` sparingly, primarily for syncing state to `localStorage` or triggering external APIs.
 4. **HTTP Interop**: When calling `HttpClient`, immediately convert the Observable response to a Signal using `toSignal()`.
 
+## 🚨 Gotchas
+- **`effect()` is not a substitute for `computed()` — this project has already shipped that exact
+  bug once.** `CategoryChartComponent` used `effect()` + a `WritableSignal` to compute derived
+  chart-options state instead of `computed()`. The practical consequence: `effect()` runs as a
+  side effect *after* change detection, not synchronously as part of signal evaluation, so
+  Chart.js was silently reading its own hardcoded defaults instead of this app's real
+  configuration — a real, live bug (fixed as PF-189), not a hypothetical style concern. If the
+  goal is "derive a value from other signals," use `computed()`. Reserve `effect()` for genuine
+  side effects only (`localStorage` sync, imperative third-party API calls) — never for producing
+  a value another part of the component reads.
+
 ## 📚 References
 - [Signal Store Gold-Source](references/signal-store-gold-source.ts) — `toSignal()` is the *only*
   RxJS touch-point in the whole file; everything downstream is Signals/`computed()`/`effect()`.
