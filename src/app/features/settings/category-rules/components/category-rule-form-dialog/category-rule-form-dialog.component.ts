@@ -10,7 +10,7 @@ import {
   WritableSignal
 } from '@angular/core';
 import {CommonModule} from '@angular/common';
-import {FormControl, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
+import {AbstractControl, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors, Validators} from '@angular/forms';
 import {finalize} from 'rxjs';
 import {DialogModule} from 'primeng/dialog';
 import {ButtonModule} from 'primeng/button';
@@ -23,13 +23,30 @@ import {CategoryRuleApiService} from '../../services/category-rule-api.service';
 import {CategoryApiService} from '@features/categories/services/category-api.service';
 import {ToastService} from '@core/services/toast.service';
 import {Category, CategoryGroup} from '@models/category.model';
-import {CategoryRuleCreateRequest} from '@models/category-rule.model';
+import {CategoryRuleCreateRequest, MatchType} from '@models/category-rule.model';
+
+/**
+ * Requires at least one non-blank, comma-separated keyword in the raw input string.
+ */
+function atLeastOneKeywordValidator(control: AbstractControl<string>): ValidationErrors | null {
+  const hasKeyword = (control.value ?? '')
+    .split(',')
+    .map((keyword: string): string => keyword.trim())
+    .some((keyword: string): boolean => keyword.length > 0);
+  return hasKeyword ? null : {required: true};
+}
+
+/** Options for the match-type selector. */
+const MATCH_TYPE_OPTIONS: { label: string; value: MatchType }[] = [
+  {label: 'Match ANY keyword (OR)', value: 'OR'},
+  {label: 'Match ALL keywords (AND)', value: 'AND'}
+];
 
 /**
  * Dialog component for creating new transaction categorization rules.
  *
- * Allows users to define a keyword match, assign a target category,
- * and set an optional priority for rule precedence.
+ * Allows users to define one or more keywords (with AND/OR match logic), assign a target
+ * category, and set an optional priority and amount range for rule precedence.
  */
 @Component({
   selector: 'app-category-rule-form-dialog',
@@ -60,6 +77,9 @@ export class CategoryRuleFormDialogComponent {
   /** Grouped categories available for assignment. */
   readonly categoryGroups: WritableSignal<CategoryGroup[]> = signal([]);
 
+  /** Options for the match-type selector. */
+  readonly matchTypeOptions = MATCH_TYPE_OPTIONS;
+
   /** Indicates if a creation operation is in flight. */
   readonly loading: WritableSignal<boolean> = signal(false);
 
@@ -67,13 +87,15 @@ export class CategoryRuleFormDialogComponent {
   readonly errorMessage: WritableSignal<string | null> = signal<string | null>(null);
 
   /**
-   * Strongly typed form for rule configuration.
+   * Strongly typed form for rule configuration. `keywordsInput` holds the raw comma-separated
+   * text as typed; it's split into the real string[] payload on submit.
    */
   readonly form = new FormGroup({
-    keyword: new FormControl<string>('', {
+    keywordsInput: new FormControl<string>('', {
       nonNullable: true,
-      validators: [Validators.required]
+      validators: [atLeastOneKeywordValidator]
     }),
+    matchType: new FormControl<MatchType>('OR', {nonNullable: true}),
     category: new FormControl<Category | null>(null, {
       validators: [Validators.required]
     }),
@@ -96,7 +118,7 @@ export class CategoryRuleFormDialogComponent {
      */
     effect((): void => {
       if (this.visible()) {
-        this.form.reset({keyword: '', category: null, priority: 0, minAmount: null, maxAmount: null});
+        this.form.reset({keywordsInput: '', matchType: 'OR', category: null, priority: 0, minAmount: null, maxAmount: null});
         this.errorMessage.set(null);
         this.loadCategories();
       }
@@ -130,14 +152,20 @@ export class CategoryRuleFormDialogComponent {
     this.form.markAllAsTouched();
     if (this.form.invalid || this.loading()) return;
 
-    const {keyword, category, priority, minAmount, maxAmount} = this.form.getRawValue();
+    const {keywordsInput, matchType, category, priority, minAmount, maxAmount} = this.form.getRawValue();
     if (!category) return;
+
+    const keywords: string[] = keywordsInput
+      .split(',')
+      .map((keyword: string): string => keyword.trim())
+      .filter((keyword: string): boolean => keyword.length > 0);
 
     this.loading.set(true);
     this.errorMessage.set(null);
 
     const request = {
-      keyword,
+      keywords,
+      matchType,
       categoryId: category.id,
       priority,
       minAmount,

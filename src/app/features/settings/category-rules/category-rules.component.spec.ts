@@ -21,7 +21,8 @@ describe('CategoryRulesComponent', () => {
   const orphanedRule: CategoryRule = {
     id: 1,
     userId: 1,
-    keyword: 'STARBUCKS',
+    keywords: ['STARBUCKS'],
+    matchType: 'OR',
     priority: 1,
     category: null,
     minAmount: null,
@@ -73,7 +74,8 @@ describe('CategoryRulesComponent', () => {
     const rangedRule: CategoryRule = {
       id: 2,
       userId: 1,
-      keyword: 'AMAZON',
+      keywords: ['AMAZON'],
+      matchType: 'OR',
       priority: 1,
       category: null,
       minAmount: 5,
@@ -89,5 +91,29 @@ describe('CategoryRulesComponent', () => {
     expect(compiled.textContent).toContain('Any amount');
     expect(compiled.textContent).toContain('$5.00');
     expect(compiled.textContent).toContain('$20.00');
+  });
+
+  it('PF-315: should display every keyword of a multi-keyword rule, joined by its match type', () => {
+    // arrange
+    const multiKeywordRule: CategoryRule = {
+      id: 3,
+      userId: 1,
+      keywords: ['AMZN', 'MKTP'],
+      matchType: 'AND',
+      priority: 1,
+      category: null,
+      minAmount: null,
+      maxAmount: null
+    } as unknown as CategoryRule;
+    mockApi.getRules.mockReturnValue(of([multiKeywordRule]));
+
+    // act
+    fixture.detectChanges();
+
+    // assert & verify
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('AMZN');
+    expect(compiled.textContent).toContain('MKTP');
+    expect(compiled.textContent).toContain('AND');
   });
 });

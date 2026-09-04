@@ -40,7 +40,7 @@
         <ng-template #header>
           <tr>
             <th id="rule-priority" class="py-4 font-bold text-surface-700 dark:text-surface-200 w-24">Priority</th>
-            <th id="rule-keyword" class="py-4 font-bold text-surface-700 dark:text-surface-200">Match Keyword</th>
+            <th id="rule-keyword" class="py-4 font-bold text-surface-700 dark:text-surface-200">Match Keywords</th>
             <th id="rule-category" class="py-4 font-bold text-surface-700 dark:text-surface-200">Assigned Category</th>
             <th id="rule-amount-range" class="py-4 font-bold text-surface-700 dark:text-surface-200">Amount Range</th>
             <th id="rule-actions" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-center w-24">
@@ -61,12 +61,17 @@
 
             <!-- Keyword Display -->
             <td class="py-4">
-              <div class="flex items-center gap-2">
+              <div class="flex items-center gap-1.5 flex-wrap">
                 <i class="pi pi-search text-xs text-muted-color"></i>
-                <span
-                  class="font-mono font-bold text-surface-900 dark:text-surface-0 bg-primary/5 px-2 py-1 rounded border border-primary/10">
-                  {{ rule.keyword }}
-                </span>
+                @for (keyword of rule.keywords; track keyword; let isLast = $last) {
+                  <span
+                    class="font-mono font-bold text-surface-900 dark:text-surface-0 bg-primary/5 px-2 py-1 rounded border border-primary/10">
+                    {{ keyword }}
+                  </span>
+                  @if (!isLast) {
+                    <span class="text-[10px] font-black uppercase text-surface-400 tracking-tighter">{{ rule.matchType }}</span>
+                  }
+                }
               </div>
             </td>
 
