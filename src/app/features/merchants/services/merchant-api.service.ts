@@ -3,7 +3,7 @@ import {HttpClient} from '@angular/common/http';
 import {AuthService} from '@core/auth/auth.service';
 import {Observable} from 'rxjs';
 import {environment} from '@env';
-import {Merchant, MerchantUpdateRequest} from '@models/merchant.model';
+import {Merchant, MerchantMergeRequest, MerchantUpdateRequest} from '@models/merchant.model';
 
 @Injectable({
   providedIn: 'root'
@@ -28,5 +28,13 @@ export class MerchantApiService {
    */
   updateMerchant(request: MerchantUpdateRequest): Observable<number> {
     return this.http.put<number>(this.apiUrl, request);
+  }
+
+  /**
+   * Merges one merchant into another.
+   * @param request which merchant survives and which gets merged away.
+   */
+  mergeMerchants(request: MerchantMergeRequest): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/merge`, request);
   }
 }

@@ -17,6 +17,18 @@
         />
       </p-iconfield>
     </div>
+
+    <div toolbarActions>
+      @if (selectedForMerge().length === 2) {
+        <p-button
+          label="Merge Selected"
+          icon="pi pi-arrow-right-arrow-left"
+          (onClick)="openMergeDialog()"
+          severity="danger"
+          [outlined]="true"
+        />
+      }
+    </div>
   </app-screen-toolbar>
 
   @if (!isEmpty()) {
@@ -24,6 +36,9 @@
       <p-table
         [value]="filteredMerchants()"
         dataKey="id"
+        [selection]="selectedForMerge()"
+        (selectionChange)="onSelectionChange($event)"
+        selectionMode="multiple"
         [loading]="loading()"
         [paginator]="filteredMerchants().length > 20"
         [rows]="20"
@@ -32,6 +47,7 @@
       >
         <ng-template #header>
           <tr>
+            <th id="merchant-select" class="w-12"></th>
             <th id="merchant-clean-name" class="py-4 font-bold text-surface-700">Display Name</th>
             <th id="merchant-original-name" class="py-4 font-bold text-surface-700">Original Bank Description</th>
             <th id="merchant-actions" class="py-4 font-bold text-surface-700 text-center" style="width: 100px">Actions</th>
@@ -40,6 +56,9 @@
 
         <ng-template #body let-merchant>
           <tr class="hover:bg-surface-100/50 transition-colors duration-200">
+            <td class="text-center">
+              <p-tableCheckbox [value]="merchant"/>
+            </td>
             <td class="py-4 px-4">
               <span class="font-semibold text-surface-900">{{ merchant.cleanName }}</span>
             </td>
@@ -61,7 +80,7 @@
 
         <ng-template #emptymessage>
           <tr>
-            <td colspan="3" class="text-center py-16 text-muted-color">
+            <td colspan="4" class="text-center py-16 text-muted-color">
               @if (noSearchResults()) {
                 <i class="pi pi-search text-4xl mb-3 block opacity-20"></i>
                 No merchants found matching "{{ searchTerm() }}".
@@ -89,5 +108,11 @@
     [(visible)]="showDialog"
     [merchant]="selectedMerchant()"
     (save)="onSave()"
+  />
+
+  <app-merge-merchants-dialog
+    [(visible)]="showMergeDialog"
+    [merchants]="selectedForMerge()"
+    (merged)="onMerged()"
   />
 </div>

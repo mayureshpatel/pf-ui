@@ -1,0 +1,79 @@
+<p-dialog
+  header="Merge Merchants"
+  [(visible)]="visible"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '500px' }"
+  class="p-fluid">
+
+  <div class="flex flex-col gap-6 py-4">
+    @if (errorMessage()) {
+      <p-message severity="error" variant="simple" class="w-full animate-fade-in">
+        {{ errorMessage() }}
+      </p-message>
+    }
+
+    <p class="text-sm text-muted-color leading-relaxed">
+      Pick which merchant to keep. Every transaction and recurring transaction on the other one
+      moves over, and the other record is permanently deleted.
+    </p>
+
+    <div class="flex flex-col gap-3">
+      @for (merchant of merchants(); track merchant.id) {
+        <label
+          class="flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-colors"
+          [class.border-primary]="survivingMerchantId() === merchant.id"
+          [class.bg-primary-50]="survivingMerchantId() === merchant.id"
+          [class.dark:bg-primary-950]="survivingMerchantId() === merchant.id"
+          [class.border-surface-200]="survivingMerchantId() !== merchant.id"
+          [class.dark:border-surface-800]="survivingMerchantId() !== merchant.id"
+        >
+          <p-radioButton
+            name="survivingMerchant"
+            [value]="merchant.id"
+            [ngModel]="survivingMerchantId()"
+            (ngModelChange)="survivingMerchantId.set($event)"
+            class="mt-1"
+          />
+          <div class="flex flex-col">
+            <span class="font-semibold text-surface-900">{{ merchant.cleanName }}</span>
+            <span class="text-xs font-mono text-muted-color">{{ merchant.originalName }}</span>
+          </div>
+        </label>
+      }
+    </div>
+
+    @if (mergedAwayMerchant(); as mergedAway) {
+      <div class="p-4 rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950 animate-fade-in">
+        <div class="flex items-start gap-3">
+          <i class="pi pi-exclamation-triangle text-amber-500 mt-1"></i>
+          <p class="text-sm text-amber-800 dark:text-amber-200 leading-relaxed">
+            <span class="font-semibold">{{ mergedAway.cleanName }}</span> will be deleted, and its
+            history will show under the merchant you kept instead. This cannot be undone.
+          </p>
+        </div>
+      </div>
+    }
+  </div>
+
+  <ng-template #footer>
+    <div class="flex justify-end gap-3 pt-4 border-t border-surface-100 dark:border-surface-800">
+      <p-button
+        label="Cancel"
+        [text]="true"
+        severity="secondary"
+        (onClick)="onHide()"
+      />
+      <p-button
+        label="Merge"
+        icon="pi pi-arrow-right-arrow-left"
+        (onClick)="onSubmit()"
+        [loading]="saving()"
+        [disabled]="survivingMerchantId() === null || saving()"
+        severity="danger"
+        [raised]="true"
+      />
+    </div>
+  </ng-template>
+</p-dialog>
