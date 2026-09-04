@@ -18,6 +18,7 @@ import {
   ApplyRulesDialogComponent
 } from './components/apply-rules-dialog/apply-rules-dialog.component';
 import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-toolbar';
+import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
 
 /**
  * Component for managing transaction categorization rules.
@@ -37,7 +38,8 @@ import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-t
     TooltipModule,
     ScreenToolbarComponent,
     CategoryRuleFormDialogComponent,
-    ApplyRulesDialogComponent
+    ApplyRulesDialogComponent,
+    FormatCurrencyPipe
   ],
   templateUrl: './category-rules.component.html'
 })
