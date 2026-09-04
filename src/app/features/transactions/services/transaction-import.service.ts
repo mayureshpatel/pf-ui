@@ -12,6 +12,14 @@ export class TransactionImportService {
   private readonly http: HttpClient = inject(HttpClient);
   private readonly apiUrl: string = environment.apiUrl;
 
+  /**
+   * Uploads a CSV file in a bank-specific format and returns a preview of the
+   * transactions it contains, without saving them.
+   * @param accountId the account to associate the import with.
+   * @param file the CSV file to upload.
+   * @param bankName the bank format to parse the file as.
+   * @returns the previewed transactions parsed from the file.
+   */
   uploadCsv(
     accountId: number,
     file: File,
@@ -27,6 +35,12 @@ export class TransactionImportService {
     );
   }
 
+  /**
+   * Saves a single previewed transaction to an account.
+   * @param accountId the account to save the transaction to.
+   * @param request the transaction to save.
+   * @returns a confirmation message from the backend.
+   */
   saveTransactions(
     accountId: number,
     request: SaveTransactionRequest
@@ -38,6 +52,11 @@ export class TransactionImportService {
     );
   }
 
+  /**
+   * Saves multiple previewed transactions in a single request.
+   * @param requests the transactions to save.
+   * @returns a confirmation message from the backend.
+   */
   saveBulkTransactions(
     requests: SaveTransactionRequest[]
   ): Observable<string> {
@@ -48,6 +67,12 @@ export class TransactionImportService {
     );
   }
 
+  /**
+   * Computes a SHA-256 hash of a file's contents, used to detect duplicate imports
+   * client-side before upload.
+   * @param file the file to hash.
+   * @returns the hex-encoded hash.
+   */
   calculateFileHash(file: File): Promise<string> {
     return new Promise((resolve, reject): void => {
       const reader = new FileReader();

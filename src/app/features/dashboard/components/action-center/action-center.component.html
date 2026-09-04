@@ -8,10 +8,10 @@
 
   <div class="flex flex-col gap-4 mt-2">
     @for (item of items(); track item.type) {
-      <div
-        class="group flex items-center justify-between p-4 rounded-2xl bg-surface-0 border border-surface-100 dark:border-surface-800 hover:border-primary/50 hover:shadow-md transition-all duration-300 cursor-pointer"
+      <button
+        type="button"
+        class="group flex items-center justify-between p-4 rounded-2xl bg-surface-0 border border-surface-100 dark:border-surface-800 hover:border-primary/50 hover:shadow-md transition-all duration-300 cursor-pointer w-full text-left"
         (click)="onAction(item)"
-        (keydown)="onAction(item)"
       >
         <div class="flex items-center gap-4">
           <!-- Action Icon -->
@@ -34,7 +34,7 @@
 
         <i
           class="pi pi-chevron-right text-surface-300 group-hover:text-primary group-hover:translate-x-1 transition-all"></i>
-      </div>
+      </button>
     } @empty {
       <!-- Perfect State -->
       <div class="flex flex-col items-center justify-center py-12 text-center animate-fade-in">

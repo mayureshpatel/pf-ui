@@ -21,11 +21,11 @@ export interface Transaction {
   account: Account;
   category: Category;
   amount: number;
-  date: Date;
+  date: string;
   description: string;
   type: TransactionType;
   merchant: Merchant;
-  postDate?: Date;
+  postDate?: string;
 }
 
 /**
@@ -142,8 +142,8 @@ export interface TransferSuggestion {
  * @property suggestedMerchant - The suggested merchant for the transaction.
  */
 export interface TransactionPreview {
-  date: Date;
-  postDate: Date;
+  date: string;
+  postDate: string;
   description: string;
   amount: number;
   type: TransactionType;
@@ -165,28 +165,26 @@ export interface TransactionPreview {
  *
  * todo: remove, if not used
  */
-export interface CsvTransactionData {
-  date: string;
-  postDate?: string;
-  type: TransactionType;
-  account: number;
+/**
+ * Represents a transaction DTO matching the backend TransactionDto structure.
+ */
+export interface TransactionDto {
+  id?: number;
+  account?: any;
+  category?: Category | null;
   amount: number;
-  description?: string;
-  vendorName?: string;
-  categoryName?: string;
+  date: string;
+  description: string;
+  type: TransactionType;
+  postDate?: string | null;
+  merchant?: Merchant | null;
 }
 
 /**
  * Represents a request to save transactions from a CSV file.
- *
- * @property transactions - The list of transactions to save.
- * @property fileName - The name of the CSV file.
- * @property fileHash - The hash of the CSV file.
- *
- * todo: change transaction type to TransactionCreateRequest[]
  */
 export interface SaveTransactionRequest {
-  transactions: CsvTransactionData[];
+  transactions: TransactionDto[];
   fileName: string;
   fileHash: string;
   accountId: number;

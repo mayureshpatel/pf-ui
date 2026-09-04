@@ -65,12 +65,12 @@ export interface AccountUpdateRequest {
 /**
  * Represents the request payload for reconciling an account.
  *
- * @property id - The unique identifier of the account.
+ * @property accountId - The unique identifier of the account.
  * @property newBalance - The new balance to reconcile the account to.
  * @property version - The version of the account for optimistic locking.
  */
 export interface AccountReconcileRequest {
-  id: number;
+  accountId: number;
   newBalance: number;
   version: number;
 }

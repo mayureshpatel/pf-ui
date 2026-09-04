@@ -140,12 +140,9 @@ export class ReportsDataService {
   }
 
   /**
-   * Helper to extract a "YYYY-MM" string from a Date or string source.
+   * Extracts a "YYYY-MM" key from a UTC ISO-8601 date string.
    */
-  private getYearMonthKey(dateSource: Date | string): string {
-    if (dateSource instanceof Date) {
-      return `${dateSource.getFullYear()}-${String(dateSource.getMonth() + 1).padStart(2, '0')}`;
-    }
+  private getYearMonthKey(dateSource: string): string {
     return dateSource.substring(0, 7);
   }
 }

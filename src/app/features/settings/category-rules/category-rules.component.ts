@@ -8,15 +8,14 @@ import {CardModule} from 'primeng/card';
 import {ConfirmationService} from 'primeng/api';
 import {TooltipModule} from 'primeng/tooltip';
 
-import {CategoryRule} from '@models/category-rule.model';
+import {CategoryRule, RuleChangePreview} from '@models/category-rule.model';
 import {CategoryRuleApiService} from './services/category-rule-api.service';
 import {ToastService} from '@core/services/toast.service';
 import {
   CategoryRuleFormDialogComponent
 } from './components/category-rule-form-dialog/category-rule-form-dialog.component';
 import {
-  ApplyRulesDialogComponent,
-  RuleChangePreview
+  ApplyRulesDialogComponent
 } from '@features/settings/vendor-rules/components/apply-rules-dialog/apply-rules-dialog.component';
 import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-toolbar';
 

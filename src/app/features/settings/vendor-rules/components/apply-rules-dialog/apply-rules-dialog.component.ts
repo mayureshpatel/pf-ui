@@ -13,18 +13,7 @@ import {CommonModule} from '@angular/common';
 import {DialogModule} from 'primeng/dialog';
 import {ButtonModule} from 'primeng/button';
 import {TableModule} from 'primeng/table';
-
-/**
- * Data structure for rule application preview.
- */
-export interface RuleChangePreview {
-  /** The original transaction description. */
-  description: string;
-  /** The value before rule application (may be null). */
-  oldValue: string | null;
-  /** The projected value after rule application. */
-  newValue: string;
-}
+import {RuleChangePreview} from '@models/category-rule.model';
 
 /**
  * Shared dialog for previewing and confirming bulk rule applications.

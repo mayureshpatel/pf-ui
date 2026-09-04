@@ -73,6 +73,10 @@ export class AccountFormDrawerComponent {
     bankName: new FormControl<BankName | null>(null)
   });
 
+  /**
+   * Handles form submission, emitting either a create or update request depending on
+   * whether an existing account is being edited.
+   */
   onSubmit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -106,6 +110,10 @@ export class AccountFormDrawerComponent {
     }
   }
 
+  /**
+   * Resets and re-populates the form when the drawer is shown, based on whether an
+   * existing account was passed in for editing.
+   */
   onShow(): void {
     this.form.reset();
     this.errorMessage.set(null);

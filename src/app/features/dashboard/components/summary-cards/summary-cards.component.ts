@@ -4,6 +4,10 @@ import {DashboardData} from '@models/dashboard.model';
 import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
 import {NgClass} from '@angular/common';
 
+/**
+ * Displays the dashboard's summary metric cards (income, expenses, net savings, etc.)
+ * for the currently selected period.
+ */
 @Component({
   selector: 'app-summary-cards',
   standalone: true,

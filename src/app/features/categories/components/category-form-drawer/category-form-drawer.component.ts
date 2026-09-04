@@ -119,19 +119,6 @@ export class CategoryFormDrawerComponent {
       .map((c: Category) => ({label: c.name, value: c.id}));
   });
 
-  /**
-   * Real-time preview color based on user selection or auto-generation.
-   */
-  readonly previewColor: Signal<string> = computed((): string => {
-    const selectedColor: string | null = this.form.controls.color.value;
-    if (selectedColor) {
-      return selectedColor;
-    }
-
-    const name: string | undefined = this.form.value.name;
-    return name ? getCategoryColor(name) : 'bg-surface-300';
-  });
-
   onShow(): void {
     this.form.reset();
     this.errorMessage.set(null);

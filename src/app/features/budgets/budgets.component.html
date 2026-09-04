@@ -142,11 +142,12 @@
             <tr class="hover:bg-surface-100/50 dark:hover:bg-surface-800/30 transition-colors duration-200">
               <td class="w-12 py-4">
                 <div
-                  [class]="getCategoryColor(status.categoryName) + ' w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm'">
-                  <i [class]="'pi ' + (status.icon || 'pi-tag') + ' text-lg'"></i>
+                  [style.backgroundColor]="status.category?.color || getCategoryColor(status.category?.name || '')"
+                  class="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm">
+                  <i [class]="'pi ' + (status.category?.icon || 'pi-tag') + ' text-lg'"></i>
                 </div>
               </td>
-              <td class="font-bold text-surface-900 dark:text-surface-0">{{ status.categoryName }}</td>
+              <td class="font-bold text-surface-900 dark:text-surface-0">{{ status.category?.name }}</td>
               <td class="text-right font-mono font-bold">{{ status.budgetedAmount | formatCurrency }}</td>
               <td class="text-right font-mono font-bold text-rose-600 dark:text-rose-400">
                 {{ status.spentAmount | formatCurrency }}
@@ -218,7 +219,7 @@
                   {{ getMonthName(budget.month) }} {{ budget.year }}
                 </span>
               </td>
-              <td class="font-bold text-surface-900 dark:text-surface-0">{{ budget.categoryName }}</td>
+              <td class="font-bold text-surface-900 dark:text-surface-0">{{ budget.category?.name }}</td>
               <td class="text-right font-mono font-black text-primary text-lg">
                 {{ budget.amount | formatCurrency }}
               </td>
@@ -230,6 +231,7 @@
                   severity="danger"
                   (onClick)="deleteBudget(budget)"
                   pTooltip="Delete Budget"
+                  ariaLabel="Delete Budget"
                   tooltipPosition="top"
                 />
               </td>

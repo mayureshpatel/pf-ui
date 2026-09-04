@@ -52,9 +52,11 @@ export interface CategoryRuleUpdateRequest {
 /**
  * Represents a preview of changes made to a category rule.
  *
- * @property description - A description of the change.
- * @property oldValue - The old value of the rule.
- * @property newValue - The new value of the rule.
+ * @property description - The original transaction description.
+ * @property oldValue - The value before rule application. Always the literal string
+ * "Uncategorized" — `CategoryRuleService.previewApply()` only ever considers already-uncategorized
+ * transactions, so this is never actually null despite the field's name suggesting it might be.
+ * @property newValue - The projected value after rule application.
  */
 export interface RuleChangePreview {
   description: string;

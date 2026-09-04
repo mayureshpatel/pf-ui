@@ -81,6 +81,52 @@ describe('AccountsComponent', () => {
     expect(component.loading()).toBe(false);
   });
 
+  it('should compute isEmpty as true when there are no accounts and loading has finished', () => {
+    mockAccountApi.getAccounts.mockReturnValue(of([]));
+
+    fixture.detectChanges();
+
+    expect(component.accounts()).toEqual([]);
+    expect(component.loading()).toBe(false);
+    expect(component.isEmpty()).toBe(true);
+  });
+
+  describe('keyboard accessibility', () => {
+    function findButtonByLabel(label: string): HTMLButtonElement {
+      const buttons: HTMLButtonElement[] = Array.from(fixture.nativeElement.querySelectorAll('button'));
+      const match = buttons.find((b: HTMLButtonElement): boolean => b.textContent?.includes(label) ?? false);
+      expect(match, `expected a rendered <button> containing "${label}"`).toBeTruthy();
+      return match!;
+    }
+
+    it('should not open the create dialog when a non-activation key is pressed on the toolbar "New Account" button (PF-206)', () => {
+      // Arrange -- accounts non-empty renders the toolbar button
+      fixture.detectChanges();
+      const openSpy = vi.spyOn(component, 'openCreateDialog');
+      const button = findButtonByLabel('New Account');
+
+      // Act
+      button.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowDown', bubbles: true}));
+
+      // Assert
+      expect(openSpy).not.toHaveBeenCalled();
+    });
+
+    it('should not open the create dialog when a non-activation key is pressed on the empty-state "Add Your First Account" button (PF-206)', () => {
+      // Arrange -- empty accounts renders the empty-state button instead
+      mockAccountApi.getAccounts.mockReturnValue(of([]));
+      fixture.detectChanges();
+      const openSpy = vi.spyOn(component, 'openCreateDialog');
+      const button = findButtonByLabel('Add Your First Account');
+
+      // Act
+      button.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowDown', bubbles: true}));
+
+      // Assert
+      expect(openSpy).not.toHaveBeenCalled();
+    });
+  });
+
   describe('dialog operations', () => {
     beforeEach(() => {
       fixture.detectChanges();

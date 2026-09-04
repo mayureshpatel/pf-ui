@@ -73,10 +73,10 @@
             <td>
               <div class="flex items-center gap-3">
                 <div
-                  [class]="'w-8 h-8 flex items-center justify-center text-white card-soft' + (rule.category.color || 'bg-surface-400')">
-                  <i [class]="'pi ' + (rule.category.icon || 'pi-tag') + ' text-xs'"></i>
+                  [class]="'w-8 h-8 flex items-center justify-center text-white card-soft' + (rule.category?.color || 'bg-surface-400')">
+                  <i [class]="'pi ' + (rule.category?.icon || 'pi-tag') + ' text-xs'"></i>
                 </div>
-                <span class="font-bold text-surface-700 dark:text-surface-200">{{ rule.category.name }}</span>
+                <span class="font-bold text-surface-700 dark:text-surface-200">{{ rule.category?.name || 'Uncategorized' }}</span>
               </div>
             </td>
 
@@ -89,6 +89,7 @@
                 severity="danger"
                 (onClick)="deleteRule(rule)"
                 pTooltip="Permanently remove this rule"
+                ariaLabel="Permanently remove this rule"
               />
             </td>
           </tr>
