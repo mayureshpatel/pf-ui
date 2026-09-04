@@ -36,7 +36,7 @@
   <!-- Left Navigation -->
   <div class="hidden lg:block border-r-2 border-r-surface-300">
     <!-- Drawer for mobile -->
-    <p-drawer [(visible)]="sidebarVisible" [modal]="true" class="lg:hidden">
+    <p-drawer [(visible)]="sidebarVisible" [modal]="true" appendTo="body" class="lg:hidden">
       <ng-template pTemplate="header">
         <div class="flex items-center gap-2">
           <i class="pi pi-wallet text-2xl text-primary"></i>
