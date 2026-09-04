@@ -13,6 +13,7 @@ import {MerchantApiService} from './services/merchant-api.service';
 import {ToastService} from '@core/services/toast.service';
 import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-toolbar';
 import {MerchantFormDialogComponent} from './components/merchant-form-dialog/merchant-form-dialog.component';
+import {MergeMerchantsDialogComponent} from './components/merge-merchants-dialog/merge-merchants-dialog.component';
 import {Merchant} from '@models/merchant.model';
 
 /**
@@ -33,7 +34,8 @@ import {Merchant} from '@models/merchant.model';
     IconFieldModule,
     InputIconModule,
     ScreenToolbarComponent,
-    MerchantFormDialogComponent
+    MerchantFormDialogComponent,
+    MergeMerchantsDialogComponent
   ],
   templateUrl: './merchants.component.html'
 })
@@ -56,6 +58,12 @@ export class MerchantsComponent implements OnInit {
 
   /** The merchant currently targeted for correction. */
   readonly selectedMerchant: WritableSignal<Merchant | null> = signal(null);
+
+  /** Merchants checked in the table, for a merge (PF-222) -- capped at 2, see {@link onSelectionChange}. */
+  readonly selectedForMerge: WritableSignal<Merchant[]> = signal([]);
+
+  /** Visibility of the merge confirmation dialog. */
+  readonly showMergeDialog: WritableSignal<boolean> = signal(false);
 
   /** Merchants matching the current search term, sorted by display name. */
   readonly filteredMerchants: Signal<Merchant[]> = computed((): Merchant[] => {
@@ -115,6 +123,31 @@ export class MerchantsComponent implements OnInit {
    * Refreshes the list after a successful correction.
    */
   onSave(): void {
+    this.loadData();
+  }
+
+  /**
+   * Handles the table's checkbox selection for a merge. Capped at 2: merging is only ever
+   * between a pair, so a 3rd checkbox click replaces the oldest selection rather than growing
+   * an open-ended list the merge dialog couldn't meaningfully use anyway.
+   * @param selection the table's current full selection
+   */
+  onSelectionChange(selection: Merchant[]): void {
+    this.selectedForMerge.set(selection.length <= 2 ? selection : selection.slice(-2));
+  }
+
+  /**
+   * Opens the merge confirmation dialog for the 2 currently-selected merchants.
+   */
+  openMergeDialog(): void {
+    this.showMergeDialog.set(true);
+  }
+
+  /**
+   * Refreshes the list and clears the selection after a successful merge.
+   */
+  onMerged(): void {
+    this.selectedForMerge.set([]);
     this.loadData();
   }
 }

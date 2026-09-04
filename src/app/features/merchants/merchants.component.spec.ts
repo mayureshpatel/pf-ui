@@ -133,4 +133,45 @@ describe('MerchantsComponent', () => {
     // assert & verify
     expect(mockMerchantApi.getMerchants).toHaveBeenCalledTimes(1);
   });
+
+  describe('merge selection (PF-222)', () => {
+    beforeEach(() => fixture.detectChanges());
+
+    it('should track up to 2 selected merchants', () => {
+      // act
+      component.onSelectionChange([mockMerchants[0], mockMerchants[1]]);
+
+      // assert & verify
+      expect(component.selectedForMerge()).toEqual([mockMerchants[0], mockMerchants[1]]);
+    });
+
+    it('should cap at 2, keeping the most recently selected pair, when a 3rd is checked', () => {
+      // act -- table selection arrays reflect the full current selection, oldest first
+      component.onSelectionChange([mockMerchants[0], mockMerchants[1], mockMerchants[2]]);
+
+      // assert & verify
+      expect(component.selectedForMerge()).toEqual([mockMerchants[1], mockMerchants[2]]);
+    });
+
+    it('should open the merge dialog', () => {
+      // act
+      component.openMergeDialog();
+
+      // assert & verify
+      expect(component.showMergeDialog()).toBe(true);
+    });
+
+    it('should clear the selection and reload merchants once a merge completes', () => {
+      // arrange
+      component.onSelectionChange([mockMerchants[0], mockMerchants[1]]);
+      mockMerchantApi.getMerchants.mockClear();
+
+      // act
+      component.onMerged();
+
+      // assert & verify
+      expect(component.selectedForMerge()).toEqual([]);
+      expect(mockMerchantApi.getMerchants).toHaveBeenCalledTimes(1);
+    });
+  });
 });

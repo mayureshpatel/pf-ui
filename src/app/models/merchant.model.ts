@@ -38,3 +38,16 @@ export interface MerchantCreateRequest {
   originalName: string;
   cleanName: string;
 }
+
+/**
+ * Represents a request to merge one merchant into another. The merged-away merchant's
+ * transactions and recurring transactions move to the surviving merchant, and the merged-away
+ * record is then deleted.
+ *
+ * @property survivingMerchantId - The merchant that remains after the merge.
+ * @property mergedAwayMerchantId - The merchant being merged away and deleted.
+ */
+export interface MerchantMergeRequest {
+  survivingMerchantId: number;
+  mergedAwayMerchantId: number;
+}
