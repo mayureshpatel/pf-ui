@@ -21,9 +21,9 @@ export interface CategoryReportData {
 }
 
 /**
- * Aggregated data for vendor-based reporting.
+ * Aggregated data for merchant-based reporting.
  */
-export interface VendorReportData {
+export interface MerchantReportData {
   merchant: Merchant;
   total: number;
   count: number;

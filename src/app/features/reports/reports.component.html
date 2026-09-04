@@ -31,7 +31,7 @@
         <p-tab [value]="1">
           <div class="flex items-center gap-2">
             <i class="pi pi-shop"></i>
-            <span class="font-bold">Vendors</span>
+            <span class="font-bold">Merchants</span>
           </div>
         </p-tab>
         <p-tab [value]="2">
@@ -48,7 +48,7 @@
         </p-tabpanel>
 
         <p-tabpanel [value]="1">
-          <app-vendor-report [transactions]="transactions()"/>
+          <app-merchant-report [transactions]="transactions()"/>
         </p-tabpanel>
 
         <p-tabpanel [value]="2">

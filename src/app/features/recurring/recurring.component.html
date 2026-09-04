@@ -60,7 +60,7 @@
                 <div class="w-8 h-8 rounded-lg bg-surface-100 flex items-center justify-center">
                   <i class="pi pi-shop text-surface-400"></i>
                 </div>
-                <span class="font-bold text-surface-900 dark:text-surface-0">{{ rec.merchant.cleanName }}</span>
+                <span class="font-bold text-surface-900 dark:text-surface-0">{{ rec.merchant.cleanName || rec.merchant.originalName || 'Unknown Merchant' }}</span>
               </div>
             </td>
 

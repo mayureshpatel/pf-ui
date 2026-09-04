@@ -117,7 +117,7 @@
                 class="group flex justify-between items-center p-4 rounded-2xl border border-surface-100 dark:border-surface-800 hover:border-primary/30 transition-all duration-300">
                 <div class="flex flex-col">
                   <span
-                    class="font-bold text-surface-900 dark:text-surface-0 tracking-tight">{{ item.merchant.cleanName }}</span>
+                    class="font-bold text-surface-900 dark:text-surface-0 tracking-tight">{{ item.merchant.cleanName || item.merchant.originalName || 'Unknown Merchant' }}</span>
                   <span class="text-[10px] font-black uppercase tracking-widest text-muted-color">Volume Leader</span>
                 </div>
                 <div class="flex flex-col items-end">

@@ -202,8 +202,8 @@ export class DashboardComponent implements OnInit {
         : this.dashboardApi.getCategoryBreakdown(month, year),
 
       merchants: range
-        ? this.dashboardApi.getVendorBreakdown(undefined, undefined, range.start, range.end)
-        : this.dashboardApi.getVendorBreakdown(month, year)
+        ? this.dashboardApi.getMerchantBreakdown(undefined, undefined, range.start, range.end)
+        : this.dashboardApi.getMerchantBreakdown(month, year)
     })
       .pipe(
         takeUntilDestroyed(this.destroyRef),

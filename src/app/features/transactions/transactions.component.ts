@@ -156,8 +156,7 @@ export class TransactionsComponent implements OnInit {
   /** Unique merchant names for filtering. */
   readonly uniqueMerchantNames: Signal<string[]> = computed((): string[] => {
     const names: string[] = this.merchants()
-      .map((m: Merchant): string => m.cleanName)
-      .filter((name: string): name is string => !!name);
+      .map((m: Merchant): string => m.cleanName || m.originalName || 'Unknown Merchant');
     return [...new Set(names)].sort((a: string, b: string): number => a.localeCompare(b));
   });
 

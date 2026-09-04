@@ -7,47 +7,47 @@ import {TagModule} from 'primeng/tag';
 
 import {Transaction} from '@models/transaction.model';
 import {ReportsDataService} from '../../services/reports-data.service';
-import {VendorReportData} from '../../models/reports.model';
+import {MerchantReportData} from '../../models/reports.model';
 import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
 
 /**
- * Sub-report component for analyzing spending volume by vendor/merchant.
+ * Sub-report component for analyzing spending volume by merchant.
  *
  * Provides a horizontal bar chart for volume leaders, a doughnut chart for
- * distribution, and a detailed vendor list with associated categories.
+ * distribution, and a detailed merchant list with associated categories.
  */
 @Component({
-  selector: 'app-vendor-report',
+  selector: 'app-merchant-report',
   standalone: true,
   imports: [CommonModule, CardModule, ChartModule, TableModule, TagModule, FormatCurrencyPipe],
-  templateUrl: './vendor-report.component.html'
+  templateUrl: './merchant-report.component.html'
 })
-export class VendorReportComponent {
+export class MerchantReportComponent {
   private readonly dataService: ReportsDataService = inject(ReportsDataService);
 
   /** The dataset of transactions to analyze. */
   readonly transactions: InputSignal<Transaction[]> = input.required<Transaction[]>();
 
   /** Aggregated report data calculated reactively from transactions. */
-  readonly vendorData: Signal<VendorReportData[]> = computed((): VendorReportData[] =>
-    this.dataService.aggregateByVendor(this.transactions())
+  readonly merchantData: Signal<MerchantReportData[]> = computed((): MerchantReportData[] =>
+    this.dataService.aggregateByMerchant(this.transactions())
   );
 
   /** Indicates if there is sufficient data to render visuals. */
-  readonly hasData: Signal<boolean> = computed((): boolean => this.vendorData().length > 0);
+  readonly hasData: Signal<boolean> = computed((): boolean => this.merchantData().length > 0);
 
   /**
    * Derived Bar Chart data for volume leaders.
    */
   readonly barChartData: Signal<any> = computed(() => {
-    const data: VendorReportData[] = this.vendorData().slice(0, 10);
+    const data: MerchantReportData[] = this.merchantData().slice(0, 10);
 
     return {
-      labels: data.map((v: VendorReportData): string => v.merchant.cleanName || 'Unknown'),
+      labels: data.map((v: MerchantReportData): string => v.merchant.cleanName || 'Unknown'),
       datasets: [{
         label: 'Total Spent',
-        data: data.map((v: VendorReportData): number => v.total),
-        backgroundColor: data.map((_: VendorReportData, i: number): string => `hsl(${(i * 36) % 360}, 70%, 60%)`),
+        data: data.map((v: MerchantReportData): number => v.total),
+        backgroundColor: data.map((_: MerchantReportData, i: number): string => `hsl(${(i * 36) % 360}, 70%, 60%)`),
         borderRadius: 8,
         barThickness: 32
       }]
@@ -58,12 +58,12 @@ export class VendorReportComponent {
    * Derived Doughnut Chart data for spending distribution.
    */
   readonly doughnutChartData: Signal<any> = computed(() => {
-    const data: VendorReportData[] = this.vendorData().slice(0, 5);
+    const data: MerchantReportData[] = this.merchantData().slice(0, 5);
 
     return {
-      labels: data.map((v: VendorReportData): string => v.merchant.cleanName || 'Unknown'),
+      labels: data.map((v: MerchantReportData): string => v.merchant.cleanName || 'Unknown'),
       datasets: [{
-        data: data.map((v: VendorReportData): number => v.total),
+        data: data.map((v: MerchantReportData): number => v.total),
         backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'],
         hoverOffset: 20,
         borderWidth: 0

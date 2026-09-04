@@ -16,10 +16,9 @@ import {TableModule} from 'primeng/table';
 import {RuleChangePreview} from '@models/category-rule.model';
 
 /**
- * Shared dialog for previewing and confirming bulk rule applications.
- *
- * Used by both Category and Vendor rules to show users which
- * transactions will be affected before execution.
+ * Dialog for previewing and confirming bulk rule applications -- shows users which transactions
+ * will be affected before execution. Currently used by category rules; the fieldLabel input keeps
+ * it generic rather than hardcoded to that one field, in case another bulk-rule flow needs it.
  */
 @Component({
   selector: 'app-apply-rules-dialog',
@@ -39,7 +38,7 @@ export class ApplyRulesDialogComponent {
   /** The list of projected changes. */
   readonly previewItems: InputSignal<RuleChangePreview[]> = input.required<RuleChangePreview[]>();
 
-  /** Functional label for the value being changed (e.g., "Category", "Vendor"). */
+  /** Functional label for the value being changed (e.g., "Category", "Merchant"). */
   readonly fieldLabel: InputSignal<string> = input<string>('Value');
 
   /** Global loading state for the apply operation. */
