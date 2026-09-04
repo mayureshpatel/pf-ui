@@ -1,0 +1,93 @@
+<div class="w-full flex flex-col gap-4">
+  <!-- Page Header -->
+  <app-screen-toolbar class="mb-6">
+    <div toolbarTitle>
+      <h1 class="text-4xl font-extrabold text-surface-900 tracking-tight">Merchants</h1>
+    </div>
+
+    <div toolbarFilters>
+      <p-iconfield>
+        <p-inputicon class="pi pi-search"/>
+        <input
+          pInputText
+          type="text"
+          placeholder="Search merchants..."
+          [ngModel]="searchTerm()"
+          (ngModelChange)="searchTerm.set($event)"
+        />
+      </p-iconfield>
+    </div>
+  </app-screen-toolbar>
+
+  @if (!isEmpty()) {
+    <p-card class="overflow-hidden">
+      <p-table
+        [value]="filteredMerchants()"
+        dataKey="id"
+        [loading]="loading()"
+        [paginator]="filteredMerchants().length > 20"
+        [rows]="20"
+        [stripedRows]="true"
+        size="small"
+      >
+        <ng-template #header>
+          <tr>
+            <th id="merchant-clean-name" class="py-4 font-bold text-surface-700">Display Name</th>
+            <th id="merchant-original-name" class="py-4 font-bold text-surface-700">Original Bank Description</th>
+            <th id="merchant-actions" class="py-4 font-bold text-surface-700 text-center" style="width: 100px">Actions</th>
+          </tr>
+        </ng-template>
+
+        <ng-template #body let-merchant>
+          <tr class="hover:bg-surface-100/50 transition-colors duration-200">
+            <td class="py-4 px-4">
+              <span class="font-semibold text-surface-900">{{ merchant.cleanName }}</span>
+            </td>
+            <td class="py-4 px-4">
+              <span class="text-sm font-mono text-muted-color">{{ merchant.originalName }}</span>
+            </td>
+            <td class="text-center py-1" style="width: 100px">
+              <p-button
+                icon="pi pi-pencil"
+                [text]="true"
+                [rounded]="true"
+                severity="secondary"
+                size="small"
+                (onClick)="openEditDialog(merchant)"
+              />
+            </td>
+          </tr>
+        </ng-template>
+
+        <ng-template #emptymessage>
+          <tr>
+            <td colspan="3" class="text-center py-16 text-muted-color">
+              @if (noSearchResults()) {
+                <i class="pi pi-search text-4xl mb-3 block opacity-20"></i>
+                No merchants found matching "{{ searchTerm() }}".
+              }
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </p-card>
+  } @else {
+    <div class="flex flex-col items-center justify-center min-h-[60vh] text-center animate-fade-in">
+      <div class="relative mb-8">
+        <div class="absolute -inset-4 bg-primary/10 rounded-full blur-2xl animate-pulse"></div>
+        <i class="pi pi-shop text-8xl text-primary/40 relative"></i>
+      </div>
+      <h2 class="text-3xl font-bold text-surface-900 mb-3">No merchants yet</h2>
+      <p class="text-muted-color mb-8 max-w-lg leading-relaxed text-lg">
+        Merchants are created automatically as you import or enter transactions.
+        Once you have some, you can search and correct their names here.
+      </p>
+    </div>
+  }
+
+  <app-merchant-form-dialog
+    [(visible)]="showDialog"
+    [merchant]="selectedMerchant()"
+    (save)="onSave()"
+  />
+</div>
