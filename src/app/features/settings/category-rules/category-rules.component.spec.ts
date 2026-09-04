@@ -23,7 +23,9 @@ describe('CategoryRulesComponent', () => {
     userId: 1,
     keyword: 'STARBUCKS',
     priority: 1,
-    category: null
+    category: null,
+    minAmount: null,
+    maxAmount: null
   } as unknown as CategoryRule;
 
   beforeEach(async () => {
@@ -64,5 +66,28 @@ describe('CategoryRulesComponent', () => {
     // assert & verify
     const button: HTMLButtonElement = fixture.nativeElement.querySelector('button:has(.pi-trash)');
     expect(button.getAttribute('aria-label')).toBe('Permanently remove this rule');
+  });
+
+  it('PF-314: should display a rule\'s amount range when set, and "Any amount" when not', () => {
+    // arrange
+    const rangedRule: CategoryRule = {
+      id: 2,
+      userId: 1,
+      keyword: 'AMAZON',
+      priority: 1,
+      category: null,
+      minAmount: 5,
+      maxAmount: 20
+    } as unknown as CategoryRule;
+    mockApi.getRules.mockReturnValue(of([orphanedRule, rangedRule]));
+
+    // act
+    fixture.detectChanges();
+
+    // assert & verify
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('Any amount');
+    expect(compiled.textContent).toContain('$5.00');
+    expect(compiled.textContent).toContain('$20.00');
   });
 });

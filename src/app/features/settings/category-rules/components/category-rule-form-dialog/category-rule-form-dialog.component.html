@@ -95,6 +95,41 @@
         Higher numbers take precedence. Use this to handle overlapping keywords (e.g., more specific rules first).
       </p>
     </div>
+
+    <!-- Amount Range (Optional) -->
+    <div class="flex flex-col gap-2">
+      <label class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
+        Amount Range (Optional)
+      </label>
+      <div class="flex gap-3">
+        <p-inputNumber
+          formControlName="minAmount"
+          mode="currency"
+          currency="USD"
+          locale="en-US"
+          [minFractionDigits]="2"
+          [maxFractionDigits]="2"
+          placeholder="No minimum"
+          [inputId]="'min-amount'"
+          class="w-full"
+        />
+        <p-inputNumber
+          formControlName="maxAmount"
+          mode="currency"
+          currency="USD"
+          locale="en-US"
+          [minFractionDigits]="2"
+          [maxFractionDigits]="2"
+          placeholder="No maximum"
+          [inputId]="'max-amount'"
+          class="w-full"
+        />
+      </div>
+      <p class="text-[10px] text-muted-color leading-tight mt-1">
+        Leave blank to match on keyword alone, regardless of amount. Set either or both to also
+        require the transaction's amount to fall within this range.
+      </p>
+    </div>
   </form>
 
   <ng-template #footer>

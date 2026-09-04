@@ -42,6 +42,7 @@
             <th id="rule-priority" class="py-4 font-bold text-surface-700 dark:text-surface-200 w-24">Priority</th>
             <th id="rule-keyword" class="py-4 font-bold text-surface-700 dark:text-surface-200">Match Keyword</th>
             <th id="rule-category" class="py-4 font-bold text-surface-700 dark:text-surface-200">Assigned Category</th>
+            <th id="rule-amount-range" class="py-4 font-bold text-surface-700 dark:text-surface-200">Amount Range</th>
             <th id="rule-actions" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-center w-24">
               Action
             </th>
@@ -80,6 +81,21 @@
               </div>
             </td>
 
+            <!-- Amount Range -->
+            <td>
+              @if (rule.minAmount != null && rule.maxAmount != null) {
+                <span class="font-mono text-xs text-muted-color">
+                  {{ rule.minAmount | formatCurrency }} &ndash; {{ rule.maxAmount | formatCurrency }}
+                </span>
+              } @else if (rule.minAmount != null) {
+                <span class="font-mono text-xs text-muted-color">&ge; {{ rule.minAmount | formatCurrency }}</span>
+              } @else if (rule.maxAmount != null) {
+                <span class="font-mono text-xs text-muted-color">&le; {{ rule.maxAmount | formatCurrency }}</span>
+              } @else {
+                <span class="text-xs text-muted-color italic">Any amount</span>
+              }
+            </td>
+
             <!-- Inline Actions -->
             <td class="text-center">
               <p-button
@@ -97,7 +113,7 @@
 
         <ng-template #emptymessage>
           <tr>
-            <td colspan="4" class="text-center py-16 text-muted-color italic">
+            <td colspan="5" class="text-center py-16 text-muted-color italic">
               No categorization rules found.
             </td>
           </tr>

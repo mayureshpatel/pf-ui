@@ -80,6 +80,12 @@ export class CategoryRuleFormDialogComponent {
     priority: new FormControl<number>(0, {
       nonNullable: true,
       validators: [Validators.min(0)]
+    }),
+    minAmount: new FormControl<number | null>(null, {
+      validators: [Validators.min(0)]
+    }),
+    maxAmount: new FormControl<number | null>(null, {
+      validators: [Validators.min(0)]
     })
   });
 
@@ -90,7 +96,7 @@ export class CategoryRuleFormDialogComponent {
      */
     effect((): void => {
       if (this.visible()) {
-        this.form.reset({keyword: '', category: null, priority: 0});
+        this.form.reset({keyword: '', category: null, priority: 0, minAmount: null, maxAmount: null});
         this.errorMessage.set(null);
         this.loadCategories();
       }
@@ -124,7 +130,7 @@ export class CategoryRuleFormDialogComponent {
     this.form.markAllAsTouched();
     if (this.form.invalid || this.loading()) return;
 
-    const {keyword, category, priority} = this.form.getRawValue();
+    const {keyword, category, priority, minAmount, maxAmount} = this.form.getRawValue();
     if (!category) return;
 
     this.loading.set(true);
@@ -133,7 +139,9 @@ export class CategoryRuleFormDialogComponent {
     const request = {
       keyword,
       categoryId: category.id,
-      priority
+      priority,
+      minAmount,
+      maxAmount
     } as CategoryRuleCreateRequest
 
     this.api.createRule(request)
