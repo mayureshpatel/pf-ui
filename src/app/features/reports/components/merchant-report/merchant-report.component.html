@@ -1,10 +1,10 @@
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-  <!-- Top Vendors Bar Chart -->
+  <!-- Top Merchants Bar Chart -->
   <p-card class="h-full card-soft">
     <ng-template pTemplate="title">
       <div class="flex items-center gap-2 mb-2">
         <i class="pi pi-shop text-primary"></i>
-        <span class="text-xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight">Vendor Volume</span>
+        <span class="text-xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight">Merchant Volume</span>
       </div>
     </ng-template>
 
@@ -15,7 +15,7 @@
     } @else {
       <div class="flex flex-col items-center justify-center h-[400px] text-center animate-fade-in">
         <i class="pi pi-chart-bar text-4xl text-surface-200 mb-2"></i>
-        <span class="text-sm font-bold text-surface-400 uppercase tracking-widest">No vendor activity</span>
+        <span class="text-sm font-bold text-surface-400 uppercase tracking-widest">No merchant activity</span>
       </div>
     }
   </p-card>
@@ -42,7 +42,7 @@
   </p-card>
 </div>
 
-<!-- Vendor Details Table -->
+<!-- Merchant Details Table -->
 <div class="mt-8">
   <p-card class="overflow-hidden card-soft">
     <ng-template pTemplate="title">
@@ -53,7 +53,7 @@
     </ng-template>
 
     <p-table
-      [value]="vendorData()"
+      [value]="merchantData()"
       [stripedRows]="true"
       size="small"
       [paginator]="true"
@@ -61,22 +61,22 @@
       class="mt-4">
       <ng-template #header>
         <tr>
-          <th id="vendor-name" class="py-3 font-bold text-surface-700 dark:text-surface-200">Merchant</th>
-          <th id="vendor-total" class="py-3 font-bold text-surface-700 dark:text-surface-200 text-right">Total Spent</th>
-          <th id="vendor-count" class="py-3 font-bold text-surface-700 dark:text-surface-200 text-center">Txns</th>
-          <th id="vendor-cats" class="py-3 font-bold text-surface-700 dark:text-surface-200">Primary Categories</th>
+          <th id="merchant-report-name" class="py-3 font-bold text-surface-700 dark:text-surface-200">Merchant</th>
+          <th id="merchant-report-total" class="py-3 font-bold text-surface-700 dark:text-surface-200 text-right">Total Spent</th>
+          <th id="merchant-report-count" class="py-3 font-bold text-surface-700 dark:text-surface-200 text-center">Txns</th>
+          <th id="merchant-report-cats" class="py-3 font-bold text-surface-700 dark:text-surface-200">Primary Categories</th>
         </tr>
       </ng-template>
-      <ng-template #body let-vendor>
+      <ng-template #body let-row>
         <tr class="hover:bg-surface-100/50 dark:hover:bg-surface-800/30 transition-colors duration-200">
           <td class="py-3">
-            <span class="font-bold text-surface-900 dark:text-surface-0">{{ vendor.merchant.cleanName }}</span>
+            <span class="font-bold text-surface-900 dark:text-surface-0">{{ row.merchant.cleanName || row.merchant.originalName || 'Unknown Merchant' }}</span>
           </td>
-          <td class="text-right font-mono font-black text-primary">{{ vendor.total | formatCurrency }}</td>
-          <td class="text-center font-mono text-xs text-muted-color">{{ vendor.count }}</td>
+          <td class="text-right font-mono font-black text-primary">{{ row.total | formatCurrency }}</td>
+          <td class="text-center font-mono text-xs text-muted-color">{{ row.count }}</td>
           <td>
             <div class="flex flex-wrap gap-1">
-              @for (category of vendor.categories; track category) {
+              @for (category of row.categories; track category) {
                 <span class="px-2 py-0.5 rounded-full bg-surface-100 text-[10px] font-black uppercase text-surface-500 tracking-tighter ring-1 ring-surface-200 dark:ring-surface-700">
                   {{ category }}
                 </span>

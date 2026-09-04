@@ -1,6 +1,6 @@
 import {Injectable} from '@angular/core';
 import {Transaction, TransactionType} from '@models/transaction.model';
-import {CategoryReportData, MonthlyReportData, VendorReportData} from '../models/reports.model';
+import {CategoryReportData, MerchantReportData, MonthlyReportData} from '../models/reports.model';
 import {Category} from '@models/category.model';
 import {Merchant} from '@models/merchant.model';
 
@@ -50,16 +50,16 @@ export class ReportsDataService {
   }
 
   /**
-   * Aggregates spending volume and transaction frequency by vendor/merchant.
+   * Aggregates spending volume and transaction frequency by merchant.
    *
    * Analyzes where money is being spent most frequently and identifies
-   * which categories are associated with specific vendors.
+   * which categories are associated with specific merchants.
    *
    * @param transactions - The array of transactions to analyze.
-   * @returns An array of VendorReportData objects sorted by highest total volume.
+   * @returns An array of MerchantReportData objects sorted by highest total volume.
    */
-  aggregateByVendor(transactions: Transaction[]): VendorReportData[] {
-    const vendorMap = new Map<number, {
+  aggregateByMerchant(transactions: Transaction[]): MerchantReportData[] {
+    const merchantMap = new Map<number, {
       merchant: Merchant;
       total: number;
       count: number;
@@ -70,8 +70,8 @@ export class ReportsDataService {
       if (txn.type === TransactionType.EXPENSE && txn.merchant) {
         const {merchant} = txn;
 
-        if (!vendorMap.has(merchant.id)) {
-          vendorMap.set(merchant.id, {
+        if (!merchantMap.has(merchant.id)) {
+          merchantMap.set(merchant.id, {
             merchant,
             total: 0,
             count: 0,
@@ -79,7 +79,7 @@ export class ReportsDataService {
           });
         }
 
-        const entry = vendorMap.get(merchant.id)!;
+        const entry = merchantMap.get(merchant.id)!;
         entry.total += Math.abs(txn.amount);
         entry.count += 1;
 
@@ -89,8 +89,8 @@ export class ReportsDataService {
       }
     }
 
-    return Array.from(vendorMap.values())
-      .map((item): VendorReportData => ({
+    return Array.from(merchantMap.values())
+      .map((item): MerchantReportData => ({
         merchant: item.merchant,
         total: item.total,
         count: item.count,

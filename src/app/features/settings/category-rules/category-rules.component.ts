@@ -16,7 +16,7 @@ import {
 } from './components/category-rule-form-dialog/category-rule-form-dialog.component';
 import {
   ApplyRulesDialogComponent
-} from '@features/settings/vendor-rules/components/apply-rules-dialog/apply-rules-dialog.component';
+} from './components/apply-rules-dialog/apply-rules-dialog.component';
 import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-toolbar';
 
 /**

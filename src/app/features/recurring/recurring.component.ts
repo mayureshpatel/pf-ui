@@ -186,7 +186,7 @@ export class RecurringComponent implements OnInit {
   deleteRecurring(rec: RecurringTransaction): void {
     this.confirmationService.confirm({
       header: 'Delete Recurring Transaction?',
-      message: `This will stop tracking the recurring payment for '${rec.merchant.cleanName}'. Are you sure?`,
+      message: `This will stop tracking the recurring payment for '${rec.merchant.cleanName || rec.merchant.originalName || 'Unknown Merchant'}'. Are you sure?`,
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Delete',
       rejectLabel: 'Cancel',

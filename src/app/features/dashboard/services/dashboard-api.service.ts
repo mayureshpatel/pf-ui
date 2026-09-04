@@ -48,7 +48,7 @@ export class DashboardApiService {
    * @param endDate the period end date
    * @returns the merchant breakdown data.
    */
-  getVendorBreakdown(month?: number, year?: number, startDate?: string, endDate?: string): Observable<MerchantBreakdown[]> {
+  getMerchantBreakdown(month?: number, year?: number, startDate?: string, endDate?: string): Observable<MerchantBreakdown[]> {
     return this.http.get<MerchantBreakdown[]>(
       `${this.apiUrl}/merchants`,
       {

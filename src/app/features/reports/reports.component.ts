@@ -11,7 +11,7 @@ import {ToastService} from '@core/services/toast.service';
 import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-toolbar';
 import {DateRangeFilterComponent} from './components/date-range-filter/date-range-filter.component';
 import {CategoryReportComponent} from './components/category-report/category-report.component';
-import {VendorReportComponent} from './components/vendor-report/vendor-report.component';
+import {MerchantReportComponent} from './components/merchant-report/merchant-report.component';
 import {IncomeExpenseReportComponent} from './components/income-expense-report/income-expense-report.component';
 import {DateRange} from './models/reports.model';
 
@@ -31,7 +31,7 @@ import {DateRange} from './models/reports.model';
     ScreenToolbarComponent,
     DateRangeFilterComponent,
     CategoryReportComponent,
-    VendorReportComponent,
+    MerchantReportComponent,
     IncomeExpenseReportComponent
   ],
   templateUrl: './reports.component.html'
@@ -50,7 +50,7 @@ export class ReportsComponent {
   /** Global loading state for report generation. */
   readonly loading: WritableSignal<boolean> = signal(false);
 
-  /** Currently selected tab (0: Category, 1: Vendor, 2: Monthly). */
+  /** Currently selected tab (0: Category, 1: Merchant, 2: Monthly). */
   readonly activeTabIndex: WritableSignal<number> = signal(0);
 
   constructor() {

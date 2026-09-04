@@ -152,20 +152,6 @@ export interface TransactionPreview {
 }
 
 /**
- * Represents a transaction data object for CSV import.
- *
- * @property date - The date of the transaction.
- * @property postDate - The date of posting the transaction.
- * @property type - The type of the transaction.
- * @property account - The ID of the account associated with the transaction.
- * @property amount - The amount of the transaction.
- * @property description - The description of the transaction.
- * @property vendorName - The name of the vendor associated with the transaction.
- * @property categoryName - The name of the category associated with the transaction.
- *
- * todo: remove, if not used
- */
-/**
  * Represents a transaction DTO matching the backend TransactionDto structure.
  */
 export interface TransactionDto {
