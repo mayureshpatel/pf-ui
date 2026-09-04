@@ -165,7 +165,7 @@ export class CategoryRulesComponent implements OnInit {
   deleteRule(rule: CategoryRule): void {
     this.confirmationService.confirm({
       header: 'Delete Rule?',
-      message: `Are you sure you want to delete the rule for keyword "${rule.keyword}"?`,
+      message: `Are you sure you want to delete the rule for keyword(s) "${rule.keywords.join(', ')}"?`,
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Delete',
       rejectLabel: 'Cancel',

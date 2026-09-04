@@ -16,27 +16,47 @@
 
     <!-- Keyword Match -->
     <div class="flex flex-col gap-2">
-      <label for="keyword" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
+      <label for="keywords" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
         If Description Contains...
       </label>
       <input
         pInputText
-        id="keyword"
-        formControlName="keyword"
+        id="keywords"
+        formControlName="keywordsInput"
         placeholder="e.g., WALMART, NETFLIX"
         class="w-full py-3"
       />
       <div class="flex items-center gap-1.5 mt-1">
         <i class="pi pi-info-circle text-[10px] text-muted-color"></i>
         <small class="text-[10px] font-bold text-muted-color uppercase tracking-tighter italic">
-          Case-insensitive keyword matching
+          Case-insensitive. Separate multiple keywords with commas.
         </small>
       </div>
-      @if (form.controls.keyword.invalid && form.controls.keyword.touched) {
+      @if (form.controls.keywordsInput.invalid && form.controls.keywordsInput.touched) {
         <small class="text-rose-500 font-medium flex items-center gap-1 animate-fade-in">
-          <i class="pi pi-times-circle text-xs"></i> A match keyword is required
+          <i class="pi pi-times-circle text-xs"></i> At least one match keyword is required
         </small>
       }
+    </div>
+
+    <!-- Match Type -->
+    <div class="flex flex-col gap-2">
+      <label for="matchType" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
+        Match Logic
+      </label>
+      <p-select
+        id="matchType"
+        formControlName="matchType"
+        [options]="matchTypeOptions"
+        optionLabel="label"
+        optionValue="value"
+        class="w-full"
+        appendTo="body"
+      />
+      <p class="text-[10px] text-muted-color leading-tight mt-1">
+        With multiple keywords: OR matches if any one is present; AND requires every keyword to
+        be present. With a single keyword, both behave identically.
+      </p>
     </div>
 
     <!-- Category Assignment -->
