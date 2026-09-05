@@ -242,6 +242,28 @@
               </div>
             </th>
 
+            <!-- Tags -->
+            <th id="txn-tags" class="py-4 font-semibold text-surface-700">
+              <div class="flex items-center gap-2">
+                Tags
+                <p-columnFilter field="tagId" display="menu" [showMatchModes]="false" [showOperator]="false"
+                                [showAddButton]="false">
+                  <ng-template pTemplate="filter" let-filterConstraint="filterConstraint">
+                    <p-select
+                      [(ngModel)]="filterConstraint.value"
+                      [options]="tags()"
+                      optionLabel="name"
+                      optionValue="id"
+                      placeholder="Select Tag"
+                      [showClear]="true"
+                      [filter]="true"
+                      class="w-64"
+                    />
+                  </ng-template>
+                </p-columnFilter>
+              </div>
+            </th>
+
             <th id="txn-actions" class="py-4 font-semibold text-surface-700 text-center w-24">
               Actions
             </th>
@@ -307,6 +329,21 @@
               </span>
             </td>
 
+            <!-- Tags -->
+            <td>
+              <div class="flex items-center gap-1 flex-wrap">
+                @for (tag of txn.tags; track tag.id) {
+                  <span
+                    class="px-2 py-0.5 rounded-full text-[10px] font-bold text-white"
+                    [style.background-color]="tag.color || '#94a3b8'">
+                    {{ tag.name }}
+                  </span>
+                } @empty {
+                  <span class="text-xs text-muted-color italic">&mdash;</span>
+                }
+              </div>
+            </td>
+
             <!-- Inline Actions -->
             <td class="text-center">
               <div class="flex justify-center gap-1">
@@ -331,7 +368,7 @@
 
         <ng-template pTemplate="emptymessage">
           <tr>
-            <td colspan="7" class="text-center py-16 text-muted-color italic">
+            <td colspan="8" class="text-center py-16 text-muted-color italic">
               No transactions match your current filtering criteria.
             </td>
           </tr>

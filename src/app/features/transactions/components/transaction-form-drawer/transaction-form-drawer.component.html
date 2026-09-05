@@ -139,6 +139,31 @@
       </p-select>
     </div>
 
+    <!-- Tags -->
+    <div class="flex flex-col gap-2">
+      <label for="tags" class="text-sm font-bold uppercase tracking-wide text-surface-700">
+        Tags
+      </label>
+      <p-multiSelect
+        id="tags"
+        formControlName="tags"
+        [options]="tags()"
+        optionLabel="name"
+        display="chip"
+        placeholder="Add tags..."
+        [filter]="true"
+        filterBy="name"
+        class="w-full"
+      >
+        <ng-template #item let-tag>
+          <div class="flex items-center gap-2">
+            <div class="w-2.5 h-2.5 rounded-full shadow-xs" [style.background-color]="tag.color || '#94a3b8'"></div>
+            <span class="font-medium truncate">{{ tag.name }}</span>
+          </div>
+        </ng-template>
+      </p-multiSelect>
+    </div>
+
     <!-- Account -->
     <div class="flex flex-col gap-2">
       <label for="account" class="text-sm font-bold uppercase tracking-wide text-surface-700">

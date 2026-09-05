@@ -32,3 +32,16 @@ export function toLocalDateString(date: Date): string {
   const day: string = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
+
+/**
+ * Converts a plain "yyyy-MM-dd" date (the transaction form's own raw value) into the
+ * midnight-UTC ISO datetime string the backend's `transactionDate` field requires. Without this,
+ * `TransactionCreateRequest`/`TransactionUpdateRequest` fail Jackson deserialization server-side
+ * (`OffsetDateTime` can't parse a bare date), so both the create and update transaction forms
+ * were unconditionally rejected with a 400 on submit.
+ *
+ * @param plainDate a "yyyy-MM-dd" string, as produced by the transaction form's date picker
+ */
+export function toApiDateTimeString(plainDate: string): string {
+  return `${plainDate}T00:00:00Z`;
+}
