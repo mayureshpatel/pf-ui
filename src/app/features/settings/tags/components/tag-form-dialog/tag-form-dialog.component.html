@@ -1,0 +1,75 @@
+<p-dialog
+  [header]="dialogTitle()"
+  [(visible)]="visible"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '420px' }"
+  class="p-fluid">
+
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-6 py-4">
+    @if (errorMessage()) {
+      <p-message severity="error" variant="simple" class="w-full animate-fade-in">
+        {{ errorMessage() }}
+      </p-message>
+    }
+
+    <!-- Live Preview -->
+    <div class="flex items-center justify-center">
+      <span
+        class="px-3 py-1 rounded-full text-xs font-bold text-white truncate max-w-full"
+        [style.background-color]="'#' + form.value.color"
+      >
+        {{ form.value.name || 'Tag Preview' }}
+      </span>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <label for="tag-name" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
+        Name
+      </label>
+      <input
+        pInputText
+        id="tag-name"
+        formControlName="name"
+        placeholder="e.g. Vacation, Reimbursable..."
+        class="w-full"
+        [autofocus]="true"
+      />
+      @if (form.controls.name.invalid && form.controls.name.touched) {
+        <small class="text-rose-500 font-medium flex items-center gap-1 animate-fade-in">
+          <i class="pi pi-times-circle text-xs"></i> A tag name is required
+        </small>
+      }
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <label for="tag-color" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
+        Color
+      </label>
+      <div class="flex items-center gap-3">
+        <p-colorPicker id="tag-color" formControlName="color" appendTo="body"/>
+        <span class="text-sm font-mono text-muted-color uppercase">#{{ form.value.color }}</span>
+      </div>
+    </div>
+  </form>
+
+  <ng-template #footer>
+    <div class="flex justify-end gap-3 pt-4 border-t border-surface-100 dark:border-surface-800">
+      <p-button
+        label="Cancel"
+        [text]="true"
+        severity="secondary"
+        (onClick)="onHide()"
+      />
+      <p-button
+        [label]="isEditMode() ? 'Save Changes' : 'Create Tag'"
+        icon="pi pi-check"
+        (onClick)="onSubmit()"
+        [loading]="saving()"
+        [disabled]="form.invalid || saving()"
+        [raised]="true"
+      />
+    </div>
+  </ng-template>
+</p-dialog>

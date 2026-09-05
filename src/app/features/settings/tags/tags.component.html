@@ -1,0 +1,129 @@
+<div class="w-full flex flex-col gap-4">
+  <!-- Page Header -->
+  <app-screen-toolbar class="mb-6">
+    <div toolbarTitle>
+      <h1 class="text-4xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight">Tags</h1>
+      <p class="text-muted-color mt-1 text-lg italic">Label your transactions, your way</p>
+    </div>
+
+    <div toolbarActions class="flex gap-3">
+      <p-button
+        label="New Tag"
+        icon="pi pi-plus"
+        (onClick)="openCreateDialog()"
+        severity="primary"
+        [raised]="true"
+      />
+    </div>
+  </app-screen-toolbar>
+
+  <!-- Tag List -->
+  @if (!isEmpty()) {
+    <p-card class="overflow-hidden card-soft">
+      <p-table
+        [value]="tags()"
+        [loading]="loading()"
+        [rowHover]="true"
+        [stripedRows]="true"
+        size="small"
+        responsiveLayout="stack"
+        [breakpoint]="'960px'">
+
+        <ng-template #header>
+          <tr>
+            <th id="tag-name" class="py-4 font-bold text-surface-700 dark:text-surface-200">Tag</th>
+            <th id="tag-color" class="py-4 font-bold text-surface-700 dark:text-surface-200">Color</th>
+            <th id="tag-actions" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-center w-32">
+              Actions
+            </th>
+          </tr>
+        </ng-template>
+
+        <ng-template #body let-tag>
+          <tr class="hover:bg-surface-100/50 dark:hover:bg-surface-800/30 transition-colors duration-200">
+            <!-- Tag Pill -->
+            <td class="py-4">
+              <span
+                class="px-3 py-1 rounded-full text-xs font-bold text-white inline-block"
+                [style.background-color]="tag.color || '#94a3b8'"
+              >
+                {{ tag.name }}
+              </span>
+            </td>
+
+            <!-- Color Swatch -->
+            <td>
+              <div class="flex items-center gap-2">
+                <div
+                  class="w-5 h-5 rounded-full shadow-xs ring-1 ring-surface-200 dark:ring-surface-700"
+                  [style.background-color]="tag.color || '#94a3b8'"
+                ></div>
+                <span class="font-mono text-xs text-muted-color uppercase">{{ tag.color || '—' }}</span>
+              </div>
+            </td>
+
+            <!-- Inline Actions -->
+            <td class="text-center">
+              <div class="flex justify-center gap-1">
+                <p-button
+                  icon="pi pi-pencil"
+                  [text]="true"
+                  [rounded]="true"
+                  severity="secondary"
+                  (onClick)="openEditDialog(tag)"
+                  pTooltip="Rename or recolor this tag"
+                  ariaLabel="Edit tag"
+                />
+                <p-button
+                  icon="pi pi-trash"
+                  [text]="true"
+                  [rounded]="true"
+                  severity="danger"
+                  (onClick)="deleteTag(tag)"
+                  pTooltip="Permanently delete this tag"
+                  ariaLabel="Delete tag"
+                />
+              </div>
+            </td>
+          </tr>
+        </ng-template>
+
+        <ng-template #emptymessage>
+          <tr>
+            <td colspan="3" class="text-center py-16 text-muted-color italic">
+              No tags found.
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </p-card>
+  } @else if (!loading()) {
+    <!-- Hero State -->
+    <div class="flex flex-col items-center justify-center min-h-[60vh] text-center animate-fade-in">
+      <div class="relative mb-8">
+        <div class="absolute -inset-4 bg-primary/10 rounded-full blur-2xl animate-pulse"></div>
+        <i class="pi pi-hashtag text-8xl text-primary/40 relative"></i>
+      </div>
+      <h2 class="text-3xl font-bold text-surface-900 dark:text-surface-0 mb-3">No tags yet</h2>
+      <p class="text-muted-color mb-8 max-w-lg leading-relaxed text-lg">
+        Create your own labels to group and find transactions by whatever matters to you --
+        independent of category.
+      </p>
+      <p-button
+        label="Create Your First Tag"
+        icon="pi pi-plus"
+        (onClick)="openCreateDialog()"
+        severity="primary"
+        size="large"
+        [raised]="true"
+      />
+    </div>
+  }
+
+  <!-- Dialog -->
+  <app-tag-form-dialog
+    [(visible)]="showDialog"
+    [tag]="selectedTag()"
+    (save)="onTagSaved()"
+  />
+</div>
