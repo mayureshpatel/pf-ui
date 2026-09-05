@@ -19,18 +19,21 @@ import {ButtonModule} from 'primeng/button';
 import {InputNumberModule} from 'primeng/inputnumber';
 import {InputTextModule} from 'primeng/inputtext';
 import {SelectModule} from 'primeng/select';
+import {MultiSelectModule} from 'primeng/multiselect';
 import {DatePicker} from 'primeng/datepicker';
 import {MessageModule} from 'primeng/message';
 
 import {
   Transaction,
   TransactionCreateRequest,
+  TransactionFormSaveEvent,
   TransactionType,
   TransactionUpdateRequest
 } from '@models/transaction.model';
 import {Account} from '@models/account.model';
 import {Category} from '@models/category.model';
 import {Merchant} from '@models/merchant.model';
+import {Tag} from '@models/tag.model';
 import {DrawerComponent} from '@shared/components/drawer/drawer.component';
 import {toLocalDateString} from '@shared/utils/transaction.utils';
 import {finalize, forkJoin} from 'rxjs';
@@ -38,6 +41,7 @@ import {CategoryApiService} from '@features/categories/services/category-api.ser
 import {AccountApiService} from '@features/accounts/services/account-api.service';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {MerchantApiService} from '@features/merchants/services/merchant-api.service';
+import {TagApiService} from '@features/tags/services/tag-api.service';
 import {ProgressSpinner} from 'primeng/progressspinner';
 import {Tooltip} from 'primeng/tooltip';
 import {SelectItemGroup} from 'primeng/api';
@@ -59,6 +63,7 @@ import {SelectItemGroup} from 'primeng/api';
     InputNumberModule,
     InputTextModule,
     SelectModule,
+    MultiSelectModule,
     DatePicker,
     MessageModule,
     DrawerComponent,
@@ -71,6 +76,7 @@ export class TransactionFormDrawerComponent {
   private readonly categoryApi: CategoryApiService = inject(CategoryApiService);
   private readonly accountApi: AccountApiService = inject(AccountApiService);
   private readonly merchantApi: MerchantApiService = inject(MerchantApiService);
+  private readonly tagApi: TagApiService = inject(TagApiService);
 
   /** Two-way binding for drawer visibility. */
   readonly visible: ModelSignal<boolean> = model.required<boolean>();
@@ -85,7 +91,7 @@ export class TransactionFormDrawerComponent {
   readonly loading: WritableSignal<boolean> = signal(false);
 
   /** Emitted when the form is validated and ready for persistence. */
-  readonly save: OutputEmitterRef<TransactionCreateRequest | TransactionUpdateRequest> = output<TransactionCreateRequest | TransactionUpdateRequest>();
+  readonly save: OutputEmitterRef<TransactionFormSaveEvent> = output<TransactionFormSaveEvent>();
 
   /** Available bank accounts for transaction association. */
   readonly accounts: WritableSignal<Account[]> = signal<Account[]>([]);
@@ -95,6 +101,9 @@ export class TransactionFormDrawerComponent {
 
   /** Known merchants for autocomplete suggestions. */
   readonly merchants: WritableSignal<Merchant[]> = signal<Merchant[]>([]);
+
+  /** Available tags for assignment. */
+  readonly tags: WritableSignal<Tag[]> = signal<Tag[]>([]);
 
   /** Error message to display. */
   readonly errorMessage: WritableSignal<string | null> = signal(null);
@@ -127,7 +136,8 @@ export class TransactionFormDrawerComponent {
     }),
     category: new FormControl<Category | null>(null, {validators: [Validators.required]}),
     postDate: new FormControl<string | null>(null),
-    merchant: new FormControl<Merchant | null>(null)
+    merchant: new FormControl<Merchant | null>(null),
+    tags: new FormControl<Tag[]>([], {nonNullable: true})
   });
 
   /** Indicates if the component is in edit mode. */
@@ -150,18 +160,20 @@ export class TransactionFormDrawerComponent {
       categories: this.categoryApi.getCategories(),
       accounts: this.accountApi.getAccounts(),
       merchants: this.merchantApi.getMerchants(),
+      tags: this.tagApi.getTags(),
     })
       .pipe(
         takeUntilDestroyed(),
         finalize(() => this.loading.set(false))
       )
       .subscribe({
-        next: ({categories, accounts, merchants}: any): void => {
+        next: ({categories, accounts, merchants, tags}: any): void => {
           accounts.sort((a: Account, b: Account): number => a.name.localeCompare(b.name));
           merchants.sort((a: Merchant, b: Merchant): number => a.originalName.localeCompare(b.originalName));
           this.accounts.set(accounts);
           this.merchants.set(merchants);
           this.groupedCategories.set(this.getGroupedCategories(categories));
+          this.tags.set(tags);
 
           this.filteredCategories.set(categories);
           this.filteredMerchants.set(merchants);
@@ -243,7 +255,8 @@ export class TransactionFormDrawerComponent {
         type: transaction.type,
         category: transaction.category,
         merchant: transaction.merchant,
-        accountId: transaction.account.id
+        accountId: transaction.account.id,
+        tags: transaction.tags ?? []
       });
     } else {
       this.form.patchValue({
@@ -253,7 +266,8 @@ export class TransactionFormDrawerComponent {
         type: TransactionType.EXPENSE,
         category: null,
         merchant: null,
-        accountId: 0
+        accountId: 0,
+        tags: []
       });
     }
   }
@@ -269,6 +283,7 @@ export class TransactionFormDrawerComponent {
 
     const rawValue = this.form.getRawValue();
     const selectedTransaction: Transaction | null = this.transaction();
+    const tagIds: number[] = rawValue.tags.map((t: Tag): number => t.id);
 
     if (selectedTransaction) {
       const updateRequest: TransactionUpdateRequest = {
@@ -283,7 +298,7 @@ export class TransactionFormDrawerComponent {
         merchantId: rawValue.merchant?.id!
       }
 
-      this.save.emit(updateRequest);
+      this.save.emit({request: updateRequest, tagIds});
     } else {
       const createRequest: TransactionCreateRequest = {
         accountId: rawValue.accountId,
@@ -296,7 +311,7 @@ export class TransactionFormDrawerComponent {
         merchantId: rawValue.merchant?.id!
       }
 
-      this.save.emit(createRequest);
+      this.save.emit({request: createRequest, tagIds});
     }
   }
 }

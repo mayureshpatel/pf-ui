@@ -52,6 +52,7 @@ export class TransactionApiService {
     if (filter.maxAmount) params = params.set('maxAmount', filter.maxAmount.toString());
     if (filter.startDate) params = params.set('startDate', toLocalDateString(filter.startDate));
     if (filter.endDate) params = params.set('endDate', toLocalDateString(filter.endDate));
+    if (filter.tagId) params = params.set('tagId', filter.tagId.toString());
 
     return this.http.get<PageResponse<Transaction>>(this.apiUrl, { params });
   }

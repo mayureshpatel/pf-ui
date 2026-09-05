@@ -7,6 +7,8 @@ import {TransactionFormDrawerComponent} from './transaction-form-drawer.componen
 import {CategoryApiService} from '@features/categories/services/category-api.service';
 import {AccountApiService} from '@features/accounts/services/account-api.service';
 import {MerchantApiService} from '@features/merchants/services/merchant-api.service';
+import {TagApiService} from '@features/tags/services/tag-api.service';
+import {Category} from '@models/category.model';
 
 describe('TransactionFormDrawerComponent', () => {
   let component: TransactionFormDrawerComponent;
@@ -16,13 +18,15 @@ describe('TransactionFormDrawerComponent', () => {
     const mockCategoryApi = {getCategories: vi.fn().mockReturnValue(of([]))};
     const mockAccountApi = {getAccounts: vi.fn().mockReturnValue(of([]))};
     const mockMerchantApi = {getMerchants: vi.fn().mockReturnValue(of([]))};
+    const mockTagApi = {getTags: vi.fn().mockReturnValue(of([]))};
 
     await TestBed.configureTestingModule({
       imports: [TransactionFormDrawerComponent, NoopAnimationsModule],
       providers: [
         {provide: CategoryApiService, useValue: mockCategoryApi},
         {provide: AccountApiService, useValue: mockAccountApi},
-        {provide: MerchantApiService, useValue: mockMerchantApi}
+        {provide: MerchantApiService, useValue: mockMerchantApi},
+        {provide: TagApiService, useValue: mockTagApi}
       ]
     }).compileComponents();
 
@@ -76,5 +80,58 @@ describe('TransactionFormDrawerComponent', () => {
 
     // Assert
     expect(component.form.get('transactionDate')?.value).toBe('2026-03-15');
+  });
+
+  it('PF-308: should preload the tags form control with the edited transaction\'s existing tags', () => {
+    // arrange
+    const tags = [{id: 1, userId: 1, name: 'Travel', color: '#123456'}];
+    fixture.componentRef.setInput('transaction', {
+      id: 1,
+      account: {id: 1, name: 'Checking'},
+      category: null,
+      amount: 42.5,
+      date: '2026-03-15T00:00:00Z',
+      description: 'Test',
+      type: 'EXPENSE',
+      merchant: null,
+      tags
+    });
+    fixture.detectChanges();
+
+    // act
+    component.onShow();
+
+    // assert & verify
+    expect(component.form.get('tags')?.value).toEqual(tags);
+  });
+
+  it('PF-308: should default the tags form control to empty for a new transaction', () => {
+    // act
+    fixture.detectChanges();
+    component.onShow();
+
+    // assert & verify
+    expect(component.form.get('tags')?.value).toEqual([]);
+  });
+
+  it('PF-308: should emit the selected tag ids alongside the request on submit', () => {
+    // arrange
+    fixture.detectChanges();
+    component.onShow();
+    component.form.patchValue({
+      accountId: 1,
+      amount: 10,
+      transactionDate: '2026-03-15',
+      category: {id: 5} as unknown as Category,
+      tags: [{id: 1, userId: 1, name: 'Travel', color: null}, {id: 2, userId: 1, name: 'Work', color: null}]
+    });
+    const saveSpy = vi.fn();
+    component.save.subscribe(saveSpy);
+
+    // act
+    component.onSubmit();
+
+    // assert & verify
+    expect(saveSpy).toHaveBeenCalledWith(expect.objectContaining({tagIds: [1, 2]}));
   });
 });

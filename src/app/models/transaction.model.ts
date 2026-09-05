@@ -1,6 +1,7 @@
 import {Merchant} from '@models/merchant.model';
 import {Category} from '@models/category.model';
 import {Account, BankName} from "./account.model";
+import {Tag} from '@models/tag.model';
 
 /**
  * Represents a transaction object.
@@ -15,6 +16,7 @@ import {Account, BankName} from "./account.model";
  * @property description - The description of the transaction.
  * @property type - The {@link TransactionType} of the transaction.
  * @property merchant - The {@link Merchant} associated with the transaction.
+ * @property tags - The {@link Tag}s assigned to this transaction.
  */
 export interface Transaction {
   id: number;
@@ -26,6 +28,7 @@ export interface Transaction {
   type: TransactionType;
   merchant: Merchant;
   postDate?: string;
+  tags: Tag[];
 }
 
 /**
@@ -54,6 +57,7 @@ export enum TransactionType {
  * @property maxAmount - The maximum amount of the transaction to filter by.
  * @property startDate - The start date of the transaction to filter by.
  * @property endDate - The end date of the transaction to filter by.
+ * @property tagId - The ID of the tag to filter by.
  */
 export interface TransactionFilter {
   accountId?: number;
@@ -65,6 +69,7 @@ export interface TransactionFilter {
   maxAmount?: number;
   startDate?: Date;
   endDate?: Date;
+  tagId?: number;
 }
 
 /**
@@ -222,6 +227,20 @@ export interface TransactionUpdateRequest {
   categoryId: number;
   postDate: string;
   merchantId: number;
+}
+
+/**
+ * Represents the payload emitted by {@link TransactionFormDrawerComponent} on save: the
+ * transaction fields themselves, plus the full set of tag ids the user selected (not a diff --
+ * the caller is responsible for comparing against the transaction's previous tags to decide what
+ * to assign/remove).
+ *
+ * @property request - The transaction create/update payload.
+ * @property tagIds - The complete set of tag ids the user selected in the form.
+ */
+export interface TransactionFormSaveEvent {
+  request: TransactionCreateRequest | TransactionUpdateRequest;
+  tagIds: number[];
 }
 
 /**

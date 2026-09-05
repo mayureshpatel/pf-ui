@@ -14,7 +14,7 @@ import {takeUntilDestroyed} from "@angular/core/rxjs-interop";
 import {CommonModule} from "@angular/common";
 import {FormsModule} from "@angular/forms";
 import {ActivatedRoute, Params, Router} from "@angular/router";
-import {finalize, Observable, skip} from "rxjs";
+import {finalize, forkJoin, Observable, of, skip, switchMap} from "rxjs";
 import {ButtonModule} from "primeng/button";
 import {TableModule} from "primeng/table";
 import {CardModule} from "primeng/card";
@@ -33,6 +33,7 @@ import {
   Transaction,
   TransactionCreateRequest,
   TransactionFilter,
+  TransactionFormSaveEvent,
   TransactionState,
   TransactionType,
   TransactionUpdateRequest
@@ -40,9 +41,11 @@ import {
 import {Account} from "@models/account.model";
 import {Category} from "@models/category.model";
 import {Merchant} from "@models/merchant.model";
+import {Tag} from "@models/tag.model";
 import {TransactionApiService} from "./services/transaction-api.service";
 import {AccountApiService} from "@features/accounts/services/account-api.service";
 import {CategoryApiService} from "@features/categories/services/category-api.service";
+import {TagApiService} from "@features/tags/services/tag-api.service";
 import {ToastService} from "@core/services/toast.service";
 import {ScreenToolbarComponent} from "@shared/components/screen-toolbar/screen-toolbar";
 import {FormatTransactionTypeAmountPipe} from "@shared/pipes/format-transaction-type-amount.pipe";
@@ -52,6 +55,7 @@ import {
   TransferMatchingDialogComponent
 } from "./components/transfer-matching-dialog/transfer-matching-dialog.component";
 import {FormatCurrencyPipe} from "@shared/pipes/format-currency.pipe";
+import {toApiDateTimeString} from "@shared/utils/transaction.utils";
 
 /**
  * Component for managing and auditing the master transaction ledger.
@@ -89,6 +93,7 @@ export class TransactionsComponent implements OnInit {
   private readonly transactionApi: TransactionApiService = inject(TransactionApiService);
   private readonly accountApi: AccountApiService = inject(AccountApiService);
   private readonly categoryApi: CategoryApiService = inject(CategoryApiService);
+  private readonly tagApi: TagApiService = inject(TagApiService);
   private readonly toast: ToastService = inject(ToastService);
   private readonly confirmationService: ConfirmationService = inject(ConfirmationService);
   private readonly route: ActivatedRoute = inject(ActivatedRoute);
@@ -114,6 +119,9 @@ export class TransactionsComponent implements OnInit {
 
   /** All known merchants for autocomplete and assignment. */
   readonly merchants: WritableSignal<Merchant[]> = signal([]);
+
+  /** All known tags, for the filter dropdown and the edit drawer's tag picker. */
+  readonly tags: WritableSignal<Tag[]> = signal([]);
 
   /** Global loading state for ledger refresh. */
   readonly loading: WritableSignal<boolean> = signal(false);
@@ -200,6 +208,7 @@ export class TransactionsComponent implements OnInit {
       merchantAndDesc: [{value: null, matchMode: "custom", operator: "and"}],
       categoryName: [{value: filter.categoryName || null, matchMode: "equals", operator: "and"}],
       accountId: [{value: filter.accountId || null, matchMode: "equals", operator: "and"}],
+      tagId: [{value: filter.tagId || null, matchMode: "equals", operator: "and"}],
       amount: [{value: null, matchMode: "custom", operator: "and"}]
     };
 
@@ -261,6 +270,7 @@ export class TransactionsComponent implements OnInit {
     if (filter.categoryName) count++;
     if (filter.minAmount !== undefined) count++;
     if (filter.maxAmount !== undefined) count++;
+    if (filter.tagId) count++;
     return count;
   });
 
@@ -287,6 +297,7 @@ export class TransactionsComponent implements OnInit {
     this.loadAccounts();
     this.loadCategories();
     this.loadMerchants();
+    this.loadTags();
 
     this.route.queryParams
       .pipe(skip(1), takeUntilDestroyed(this.destroyRef))
@@ -332,7 +343,8 @@ export class TransactionsComponent implements OnInit {
       minAmount: params['minAmount'] === undefined ? undefined : Number(params['minAmount']),
       maxAmount: params['maxAmount'] === undefined ? undefined : Number(params['maxAmount']),
       startDate: params["startDate"] ? new Date(params["startDate"]) : undefined,
-      endDate: params["endDate"] ? new Date(params["endDate"]) : undefined
+      endDate: params["endDate"] ? new Date(params["endDate"]) : undefined,
+      tagId: params["tagId"] ? Number(params["tagId"]) : undefined
     };
 
     const page: number = params["page"] ? Number(params["page"]) : 0;
@@ -370,6 +382,7 @@ export class TransactionsComponent implements OnInit {
     if (filter.maxAmount !== undefined) queryParams["maxAmount"] = filter.maxAmount;
     if (filter.startDate) queryParams["startDate"] = filter.startDate;
     if (filter.endDate) queryParams["endDate"] = filter.endDate;
+    if (filter.tagId) queryParams["tagId"] = filter.tagId;
 
     if (page > 0) queryParams["page"] = page;
     if (size !== 20) queryParams["size"] = size;
@@ -414,6 +427,16 @@ export class TransactionsComponent implements OnInit {
       .subscribe((data: Merchant[]): void => this.merchants.set(data));
   }
 
+  /**
+   * Loads all the tags for the current user.
+   * @private
+   */
+  private loadTags(): void {
+    this.tagApi.getTags()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((data: Tag[]): void => this.tags.set(data));
+  }
+
   onLazyLoad(event: any): void {
     const rows: number = event.rows ?? 20;
     const first: number = event.first ?? 0;
@@ -450,6 +473,7 @@ export class TransactionsComponent implements OnInit {
       this.setMerchantFilter(filterEvent["merchantAndDesc"], stateFilter);
       this.setCategoryFilter(filterEvent["categoryName"], stateFilter);
       this.setAccountIdFilter(filterEvent["accountId"], stateFilter);
+      this.setTagFilter(filterEvent["tagId"], stateFilter);
       this.setAmountFilter(filterEvent["amount"], stateFilter);
     }
 
@@ -531,6 +555,21 @@ export class TransactionsComponent implements OnInit {
       stateFilter.accountId = metadata.value || undefined;
     } else {
       stateFilter.accountId = undefined;
+    }
+  }
+
+  /**
+   * Sets the tag filter for the current transaction filter state.
+   * @param tagFilter the tag filter object from the event; contains the tag ID
+   * @param stateFilter the transaction filter state object
+   * @private
+   */
+  private setTagFilter(tagFilter: any, stateFilter: TransactionFilter): void {
+    if (tagFilter) {
+      const metadata = Array.isArray(tagFilter) ? tagFilter[0] : tagFilter;
+      stateFilter.tagId = metadata.value || undefined;
+    } else {
+      stateFilter.tagId = undefined;
     }
   }
 
@@ -657,10 +696,13 @@ export class TransactionsComponent implements OnInit {
   }
 
   /**
-   * Saves the transaction form data. Handles saving either a new transaction or updating an existing one.
-   * @param formData the form data to save
+   * Saves the transaction form data. Handles saving either a new transaction or updating an
+   * existing one, then reconciles tag assignment against the transaction's previous tags (a new
+   * transaction has none yet, so every selected tag is an addition).
+   * @param event the form data and the full set of tag ids the user selected
    */
-  onSave(formData: TransactionCreateRequest | TransactionUpdateRequest): void {
+  onSave(event: TransactionFormSaveEvent): void {
+    const {request: formData, tagIds} = event;
     const existing: Transaction | null = this.selectedTransaction();
     this.savingTransaction.set(true);
 
@@ -668,8 +710,9 @@ export class TransactionsComponent implements OnInit {
     if (existing) {
       payload = {
         id: existing.id,
+        accountId: formData.accountId,
         amount: formData.amount,
-        transactionDate: formData.transactionDate,
+        transactionDate: toApiDateTimeString(formData.transactionDate),
         description: formData.description || "",
         type: formData.type,
         categoryId: formData.categoryId,
@@ -677,9 +720,9 @@ export class TransactionsComponent implements OnInit {
       } as TransactionUpdateRequest;
     } else {
       payload = {
-        accountId: formData.accountId,
+        accountId: (formData as TransactionCreateRequest).accountId,
         amount: formData.amount,
-        transactionDate: formData.transactionDate,
+        transactionDate: toApiDateTimeString(formData.transactionDate),
         description: formData.description || "",
         type: formData.type,
         categoryId: formData.categoryId,
@@ -691,7 +734,17 @@ export class TransactionsComponent implements OnInit {
       ? this.transactionApi.updateTransaction(payload as TransactionUpdateRequest)
       : this.transactionApi.createTransaction(payload as TransactionCreateRequest);
 
-    op.pipe(finalize((): void => this.savingTransaction.set(false))).subscribe({
+    op.pipe(
+      switchMap((result: number): Observable<unknown> => {
+        // updateTransaction resolves to a rows-affected count, not the transaction's own id --
+        // use the already-known existing.id for that case; createTransaction resolves to the
+        // real new id.
+        const transactionId: number = existing ? existing.id : result;
+        const previousTagIds: number[] = (existing?.tags ?? []).map((t: Tag): number => t.id);
+        return this.syncTags(transactionId, previousTagIds, tagIds);
+      }),
+      finalize((): void => this.savingTransaction.set(false))
+    ).subscribe({
       next: (): void => {
         this.toast.success(`Transaction ${existing ? "updated" : "created"}`);
         this.showDialog.set(false);
@@ -699,6 +752,27 @@ export class TransactionsComponent implements OnInit {
       },
       error: (err: any): void => this.toast.error(err.error?.detail || "Operation failed")
     });
+  }
+
+  /**
+   * Reconciles a transaction's tag assignments against a new full selection: assigns whatever's
+   * newly present, removes whatever's no longer present. A no-op (completes immediately) when
+   * nothing changed.
+   * @param transactionId the transaction to reconcile tags on
+   * @param previousTagIds the tag ids it carried before this save
+   * @param newTagIds the full set of tag ids the user selected
+   * @private
+   */
+  private syncTags(transactionId: number, previousTagIds: number[], newTagIds: number[]): Observable<unknown> {
+    const toAdd: number[] = newTagIds.filter((id: number): boolean => !previousTagIds.includes(id));
+    const toRemove: number[] = previousTagIds.filter((id: number): boolean => !newTagIds.includes(id));
+
+    const ops: Observable<void>[] = [
+      ...toAdd.map((tagId: number): Observable<void> => this.tagApi.assignToTransaction(tagId, transactionId)),
+      ...toRemove.map((tagId: number): Observable<void> => this.tagApi.removeFromTransaction(tagId, transactionId))
+    ];
+
+    return ops.length > 0 ? forkJoin(ops) : of(null);
   }
 
   /**
