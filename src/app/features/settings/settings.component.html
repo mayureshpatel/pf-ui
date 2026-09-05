@@ -16,11 +16,20 @@
             <span class="font-bold">Category Rules</span>
           </div>
         </p-tab>
+        <p-tab value="2">
+          <div class="flex items-center gap-2">
+            <i class="pi pi-hashtag"></i>
+            <span class="font-bold">Tags</span>
+          </div>
+        </p-tab>
       </p-tablist>
 
       <p-tabpanels class="bg-transparent px-0 py-6">
         <p-tabpanel value="1">
           <app-category-rules/>
+        </p-tabpanel>
+        <p-tabpanel value="2">
+          <app-tags/>
         </p-tabpanel>
       </p-tabpanels>
     </p-tabs>
