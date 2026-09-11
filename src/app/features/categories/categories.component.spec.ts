@@ -151,6 +151,20 @@ describe('CategoriesComponent', () => {
     expect(component.showDialog()).toBe(true);
   });
 
+  it("bug regression: viewTransactions should navigate with a 'categoryName' query param, not "
+      + "'category' -- TransactionsComponent.hydrateFromParams() only ever reads 'categoryName' "
+      + "off the URL, so the old param name was silently dropped and the Usage-count click "
+      + "landed on an unfiltered transactions list instead of one scoped to the clicked category",
+    () => {
+      // act
+      component.viewTransactions(mockCategories[1]); // Groceries
+
+      // assert & verify
+      expect(mockRouter.navigate).toHaveBeenCalledWith(['/transactions'], {
+        queryParams: {categoryName: 'Groceries'}
+      });
+    });
+
   it('should delete category on confirmation', () => {
     // arrange
     mockConfirmationService.confirm.mockImplementation((config: any) => {

@@ -4,6 +4,7 @@ import {FormsModule} from '@angular/forms';
 import {DatePicker} from 'primeng/datepicker';
 import {Button} from 'primeng/button';
 import {DateRange, DateRangePreset} from '../../models/reports.model';
+import {fromLocalDateString, toLocalDateString} from '@shared/utils/transaction.utils';
 
 /**
  * Component for selecting and managing date range filters for reports.
@@ -41,7 +42,7 @@ export class DateRangeFilterComponent {
     effect((): void => {
       const range: DateRange = this.dateRange();
       if (range) {
-        this.selectedRange.set([new Date(range.startDate), new Date(range.endDate)]);
+        this.selectedRange.set([fromLocalDateString(range.startDate), fromLocalDateString(range.endDate)]);
       }
     });
   }
@@ -62,49 +63,42 @@ export class DateRangeFilterComponent {
 
     if (dates?.length === 2 && dates[0] && dates[1]) {
       this.dateRange.set({
-        startDate: this.formatDateToISO(dates[0]),
-        endDate: this.formatDateToISO(dates[1]),
+        startDate: toLocalDateString(dates[0]),
+        endDate: toLocalDateString(dates[1]),
         label: 'Custom Range'
       });
     }
   }
 
-  /**
-   * Utility to format local dates into API-ready ISO strings.
-   */
-  private formatDateToISO(date: Date): string {
-    return date.toISOString().split('T')[0];
-  }
-
   private getThisMonth(): DateRange {
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth(), 1);
-    return {startDate: this.formatDateToISO(start), endDate: this.formatDateToISO(now), label: 'This Month'};
+    return {startDate: toLocalDateString(start), endDate: toLocalDateString(now), label: 'This Month'};
   }
 
   private getLastMonth(): DateRange {
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const end = new Date(now.getFullYear(), now.getMonth(), 0);
-    return {startDate: this.formatDateToISO(start), endDate: this.formatDateToISO(end), label: 'Last Month'};
+    return {startDate: toLocalDateString(start), endDate: toLocalDateString(end), label: 'Last Month'};
   }
 
   private getLast3Months(): DateRange {
     const now = new Date();
     const start = new Date();
     start.setMonth(start.getMonth() - 3);
-    return {startDate: this.formatDateToISO(start), endDate: this.formatDateToISO(now), label: 'Last 3 Months'};
+    return {startDate: toLocalDateString(start), endDate: toLocalDateString(now), label: 'Last 3 Months'};
   }
 
   private getYTD(): DateRange {
     const now = new Date();
     const start = new Date(now.getFullYear(), 0, 1);
-    return {startDate: this.formatDateToISO(start), endDate: this.formatDateToISO(now), label: 'Year to Date'};
+    return {startDate: toLocalDateString(start), endDate: toLocalDateString(now), label: 'Year to Date'};
   }
 
   private getLastYear(): DateRange {
     const start = new Date(new Date().getFullYear() - 1, 0, 1);
     const end = new Date(new Date().getFullYear() - 1, 11, 31);
-    return {startDate: this.formatDateToISO(start), endDate: this.formatDateToISO(end), label: 'Last Year'};
+    return {startDate: toLocalDateString(start), endDate: toLocalDateString(end), label: 'Last Year'};
   }
 }

@@ -1,11 +1,11 @@
-<p-dialog
-  [header]="isEditMode() ? 'Edit Recurring Entry' : 'Create Recurring Entry'"
+<app-drawer
   [(visible)]="visible"
-  [modal]="true"
-  [draggable]="false"
-  [resizable]="false"
-  [style]="{ width: '500px' }"
-  class="p-fluid">
+  [title]="isEditMode() ? 'Edit Recurring Entry' : 'Create Recurring Entry'"
+  icon="pi-sync"
+  [saveLabel]="isEditMode() ? 'Update Entry' : 'Create Entry'"
+  [saving]="loading()"
+  (saveEmitterRef)="onSubmit()"
+  (showEmitterRef)="onShow()">
 
   <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-8 py-4">
     @if (errorMessage()) {
@@ -144,23 +144,4 @@
       </div>
     </div>
   </form>
-
-  <ng-template #footer>
-    <div class="flex justify-end gap-3 pt-4 border-t border-surface-100 dark:border-surface-800">
-      <p-button
-        label="Cancel"
-        [text]="true"
-        severity="secondary"
-        (onClick)="onHide()"
-      />
-      <p-button
-        [label]="isEditMode() ? 'Update Entry' : 'Create Entry'"
-        icon="pi pi-check"
-        (onClick)="onSubmit()"
-        [loading]="loading()"
-        [disabled]="form.invalid || loading()"
-        [raised]="true"
-      />
-    </div>
-  </ng-template>
-</p-dialog>
+</app-drawer>

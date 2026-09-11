@@ -234,7 +234,7 @@ export class CategoriesComponent implements OnInit {
    */
   viewTransactions(category: Category): void {
     this.router.navigate(['/transactions'], {
-      queryParams: {category: category.name}
+      queryParams: {categoryName: category.name}
     });
   }
 }

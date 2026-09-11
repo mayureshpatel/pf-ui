@@ -138,24 +138,28 @@ describe('AccountFormDrawerComponent', () => {
       });
     });
 
-    it('should handle null bankName fallback to empty string on create', () => {
-      vi.spyOn(component.save, 'emit');
-      fixture.componentRef.setInput('account', null);
+    it("bug regression: should keep a null bankName as null on create, not fall back to an empty "
+        + "string -- the empty string used to slip past the backend's null-only guard in "
+        + "AccountDtoMapper and throw when the row was later read back (BankName.fromString('')), "
+        + "breaking GET /accounts for the whole user, not just the account with no bank",
+      () => {
+        vi.spyOn(component.save, 'emit');
+        fixture.componentRef.setInput('account', null);
 
-      component.form.patchValue({
-        name: 'New Account',
-        type: mockAccountTypes[0],
-        currencyCode: 'USD',
-        currentBalance: 100,
-        bankName: null
+        component.form.patchValue({
+          name: 'New Account',
+          type: mockAccountTypes[0],
+          currencyCode: 'USD',
+          currentBalance: 100,
+          bankName: null
+        });
+
+        component.onSubmit();
+
+        expect(component.save.emit).toHaveBeenCalledWith(expect.objectContaining({
+          bankName: null
+        }));
       });
-
-      component.onSubmit();
-
-      expect(component.save.emit).toHaveBeenCalledWith(expect.objectContaining({
-        bankName: ''
-      }));
-    });
 
     it('should emit update request when account is provided', () => {
       vi.spyOn(component.save, 'emit');
@@ -182,7 +186,7 @@ describe('AccountFormDrawerComponent', () => {
       });
     });
 
-    it('should handle null bankName fallback to empty string on update', () => {
+    it('bug regression: should keep a null bankName as null on update too, not fall back to an empty string', () => {
       vi.spyOn(component.save, 'emit');
       fixture.componentRef.setInput('account', mockAccount);
 
@@ -195,7 +199,7 @@ describe('AccountFormDrawerComponent', () => {
       component.onSubmit();
 
       expect(component.save.emit).toHaveBeenCalledWith(expect.objectContaining({
-        bankName: ''
+        bankName: null
       }));
     });
   });

@@ -14,6 +14,7 @@ import {CategoryReportComponent} from './components/category-report/category-rep
 import {MerchantReportComponent} from './components/merchant-report/merchant-report.component';
 import {IncomeExpenseReportComponent} from './components/income-expense-report/income-expense-report.component';
 import {DateRange} from './models/reports.model';
+import {fromLocalDateString, toLocalDateString} from '@shared/utils/transaction.utils';
 
 /**
  * Main reporting hub providing visual analytics and deep-dive spending patterns.
@@ -75,8 +76,8 @@ export class ReportsComponent {
     this.loading.set(true);
 
     const filter: TransactionFilter = {
-      startDate: new Date(range.startDate),
-      endDate: new Date(range.endDate)
+      startDate: fromLocalDateString(range.startDate),
+      endDate: fromLocalDateString(range.endDate)
     };
 
     const pageRequest: PageRequest = {
@@ -109,17 +110,9 @@ export class ReportsComponent {
     start.setMonth(start.getMonth() - 3);
 
     return {
-      startDate: this.formatDateToISO(start),
-      endDate: this.formatDateToISO(end),
+      startDate: toLocalDateString(start),
+      endDate: toLocalDateString(end),
       label: 'Last 3 Months'
     };
-  }
-
-  /**
-   * Local utility to format a date into an ISO string (YYYY-MM-DD).
-   * @param date - The date object to format.
-   */
-  private formatDateToISO(date: Date): string {
-    return date.toISOString().split('T')[0];
   }
 }

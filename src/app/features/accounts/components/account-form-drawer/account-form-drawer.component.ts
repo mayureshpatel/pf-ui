@@ -92,7 +92,7 @@ export class AccountFormDrawerComponent {
         name: rawValue.name,
         type: rawValue.type!.code,
         currencyCode: rawValue.currencyCode,
-        bankName: rawValue.bankName ?? '',
+        bankName: rawValue.bankName ?? null,
         version: selectedAccount.version
       };
 
@@ -103,7 +103,7 @@ export class AccountFormDrawerComponent {
         type: rawValue.type!.code,
         startingBalance: rawValue.currentBalance,
         currencyCode: rawValue.currencyCode,
-        bankName: rawValue.bankName ?? ''
+        bankName: rawValue.bankName ?? null
       };
 
       this.save.emit(createRequest);

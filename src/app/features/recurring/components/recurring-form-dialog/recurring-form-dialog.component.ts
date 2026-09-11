@@ -9,7 +9,6 @@ import {
 import {
   Component,
   computed,
-  effect,
   inject,
   input,
   InputSignal,
@@ -23,7 +22,6 @@ import {
 } from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {finalize} from 'rxjs';
-import {DialogModule} from 'primeng/dialog';
 import {ButtonModule} from 'primeng/button';
 import {InputNumberModule} from 'primeng/inputnumber';
 import {SelectModule} from 'primeng/select';
@@ -43,6 +41,7 @@ import {
 import {RecurringApiService} from '../../services/recurring-api.service';
 import {ToastService} from '@core/services/toast.service';
 import {AuthService} from '@core/auth/auth.service';
+import {DrawerComponent} from '@shared/components/drawer/drawer.component';
 
 /**
  * Custom validator ensuring a date is in the future.
@@ -59,10 +58,14 @@ function futureDateValidator(control: AbstractControl): ValidationErrors | null 
 }
 
 /**
- * Dialog component for creating or updating recurring transactions.
+ * Drawer component for creating or updating recurring transactions.
  *
  * Supports manual entry, editing existing records, and pre-filling from
  * recurring pattern suggestions.
+ *
+ * A `p-dialog` originally, migrated to `DrawerComponent` by PF-281 -- PrimeNG 21.1.3's `p-select`
+ * silently fails to register a clicked option when hosted inside a `p-dialog` (see PF-803, which
+ * found and fixed the identical bug in `budget-form-dialog`/`category-rule-form-dialog`).
  */
 @Component({
   selector: 'app-recurring-form-dialog',
@@ -70,13 +73,13 @@ function futureDateValidator(control: AbstractControl): ValidationErrors | null 
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    DialogModule,
     ButtonModule,
     InputNumberModule,
     SelectModule,
     DatePicker,
     ToggleSwitchModule,
-    MessageModule
+    MessageModule,
+    DrawerComponent
   ],
   templateUrl: './recurring-form-dialog.component.html',
 })
@@ -145,47 +148,35 @@ export class RecurringFormDialogComponent {
     this.merchants().map((m: Merchant) => ({label: m.cleanName || m.originalName || 'Unknown Merchant', value: m.id}))
   );
 
-  constructor() {
-    /**
-     * Effect to reactively synchronize the form whenever input data changes.
-     * Handles switching between Create, Edit, and Suggestion modes.
-     */
-    effect((): void => {
-      const isVisible: boolean = this.visible();
-      const rec: RecurringTransaction | null = this.recurring();
-      const sug: RecurringSuggestion | null = this.suggestion();
-
-      if (isVisible) {
-        if (rec) {
-          this.form.patchValue({
-            accountId: rec.account.id,
-            merchantId: rec.merchant.id,
-            amount: rec.amount,
-            frequency: rec.frequency,
-            nextDate: rec.nextDate ? new Date(rec.nextDate) : null,
-            active: rec.active
-          });
-        } else if (sug) {
-          this.form.patchValue({
-            merchantId: sug.merchant.id,
-            amount: sug.amount,
-            frequency: sug.frequency,
-            nextDate: sug.nextDate ? new Date(sug.nextDate) : null,
-            active: true
-          });
-        } else {
-          this.form.reset({active: true});
-        }
-        this.errorMessage.set(null);
-      }
-    });
-  }
-
   /**
-   * Resets form state and closes the dialog.
+   * Synchronizes the form whenever the drawer is shown, switching between Create, Edit, and
+   * Suggestion modes based on which input the parent set before opening.
    */
-  onHide(): void {
-    this.visible.set(false);
+  onShow(): void {
+    const rec: RecurringTransaction | null = this.recurring();
+    const sug: RecurringSuggestion | null = this.suggestion();
+
+    if (rec) {
+      this.form.patchValue({
+        accountId: rec.account.id,
+        merchantId: rec.merchant.id,
+        amount: rec.amount,
+        frequency: rec.frequency,
+        nextDate: rec.nextDate ? new Date(rec.nextDate) : null,
+        active: rec.active
+      });
+    } else if (sug) {
+      this.form.patchValue({
+        merchantId: sug.merchant.id,
+        amount: sug.amount,
+        frequency: sug.frequency,
+        nextDate: sug.nextDate ? new Date(sug.nextDate) : null,
+        active: true
+      });
+    } else {
+      this.form.reset({active: true});
+    }
+    this.errorMessage.set(null);
   }
 
   /**
@@ -251,7 +242,7 @@ export class RecurringFormDialogComponent {
   private handleSuccess(message: string): void {
     this.toast.success(message);
     this.saved.emit();
-    this.onHide();
+    this.visible.set(false);
   }
 
   private handleError(error: any, fallback: string): void {
