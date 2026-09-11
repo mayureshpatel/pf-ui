@@ -34,6 +34,23 @@ export function toLocalDateString(date: Date): string {
 }
 
 /**
+ * Parses a "yyyy-MM-dd" string (as produced by `toLocalDateString`) back into a Date at local
+ * midnight on that calendar day.
+ *
+ * Deliberately does not pass the string straight to `new Date(string)` -- the single-argument
+ * `Date` string constructor always interprets a bare "yyyy-MM-dd" as UTC midnight, not local
+ * midnight, which re-shifts the date backward by a day for any user in a negative UTC offset
+ * (e.g. the Americas) once reformatted through `toLocalDateString` again. The 3-argument
+ * `Date(year, monthIndex, day)` constructor is always local-time, avoiding that round-trip.
+ *
+ * @param dateString a "yyyy-MM-dd" string, as produced by `toLocalDateString`
+ */
+export function fromLocalDateString(dateString: string): Date {
+  const [year, month, day] = dateString.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
+/**
  * Converts a plain "yyyy-MM-dd" date (the transaction form's own raw value) into the
  * midnight-UTC ISO datetime string the backend's `transactionDate` field requires. Without this,
  * `TransactionCreateRequest`/`TransactionUpdateRequest` fail Jackson deserialization server-side

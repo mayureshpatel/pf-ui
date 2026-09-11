@@ -40,7 +40,7 @@ export interface AccountCreateRequest {
   type: string;
   startingBalance: number;
   currencyCode: string;
-  bankName: string;
+  bankName: string | null;
 }
 
 /**
@@ -58,7 +58,7 @@ export interface AccountUpdateRequest {
   name: string;
   type: string;
   currencyCode: string;
-  bankName: string;
+  bankName: string | null;
   version: number;
 }
 

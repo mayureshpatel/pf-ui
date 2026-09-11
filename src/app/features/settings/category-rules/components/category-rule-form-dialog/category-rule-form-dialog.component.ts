@@ -1,6 +1,5 @@
 import {
   Component,
-  effect,
   inject,
   model,
   ModelSignal,
@@ -12,7 +11,6 @@ import {
 import {CommonModule} from '@angular/common';
 import {AbstractControl, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors, Validators} from '@angular/forms';
 import {finalize} from 'rxjs';
-import {DialogModule} from 'primeng/dialog';
 import {ButtonModule} from 'primeng/button';
 import {InputTextModule} from 'primeng/inputtext';
 import {InputNumberModule} from 'primeng/inputnumber';
@@ -24,6 +22,7 @@ import {CategoryApiService} from '@features/categories/services/category-api.ser
 import {ToastService} from '@core/services/toast.service';
 import {Category, CategoryGroup} from '@models/category.model';
 import {CategoryRuleCreateRequest, MatchType} from '@models/category-rule.model';
+import {DrawerComponent} from '@shared/components/drawer/drawer.component';
 
 /**
  * Requires at least one non-blank, comma-separated keyword in the raw input string.
@@ -43,10 +42,14 @@ const MATCH_TYPE_OPTIONS: { label: string; value: MatchType }[] = [
 ];
 
 /**
- * Dialog component for creating new transaction categorization rules.
+ * Drawer component for creating new transaction categorization rules.
  *
  * Allows users to define one or more keywords (with AND/OR match logic), assign a target
  * category, and set an optional priority and amount range for rule precedence.
+ *
+ * A `p-dialog` originally, migrated to `DrawerComponent` by PF-803 alongside `budget-form-dialog`
+ * -- PrimeNG 21.1.3's `p-select` silently fails to register a clicked option when hosted inside a
+ * `p-dialog`. See `budget-form-dialog.component.ts`'s docstring for the full investigation.
  */
 @Component({
   selector: 'app-category-rule-form-dialog',
@@ -54,12 +57,12 @@ const MATCH_TYPE_OPTIONS: { label: string; value: MatchType }[] = [
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    DialogModule,
     ButtonModule,
     InputTextModule,
     InputNumberModule,
     SelectModule,
-    MessageModule
+    MessageModule,
+    DrawerComponent
   ],
   templateUrl: './category-rule-form-dialog.component.html'
 })
@@ -111,18 +114,13 @@ export class CategoryRuleFormDialogComponent {
     })
   });
 
-  constructor() {
-    /**
-     * Effect to reactively synchronize the dialog state.
-     * Resets the form and reloads categories whenever the dialog is shown.
-     */
-    effect((): void => {
-      if (this.visible()) {
-        this.form.reset({keywordsInput: '', matchType: 'OR', category: null, priority: 0, minAmount: null, maxAmount: null});
-        this.errorMessage.set(null);
-        this.loadCategories();
-      }
-    });
+  /**
+   * Resets the form and reloads categories whenever the drawer is shown.
+   */
+  onShow(): void {
+    this.form.reset({keywordsInput: '', matchType: 'OR', category: null, priority: 0, minAmount: null, maxAmount: null});
+    this.errorMessage.set(null);
+    this.loadCategories();
   }
 
   /**
@@ -136,13 +134,6 @@ export class CategoryRuleFormDialogComponent {
         this.toast.error('Failed to load categories.');
       }
     });
-  }
-
-  /**
-   * Closes the dialog and resets state.
-   */
-  onHide(): void {
-    this.visible.set(false);
   }
 
   /**
@@ -178,7 +169,7 @@ export class CategoryRuleFormDialogComponent {
         next: (): void => {
           this.toast.success('Category rule created.');
           this.save.emit();
-          this.onHide();
+          this.visible.set(false);
         },
         error: (err: any): void => {
           console.error('Create rule failed:', err);

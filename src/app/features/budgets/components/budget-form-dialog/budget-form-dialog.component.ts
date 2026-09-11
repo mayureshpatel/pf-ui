@@ -1,7 +1,6 @@
 import {
   Component,
   computed,
-  effect,
   inject,
   input,
   InputSignal,
@@ -16,7 +15,6 @@ import {
 import {CommonModule} from '@angular/common';
 import {FormControl, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
 import {finalize} from 'rxjs';
-import {DialogModule} from 'primeng/dialog';
 import {ButtonModule} from 'primeng/button';
 import {SelectModule} from 'primeng/select';
 import {InputNumberModule} from 'primeng/inputnumber';
@@ -26,12 +24,21 @@ import {SelectItemGroup} from 'primeng/api';
 import {Category} from '@models/category.model';
 import {BudgetApiService} from '../../services/budget-api.service';
 import {ToastService} from '@core/services/toast.service';
+import {DrawerComponent} from '@shared/components/drawer/drawer.component';
 
 /**
- * Dialog component for setting and updating category budgets.
+ * Drawer component for setting and updating category budgets.
  *
  * Groups categories into Parent/Child structures for easier selection
  * and validates budget amounts before submission.
+ *
+ * A `p-dialog` originally, migrated to `DrawerComponent` by PF-803 -- PrimeNG 21.1.3's `p-select`
+ * silently fails to register a clicked option when hosted inside a `p-dialog` (confirmed via live
+ * e2e testing across mouse click, force-click, raw coordinates, and keyboard selection, all
+ * failing identically with no console error). The identical `formControlName` + `p-select`
+ * pattern works correctly inside `app-drawer`, so migrating the container -- not the form itself
+ * -- was the fix. PrimeNG's repository is archived (2026-06-28) with no further fixes coming to
+ * this version line, ruling out waiting for an upstream patch.
  */
 @Component({
   selector: 'app-budget-form-dialog',
@@ -39,11 +46,11 @@ import {ToastService} from '@core/services/toast.service';
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    DialogModule,
     ButtonModule,
     SelectModule,
     InputNumberModule,
-    MessageModule
+    MessageModule,
+    DrawerComponent
   ],
   templateUrl: './budget-form-dialog.component.html'
 })
@@ -116,23 +123,12 @@ export class BudgetFormDialogComponent {
     return groups;
   });
 
-  constructor() {
-    /**
-     * Effect to handle form resets whenever the dialog visibility toggles.
-     */
-    effect((): void => {
-      if (this.visible()) {
-        this.form.reset();
-        this.errorMessage.set(null);
-      }
-    });
-  }
-
   /**
-   * Closes the dialog and resets local state.
+   * Resets the form whenever the drawer is shown.
    */
-  onHide(): void {
-    this.visible.set(false);
+  onShow(): void {
+    this.form.reset();
+    this.errorMessage.set(null);
   }
 
   /**
@@ -163,7 +159,7 @@ export class BudgetFormDialogComponent {
         next: (): void => {
           this.toast.success('Budget saved successfully');
           this.save.emit();
-          this.onHide();
+          this.visible.set(false);
         },
         error: (err: any): void => {
           console.error('Error saving budget:', err);
