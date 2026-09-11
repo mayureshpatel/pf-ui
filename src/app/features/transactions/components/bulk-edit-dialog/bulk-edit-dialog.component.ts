@@ -14,6 +14,7 @@ import {
   WritableSignal
 } from '@angular/core';
 import {CommonModule} from '@angular/common';
+import {toSignal} from '@angular/core/rxjs-interop';
 import {FormControl, FormGroup, ReactiveFormsModule} from '@angular/forms';
 import {DialogModule} from 'primeng/dialog';
 import {ButtonModule} from 'primeng/button';
@@ -98,11 +99,19 @@ export class BulkEditDialogComponent {
   readonly isLargeUpdate: Signal<boolean> = computed(() => this.transactionCount() > 50);
 
   /**
+   * A signal mirror of the form's own value. `computed()` only tracks Signal reads as
+   * dependencies -- reading `this.form.value` directly inside a computed (as `isValid` used to)
+   * creates no reactive dependency at all, so it would compute once on first read and then never
+   * change again for the lifetime of the component, regardless of any later form edits.
+   */
+  private readonly formValue = toSignal(this.form.valueChanges, {initialValue: this.form.getRawValue()});
+
+  /**
    * Evaluates the logical validity of the bulk form.
    * Ensures at least one toggle is active and its associated field is populated.
    */
   readonly isValid: Signal<boolean | undefined> = computed((): boolean | undefined => {
-    const v = this.form.value;
+    const v = this.formValue();
     const hasCategory: boolean = v.updateCategory ? !!v.category : false;
     const hasVendor: boolean = v.updateVendor ? !!v.merchant?.trim() : false;
     const hasDesc: boolean = v.updateDescription ? !!v.description?.trim() : false;

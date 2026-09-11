@@ -181,7 +181,7 @@ export class CategoryFormDrawerComponent {
         id: selectedCategory.id,
         name: trimmedName,
         type: rawValue.type,
-        color: rawValue.color ?? getCategoryColor(trimmedName),
+        color: rawValue.color || getCategoryColor(trimmedName),
         icon: rawValue.icon ?? undefined,
         parentId: rawValue.parentId ?? undefined
       };

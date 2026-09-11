@@ -42,6 +42,7 @@ import {RecurringApiService} from '../../services/recurring-api.service';
 import {ToastService} from '@core/services/toast.service';
 import {AuthService} from '@core/auth/auth.service';
 import {DrawerComponent} from '@shared/components/drawer/drawer.component';
+import {fromLocalDateString, toLocalDateString} from '@shared/utils/transaction.utils';
 
 /**
  * Custom validator ensuring a date is in the future.
@@ -162,7 +163,7 @@ export class RecurringFormDialogComponent {
         merchantId: rec.merchant.id,
         amount: rec.amount,
         frequency: rec.frequency,
-        nextDate: rec.nextDate ? new Date(rec.nextDate) : null,
+        nextDate: rec.nextDate ? fromLocalDateString(rec.nextDate) : null,
         active: rec.active
       });
     } else if (sug) {
@@ -170,7 +171,7 @@ export class RecurringFormDialogComponent {
         merchantId: sug.merchant.id,
         amount: sug.amount,
         frequency: sug.frequency,
-        nextDate: sug.nextDate ? new Date(sug.nextDate) : null,
+        nextDate: sug.nextDate ? fromLocalDateString(sug.nextDate) : null,
         active: true
       });
     } else {
@@ -193,7 +194,7 @@ export class RecurringFormDialogComponent {
       return;
     }
 
-    const nextDateISO: string = raw.nextDate ? raw.nextDate.toISOString().split('T')[0] : '';
+    const nextDateISO: string = raw.nextDate ? toLocalDateString(raw.nextDate) : '';
 
     this.loading.set(true);
     this.errorMessage.set(null);
