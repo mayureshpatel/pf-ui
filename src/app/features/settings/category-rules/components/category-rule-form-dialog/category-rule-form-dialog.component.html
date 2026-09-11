@@ -72,15 +72,15 @@
         [filter]="true"
         [showClear]="true"
         optionLabel="name"
-        groupLabel="groupLabel"
-        groupChildren="items"
+        optionGroupLabel="parent.name"
+        optionGroupChildren="items"
         placeholder="Select target category"
         class="w-full"
         appendTo="body">
 
         <ng-template #group let-group>
           <div class="flex items-center gap-2 py-1 px-2">
-            <span class="text-xs font-black uppercase text-surface-400 tracking-tighter">{{ group.groupLabel }}</span>
+            <span class="text-xs font-black uppercase text-surface-400 tracking-tighter">{{ group.parent.name }}</span>
           </div>
         </ng-template>
 
