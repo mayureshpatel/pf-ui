@@ -1,4 +1,5 @@
 import {
+  ChangeDetectionStrategy,
   Component,
   computed,
   effect,
@@ -61,7 +62,8 @@ export interface BulkEditData {
     SelectModule,
     MessageModule
   ],
-  templateUrl: './bulk-edit-dialog.component.html'
+  templateUrl: './bulk-edit-dialog.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class BulkEditDialogComponent {
   private readonly categoryApi: CategoryApiService = inject(CategoryApiService);

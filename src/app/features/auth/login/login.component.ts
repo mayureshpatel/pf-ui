@@ -1,4 +1,4 @@
-import {Component, inject, signal, WritableSignal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, inject, signal, WritableSignal} from '@angular/core';
 import {FormControl, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
 import {finalize} from 'rxjs';
 import {RouterLink} from '@angular/router';
@@ -29,7 +29,8 @@ import {AuthService} from '@core/auth/auth.service';
     PasswordModule,
     MessageModule
   ],
-  templateUrl: './login.component.html'
+  templateUrl: './login.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class LoginComponent {
   private readonly authService: AuthService = inject(AuthService);

@@ -1,4 +1,4 @@
-import {Component} from '@angular/core';
+import {ChangeDetectionStrategy, Component} from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {TabsModule} from 'primeng/tabs';
 import {CategoryRulesComponent} from './category-rules/category-rules.component';
@@ -20,7 +20,8 @@ import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-t
     TagsComponent,
     ScreenToolbarComponent
   ],
-  templateUrl: './settings.component.html'
+  templateUrl: './settings.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SettingsComponent {
 }

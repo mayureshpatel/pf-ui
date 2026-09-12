@@ -1,4 +1,4 @@
-import {Component, computed, DestroyRef, inject, OnInit, Signal, signal, WritableSignal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, DestroyRef, inject, OnInit, Signal, signal, WritableSignal} from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {CommonModule} from '@angular/common';
 import {finalize} from 'rxjs';
@@ -43,7 +43,8 @@ import {
     RecurringFormDialogComponent,
     RecurringSuggestionsDialogComponent
   ],
-  templateUrl: './recurring.component.html'
+  templateUrl: './recurring.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RecurringComponent implements OnInit {
   private readonly recurringApi: RecurringApiService = inject(RecurringApiService);

@@ -7,6 +7,7 @@ import {
   Validators
 } from '@angular/forms';
 import {
+  ChangeDetectionStrategy,
   Component,
   computed,
   inject,
@@ -83,6 +84,7 @@ function futureDateValidator(control: AbstractControl): ValidationErrors | null 
     DrawerComponent
   ],
   templateUrl: './recurring-form-dialog.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RecurringFormDialogComponent {
   private readonly recurringApi: RecurringApiService = inject(RecurringApiService);

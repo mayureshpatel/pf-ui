@@ -1,4 +1,5 @@
 import {
+  ChangeDetectionStrategy,
   Component,
   computed,
   DestroyRef,
@@ -89,7 +90,8 @@ import {toApiDateTimeString} from "@shared/utils/transaction.utils";
     FormatTransactionTypeAmountPipe
   ],
   providers: [FormatCurrencyPipe, FormatTransactionTypeAmountPipe],
-  templateUrl: "./transactions.component.html"
+  templateUrl: "./transactions.component.html",
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TransactionsComponent implements OnInit {
   private readonly transactionApi: TransactionApiService = inject(TransactionApiService);

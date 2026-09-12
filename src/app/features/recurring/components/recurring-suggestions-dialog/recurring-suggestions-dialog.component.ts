@@ -1,4 +1,5 @@
 import {
+  ChangeDetectionStrategy,
   Component,
   effect,
   inject,
@@ -39,7 +40,8 @@ import {ToastService} from '@core/services/toast.service';
     MessageModule,
     TooltipModule
   ],
-  templateUrl: './recurring-suggestions-dialog.component.html'
+  templateUrl: './recurring-suggestions-dialog.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RecurringSuggestionsDialogComponent {
   private readonly recurringApi: RecurringApiService = inject(RecurringApiService);

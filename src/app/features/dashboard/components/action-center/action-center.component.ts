@@ -1,4 +1,4 @@
-import {Component, inject, input, InputSignal, output, OutputEmitterRef} from '@angular/core';
+import {ChangeDetectionStrategy, Component, inject, input, InputSignal, output, OutputEmitterRef} from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {CardModule} from 'primeng/card';
 import {ButtonModule} from 'primeng/button';
@@ -15,7 +15,8 @@ import {ActionItem, ActionType} from '@models/dashboard.model';
   selector: 'app-action-center',
   standalone: true,
   imports: [CommonModule, CardModule, ButtonModule],
-  templateUrl: './action-center.component.html'
+  templateUrl: './action-center.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ActionCenterComponent {
   private readonly router: Router = inject(Router);

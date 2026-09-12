@@ -1,4 +1,5 @@
 import {
+  ChangeDetectionStrategy,
   Component,
   computed,
   inject,
@@ -73,7 +74,8 @@ interface BatchImportItem {
     TooltipModule,
     FileUpload
   ],
-  templateUrl: "./csv-import-dialog.component.html"
+  templateUrl: "./csv-import-dialog.component.html",
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CsvImportDialog {
   private readonly importService: TransactionImportService = inject(TransactionImportService);

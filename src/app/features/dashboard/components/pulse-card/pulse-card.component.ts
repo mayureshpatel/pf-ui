@@ -1,4 +1,4 @@
-import {Component, computed, input, InputSignal, Signal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, input, InputSignal, Signal} from '@angular/core';
 import {CommonModule, formatCurrency} from '@angular/common';
 import {CardModule} from 'primeng/card';
 import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
@@ -11,7 +11,8 @@ import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
   selector: 'app-pulse-card',
   standalone: true,
   imports: [CommonModule, CardModule, FormatCurrencyPipe],
-  templateUrl: './pulse-card.component.html'
+  templateUrl: './pulse-card.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PulseCardComponent {
   /** The descriptive title of the metric. */

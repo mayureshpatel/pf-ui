@@ -1,4 +1,5 @@
 import {
+  ChangeDetectionStrategy,
   Component,
   computed,
   input,
@@ -29,7 +30,8 @@ import {RuleChangePreview} from '@models/category-rule.model';
     ButtonModule,
     TableModule
   ],
-  templateUrl: './apply-rules-dialog.component.html'
+  templateUrl: './apply-rules-dialog.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ApplyRulesDialogComponent {
   /** Two-way binding for dialog visibility. */

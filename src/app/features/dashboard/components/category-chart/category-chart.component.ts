@@ -1,4 +1,4 @@
-import {Component, computed, input, InputSignal, Signal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, input, InputSignal, Signal} from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {CardModule} from 'primeng/card';
 import {ChartModule} from 'primeng/chart';
@@ -15,7 +15,8 @@ import {getCategoryColor} from '@shared/utils/category.utils';
   selector: 'app-category-chart',
   standalone: true,
   imports: [CommonModule, CardModule, ChartModule],
-  templateUrl: './category-chart.component.html'
+  templateUrl: './category-chart.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CategoryChartComponent {
   /** The title of the chart widget. */

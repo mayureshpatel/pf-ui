@@ -1,4 +1,5 @@
 import {
+  ChangeDetectionStrategy,
   Component,
   computed,
   input,
@@ -44,7 +45,8 @@ import {DrawerComponent} from '@shared/components/drawer/drawer.component';
     MessageModule,
     DrawerComponent
   ],
-  templateUrl: './category-form-drawer.component.html'
+  templateUrl: './category-form-drawer.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CategoryFormDrawerComponent {
   /** Indicates if the drawer is currently visible. */

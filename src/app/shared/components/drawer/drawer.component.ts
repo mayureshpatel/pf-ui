@@ -1,4 +1,4 @@
-import {Component, input, InputSignal, model, ModelSignal, output, OutputEmitterRef} from '@angular/core';
+import {ChangeDetectionStrategy, Component, input, InputSignal, model, ModelSignal, output, OutputEmitterRef} from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {DrawerModule} from 'primeng/drawer';
 import {ButtonModule} from 'primeng/button';
@@ -12,7 +12,8 @@ import {ButtonModule} from 'primeng/button';
 @Component({
   selector: 'app-drawer',
   imports: [CommonModule, DrawerModule, ButtonModule],
-  templateUrl: './drawer.component.html'
+  templateUrl: './drawer.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DrawerComponent {
   /**
