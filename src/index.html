@@ -2,6 +2,20 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <script>
+    // Applies the persisted dark-mode class before any stylesheet loads, avoiding a flash of
+    // the wrong theme. Kept as a plain inline script (not an Angular service) specifically so
+    // it runs before Angular bootstraps at all -- see ThemeService for the reachable toggle.
+    (function () {
+      try {
+        if (localStorage.getItem('pf_dark_mode') === 'true') {
+          document.documentElement.classList.add('my-app-dark');
+        }
+      } catch (e) {
+        // localStorage inaccessible (e.g. privacy mode) -- fail open to light mode
+      }
+    })();
+  </script>
   <title>PfUi</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">

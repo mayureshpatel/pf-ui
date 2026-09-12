@@ -23,6 +23,9 @@ describe('SettingsComponent', () => {
   });
 
   beforeEach(async () => {
+    document.documentElement.classList.remove('my-app-dark');
+    localStorage.removeItem('pf_dark_mode');
+
     await TestBed.configureTestingModule({
       imports: [SettingsComponent],
       providers: [
@@ -91,5 +94,19 @@ describe('SettingsComponent', () => {
     // assert & verify
     expect(panels()[0].nativeElement.hidden).toBe(false);
     expect(panels()[1].nativeElement.hidden).toBe(true);
+  });
+
+  it('should switch to the Appearance tab and show the dark-mode toggle', () => {
+    // arrange
+    fixture.detectChanges();
+
+    // act
+    tabHeaders()[2].nativeElement.click();
+    fixture.detectChanges();
+
+    // assert & verify
+    expect(panels()[2].nativeElement.hidden).toBe(false);
+    const toggleInput = fixture.debugElement.query(By.css('.p-toggleswitch-input'));
+    expect(toggleInput).toBeTruthy();
   });
 });
