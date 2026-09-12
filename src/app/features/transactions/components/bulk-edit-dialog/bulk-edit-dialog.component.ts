@@ -26,6 +26,7 @@ import {MessageModule} from 'primeng/message';
 
 import {Transaction} from '@models/transaction.model';
 import {CategoryApiService} from '../../../categories/services/category-api.service';
+import {MerchantApiService} from '@features/merchants/services/merchant-api.service';
 import {Category, CategoryGroup} from '@models/category.model';
 import {Merchant} from '@models/merchant.model';
 
@@ -64,6 +65,7 @@ export interface BulkEditData {
 })
 export class BulkEditDialogComponent {
   private readonly categoryApi: CategoryApiService = inject(CategoryApiService);
+  private readonly merchantApi: MerchantApiService = inject(MerchantApiService);
 
   /** Two-way binding for dialog visibility. */
   readonly visible: ModelSignal<boolean> = model.required<boolean>();
@@ -84,13 +86,16 @@ export class BulkEditDialogComponent {
     updateCategory: new FormControl<boolean>(false, {nonNullable: true}),
     category: new FormControl<Category | null>(null),
     updateVendor: new FormControl<boolean>(false, {nonNullable: true}),
-    merchant: new FormControl<string>('', {nonNullable: true}),
+    merchant: new FormControl<Merchant | null>(null),
     updateDescription: new FormControl<boolean>(false, {nonNullable: true}),
     description: new FormControl<string>('', {nonNullable: true})
   });
 
   /** Hierarchical category groups for the dropdown. */
   readonly categoryGroups: WritableSignal<SelectItemGroup[]> = signal([]);
+
+  /** Merchant options for the reassignment dropdown. */
+  readonly merchantOptions: WritableSignal<{ label: string, value: Merchant }[]> = signal([]);
 
   /** Total number of transactions in the current batch. */
   readonly transactionCount: Signal<number> = computed(() => this.transactions().length);
@@ -113,7 +118,7 @@ export class BulkEditDialogComponent {
   readonly isValid: Signal<boolean | undefined> = computed((): boolean | undefined => {
     const v = this.formValue();
     const hasCategory: boolean = v.updateCategory ? !!v.category : false;
-    const hasVendor: boolean = v.updateVendor ? !!v.merchant?.trim() : false;
+    const hasVendor: boolean = v.updateVendor ? !!v.merchant : false;
     const hasDesc: boolean = v.updateDescription ? !!v.description?.trim() : false;
 
     const anyToggle: boolean | undefined = v.updateCategory || v.updateVendor || v.updateDescription;
@@ -126,6 +131,7 @@ export class BulkEditDialogComponent {
 
   constructor() {
     this.loadCategories();
+    this.loadMerchants();
 
     /**
      * Effect to handle dialog reset logic.
@@ -153,6 +159,20 @@ export class BulkEditDialogComponent {
   }
 
   /**
+   * Fetches the full merchant list for reassignment.
+   */
+  private loadMerchants(): void {
+    this.merchantApi.getMerchants().subscribe({
+      next: (merchants: Merchant[]): void => {
+        this.merchantOptions.set(merchants.map((m: Merchant) => ({
+          label: m.cleanName || m.originalName || 'Unknown Merchant',
+          value: m
+        })));
+      }
+    });
+  }
+
+  /**
    * Resets the dialog state.
    */
   onCancel(): void {
@@ -170,7 +190,7 @@ export class BulkEditDialogComponent {
       updateCategory: v.updateCategory,
       category: v.category || undefined,
       updateMerchant: v.updateVendor,
-      merchant: v.merchant ? {cleanName: v.merchant} as Merchant : undefined,
+      merchant: v.merchant ?? undefined,
       updateDescription: v.updateDescription,
       description: v.description?.trim()
     });
@@ -184,7 +204,7 @@ export class BulkEditDialogComponent {
       updateCategory: false,
       category: null,
       updateVendor: false,
-      merchant: '',
+      merchant: null,
       updateDescription: false,
       description: ''
     });

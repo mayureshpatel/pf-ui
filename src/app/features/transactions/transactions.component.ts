@@ -54,6 +54,7 @@ import {CsvImportDialog} from "./components/csv-import-dialog/csv-import-dialog.
 import {
   TransferMatchingDialogComponent
 } from "./components/transfer-matching-dialog/transfer-matching-dialog.component";
+import {BulkEditData, BulkEditDialogComponent} from "./components/bulk-edit-dialog/bulk-edit-dialog.component";
 import {FormatCurrencyPipe} from "@shared/pipes/format-currency.pipe";
 import {toApiDateTimeString} from "@shared/utils/transaction.utils";
 
@@ -84,6 +85,7 @@ import {toApiDateTimeString} from "@shared/utils/transaction.utils";
     TransactionFormDrawerComponent,
     CsvImportDialog,
     TransferMatchingDialogComponent,
+    BulkEditDialogComponent,
     FormatTransactionTypeAmountPipe
   ],
   providers: [FormatCurrencyPipe, FormatTransactionTypeAmountPipe],
@@ -128,6 +130,9 @@ export class TransactionsComponent implements OnInit {
 
   /** Indicates if a single transaction is currently being saved. */
   readonly savingTransaction: WritableSignal<boolean> = signal(false);
+
+  /** Indicates if a bulk-edit save operation is currently in flight. */
+  readonly bulkSaving: WritableSignal<boolean> = signal(false);
 
   /** Indicates if the transaction form drawer is currently open. */
   readonly showDialog: WritableSignal<boolean> = signal(false);
@@ -773,6 +778,40 @@ export class TransactionsComponent implements OnInit {
     ];
 
     return ops.length > 0 ? forkJoin(ops) : of(null);
+  }
+
+  /**
+   * Applies a mass-edit configuration to every currently-selected transaction. Each toggled-on
+   * field overrides that transaction's own current value; toggled-off fields pass through
+   * unchanged -- `TransactionUpdateRequest` requires the full set of fields per transaction, not
+   * just the ones being changed (a PATCH endpoint, but not a partial-object one).
+   * @param data the finalized mass-edit configuration from BulkEditDialogComponent
+   */
+  onBulkSave(data: BulkEditData): void {
+    this.bulkSaving.set(true);
+
+    const updates: TransactionUpdateRequest[] = this.selectedTransactions().map((txn: Transaction) => ({
+      id: txn.id,
+      accountId: txn.account.id,
+      amount: txn.amount,
+      transactionDate: txn.date,
+      description: data.updateDescription ? data.description! : txn.description,
+      type: txn.type,
+      categoryId: data.updateCategory ? data.category!.id : txn.category?.id,
+      merchantId: data.updateMerchant ? data.merchant!.id : txn.merchant?.id
+    } as TransactionUpdateRequest));
+
+    this.transactionApi.bulkUpdateTransactions(updates)
+      .pipe(finalize((): void => this.bulkSaving.set(false)))
+      .subscribe({
+        next: (count: number): void => {
+          this.toast.success(`${count} transaction${count === 1 ? "" : "s"} updated`);
+          this.showBulkEditDialog.set(false);
+          this.selectedTransactions.set([]);
+          this.loadTransactions();
+        },
+        error: (err: any): void => this.toast.error(err.error?.detail || "Bulk update failed")
+      });
   }
 
   /**

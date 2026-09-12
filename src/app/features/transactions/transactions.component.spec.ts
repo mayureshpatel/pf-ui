@@ -12,6 +12,9 @@ import {of, throwError} from 'rxjs';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {vi} from 'vitest';
 import {Transaction, TransactionCreateRequest, TransactionFormSaveEvent, TransactionUpdateRequest} from '@models/transaction.model';
+import {BulkEditData} from './components/bulk-edit-dialog/bulk-edit-dialog.component';
+import {Category} from '@models/category.model';
+import {Merchant} from '@models/merchant.model';
 
 describe('TransactionsComponent', () => {
   let component: TransactionsComponent;
@@ -34,7 +37,8 @@ describe('TransactionsComponent', () => {
       })),
       deleteTransaction: vi.fn(),
       createTransaction: vi.fn(),
-      updateTransaction: vi.fn()
+      updateTransaction: vi.fn(),
+      bulkUpdateTransactions: vi.fn()
     };
     mockAccountApi = {
       getAccounts: vi.fn().mockReturnValue(of([]))
@@ -42,7 +46,8 @@ describe('TransactionsComponent', () => {
     mockCategoryApi = {
       getCategories: vi.fn().mockReturnValue(of([])),
       getCategoriesWithTransactions: vi.fn().mockReturnValue(of([])),
-      getMerchantsWithTransactions: vi.fn().mockReturnValue(of([]))
+      getMerchantsWithTransactions: vi.fn().mockReturnValue(of([])),
+      getGroupedCategories: vi.fn().mockReturnValue(of([])) // consumed by the child BulkEditDialogComponent
     };
     mockMerchantApi = {
       getMerchants: vi.fn().mockReturnValue(of([]))
@@ -393,6 +398,181 @@ describe('TransactionsComponent', () => {
       // assert & verify
       expect(mockTagApi.assignToTransaction).not.toHaveBeenCalled();
       expect(mockTagApi.removeFromTransaction).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Bulk Edit trigger visibility (PF-395)', () => {
+    beforeEach(() => {
+      // the toolbar (and its trigger buttons) only renders when !isEmpty(); a real table row
+      // needs the nested account/category/merchant fields a bare {id} fixture doesn't have
+      component.transactions.set([{
+        id: 1,
+        account: {name: 'Checking'},
+        category: null,
+        amount: -10,
+        date: new Date('2026-01-15'),
+        description: 'test',
+        type: 'EXPENSE',
+        merchant: {originalName: 'Test'}
+      } as unknown as Transaction]);
+    });
+
+    // Scoped by label text, not just the pi-pencil icon class -- the table's own per-row edit
+    // action button also uses a pencil icon, and would otherwise false-match this selector.
+    const findBulkEditButton = (): HTMLButtonElement | undefined =>
+      (Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[])
+        .find((b: HTMLButtonElement): boolean => !!b.textContent?.includes('Bulk Edit'));
+
+    it('should be hidden when nothing is selected', () => {
+      component.selectedTransactions.set([]);
+      fixture.detectChanges();
+
+      expect(findBulkEditButton()).toBeUndefined();
+    });
+
+    it('should appear, showing the selection count, once at least one row is selected', () => {
+      component.selectedTransactions.set([{id: 1} as Transaction, {id: 2} as Transaction]);
+      fixture.detectChanges();
+
+      const button = findBulkEditButton();
+      expect(button).not.toBeUndefined();
+      expect(button!.textContent).toContain('Bulk Edit (2)');
+    });
+  });
+
+  describe('onBulkSave (PF-395)', () => {
+    const buildTxn = (id: number): Transaction => ({
+      id,
+      account: {id: 1} as Transaction['account'],
+      category: {id: 5} as Transaction['category'],
+      amount: 42.5,
+      date: '2026-01-15T00:00:00Z',
+      description: 'Original description',
+      type: 'EXPENSE',
+      merchant: {id: 7} as Transaction['merchant'],
+      tags: []
+    }) as unknown as Transaction;
+
+    const noop: BulkEditData = {updateCategory: false, updateMerchant: false, updateDescription: false};
+
+    beforeEach(() => {
+      mockTransactionApi.bulkUpdateTransactions.mockReturnValue(of(1));
+    });
+
+    it('should override only the category, keeping merchant/description/everything else from the transaction itself', () => {
+      // arrange
+      component.selectedTransactions.set([buildTxn(10)]);
+      const newCategory = {id: 99} as Category;
+
+      // act
+      component.onBulkSave({...noop, updateCategory: true, category: newCategory});
+
+      // assert & verify
+      expect(mockTransactionApi.bulkUpdateTransactions).toHaveBeenCalledWith([
+        expect.objectContaining({
+          id: 10, accountId: 1, amount: 42.5, transactionDate: '2026-01-15T00:00:00Z',
+          categoryId: 99, merchantId: 7, description: 'Original description', type: 'EXPENSE'
+        })
+      ]);
+    });
+
+    it('should override only the merchant', () => {
+      // arrange
+      component.selectedTransactions.set([buildTxn(10)]);
+      const newMerchant = {id: 88} as Merchant;
+
+      // act
+      component.onBulkSave({...noop, updateMerchant: true, merchant: newMerchant});
+
+      // assert & verify
+      expect(mockTransactionApi.bulkUpdateTransactions).toHaveBeenCalledWith([
+        expect.objectContaining({id: 10, categoryId: 5, merchantId: 88, description: 'Original description'})
+      ]);
+    });
+
+    it('should override only the description', () => {
+      // arrange
+      component.selectedTransactions.set([buildTxn(10)]);
+
+      // act
+      component.onBulkSave({...noop, updateDescription: true, description: 'Corrected memo'});
+
+      // assert & verify
+      expect(mockTransactionApi.bulkUpdateTransactions).toHaveBeenCalledWith([
+        expect.objectContaining({id: 10, categoryId: 5, merchantId: 7, description: 'Corrected memo'})
+      ]);
+    });
+
+    it('should override all three at once, and build one request per selected transaction', () => {
+      // arrange
+      component.selectedTransactions.set([buildTxn(10), buildTxn(11)]);
+      const newCategory = {id: 99} as Category;
+      const newMerchant = {id: 88} as Merchant;
+
+      // act
+      component.onBulkSave({
+        updateCategory: true, category: newCategory,
+        updateMerchant: true, merchant: newMerchant,
+        updateDescription: true, description: 'Corrected memo'
+      });
+
+      // assert & verify
+      expect(mockTransactionApi.bulkUpdateTransactions).toHaveBeenCalledWith([
+        expect.objectContaining({id: 10, categoryId: 99, merchantId: 88, description: 'Corrected memo'}),
+        expect.objectContaining({id: 11, categoryId: 99, merchantId: 88, description: 'Corrected memo'})
+      ]);
+    });
+
+    it('should toast success, close the dialog, clear the selection, and reload on success', () => {
+      // arrange
+      mockTransactionApi.bulkUpdateTransactions.mockReturnValue(of(2));
+      component.selectedTransactions.set([buildTxn(10), buildTxn(11)]);
+      component.showBulkEditDialog.set(true);
+
+      // act
+      component.onBulkSave({...noop, updateDescription: true, description: 'Corrected memo'});
+
+      // assert & verify
+      expect(mockToast.success).toHaveBeenCalledWith('2 transactions updated');
+      expect(component.showBulkEditDialog()).toBe(false);
+      expect(component.selectedTransactions()).toEqual([]);
+      expect(mockTransactionApi.getTransactions).toHaveBeenCalledTimes(2); // initial load + post-save reload
+      expect(component.bulkSaving()).toBe(false);
+    });
+
+    it('should singularize the success toast for exactly one transaction', () => {
+      mockTransactionApi.bulkUpdateTransactions.mockReturnValue(of(1));
+      component.selectedTransactions.set([buildTxn(10)]);
+
+      component.onBulkSave({...noop, updateDescription: true, description: 'Corrected memo'});
+
+      expect(mockToast.success).toHaveBeenCalledWith('1 transaction updated');
+    });
+
+    it('should toast an error and keep the dialog open on failure', () => {
+      // arrange
+      mockTransactionApi.bulkUpdateTransactions.mockReturnValue(
+        throwError(() => ({error: {detail: 'One or more transactions could not be updated'}}))
+      );
+      component.selectedTransactions.set([buildTxn(10)]);
+      component.showBulkEditDialog.set(true);
+
+      // act
+      component.onBulkSave({...noop, updateDescription: true, description: 'Corrected memo'});
+
+      // assert & verify
+      expect(mockToast.error).toHaveBeenCalledWith('One or more transactions could not be updated');
+      expect(component.showBulkEditDialog()).toBe(true);
+      expect(component.bulkSaving()).toBe(false);
+    });
+
+    it('should fall back to a generic error message when the API error has no detail', () => {
+      mockTransactionApi.bulkUpdateTransactions.mockReturnValue(throwError(() => ({error: {}})));
+      component.selectedTransactions.set([buildTxn(10)]);
+
+      component.onBulkSave({...noop, updateDescription: true, description: 'Corrected memo'});
+
+      expect(mockToast.error).toHaveBeenCalledWith('Bulk update failed');
     });
   });
 
