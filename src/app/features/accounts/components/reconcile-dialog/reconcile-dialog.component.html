@@ -67,11 +67,11 @@
 
       <!-- Difference Logic Explanation -->
       @if (difference() !== 0) {
-        <div class="p-4 rounded-lg border border-blue-100 bg-blue-50/50 flex gap-3">
-          <i class="pi pi-info-circle text-blue-500 mt-1"></i>
+        <div class="p-4 rounded-lg border border-blue-100 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/50 flex gap-3">
+          <i class="pi pi-info-circle text-blue-500 dark:text-blue-400 mt-1"></i>
           <div class="flex flex-col gap-1">
-            <span class="text-sm font-semibold text-blue-900">Adjustment Transaction</span>
-            <p class="text-xs text-blue-700 leading-relaxed">
+            <span class="text-sm font-semibold text-blue-900 dark:text-blue-100">Adjustment Transaction</span>
+            <p class="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
               We will create a
               <strong>{{ difference() > 0 ? 'Balance Adjustment (Income)' : 'Balance Adjustment (Expense)' }}</strong>
               of <strong>{{ Math.abs(difference()) | formatCurrency: true : account().currency.code }}</strong>
@@ -80,11 +80,11 @@
           </div>
         </div>
       } @else if (form.controls.targetBalance.value !== null) {
-        <div class="p-4 rounded-lg border border-emerald-100 bg-emerald-50/50 flex gap-3">
-          <i class="pi pi-check-circle text-emerald-500 mt-1"></i>
+        <div class="p-4 rounded-lg border border-emerald-100 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/50 flex gap-3">
+          <i class="pi pi-check-circle text-emerald-500 dark:text-emerald-400 mt-1"></i>
           <div class="flex flex-col gap-1">
-            <span class="text-sm font-semibold text-emerald-900">Balanced!</span>
-            <p class="text-xs text-emerald-700 leading-relaxed">
+            <span class="text-sm font-semibold text-emerald-900 dark:text-emerald-100">Balanced!</span>
+            <p class="text-xs text-emerald-700 dark:text-emerald-300 leading-relaxed">
               Your actual balance matches the system balance perfectly. No adjustment needed.
             </p>
           </div>
