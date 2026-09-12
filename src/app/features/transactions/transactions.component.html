@@ -50,6 +50,15 @@
 
             <!-- Table actions -->
             <div class="flex items-center gap-4">
+              @if (selectedTransactions().length > 0) {
+                <p-button
+                  [label]="'Bulk Edit (' + selectedTransactions().length + ')'"
+                  icon="pi pi-pencil"
+                  severity="secondary"
+                  [outlined]="true"
+                  (onClick)="showBulkEditDialog.set(true)"
+                />
+              }
               <p-button
                 label="Import CSV"
                 icon="pi pi-upload"
@@ -425,5 +434,12 @@
   <app-transfer-matching-dialog
     [(visible)]="showTransferDialog"
     (complete)="showTransferDialog.set(false)"
+  />
+
+  <app-bulk-edit-dialog
+    [(visible)]="showBulkEditDialog"
+    [transactions]="selectedTransactions()"
+    [saving]="bulkSaving()"
+    (save)="onBulkSave($event)"
   />
 </div>

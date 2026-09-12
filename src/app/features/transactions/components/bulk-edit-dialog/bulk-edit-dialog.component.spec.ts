@@ -1,15 +1,20 @@
 import {vi} from 'vitest';
 import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {By} from '@angular/platform-browser';
 import {of} from 'rxjs';
+import {Select} from 'primeng/select';
 import {BulkEditDialogComponent} from './bulk-edit-dialog.component';
 import {CategoryApiService} from '@features/categories/services/category-api.service';
+import {MerchantApiService} from '@features/merchants/services/merchant-api.service';
 import {Category, CategoryGroup, CategoryType} from '@models/category.model';
+import {Merchant} from '@models/merchant.model';
 import {Transaction} from '@models/transaction.model';
 
 describe('BulkEditDialogComponent', () => {
   let component: BulkEditDialogComponent;
   let fixture: ComponentFixture<BulkEditDialogComponent>;
   let mockCategoryApi: any;
+  let mockMerchantApi: any;
 
   const category = (id: number, name: string): Category =>
     ({id, userId: 1, name, type: CategoryType.EXPENSE, parent: null, icon: '', color: ''}) as Category;
@@ -17,14 +22,22 @@ describe('BulkEditDialogComponent', () => {
   const rent = category(1, 'Rent');
   const mockGroups: CategoryGroup[] = [{parent: rent, items: [rent]}];
 
+  const costco: Merchant = {id: 1, userId: 1, originalName: 'COSTCO WHSE #123', cleanName: 'Costco'};
+  const noCleanName: Merchant = {id: 2, userId: 1, originalName: 'RAW MERCHANT', cleanName: ''};
+  const mockMerchants: Merchant[] = [costco, noCleanName];
+
   const mockTransactions: Transaction[] = [{id: 1} as Transaction];
 
   beforeEach(async () => {
     mockCategoryApi = {getGroupedCategories: vi.fn().mockReturnValue(of(mockGroups))};
+    mockMerchantApi = {getMerchants: vi.fn().mockReturnValue(of(mockMerchants))};
 
     await TestBed.configureTestingModule({
       imports: [BulkEditDialogComponent],
-      providers: [{provide: CategoryApiService, useValue: mockCategoryApi}]
+      providers: [
+        {provide: CategoryApiService, useValue: mockCategoryApi},
+        {provide: MerchantApiService, useValue: mockMerchantApi}
+      ]
     }).compileComponents();
 
     fixture = TestBed.createComponent(BulkEditDialogComponent);
@@ -44,6 +57,29 @@ describe('BulkEditDialogComponent', () => {
       expect(component.categoryGroups()).toEqual([
         {label: 'Rent', items: [{label: 'Rent', value: rent}]}
       ]);
+    });
+  });
+
+  describe('merchant loading (constructor-time, not gated behind dialog visibility)', () => {
+    it('should load and reshape the full merchant list into PrimeNG-default-compatible options', () => {
+      expect(mockMerchantApi.getMerchants).toHaveBeenCalled();
+      expect(component.merchantOptions()).toEqual([
+        {label: 'Costco', value: costco},
+        {label: 'RAW MERCHANT', value: noCleanName}
+      ]);
+    });
+
+    it("should fall back through cleanName -> originalName -> 'Unknown Merchant'", () => {
+      mockMerchantApi.getMerchants.mockReturnValue(of([{id: 3, userId: 1, originalName: '', cleanName: ''}]));
+
+      fixture = TestBed.createComponent(BulkEditDialogComponent);
+      fixture.componentRef.setInput('visible', true);
+      fixture.componentRef.setInput('transactions', mockTransactions);
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.merchantOptions()).toEqual([{
+        label: 'Unknown Merchant', value: {id: 3, userId: 1, originalName: '', cleanName: ''}
+      }]);
     });
   });
 
@@ -85,16 +121,15 @@ describe('BulkEditDialogComponent', () => {
       expect(component.isValid()).toBe(true);
     });
 
-    it('should be false when the merchant override is toggled on but blank', () => {
+    it('should be false when the merchant override is toggled on but nothing is selected', () => {
       component.form.controls.updateVendor.setValue(true);
-      component.form.controls.merchant.setValue('   ');
 
       expect(component.isValid()).toBe(false);
     });
 
-    it('should be true when the merchant override is toggled on and non-blank', () => {
+    it('should be true when the merchant override is toggled on and a merchant is selected', () => {
       component.form.controls.updateVendor.setValue(true);
-      component.form.controls.merchant.setValue('Costco');
+      component.form.controls.merchant.setValue(costco);
 
       expect(component.isValid()).toBe(true);
     });
@@ -114,11 +149,10 @@ describe('BulkEditDialogComponent', () => {
     });
 
     it('should require every toggled-on field to be filled, not just one of them', () => {
-      // arrange -- category filled, but merchant toggled on and left blank
+      // arrange -- category filled, but merchant toggled on and left unselected
       component.form.controls.updateCategory.setValue(true);
       component.form.controls.category.setValue(rent);
       component.form.controls.updateVendor.setValue(true);
-      component.form.controls.merchant.setValue('');
 
       // act & assert & verify
       expect(component.isValid()).toBe(false);
@@ -128,7 +162,7 @@ describe('BulkEditDialogComponent', () => {
       component.form.controls.updateCategory.setValue(true);
       component.form.controls.category.setValue(rent);
       component.form.controls.updateVendor.setValue(true);
-      component.form.controls.merchant.setValue('Costco');
+      component.form.controls.merchant.setValue(costco);
       component.form.controls.updateDescription.setValue(true);
       component.form.controls.description.setValue('Business trip');
 
@@ -162,39 +196,19 @@ describe('BulkEditDialogComponent', () => {
       }));
     });
 
-    it('should wrap the free-text merchant override as a partial Merchant with only cleanName set', () => {
-      // arrange -- this dialog only ever collects a replacement display name, not a full merchant
-      // entity (confirmed against the template: a plain text input labeled "Override Merchant",
-      // not a merchant picker) -- BulkEditData.merchant is only ever partially populated as a
-      // result, real behavior as of this unwired (PF-395) component, not assumed
+    it('should emit the real, selected Merchant object -- no more unsafe cast around a typed name', () => {
+      // PF-395: merchant is now a real picker bound to Merchant objects (MerchantApiService
+      // .getMerchants()), not a free-text input wrapped in an unsafe `as Merchant` cast.
       const saveSpy = vi.fn();
       component.save.subscribe(saveSpy);
       component.form.controls.updateVendor.setValue(true);
-      component.form.controls.merchant.setValue('Costco');
+      component.form.controls.merchant.setValue(costco);
 
       // act
       component.onSave();
 
       // assert & verify
-      expect(saveSpy).toHaveBeenCalledWith(expect.objectContaining({
-        updateMerchant: true, merchant: {cleanName: 'Costco'}
-      }));
-    });
-
-    it("bug-adjacent characterization: does not trim the emitted merchant override, though isValid()'s own blank check does trim", () => {
-      // arrange -- typed with padding; isValid() trims to check non-blankness, but onSave()'s own
-      // payload construction does not apply the same trim, unlike the description field below
-      component.form.controls.updateVendor.setValue(true);
-      component.form.controls.merchant.setValue('  Costco  ');
-      const saveSpy = vi.fn();
-      component.save.subscribe(saveSpy);
-
-      // act
-      component.onSave();
-
-      // assert & verify -- documents current (untrimmed) behavior; worth a second look if PF-395
-      // ever surfaces a leading/trailing-space bug in a real merchant override
-      expect(saveSpy).toHaveBeenCalledWith(expect.objectContaining({merchant: {cleanName: '  Costco  '}}));
+      expect(saveSpy).toHaveBeenCalledWith(expect.objectContaining({updateMerchant: true, merchant: costco}));
     });
 
     it('should trim the emitted description override', () => {
@@ -213,12 +227,12 @@ describe('BulkEditDialogComponent', () => {
       // leftover value from before its toggle was switched back off. onSave()'s `category`/
       // `merchant`/`description` fields are each computed independently of their own toggle
       // (only the toggle flags themselves gate isValid()) -- so a stale, untoggled field's value
-      // still rides along in the emitted payload. Not fixed here: this component has no wired
-      // parent yet (PF-395), so there's no live consumer this could currently mislead.
+      // still rides along in the emitted payload. Not fixed here: PF-395 only scopes the
+      // merchant-mapping gap, not this separate, pre-existing quirk.
       component.form.controls.updateCategory.setValue(true);
       component.form.controls.category.setValue(rent);
       component.form.controls.updateVendor.setValue(true);
-      component.form.controls.merchant.setValue('Costco');
+      component.form.controls.merchant.setValue(costco);
       component.form.controls.updateVendor.setValue(false); // toggled back off, value left behind
       const saveSpy = vi.fn();
       component.save.subscribe(saveSpy);
@@ -227,9 +241,7 @@ describe('BulkEditDialogComponent', () => {
       component.onSave();
 
       // assert & verify
-      expect(saveSpy).toHaveBeenCalledWith(expect.objectContaining({
-        updateMerchant: false, merchant: {cleanName: 'Costco'}
-      }));
+      expect(saveSpy).toHaveBeenCalledWith(expect.objectContaining({updateMerchant: false, merchant: costco}));
     });
   });
 
@@ -246,6 +258,8 @@ describe('BulkEditDialogComponent', () => {
       // arrange
       component.form.controls.updateCategory.setValue(true);
       component.form.controls.category.setValue(rent);
+      component.form.controls.updateVendor.setValue(true);
+      component.form.controls.merchant.setValue(costco);
 
       // act
       fixture.componentRef.setInput('visible', false);
@@ -254,6 +268,7 @@ describe('BulkEditDialogComponent', () => {
       // assert & verify
       expect(component.form.controls.updateCategory.value).toBe(false);
       expect(component.form.controls.category.value).toBeNull();
+      expect(component.form.controls.merchant.value).toBeNull();
     });
 
     it('should not reset the form while the dialog remains open', () => {
@@ -267,25 +282,44 @@ describe('BulkEditDialogComponent', () => {
   });
 
   describe('rendering', () => {
-    it("bug found, not fixed here: [disabled]=\"!form.value.x\" on a formControlName element " +
-      "never actually disables the field, despite that clearly being the intent (label text, " +
-      "placeholder copy, and the ring-highlight styling all treat these fields as gated by their " +
-      "toggle) -- Angular's own reactive-forms directive manages the disabled state of a control " +
-      "with formControlName and overrides a plain property binding attempting the same thing " +
-      "(confirmed via Angular's own runtime warning: \"It looks like you're using the disabled " +
-      "attribute with a reactive form directive\"). Fixing this properly means enabling/disabling " +
-      "the FormControl itself (e.g. via an effect reacting to each toggle), which is a real design " +
-      "decision, not a one-line swap -- left to a dedicated bug ticket rather than fixed inline " +
-      'during test backfill for a component with no wired parent yet (PF-395).',
+    it("bug found, not fixed here: [disabled]=\"!form.value.x\" on a native formControlName " +
+      "input never actually disables it, despite that clearly being the intent (label text and " +
+      "ring-highlight styling both treat this field as gated by its toggle) -- Angular's own " +
+      "reactive-forms directive manages a native element's disabled state and overrides a plain " +
+      "property binding attempting the same thing (confirmed via Angular's own runtime warning: " +
+      "\"It looks like you're using the disabled attribute with a reactive form directive\"). " +
+      "Fixing this properly means enabling/disabling the FormControl itself, a real design " +
+      "decision -- left to a dedicated bug ticket, not fixed as part of PF-395 (scoped only to " +
+      "the merchant-mapping gap).",
       () => {
         // arrange & act
-        const merchantInput = fixture.nativeElement.querySelector('input[formcontrolname="merchant"]');
         const descriptionInput = fixture.nativeElement.querySelector('input[formcontrolname="description"]');
 
-        // assert & verify -- documents current (broken) behavior
-        expect(merchantInput.disabled).toBe(false);
+        // assert & verify -- documents current (broken) behavior, unchanged by PF-395
         expect(descriptionInput.disabled).toBe(false);
       });
+
+    // Two <p-select>s exist in this template now (category, then merchant) -- By.directive(Select)
+    // alone matches the first one found (category), so this filters by `group`, which only the
+    // category select sets, to reliably target the merchant one specifically.
+    const findMerchantSelect = (): any => fixture.debugElement.queryAll(By.directive(Select))
+      .find((de: any): boolean => !de.componentInstance.group)!;
+
+    it('should correctly disable the merchant p-select until its own toggle is switched on', () => {
+      // Unlike the native <input> above, PrimeNG's Select inherits a real, dedicated `disabled`
+      // Signal input (BaseEditableHolder) that a plain property binding sets independently of
+      // whatever formControlName's own ControlValueAccessor disabled-state management does --
+      // there's no conflict here the way there is on a native form element, so migrating this
+      // field off free text incidentally fixes its own instance of the disabled-binding bug too.
+      expect(findMerchantSelect().componentInstance.disabled()).toBe(true);
+    });
+
+    it('should enable the merchant p-select once its toggle is switched on', () => {
+      component.form.controls.updateVendor.setValue(true);
+      fixture.detectChanges();
+
+      expect(findMerchantSelect().componentInstance.disabled()).toBe(false);
+    });
 
     it('should show the combined validation error only once a toggle is on and the form is still invalid', () => {
       // before any toggle
