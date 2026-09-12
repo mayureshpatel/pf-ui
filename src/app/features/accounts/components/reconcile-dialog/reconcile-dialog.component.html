@@ -13,7 +13,7 @@
       <div class="flex justify-between items-center">
         <span class="text-sm font-medium text-surface-500 uppercase tracking-wider">Current System Balance</span>
         <span class="text-lg font-mono font-bold text-surface-900">
-          {{ account().currentBalance | currency: account().currency.code }}
+          {{ account().currentBalance | formatCurrency: true : account().currency.code }}
         </span>
       </div>
 
@@ -27,7 +27,7 @@
           [class.text-rose-600]="difference() < 0"
           [class.text-surface-400]="difference() === 0"
         >
-          {{ difference() > 0 ? '+' : '' }}{{ difference() | currency: account().currency.code }}
+          {{ difference() > 0 ? '+' : '' }}{{ difference() | formatCurrency: true : account().currency.code }}
         </span>
       </div>
     </div>
@@ -73,7 +73,7 @@
             <p class="text-xs text-blue-700 leading-relaxed">
               We will create a
               <strong>{{ difference() > 0 ? 'Balance Adjustment (Income)' : 'Balance Adjustment (Expense)' }}</strong>
-              of <strong>{{ Math.abs(difference()) | currency: account().currency.code }}</strong>
+              of <strong>{{ Math.abs(difference()) | formatCurrency: true : account().currency.code }}</strong>
               to match your actual bank balance.
             </p>
           </div>

@@ -1,5 +1,5 @@
 import {ChangeDetectionStrategy, Component, computed, inject, input, InputSignal, Signal} from '@angular/core';
-import {CommonModule, formatCurrency} from '@angular/common';
+import {CommonModule, formatCurrency, formatDate} from '@angular/common';
 import {CardModule} from 'primeng/card';
 import {ChartModule} from 'primeng/chart';
 import {TableModule} from 'primeng/table';
@@ -151,7 +151,7 @@ export class IncomeExpenseReportComponent {
   private formatMonthLabel(monthStr: string): string {
     const [year, month] = monthStr.split('-');
     const date = new Date(Number.parseInt(year), Number.parseInt(month) - 1);
-    return date.toLocaleDateString('en-US', {month: 'short', year: '2-digit'});
+    return formatDate(date, 'MMM yy', 'en-US');
   }
 
   /**

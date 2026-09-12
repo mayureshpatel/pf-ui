@@ -21,6 +21,7 @@ import {InputNumberModule} from 'primeng/inputnumber';
 import {MessageModule} from 'primeng/message';
 import {Account, AccountCreateRequest, AccountType, AccountUpdateRequest, BankName} from '@models/account.model';
 import {DrawerComponent} from '@shared/components/drawer/drawer.component';
+import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
 import {BankOption} from '@models/transaction.model';
 
 @Component({
@@ -33,7 +34,8 @@ import {BankOption} from '@models/transaction.model';
     SelectModule,
     InputNumberModule,
     MessageModule,
-    DrawerComponent
+    DrawerComponent,
+    FormatCurrencyPipe
   ],
   templateUrl: './account-form-drawer.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush

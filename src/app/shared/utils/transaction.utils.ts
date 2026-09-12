@@ -1,22 +1,4 @@
 /**
- * Converts a date string to a localized format.
- * The default format is "MM/DD/YYYY" with English locale.
- * @param dateString The date string to format.
- * @param formatOptions
- * @param locale The locale to use for formatting the date.
- */
-export function convertDateString(
-  dateString: string,
-  formatOptions?: Intl.DateTimeFormatOptions,
-  locale?: Intl.LocalesArgument
-): string {
-  formatOptions ??= {year: 'numeric', month: 'short', day: 'numeric'};
-  locale ??= 'en-US';
-
-  return new Date(dateString).toLocaleDateString(locale, formatOptions);
-}
-
-/**
  * Formats a Date's *local* calendar date as an ISO-style "yyyy-MM-dd" string.
  *
  * Deliberately does not go through `toISOString()`, which normalizes to UTC first --

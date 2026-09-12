@@ -1,5 +1,5 @@
 import {ChangeDetectionStrategy, Component, computed, input, InputSignal, Signal} from '@angular/core';
-import {CommonModule} from '@angular/common';
+import {CommonModule, formatDate} from '@angular/common';
 import {CardModule} from 'primeng/card';
 import {ChartModule} from 'primeng/chart';
 import {CashFlowTrend} from '@models/dashboard.model';
@@ -30,7 +30,7 @@ export class CashFlowTrendComponent {
     // Map month/year numbers to short labels (e.g., 'Jan 24')
     const labels: string[] = trendData.map((d: CashFlowTrend): string => {
       const date = new Date(d.year, d.month - 1);
-      return date.toLocaleString('default', {month: 'short', year: '2-digit'});
+      return formatDate(date, 'MMM yy', 'en-US');
     });
 
     return {
