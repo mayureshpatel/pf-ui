@@ -14,7 +14,7 @@
   <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-8 py-4">
     <!-- Transaction Type -->
     <div class="flex flex-col gap-3">
-      <label for="type-options" class="text-sm font-bold uppercase tracking-wide text-surface-700">
+      <label for="type-options" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
         Transaction Classification
       </label>
       <div id="type-options" class="flex flex-row justify-center gap-3">
@@ -31,7 +31,9 @@
             [class.ring-1]="form.value.type === option.value"
             [class.ring-primary-200]="form.value.type === option.value"
             [class.bg-surface-0]="form.value.type !== option.value"
+            [class.dark:bg-surface-900]="form.value.type !== option.value"
             [class.border-surface-200]="form.value.type !== option.value"
+            [class.dark:border-surface-700]="form.value.type !== option.value"
             [class.opacity-60]="form.value.type !== option.value"
             [class.hover:opacity-100]="form.value.type !== option.value"
             [class.hover:shadow-xl]="form.value.type !== option.value"
@@ -40,7 +42,7 @@
             <i
               [class]="'pi ' + option.icon + ' text-2xl mb-2 transition-transform group-hover:scale-110 ' + (form.value.type === option.value ? 'text-primary' : option.color)"></i>
             <span
-              [class]="'text-[10px] font-black uppercase tracking-widest ' + (form.value.type === option.value ? 'text-primary' : 'text-surface-500')">
+              [class]="'text-[10px] font-black uppercase tracking-widest ' + (form.value.type === option.value ? 'text-primary' : 'text-surface-500 dark:text-surface-400')">
               {{ option.label }}
             </span>
           </button>
@@ -50,7 +52,7 @@
 
     <!-- Amount -->
     <div class="flex flex-col gap-2">
-      <label for="amount" class="text-sm font-bold uppercase tracking-wide text-surface-700">Amount</label>
+      <label for="amount" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">Amount</label>
       <p-inputNumber
         id="amount"
         formControlName="amount"
@@ -64,7 +66,7 @@
 
     <!-- Date -->
     <div class="flex flex-col gap-2">
-      <label for="date" class="text-sm font-bold uppercase tracking-wide text-surface-700">Date</label>
+      <label for="date" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">Date</label>
       <p-datePicker
         id="date"
         formControlName="transactionDate"
@@ -74,7 +76,7 @@
 
     <!-- Merchant -->
     <div class="flex flex-col gap-2">
-      <label for="merchant" class="text-sm font-bold uppercase tracking-wide text-surface-700">
+      <label for="merchant" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
         Merchant / Payee
       </label>
       <p-autoComplete
@@ -96,7 +98,7 @@
             <div class="flex flex-col gap-1">
               <span class="text-xs">ID: {{ merchant.id }}</span>
               <span class="text-sm">{{ merchant.originalName }}</span>
-              <span class="text-xs text-surface-500">{{ merchant.cleanName || merchant.originalName || 'Unknown Merchant' }}</span>
+              <span class="text-xs text-surface-500 dark:text-surface-400">{{ merchant.cleanName || merchant.originalName || 'Unknown Merchant' }}</span>
             </div>
           </ng-template>
         </ng-template>
@@ -105,7 +107,7 @@
 
     <!-- Category -->
     <div class="flex flex-col gap-2">
-      <label for="category" class="text-sm font-bold uppercase tracking-wide text-surface-700">
+      <label for="category" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
         Category
       </label>
       <p-select
@@ -141,7 +143,7 @@
 
     <!-- Tags -->
     <div class="flex flex-col gap-2">
-      <label for="tags" class="text-sm font-bold uppercase tracking-wide text-surface-700">
+      <label for="tags" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
         Tags
       </label>
       <p-multiSelect
@@ -166,7 +168,7 @@
 
     <!-- Account -->
     <div class="flex flex-col gap-2">
-      <label for="account" class="text-sm font-bold uppercase tracking-wide text-surface-700">
+      <label for="account" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
         Account
       </label>
       <p-select
@@ -182,7 +184,7 @@
 
     <!-- Description -->
     <div class="flex flex-col gap-2">
-      <label for="description" class="text-sm font-bold uppercase tracking-wide text-surface-700">
+      <label for="description" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
         Description / Notes
       </label>
       <textarea
@@ -191,7 +193,7 @@
         formControlName="description"
         rows="3"
         placeholder="Add any additional details or memos here..."
-        class="w-full p-3 text-sm font-medium leading-relaxed border-surface-200"
+        class="w-full p-3 text-sm font-medium leading-relaxed border-surface-200 dark:border-surface-700"
       ></textarea>
     </div>
   </form>

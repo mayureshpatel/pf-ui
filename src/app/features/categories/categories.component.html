@@ -2,7 +2,7 @@
   <!-- Page Header -->
   <app-screen-toolbar class="mb-6">
     <div toolbarTitle>
-      <h1 class="text-4xl font-extrabold text-surface-900 tracking-tight">Categories</h1>
+      <h1 class="text-4xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight">Categories</h1>
     </div>
 
     <div toolbarActions>
@@ -43,15 +43,15 @@
         <ng-template #header>
           <tr>
             <th id="indent-spacer" style="width: 4rem"></th>
-            <th id="category-name" class="py-4 font-bold text-surface-700">Category</th>
-            <th id="usage" class="py-4 font-bold text-surface-700 text-center" style="width: 150px">Usage</th>
-            <th id="actions" class="py-4 font-bold text-surface-700 text-center" style="width: 120px">Actions</th>
+            <th id="category-name" class="py-4 font-bold text-surface-700 dark:text-surface-200">Category</th>
+            <th id="usage" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-center" style="width: 150px">Usage</th>
+            <th id="actions" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-center" style="width: 120px">Actions</th>
           </tr>
         </ng-template>
 
         <!-- Parent Row (2 Columns) -->
         <ng-template #body let-group let-expanded="expanded">
-          <tr class="hover:bg-surface-100/50 transition-colors duration-200">
+          <tr class="hover:bg-surface-100/50 dark:hover:bg-surface-800/50 transition-colors duration-200">
             <!-- Expand/Name/Description -->
             <td colspan="2" class="py-4 px-4">
               <div class="flex items-center gap-4">
@@ -80,7 +80,7 @@
 
                 <!-- Name & Description -->
                 <div class="flex flex-col">
-                  <span class="font-bold text-lg text-surface-900">{{ group.parent.name }}</span>
+                  <span class="font-bold text-lg text-surface-900 dark:text-surface-0">{{ group.parent.name }}</span>
                   <span class="text-xs font-bold text-muted-color uppercase tracking-tighter opacity-70">
                     {{ group.parent.type }}
                   </span>
@@ -127,20 +127,20 @@
         <ng-template #expandedrow let-group>
           <tr>
             <td colspan="4" class="p-0">
-              <div class="bg-surface-50/50 pb-2">
+              <div class="bg-surface-50/50 dark:bg-surface-800/50 pb-2">
                 <p-table [value]="group.items" [stripedRows]="false" size="small" class="w-full">
                   <ng-template #body let-item>
-                    <tr class="hover:bg-surface-100/30 transition-colors duration-200 border-none!">
+                    <tr class="hover:bg-surface-100/30 dark:hover:bg-surface-800/30 transition-colors duration-200 border-none!">
                       <td style="width: 4rem"></td>
 
                       <!-- Name/Description -->
                       <td class="py-3 px-4">
                         <div class="flex items-center gap-4">
-                          <div class="w-8 h-8 rounded-lg flex items-center justify-center shadow-xs bg-surface-200">
+                          <div class="w-8 h-8 rounded-lg flex items-center justify-center shadow-xs bg-surface-200 dark:bg-surface-700">
                             <i [class]="'pi ' + (item.icon || 'pi-tag') + ' text-sm'"></i>
                           </div>
                           <div class="flex flex-col">
-                            <span class="text-surface-800 font-semibold">{{ item.name }}</span>
+                            <span class="text-surface-800 dark:text-surface-100 font-semibold">{{ item.name }}</span>
                             <span class="text-[10px] font-bold text-muted-color uppercase opacity-60">
                               {{ item.type }}
                             </span>
@@ -203,7 +203,7 @@
         <div class="absolute -inset-4 bg-primary/10 rounded-full blur-2xl animate-pulse"></div>
         <i class="pi pi-tags text-8xl text-primary/40 relative"></i>
       </div>
-      <h2 class="text-3xl font-bold text-surface-900 mb-3">No categories yet</h2>
+      <h2 class="text-3xl font-bold text-surface-900 dark:text-surface-0 mb-3">No categories yet</h2>
       <p class="text-muted-color mb-8 max-w-lg leading-relaxed text-lg">
         Create categories to organize your income and expenses.
         You can group them under parent categories for better tracking.

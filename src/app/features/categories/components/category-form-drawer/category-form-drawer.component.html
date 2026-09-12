@@ -17,7 +17,7 @@
     <!-- Live Preview Card -->
     <div class="flex flex-col gap-3">
       <label for="live-preview"
-             class="text-[10px] font-black uppercase tracking-[0.2em] text-surface-400">Preview</label>
+             class="text-[10px] font-black uppercase tracking-[0.2em] text-surface-400 dark:text-surface-500">Preview</label>
       <div id="live-preview" class="flex items-center gap-4">
         <div
           class="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg ring-2 ring-white/20 animate-in zoom-in-75 duration-300"
@@ -27,7 +27,7 @@
           <i [class]="'pi ' + (form.value.icon || 'pi-tag') + ' text-2xl'"></i>
         </div>
         <div class="flex flex-col">
-          <span class="text-xl font-black text-surface-900 tracking-tight">
+          <span class="text-xl font-black text-surface-900 dark:text-surface-0 tracking-tight">
             {{ form.value.name || 'New Category Name' }}
           </span>
           <span class="text-xs font-bold text-muted-color uppercase tracking-widest opacity-70">
@@ -39,7 +39,7 @@
 
     <!-- Category Name -->
     <div class="flex flex-col gap-2">
-      <label for="name" class="text-sm font-bold uppercase tracking-wide text-surface-700">
+      <label for="name" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
         Category Name
       </label>
       <input
@@ -87,7 +87,7 @@
 
     <!-- Color Picker -->
     <div class="flex flex-col gap-3">
-      <label for="color" class="text-sm font-bold uppercase tracking-wide text-surface-700">
+      <label for="color" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
         Accent Color
       </label>
       <div id="color-picker" class="grid grid-cols-5 sm:grid-cols-10 gap-2 p-1">
@@ -111,11 +111,11 @@
 
     <!-- Icon Picker -->
     <div class="flex flex-col gap-3">
-      <label for="icon-picker" class="text-sm font-bold uppercase tracking-wide text-surface-700">
+      <label for="icon-picker" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
         Category Icon
       </label>
       <div id="icon-picker"
-           class="grid grid-cols-5 sm:grid-cols-10 gap-2 p-3 rounded-2xl border border-surface-300">
+           class="grid grid-cols-5 sm:grid-cols-10 gap-2 p-3 rounded-2xl border border-surface-300 dark:border-surface-600">
         @for (icon of iconOptions; track icon) {
           <button
             type="button"
@@ -124,7 +124,9 @@
             [class.bg-primary]="form.value.icon === icon"
             [class.text-white]="form.value.icon === icon"
             [class.text-surface-400]="form.value.icon !== icon"
+            [class.dark:text-surface-500]="form.value.icon !== icon"
             [class.hover:bg-surface-100]="form.value.icon !== icon"
+            [class.dark:hover:bg-surface-800]="form.value.icon !== icon"
             [class.hover:shadow-xl]="form.value.icon !== icon"
           >
             <i [class]="'pi ' + icon + ' text-lg transition-transform'"

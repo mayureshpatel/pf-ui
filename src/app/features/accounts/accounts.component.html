@@ -2,7 +2,7 @@
   <!-- Page Header -->
   <app-screen-toolbar class="mb-6">
     <div toolbarTitle>
-      <h1 class="text-4xl font-extrabold text-surface-900 tracking-tight">Accounts</h1>
+      <h1 class="text-4xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight">Accounts</h1>
     </div>
   </app-screen-toolbar>
 
@@ -24,7 +24,7 @@
       >
         <ng-template pTemplate="caption">
           <div class="flex justify-between items-center mb-4">
-            <h5 class="text-xl font-semibold text-surface-900">All Accounts</h5>
+            <h5 class="text-xl font-semibold text-surface-900 dark:text-surface-0">All Accounts</h5>
             <p-button
               label="New Account"
               icon="pi pi-plus"
@@ -38,18 +38,18 @@
 
         <ng-template pTemplate="header">
           <tr>
-            <th id="account-name" class="font-semibold text-surface-700">Account Name</th>
-            <th id="account-type" class="font-semibold text-surface-700">Account Type</th>
-            <th id="account-balance" class="font-semibold text-surface-700">Account Balance</th>
-            <th id="account-actions" class="font-semibold text-surface-700">Actions</th>
+            <th id="account-name" class="font-semibold text-surface-700 dark:text-surface-200">Account Name</th>
+            <th id="account-type" class="font-semibold text-surface-700 dark:text-surface-200">Account Type</th>
+            <th id="account-balance" class="font-semibold text-surface-700 dark:text-surface-200">Account Balance</th>
+            <th id="account-actions" class="font-semibold text-surface-700 dark:text-surface-200">Actions</th>
           </tr>
         </ng-template>
 
         <ng-template pTemplate="body" let-account>
-          <tr class="hover:bg-surface-100/50 transition-colors duration-200">
+          <tr class="hover:bg-surface-100/50 dark:hover:bg-surface-800/50 transition-colors duration-200">
             <!-- Account Name -->
             <td class="px-4">
-              <span class="font-semibold text-surface-900">{{ account.name }}</span>
+              <span class="font-semibold text-surface-900 dark:text-surface-0">{{ account.name }}</span>
             </td>
 
             <!-- Account Type -->
@@ -60,7 +60,7 @@
                     <i [class]="'pi ' + account.type.icon + ' ' + account.type.color"></i>
                   </div>
                 }
-                <span class="text-surface-600 font-medium">{{ account.type.label }}</span>
+                <span class="text-surface-600 dark:text-surface-300 font-medium">{{ account.type.label }}</span>
               </div>
             </td>
 
@@ -123,7 +123,7 @@
         <div class="absolute -inset-4 bg-primary/10 rounded-full blur-2xl animate-pulse"></div>
         <i class="pi pi-wallet text-8xl text-primary/40 relative"></i>
       </div>
-      <h2 class="text-3xl font-bold text-surface-900 mb-3">No Accounts Found</h2>
+      <h2 class="text-3xl font-bold text-surface-900 dark:text-surface-0 mb-3">No Accounts Found</h2>
       <p class="text-muted-color mb-8 max-w-lg leading-relaxed text-lg">
         Get started by adding your first account to track your finances.
         You can add bank accounts, credit cards, and more.

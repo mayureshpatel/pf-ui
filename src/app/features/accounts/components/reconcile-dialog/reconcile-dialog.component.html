@@ -9,23 +9,24 @@
 >
   <div class="flex flex-col gap-6 py-4">
     <!-- Account Information Summary -->
-    <div class="p-4 rounded-xl bg-surface-50 border border-surface-200 flex flex-col gap-3">
+    <div class="p-4 rounded-xl bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 flex flex-col gap-3">
       <div class="flex justify-between items-center">
-        <span class="text-sm font-medium text-surface-500 uppercase tracking-wider">Current System Balance</span>
-        <span class="text-lg font-mono font-bold text-surface-900">
+        <span class="text-sm font-medium text-surface-500 dark:text-surface-400 uppercase tracking-wider">Current System Balance</span>
+        <span class="text-lg font-mono font-bold text-surface-900 dark:text-surface-0">
           {{ account().currentBalance | formatCurrency: true : account().currency.code }}
         </span>
       </div>
 
-      <div class="h-px bg-surface-200"></div>
+      <div class="h-px bg-surface-200 dark:bg-surface-700"></div>
 
       <div class="flex justify-between items-center">
-        <span class="text-sm font-medium text-surface-500 uppercase tracking-wider">Adjustment Needed</span>
+        <span class="text-sm font-medium text-surface-500 dark:text-surface-400 uppercase tracking-wider">Adjustment Needed</span>
         <span
           class="text-lg font-mono font-bold"
           [class.text-emerald-600]="difference() > 0"
           [class.text-rose-600]="difference() < 0"
           [class.text-surface-400]="difference() === 0"
+          [class.dark:text-surface-500]="difference() === 0"
         >
           {{ difference() > 0 ? '+' : '' }}{{ difference() | formatCurrency: true : account().currency.code }}
         </span>
@@ -35,7 +36,7 @@
     <form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-6">
       <!-- Target Balance Input -->
       <div class="flex flex-col gap-2">
-        <label for="targetBalance" class="text-sm font-bold text-surface-900 tracking-wide uppercase">
+        <label for="targetBalance" class="text-sm font-bold text-surface-900 dark:text-surface-0 tracking-wide uppercase">
           Actual Bank Balance
         </label>
         <p-inputNumber
