@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '@env';
 import {
@@ -13,6 +13,10 @@ import {
 } from '@models/transaction.model';
 import {Category} from '@models/category.model';
 import {toLocalDateString} from '@shared/utils/transaction.utils';
+import {SKIP_GENERIC_ERROR_TOAST} from '@core/auth/error.interceptor';
+
+const SKIP_TOAST_CONTEXT = new HttpContext().set(SKIP_GENERIC_ERROR_TOAST, true);
+const SKIP_TOAST_OPTIONS = {context: SKIP_TOAST_CONTEXT};
 
 @Injectable({
   providedIn: 'root'
@@ -54,7 +58,7 @@ export class TransactionApiService {
     if (filter.endDate) params = params.set('endDate', toLocalDateString(filter.endDate));
     if (filter.tagId) params = params.set('tagId', filter.tagId.toString());
 
-    return this.http.get<PageResponse<Transaction>>(this.apiUrl, { params });
+    return this.http.get<PageResponse<Transaction>>(this.apiUrl, { params, context: SKIP_TOAST_CONTEXT });
   }
 
   /**
@@ -63,7 +67,7 @@ export class TransactionApiService {
    * @returns the id of the newly created transaction.
    */
   createTransaction(data: TransactionCreateRequest): Observable<number> {
-    return this.http.post<number>(this.apiUrl, data);
+    return this.http.post<number>(this.apiUrl, data, SKIP_TOAST_OPTIONS);
   }
 
   /**
@@ -72,7 +76,7 @@ export class TransactionApiService {
    * @returns the id of the updated transaction.
    */
   updateTransaction(data: TransactionUpdateRequest): Observable<number> {
-    return this.http.put<number>(this.apiUrl, data);
+    return this.http.put<number>(this.apiUrl, data, SKIP_TOAST_OPTIONS);
   }
 
   /**
@@ -80,7 +84,7 @@ export class TransactionApiService {
    * @param id the transaction id to delete.
    */
   deleteTransaction(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${id}`);
+    return this.http.delete<void>(`${this.apiUrl}/${id}`, SKIP_TOAST_OPTIONS);
   }
 
   /**
@@ -97,7 +101,7 @@ export class TransactionApiService {
    * @returns the number of transactions updated.
    */
   bulkUpdateTransactions(updates: TransactionUpdateRequest[]): Observable<number> {
-    return this.http.patch<number>(`${this.apiUrl}/bulk`, updates);
+    return this.http.patch<number>(`${this.apiUrl}/bulk`, updates, SKIP_TOAST_OPTIONS);
   }
 
   /**
@@ -106,7 +110,7 @@ export class TransactionApiService {
    * @returns the list of suggested transfer matches.
    */
   getTransferSuggestions(): Observable<TransferSuggestion[]> {
-    return this.http.get<TransferSuggestion[]>(`${this.apiUrl}/suggestions/transfers`);
+    return this.http.get<TransferSuggestion[]>(`${this.apiUrl}/suggestions/transfers`, SKIP_TOAST_OPTIONS);
   }
 
   /**
@@ -114,7 +118,7 @@ export class TransactionApiService {
    * @param ids the transaction ids to mark as transferred.
    */
   markAsTransfer(ids: number[]): Observable<void> {
-    return this.http.post<void>(`${this.apiUrl}/mark-as-transfer`, ids);
+    return this.http.post<void>(`${this.apiUrl}/mark-as-transfer`, ids, SKIP_TOAST_OPTIONS);
   }
 
   /**
@@ -122,6 +126,6 @@ export class TransactionApiService {
    * @returns the categories with their transaction counts.
    */
   getCountsByCategory(): Observable<Category[]> {
-    return this.http.get<Category[]>(`${this.apiUrl}/count-by-category`);
+    return this.http.get<Category[]>(`${this.apiUrl}/count-by-category`, SKIP_TOAST_OPTIONS);
   }
 }

@@ -1,5 +1,5 @@
 import {inject, Injectable} from '@angular/core';
-import {HttpClient, HttpParams} from '@angular/common/http';
+import {HttpClient, HttpContext, HttpParams} from '@angular/common/http';
 import {Observable} from 'rxjs';
 import {environment} from '@env';
 import {
@@ -10,6 +10,9 @@ import {
   MerchantBreakdown,
   YtdSummary
 } from '@models/dashboard.model';
+import {SKIP_GENERIC_ERROR_TOAST} from '@core/auth/error.interceptor';
+
+const SKIP_TOAST_CONTEXT = new HttpContext().set(SKIP_GENERIC_ERROR_TOAST, true);
 
 @Injectable({
   providedIn: 'root'
@@ -34,6 +37,7 @@ export class DashboardApiService {
       `${this.apiUrl}/categories`,
       {
         params: this.getPeriodHttpParams(month, year, startDate, endDate),
+        context: SKIP_TOAST_CONTEXT
       });
   }
 
@@ -52,7 +56,8 @@ export class DashboardApiService {
     return this.http.get<MerchantBreakdown[]>(
       `${this.apiUrl}/merchants`,
       {
-        params: this.getPeriodHttpParams(month, year, startDate, endDate)
+        params: this.getPeriodHttpParams(month, year, startDate, endDate),
+        context: SKIP_TOAST_CONTEXT
       });
   }
 
@@ -71,7 +76,8 @@ export class DashboardApiService {
   getPulse(month?: number, year?: number, startDate?: string, endDate?: string): Observable<DashboardPulse> {
     return this.http.get<DashboardPulse>(
       `${this.apiUrl}/pulse`, {
-        params: this.getPeriodHttpParams(month, year, startDate, endDate)
+        params: this.getPeriodHttpParams(month, year, startDate, endDate),
+        context: SKIP_TOAST_CONTEXT
       });
   }
 
@@ -80,7 +86,7 @@ export class DashboardApiService {
    * @returns the cash flow trend data.
    */
   getCashFlowTrend(): Observable<CashFlowTrend[]> {
-    return this.http.get<CashFlowTrend[]>(`${this.apiUrl}/trend/cashflow`);
+    return this.http.get<CashFlowTrend[]>(`${this.apiUrl}/trend/cashflow`, {context: SKIP_TOAST_CONTEXT});
   }
 
   /**
@@ -94,7 +100,8 @@ export class DashboardApiService {
     return this.http.get<YtdSummary>(
       `${this.apiUrl}/ytd`,
       {
-        params
+        params,
+        context: SKIP_TOAST_CONTEXT
       });
   }
 
@@ -103,7 +110,7 @@ export class DashboardApiService {
    * @returns the action items.
    */
   getActionItems(): Observable<ActionItem[]> {
-    return this.http.get<ActionItem[]>(`${this.apiUrl}/actions`);
+    return this.http.get<ActionItem[]>(`${this.apiUrl}/actions`, {context: SKIP_TOAST_CONTEXT});
   }
 
   /**
