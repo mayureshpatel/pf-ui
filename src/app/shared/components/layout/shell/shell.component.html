@@ -48,7 +48,7 @@
           <a
             [routerLink]="item.routerLink"
             routerLinkActive="bg-primary-100 text-primary-700"
-            class="flex items-center gap-3 px-4 py-3 rounded-lg text-color hover:bg-surface-100 transition-colors"
+            class="flex items-center gap-3 px-4 py-3 rounded-lg text-color hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors"
             (click)="sidebarVisible.set(false)"
           >
             <i [class]="item.icon"></i>
@@ -64,7 +64,7 @@
         <a
           [routerLink]="item.routerLink"
           routerLinkActive="bg-primary-100 text-primary-700"
-          class="flex items-center gap-3 px-4 py-3 rounded-lg text-color hover:bg-surface-100 transition-colors"
+          class="flex items-center gap-3 px-4 py-3 rounded-lg text-color hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors"
         >
           <i [class]="item.icon"></i>
           <span>{{ item.label }}</span>

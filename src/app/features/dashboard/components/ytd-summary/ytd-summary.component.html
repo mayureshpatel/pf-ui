@@ -4,10 +4,10 @@
     <div class="flex items-center justify-between">
       <div class="flex flex-col">
         <span class="text-xl font-black text-surface-900 dark:text-surface-0 tracking-tight">{{ year() }} Summary</span>
-        <span class="text-[10px] font-black uppercase tracking-widest text-surface-400">Year to Date</span>
+        <span class="text-[10px] font-black uppercase tracking-widest text-surface-400 dark:text-surface-500">Year to Date</span>
       </div>
-      <div class="bg-surface-100 p-2 rounded-lg">
-        <i class="pi pi-calendar-clock text-surface-500"></i>
+      <div class="bg-surface-100 dark:bg-surface-800 p-2 rounded-lg">
+        <i class="pi pi-calendar-clock text-surface-500 dark:text-surface-400"></i>
       </div>
     </div>
 
@@ -16,7 +16,7 @@
       <!-- Total Income -->
       <div
         class="flex justify-between items-center p-3 rounded-xl border border-surface-100 dark:border-surface-800">
-        <span class="text-xs font-bold text-surface-500 uppercase">Income</span>
+        <span class="text-xs font-bold text-surface-500 dark:text-surface-400 uppercase">Income</span>
         <span class="font-mono font-bold text-emerald-600 dark:text-emerald-400">
           {{ totalIncome() | formatCurrency }}
         </span>
@@ -25,7 +25,7 @@
       <!-- Total Expenses -->
       <div
         class="flex justify-between items-center p-3 rounded-xl border border-surface-100 dark:border-surface-800">
-        <span class="text-xs font-bold text-surface-500 uppercase">Expenses</span>
+        <span class="text-xs font-bold text-surface-500 dark:text-surface-400 uppercase">Expenses</span>
         <span class="font-mono font-bold text-rose-600 dark:text-rose-400">
           {{ totalExpense() | formatCurrency }}
         </span>
@@ -43,7 +43,7 @@
     <!-- Savings Rate Progress -->
     <div class="flex flex-col gap-3 pt-2">
       <div class="flex justify-between items-end">
-        <span class="text-[10px] font-black uppercase tracking-[0.2em] text-surface-400">Avg. Savings Rate</span>
+        <span class="text-[10px] font-black uppercase tracking-[0.2em] text-surface-400 dark:text-surface-500">Avg. Savings Rate</span>
         <span [class]="savingsRateStyles() + ' px-2 py-0.5 rounded text-xs font-black font-mono'">
           {{ avgSavingsRate().toFixed(1) }}%
         </span>

@@ -16,9 +16,9 @@
     } @else {
       <div class="flex flex-col items-center justify-center h-[400px] text-center animate-fade-in">
         <div class="w-16 h-16 rounded-full flex items-center justify-center mb-4">
-          <i class="pi pi-chart-bar text-2xl text-surface-300"></i>
+          <i class="pi pi-chart-bar text-2xl text-surface-300 dark:text-surface-600"></i>
         </div>
-        <span class="text-sm font-bold text-surface-400 uppercase tracking-widest">No spending data</span>
+        <span class="text-sm font-bold text-surface-400 dark:text-surface-500 uppercase tracking-widest">No spending data</span>
         <p class="text-xs text-muted-color mt-1">Try expanding your date range filters.</p>
       </div>
     }
@@ -51,7 +51,7 @@
         <tr class="hover:bg-surface-100/50 dark:hover:bg-surface-800/30 transition-colors duration-200">
           <td class="py-3">
             <div class="flex items-center gap-2">
-              <div [class]="'w-2 h-2 rounded-full ' + (cat.category.color || 'bg-surface-300')"></div>
+              <div [class]="'w-2 h-2 rounded-full ' + (cat.category.color || 'bg-surface-300 dark:bg-surface-600')"></div>
               <span class="font-bold text-surface-900 dark:text-surface-0">{{ cat.category.name }}</span>
             </div>
           </td>

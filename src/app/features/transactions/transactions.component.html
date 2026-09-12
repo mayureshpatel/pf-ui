@@ -2,7 +2,7 @@
   <!-- Page Header -->
   <app-screen-toolbar class="mb-6">
     <div toolbarTitle>
-      <h1 class="text-4xl font-extrabold text-surface-900 tracking-tight">Ledger</h1>
+      <h1 class="text-4xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight">Ledger</h1>
     </div>
   </app-screen-toolbar>
 
@@ -85,7 +85,7 @@
             </th>
 
             <!-- Date -->
-            <th id="txn-date" pSortableColumn="date" class="py-4 font-semibold text-surface-700">
+            <th id="txn-date" pSortableColumn="date" class="py-4 font-semibold text-surface-700 dark:text-surface-200">
               <div class="flex items-center gap-2">
                 Date
                 <p-sortIcon field="date"/>
@@ -103,7 +103,7 @@
             </th>
 
             <!-- Merchant / Description -->
-            <th id="txn-merchant" pSortableColumn="description" class="py-4 font-semibold text-surface-700">
+            <th id="txn-merchant" pSortableColumn="description" class="py-4 font-semibold text-surface-700 dark:text-surface-200">
               <div class="flex items-center gap-2">
                 Merchant / Description
                 <p-sortIcon field="description"/>
@@ -113,7 +113,7 @@
                     <div class="flex flex-col gap-4 w-64">
                       <div class="flex flex-col gap-2">
                         <label for="merchant-filter"
-                               class="text-xs font-bold uppercase text-surface-500">Merchant</label>
+                               class="text-xs font-bold uppercase text-surface-500 dark:text-surface-400">Merchant</label>
                         <p-select
                           id="merchant-filter"
                           [ngModel]="filterConstraint.value?.merchant"
@@ -126,7 +126,7 @@
                       </div>
                       <div class="flex flex-col gap-2">
                         <label for="transaction-description-filter"
-                               class="text-xs font-bold uppercase text-surface-500">Description</label>
+                               class="text-xs font-bold uppercase text-surface-500 dark:text-surface-400">Description</label>
                         <input
                           id="transaction-description-filter"
                           pInputText
@@ -143,7 +143,7 @@
             </th>
 
             <!-- Category -->
-            <th id="txn-category" pSortableColumn="category.name" class="py-4 font-semibold text-surface-700">
+            <th id="txn-category" pSortableColumn="category.name" class="py-4 font-semibold text-surface-700 dark:text-surface-200">
               <div class="flex items-center gap-2">
                 Category
                 <p-sortIcon field="category.name"/>
@@ -173,7 +173,7 @@
             </th>
 
             <!-- Account -->
-            <th id="txn-account" pSortableColumn="account.name" class="py-4 font-semibold text-surface-700">
+            <th id="txn-account" pSortableColumn="account.name" class="py-4 font-semibold text-surface-700 dark:text-surface-200">
               <div class="flex items-center gap-2">
                 Account
                 <p-sortIcon field="account.name"/>
@@ -196,7 +196,7 @@
             </th>
 
             <!-- Amount -->
-            <th id="txn-amount" pSortableColumn="amount" class="py-4 font-semibold text-surface-700 text-right">
+            <th id="txn-amount" pSortableColumn="amount" class="py-4 font-semibold text-surface-700 dark:text-surface-200 text-right">
               <div class="flex items-center justify-end gap-2">
                 Amount
                 <p-sortIcon field="amount"/>
@@ -205,7 +205,7 @@
                   <ng-template pTemplate="filter" let-filterConstraint="filterConstraint">
                     <div class="flex flex-col gap-4 w-64">
                       <div class="flex flex-col gap-2">
-                        <label for="type-filter" class="text-xs font-bold uppercase text-surface-500">Type</label>
+                        <label for="type-filter" class="text-xs font-bold uppercase text-surface-500 dark:text-surface-400">Type</label>
                         <p-select
                           id="type-filter"
                           [ngModel]="filterConstraint.value?.type"
@@ -217,7 +217,7 @@
                         />
                       </div>
                       <div class="flex flex-col gap-2">
-                        <label for="min-amount-filter" class="text-xs font-bold uppercase text-surface-500">
+                        <label for="min-amount-filter" class="text-xs font-bold uppercase text-surface-500 dark:text-surface-400">
                           Min Amount
                         </label>
                         <p-inputNumber
@@ -232,7 +232,7 @@
                         />
                       </div>
                       <div class="flex flex-col gap-2">
-                        <label for="max-amount-filter" class="text-xs font-bold uppercase text-surface-500">
+                        <label for="max-amount-filter" class="text-xs font-bold uppercase text-surface-500 dark:text-surface-400">
                           Max Amount
                         </label>
                         <p-inputNumber
@@ -253,7 +253,7 @@
             </th>
 
             <!-- Tags -->
-            <th id="txn-tags" class="py-4 font-semibold text-surface-700">
+            <th id="txn-tags" class="py-4 font-semibold text-surface-700 dark:text-surface-200">
               <div class="flex items-center gap-2">
                 Tags
                 <p-columnFilter field="tagId" display="menu" [showMatchModes]="false" [showOperator]="false"
@@ -274,7 +274,7 @@
               </div>
             </th>
 
-            <th id="txn-actions" class="py-4 font-semibold text-surface-700 text-center w-24">
+            <th id="txn-actions" class="py-4 font-semibold text-surface-700 dark:text-surface-200 text-center w-24">
               Actions
             </th>
           </tr>
@@ -300,7 +300,7 @@
               <div class="flex items-center gap-3">
                 <div
                   class="w-10 h-10 flex items-center justify-center shrink-0">
-                  <i class="pi pi-receipt text-surface-400 group-hover:text-primary transition-colors"></i>
+                  <i class="pi pi-receipt text-surface-400 dark:text-surface-500 group-hover:text-primary transition-colors"></i>
                 </div>
                 <div class="flex flex-col truncate max-w-[250px]">
                   <span class="font-bold text-surface-900 dark:text-surface-0 truncate">
@@ -314,7 +314,7 @@
             <!-- Category -->
             <td>
               <div class="flex items-center gap-2">
-                <div [class]="'w-2 h-2 rounded-full ' + (txn.category?.color || 'bg-surface-300')"></div>
+                <div [class]="'w-2 h-2 rounded-full ' + (txn.category?.color || 'bg-surface-300 dark:bg-surface-600')"></div>
                 <span class="text-sm font-medium text-surface-700 dark:text-surface-200">
                   {{ txn.category?.name || 'Uncategorized' }}
                 </span>
@@ -324,7 +324,7 @@
             <!-- Account -->
             <td>
               <span
-                class="px-2 py-1 rounded bg-surface-100 text-[10px] font-black uppercase text-surface-500 tracking-tighter ring-1 ring-surface-200 dark:ring-surface-700">
+                class="px-2 py-1 rounded bg-surface-100 dark:bg-surface-800 text-[10px] font-black uppercase text-surface-500 dark:text-surface-400 tracking-tighter ring-1 ring-surface-200 dark:ring-surface-700">
                 {{ txn.account.name }}
               </span>
             </td>
@@ -334,7 +334,8 @@
               <span class="font-mono font-black text-lg"
                     [class.text-emerald-600]="txn.type === 'INCOME'"
                     [class.text-rose-600]="txn.type === 'EXPENSE'"
-                    [class.text-surface-500]="txn.type === 'TRANSFER'">
+                    [class.text-surface-500]="txn.type === 'TRANSFER'"
+                    [class.dark:text-surface-400]="txn.type === 'TRANSFER'">
                 {{ txn.amount | formatTransactionTypeAmount:txn.type }}
               </span>
             </td>

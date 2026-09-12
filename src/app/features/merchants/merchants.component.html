@@ -2,7 +2,7 @@
   <!-- Page Header -->
   <app-screen-toolbar class="mb-6">
     <div toolbarTitle>
-      <h1 class="text-4xl font-extrabold text-surface-900 tracking-tight">Merchants</h1>
+      <h1 class="text-4xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight">Merchants</h1>
     </div>
 
     <div toolbarFilters>
@@ -48,19 +48,19 @@
         <ng-template #header>
           <tr>
             <th id="merchant-select" class="w-12"></th>
-            <th id="merchant-clean-name" class="py-4 font-bold text-surface-700">Display Name</th>
-            <th id="merchant-original-name" class="py-4 font-bold text-surface-700">Original Bank Description</th>
-            <th id="merchant-actions" class="py-4 font-bold text-surface-700 text-center" style="width: 100px">Actions</th>
+            <th id="merchant-clean-name" class="py-4 font-bold text-surface-700 dark:text-surface-200">Display Name</th>
+            <th id="merchant-original-name" class="py-4 font-bold text-surface-700 dark:text-surface-200">Original Bank Description</th>
+            <th id="merchant-actions" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-center" style="width: 100px">Actions</th>
           </tr>
         </ng-template>
 
         <ng-template #body let-merchant>
-          <tr class="hover:bg-surface-100/50 transition-colors duration-200">
+          <tr class="hover:bg-surface-100/50 dark:hover:bg-surface-800/50 transition-colors duration-200">
             <td class="text-center">
               <p-tableCheckbox [value]="merchant"/>
             </td>
             <td class="py-4 px-4">
-              <span class="font-semibold text-surface-900">{{ merchant.cleanName }}</span>
+              <span class="font-semibold text-surface-900 dark:text-surface-0">{{ merchant.cleanName }}</span>
             </td>
             <td class="py-4 px-4">
               <span class="text-sm font-mono text-muted-color">{{ merchant.originalName }}</span>
@@ -96,7 +96,7 @@
         <div class="absolute -inset-4 bg-primary/10 rounded-full blur-2xl animate-pulse"></div>
         <i class="pi pi-shop text-8xl text-primary/40 relative"></i>
       </div>
-      <h2 class="text-3xl font-bold text-surface-900 mb-3">No merchants yet</h2>
+      <h2 class="text-3xl font-bold text-surface-900 dark:text-surface-0 mb-3">No merchants yet</h2>
       <p class="text-muted-color mb-8 max-w-lg leading-relaxed text-lg">
         Merchants are created automatically as you import or enter transactions.
         Once you have some, you can search and correct their names here.

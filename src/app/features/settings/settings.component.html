@@ -22,6 +22,12 @@
             <span class="font-bold">Tags</span>
           </div>
         </p-tab>
+        <p-tab value="3">
+          <div class="flex items-center gap-2">
+            <i class="pi pi-palette"></i>
+            <span class="font-bold">Appearance</span>
+          </div>
+        </p-tab>
       </p-tablist>
 
       <p-tabpanels class="bg-transparent px-0 py-6">
@@ -30,6 +36,19 @@
         </p-tabpanel>
         <p-tabpanel value="2">
           <app-tags/>
+        </p-tabpanel>
+        <p-tabpanel value="3">
+          <div class="max-w-md p-4 rounded-xl bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 flex items-center justify-between gap-4">
+            <div class="flex flex-col gap-1">
+              <span class="font-bold text-surface-900 dark:text-surface-0">Dark Mode</span>
+              <span class="text-sm text-muted-color">Switch between light and dark themes.</span>
+            </div>
+            <p-toggleswitch
+              [ngModel]="theme.isDarkMode()"
+              (ngModelChange)="theme.setDarkMode($event)"
+              ariaLabel="Toggle dark mode"
+            />
+          </div>
         </p-tabpanel>
       </p-tabpanels>
     </p-tabs>
