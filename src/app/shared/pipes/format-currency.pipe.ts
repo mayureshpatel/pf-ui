@@ -1,7 +1,7 @@
 import {Pipe, PipeTransform} from '@angular/core';
 
 /**
- * Formats a number as USD currency.
+ * Formats a number as currency, USD by default.
  * <br><br>
  * Example:
  * <pre>
@@ -10,6 +10,9 @@ import {Pipe, PipeTransform} from '@angular/core';
  *
  *   {{ 1234567.89 | formatCurrency: false }}
  *   <!-- Results in: $1,234,567 -->
+ *
+ *   {{ 1234567.89 | formatCurrency: true : 'EUR' }}
+ *   <!-- Results in: €1,234,567.89 -->
  * </pre>
  */
 @Pipe({
@@ -17,21 +20,18 @@ import {Pipe, PipeTransform} from '@angular/core';
 })
 export class FormatCurrencyPipe implements PipeTransform {
   /**
-   * Formats a number as USD currency.
+   * Formats a number as currency.
    * @param value the number to format
    * @param showCents whether to show cents (default: true)
-   * @returns formatted currency string or '$0.00' if value is null or undefined
+   * @param currencyCode the ISO 4217 currency code to format as (default: 'USD')
+   * @returns formatted currency string, formatting 0 if value is null or undefined
    */
-  transform(value: number | null | undefined, showCents: boolean = true): string {
-    if (value === null || value === undefined) {
-      return '$0.00';
-    }
-
+  transform(value: number | null | undefined, showCents: boolean = true, currencyCode: string = 'USD'): string {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD',
+      currency: currencyCode,
       minimumFractionDigits: showCents ? 2 : 0,
       maximumFractionDigits: showCents ? 2 : 0,
-    }).format(value);
+    }).format(value ?? 0);
   }
 }

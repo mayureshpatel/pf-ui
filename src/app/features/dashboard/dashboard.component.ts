@@ -27,6 +27,7 @@ import {YtdSummaryComponent} from './components/ytd-summary/ytd-summary.componen
 import {ActionCenterComponent} from './components/action-center/action-center.component';
 import {CategoryChartComponent} from './components/category-chart/category-chart.component';
 import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-toolbar';
+import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
 
 type RangePreset = 'THIS_MONTH' | 'LAST_MONTH' | 'THIS_YEAR' | 'LAST_YEAR' | 'CUSTOM';
 
@@ -51,7 +52,8 @@ type RangePreset = 'THIS_MONTH' | 'LAST_MONTH' | 'THIS_YEAR' | 'LAST_YEAR' | 'CU
     CashFlowTrendComponent,
     YtdSummaryComponent,
     ActionCenterComponent,
-    CategoryChartComponent
+    CategoryChartComponent,
+    FormatCurrencyPipe
   ],
   templateUrl: './dashboard.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush

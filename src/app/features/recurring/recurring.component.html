@@ -85,7 +85,7 @@
             <!-- Next Date -->
             <td>
               <div class="flex flex-col">
-                <span class="text-sm font-bold text-surface-700 dark:text-surface-200">{{ rec.nextDate }}</span>
+                <span class="text-sm font-bold text-surface-700 dark:text-surface-200">{{ rec.nextDate | date: 'MMM d, yyyy' }}</span>
                 <span class="text-[10px] text-muted-color uppercase font-medium">Projected</span>
               </div>
             </td>

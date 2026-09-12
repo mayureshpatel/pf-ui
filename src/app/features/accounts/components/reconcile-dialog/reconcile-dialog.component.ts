@@ -21,6 +21,7 @@ import {Account, AccountReconcileRequest} from '@models/account.model';
 import {AccountApiService} from '@features/accounts/services/account-api.service';
 import {ToastService} from '@core/services/toast.service';
 import {DrawerComponent} from '@shared/components/drawer/drawer.component';
+import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
 
 /**
  * Component for reconciling an account balance.
@@ -34,7 +35,8 @@ import {DrawerComponent} from '@shared/components/drawer/drawer.component';
     ButtonModule,
     InputNumberModule,
     MessageModule,
-    DrawerComponent
+    DrawerComponent,
+    FormatCurrencyPipe
   ],
   templateUrl: './reconcile-dialog.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush

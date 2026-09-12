@@ -128,7 +128,7 @@
       } @else {
         <div class="flex justify-between items-center">
           <span class="text-3xl font-mono font-black text-surface-900">
-            {{ form.controls.currentBalance.value | currency: form.controls.currencyCode.value }}
+            {{ form.controls.currentBalance.value | formatCurrency: true : form.controls.currencyCode.value }}
           </span>
         </div>
       }
