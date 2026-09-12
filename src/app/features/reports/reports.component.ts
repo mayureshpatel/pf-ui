@@ -1,4 +1,4 @@
-import {Component, DestroyRef, effect, inject, signal, WritableSignal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, DestroyRef, effect, inject, signal, WritableSignal} from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {finalize} from 'rxjs';
@@ -35,7 +35,8 @@ import {fromLocalDateString, toLocalDateString} from '@shared/utils/transaction.
     MerchantReportComponent,
     IncomeExpenseReportComponent
   ],
-  templateUrl: './reports.component.html'
+  templateUrl: './reports.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ReportsComponent {
   private readonly transactionApi: TransactionApiService = inject(TransactionApiService);

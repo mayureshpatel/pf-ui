@@ -1,4 +1,5 @@
 import {
+  ChangeDetectionStrategy,
   Component,
   computed,
   inject,
@@ -70,7 +71,8 @@ import {SelectItemGroup} from 'primeng/api';
     ProgressSpinner,
     Tooltip
   ],
-  templateUrl: './transaction-form-drawer.component.html'
+  templateUrl: './transaction-form-drawer.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TransactionFormDrawerComponent {
   private readonly categoryApi: CategoryApiService = inject(CategoryApiService);

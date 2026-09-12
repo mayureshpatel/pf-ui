@@ -1,4 +1,4 @@
-import {Component, computed, input, InputSignal, Signal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, input, InputSignal, Signal} from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {CardModule} from 'primeng/card';
 import {ChartModule} from 'primeng/chart';
@@ -13,7 +13,8 @@ import {CashFlowTrend} from '@models/dashboard.model';
   selector: 'app-cash-flow-trend',
   standalone: true,
   imports: [CommonModule, CardModule, ChartModule],
-  templateUrl: './cash-flow-trend.component.html'
+  templateUrl: './cash-flow-trend.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CashFlowTrendComponent {
   /** The trend data to visualize. */

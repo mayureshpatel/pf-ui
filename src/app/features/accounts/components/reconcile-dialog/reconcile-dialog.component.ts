@@ -1,4 +1,5 @@
 import {
+  ChangeDetectionStrategy,
   Component,
   computed,
   effect,
@@ -35,7 +36,8 @@ import {DrawerComponent} from '@shared/components/drawer/drawer.component';
     MessageModule,
     DrawerComponent
   ],
-  templateUrl: './reconcile-dialog.component.html'
+  templateUrl: './reconcile-dialog.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ReconcileDrawerComponent {
   private readonly accountService: AccountApiService = inject(AccountApiService);

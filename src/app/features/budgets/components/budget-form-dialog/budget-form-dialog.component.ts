@@ -1,4 +1,5 @@
 import {
+  ChangeDetectionStrategy,
   Component,
   computed,
   inject,
@@ -52,7 +53,8 @@ import {DrawerComponent} from '@shared/components/drawer/drawer.component';
     MessageModule,
     DrawerComponent
   ],
-  templateUrl: './budget-form-dialog.component.html'
+  templateUrl: './budget-form-dialog.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class BudgetFormDialogComponent {
   private readonly budgetApi: BudgetApiService = inject(BudgetApiService);

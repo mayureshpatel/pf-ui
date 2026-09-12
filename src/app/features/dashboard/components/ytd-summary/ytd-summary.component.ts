@@ -1,4 +1,4 @@
-import {Component, computed, input, InputSignal, Signal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, input, InputSignal, Signal} from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {CardModule} from 'primeng/card';
 import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
@@ -13,7 +13,8 @@ import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
   selector: 'app-ytd-summary',
   standalone: true,
   imports: [CommonModule, CardModule, FormatCurrencyPipe],
-  templateUrl: './ytd-summary.component.html'
+  templateUrl: './ytd-summary.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class YtdSummaryComponent {
   /** The year for which the summary is being displayed. */

@@ -1,4 +1,4 @@
-import {Component, computed, DestroyRef, inject, OnInit, Signal, signal, WritableSignal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, DestroyRef, inject, OnInit, Signal, signal, WritableSignal} from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {CommonModule} from '@angular/common';
 import {ButtonModule} from 'primeng/button';
@@ -31,7 +31,8 @@ import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
     ReconcileDrawerComponent,
     FormatCurrencyPipe
   ],
-  templateUrl: './accounts.component.html'
+  templateUrl: './accounts.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AccountsComponent implements OnInit {
   private readonly accountApi: AccountApiService = inject(AccountApiService);

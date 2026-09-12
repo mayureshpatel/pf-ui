@@ -1,4 +1,4 @@
-import {Component, computed, DestroyRef, inject, OnInit, Signal, signal, WritableSignal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, DestroyRef, inject, OnInit, Signal, signal, WritableSignal} from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {CommonModule} from '@angular/common';
 import {finalize} from 'rxjs';
@@ -41,7 +41,8 @@ import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
     ApplyRulesDialogComponent,
     FormatCurrencyPipe
   ],
-  templateUrl: './category-rules.component.html'
+  templateUrl: './category-rules.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CategoryRulesComponent implements OnInit {
   private readonly api: CategoryRuleApiService = inject(CategoryRuleApiService);

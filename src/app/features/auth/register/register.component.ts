@@ -1,4 +1,4 @@
-import {Component, inject, signal, WritableSignal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, inject, signal, WritableSignal} from '@angular/core';
 import {
   AbstractControl,
   FormControl,
@@ -46,7 +46,8 @@ function passwordMatchValidator(group: AbstractControl): ValidationErrors | null
     PasswordModule,
     MessageModule
   ],
-  templateUrl: './register.component.html'
+  templateUrl: './register.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RegisterComponent {
   private readonly authService: AuthService = inject(AuthService);

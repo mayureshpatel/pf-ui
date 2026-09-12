@@ -1,4 +1,4 @@
-import {Component, inject, Signal, signal, WritableSignal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, inject, Signal, signal, WritableSignal} from '@angular/core';
 import {RouterLink, RouterLinkActive, RouterOutlet} from '@angular/router';
 import {AvatarModule} from 'primeng/avatar';
 import {ButtonModule} from 'primeng/button';
@@ -29,7 +29,8 @@ import {Tooltip} from 'primeng/tooltip';
     Tooltip
   ],
   templateUrl: './shell.component.html',
-  styleUrl: './shell.component.css'
+  styleUrl: './shell.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ShellComponent {
   private readonly authService: AuthService = inject(AuthService);

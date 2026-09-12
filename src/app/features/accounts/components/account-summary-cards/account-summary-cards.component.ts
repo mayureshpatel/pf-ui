@@ -1,4 +1,4 @@
-import {Component, computed, input, InputSignal, Signal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, input, InputSignal, Signal} from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {CardModule} from 'primeng/card';
 import {Account, AccountSummary} from '@models/account.model';
@@ -15,7 +15,8 @@ import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
   selector: 'app-account-summary-cards',
   standalone: true,
   imports: [CommonModule, CardModule, FormatCurrencyPipe],
-  templateUrl: './account-summary-cards.component.html'
+  templateUrl: './account-summary-cards.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AccountSummaryCardsComponent {
 

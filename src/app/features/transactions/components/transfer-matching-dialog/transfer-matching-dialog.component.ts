@@ -1,4 +1,5 @@
 import {
+  ChangeDetectionStrategy,
   Component,
   effect,
   inject,
@@ -40,7 +41,8 @@ import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
     TagModule,
     FormatCurrencyPipe
   ],
-  templateUrl: './transfer-matching-dialog.component.html'
+  templateUrl: './transfer-matching-dialog.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TransferMatchingDialogComponent {
   private readonly transactionApi: TransactionApiService = inject(TransactionApiService);

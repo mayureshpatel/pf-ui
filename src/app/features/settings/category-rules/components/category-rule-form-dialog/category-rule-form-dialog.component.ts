@@ -1,4 +1,5 @@
 import {
+  ChangeDetectionStrategy,
   Component,
   inject,
   model,
@@ -64,7 +65,8 @@ const MATCH_TYPE_OPTIONS: { label: string; value: MatchType }[] = [
     MessageModule,
     DrawerComponent
   ],
-  templateUrl: './category-rule-form-dialog.component.html'
+  templateUrl: './category-rule-form-dialog.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CategoryRuleFormDialogComponent {
   private readonly api: CategoryRuleApiService = inject(CategoryRuleApiService);

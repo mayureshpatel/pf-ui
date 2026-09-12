@@ -1,4 +1,4 @@
-import {Component, computed, DestroyRef, inject, OnInit, Signal, signal, WritableSignal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, DestroyRef, inject, OnInit, Signal, signal, WritableSignal} from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {CommonModule} from '@angular/common';
 import {Router} from '@angular/router';
@@ -36,7 +36,8 @@ import {Category, CategoryCreateRequest, CategoryGroup, CategoryUpdateRequest} f
     ScreenToolbarComponent,
     CategoryFormDrawerComponent
   ],
-  templateUrl: './categories.component.html'
+  templateUrl: './categories.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CategoriesComponent implements OnInit {
   private readonly categoryApi: CategoryApiService = inject(CategoryApiService);

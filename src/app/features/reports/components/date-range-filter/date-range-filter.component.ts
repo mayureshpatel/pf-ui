@@ -1,4 +1,4 @@
-import {Component, effect, model, ModelSignal, signal, WritableSignal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, effect, model, ModelSignal, signal, WritableSignal} from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {FormsModule} from '@angular/forms';
 import {DatePicker} from 'primeng/datepicker';
@@ -16,7 +16,8 @@ import {fromLocalDateString, toLocalDateString} from '@shared/utils/transaction.
   selector: 'app-date-range-filter',
   standalone: true,
   imports: [CommonModule, FormsModule, DatePicker, Button],
-  templateUrl: './date-range-filter.component.html'
+  templateUrl: './date-range-filter.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DateRangeFilterComponent {
   /** Two-way binding for the currently selected date range. */

@@ -1,4 +1,4 @@
-import {Component, computed, inject, input, InputSignal, Signal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, inject, input, InputSignal, Signal} from '@angular/core';
 import {CommonModule, formatCurrency} from '@angular/common';
 import {CardModule} from 'primeng/card';
 import {ChartModule} from 'primeng/chart';
@@ -20,7 +20,8 @@ import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
   selector: 'app-merchant-report',
   standalone: true,
   imports: [CommonModule, CardModule, ChartModule, TableModule, TagModule, FormatCurrencyPipe],
-  templateUrl: './merchant-report.component.html'
+  templateUrl: './merchant-report.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MerchantReportComponent {
   private readonly dataService: ReportsDataService = inject(ReportsDataService);

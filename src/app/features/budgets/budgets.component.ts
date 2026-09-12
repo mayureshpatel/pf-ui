@@ -1,4 +1,4 @@
-import {Component, computed, DestroyRef, inject, OnInit, Signal, signal, WritableSignal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, DestroyRef, inject, OnInit, Signal, signal, WritableSignal} from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {FormsModule} from '@angular/forms';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
@@ -51,7 +51,8 @@ import {getCategoryColor} from '@shared/utils/category.utils';
     FormatCurrencyPipe,
     Tooltip
   ],
-  templateUrl: './budgets.component.html'
+  templateUrl: './budgets.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class BudgetsComponent implements OnInit {
   private readonly budgetApi: BudgetApiService = inject(BudgetApiService);

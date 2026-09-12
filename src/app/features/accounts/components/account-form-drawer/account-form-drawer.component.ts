@@ -1,4 +1,5 @@
 import {
+  ChangeDetectionStrategy,
   Component,
   computed,
   input,
@@ -34,7 +35,8 @@ import {BankOption} from '@models/transaction.model';
     MessageModule,
     DrawerComponent
   ],
-  templateUrl: './account-form-drawer.component.html'
+  templateUrl: './account-form-drawer.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AccountFormDrawerComponent {
   visible: ModelSignal<boolean> = model.required<boolean>();
