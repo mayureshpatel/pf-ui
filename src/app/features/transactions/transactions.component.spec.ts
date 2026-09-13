@@ -131,6 +131,32 @@ describe('TransactionsComponent', () => {
     expect(button.getAttribute('aria-label')).toBe('Clear Filters');
   });
 
+  describe('openCreateDialog / openEditDialog (PF-397)', () => {
+    it('openCreateDialog should clear any selected transaction and open the dialog', () => {
+      // arrange -- simulate a prior edit having left a transaction selected
+      component.selectedTransaction.set({ id: 1 } as Transaction);
+
+      // act
+      component.openCreateDialog();
+
+      // assert & verify
+      expect(component.selectedTransaction()).toBeNull();
+      expect(component.showDialog()).toBe(true);
+    });
+
+    it('openEditDialog should select the given transaction and open the dialog', () => {
+      // arrange
+      const txn = { id: 42, description: 'Coffee' } as Transaction;
+
+      // act
+      component.openEditDialog(txn);
+
+      // assert & verify
+      expect(component.selectedTransaction()).toBe(txn);
+      expect(component.showDialog()).toBe(true);
+    });
+  });
+
   it('should handle onLazyLoad with dateIs filter', () => {
     // arrange
     const testDate = new Date('2026-03-12');
@@ -258,6 +284,83 @@ describe('TransactionsComponent', () => {
 
     // assert & verify
     expect(component.state().filter.tagId).toBeUndefined();
+  });
+
+  describe('onSave: create vs. update branching (PF-397)', () => {
+    const formData = {
+      accountId: 1,
+      amount: 10,
+      transactionDate: '2026-03-01',
+      description: 'Coffee',
+      type: 'EXPENSE',
+      categoryId: 1,
+      merchantId: 1,
+    };
+
+    it('should call createTransaction (never updateTransaction) when no transaction is selected', () => {
+      // arrange
+      component.selectedTransaction.set(null);
+      mockTransactionApi.createTransaction.mockReturnValue(of(99));
+
+      // act
+      component.onSave({ request: formData as TransactionCreateRequest, tagIds: [] });
+
+      // assert & verify -- create payload has no `id` field at all
+      expect(mockTransactionApi.createTransaction).toHaveBeenCalledWith(
+        expect.not.objectContaining({ id: expect.anything() }),
+      );
+      expect(mockTransactionApi.updateTransaction).not.toHaveBeenCalled();
+    });
+
+    it('should call updateTransaction (never createTransaction) when a transaction is selected', () => {
+      // arrange
+      const existing = { id: 42, tags: [] } as unknown as Transaction;
+      component.selectedTransaction.set(existing);
+      mockTransactionApi.updateTransaction.mockReturnValue(of(1));
+
+      // act
+      component.onSave({
+        request: { ...formData, id: 42 } as TransactionUpdateRequest,
+        tagIds: [],
+      });
+
+      // assert & verify -- update payload carries the existing transaction's own id
+      expect(mockTransactionApi.updateTransaction).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 42 }),
+      );
+      expect(mockTransactionApi.createTransaction).not.toHaveBeenCalled();
+    });
+
+    it('should toast success, close the dialog, and reload on a successful create', () => {
+      // arrange
+      component.selectedTransaction.set(null);
+      component.showDialog.set(true);
+      mockTransactionApi.createTransaction.mockReturnValue(of(99));
+
+      // act
+      component.onSave({ request: formData as TransactionCreateRequest, tagIds: [] });
+
+      // assert & verify
+      expect(mockToast.success).toHaveBeenCalledWith('Transaction created');
+      expect(component.showDialog()).toBe(false);
+      expect(mockTransactionApi.getTransactions).toHaveBeenCalledTimes(2); // initial load + reload
+    });
+
+    it('should toast an error and leave the dialog open when create fails', () => {
+      // arrange
+      component.selectedTransaction.set(null);
+      component.showDialog.set(true);
+      mockTransactionApi.createTransaction.mockReturnValue(
+        throwError(() => ({ error: { detail: 'Invalid account' } })),
+      );
+
+      // act
+      component.onSave({ request: formData as TransactionCreateRequest, tagIds: [] });
+
+      // assert & verify
+      expect(mockToast.error).toHaveBeenCalledWith('Invalid account');
+      expect(component.showDialog()).toBe(true);
+    });
   });
 
   describe('onSave (PF-308: tag reconciliation)', () => {
