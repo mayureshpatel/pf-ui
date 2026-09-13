@@ -8,20 +8,20 @@ import {
   output,
   OutputEmitterRef,
   signal,
-  WritableSignal
+  WritableSignal,
 } from '@angular/core';
-import {CommonModule} from '@angular/common';
-import {DialogModule} from 'primeng/dialog';
-import {ButtonModule} from 'primeng/button';
-import {TagModule} from 'primeng/tag';
-import {TableModule} from 'primeng/table';
-import {MessageModule} from 'primeng/message';
-import {TooltipModule} from 'primeng/tooltip';
+import { CommonModule } from '@angular/common';
+import { DialogModule } from 'primeng/dialog';
+import { ButtonModule } from 'primeng/button';
+import { TagModule } from 'primeng/tag';
+import { TableModule } from 'primeng/table';
+import { MessageModule } from 'primeng/message';
+import { TooltipModule } from 'primeng/tooltip';
 
-import {RecurringSuggestion} from '@models/recurring.model';
-import {RecurringApiService} from '../../services/recurring-api.service';
-import {ToastService} from '@core/services/toast.service';
-import {RestoreFocusOnHideDirective} from '@shared/directives/restore-focus-on-hide.directive';
+import { RecurringSuggestion } from '@models/recurring.model';
+import { RecurringApiService } from '../../services/recurring-api.service';
+import { ToastService } from '@core/services/toast.service';
+import { RestoreFocusOnHideDirective } from '@shared/directives/restore-focus-on-hide.directive';
 
 /**
  * Dialog component for reviewing detected recurring patterns.
@@ -40,10 +40,10 @@ import {RestoreFocusOnHideDirective} from '@shared/directives/restore-focus-on-h
     TableModule,
     MessageModule,
     RestoreFocusOnHideDirective,
-    TooltipModule
+    TooltipModule,
   ],
   templateUrl: './recurring-suggestions-dialog.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RecurringSuggestionsDialogComponent {
   private readonly recurringApi: RecurringApiService = inject(RecurringApiService);
@@ -53,7 +53,8 @@ export class RecurringSuggestionsDialogComponent {
   readonly visible: ModelSignal<boolean> = model.required<boolean>();
 
   /** Emitted when a user selects a suggestion to be converted into a recurring entry. */
-  readonly suggestionAccepted: OutputEmitterRef<RecurringSuggestion> = output<RecurringSuggestion>();
+  readonly suggestionAccepted: OutputEmitterRef<RecurringSuggestion> =
+    output<RecurringSuggestion>();
 
   /** The list of detected patterns from the API. */
   readonly suggestions: WritableSignal<RecurringSuggestion[]> = signal([]);
@@ -67,7 +68,7 @@ export class RecurringSuggestionsDialogComponent {
     BI_WEEKLY: 'Bi-Weekly',
     MONTHLY: 'Monthly',
     QUARTERLY: 'Quarterly',
-    YEARLY: 'Yearly'
+    YEARLY: 'Yearly',
   };
 
   constructor() {
@@ -95,7 +96,7 @@ export class RecurringSuggestionsDialogComponent {
         console.error('Failed to detect recurring patterns:', err);
         this.toast.error('Could not load recurring suggestions.');
         this.loading.set(false);
-      }
+      },
     });
   }
 

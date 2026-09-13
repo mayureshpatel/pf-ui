@@ -1,12 +1,16 @@
-import {inject, Injectable} from '@angular/core';
-import {HttpClient, HttpContext} from '@angular/common/http';
-import {Observable} from 'rxjs';
-import {environment} from '@env';
-import {CategoryRule, CategoryRuleCreateRequest, RuleChangePreview} from '@models/category-rule.model';
-import {AuthService} from '@core/auth/auth.service';
-import {SKIP_GENERIC_ERROR_TOAST} from '@core/auth/error.interceptor';
+import { inject, Injectable } from '@angular/core';
+import { HttpClient, HttpContext } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { environment } from '@env';
+import {
+  CategoryRule,
+  CategoryRuleCreateRequest,
+  RuleChangePreview,
+} from '@models/category-rule.model';
+import { AuthService } from '@core/auth/auth.service';
+import { SKIP_GENERIC_ERROR_TOAST } from '@core/auth/error.interceptor';
 
-const SKIP_TOAST_OPTIONS = {context: new HttpContext().set(SKIP_GENERIC_ERROR_TOAST, true)};
+const SKIP_TOAST_OPTIONS = { context: new HttpContext().set(SKIP_GENERIC_ERROR_TOAST, true) };
 
 /**
  * Service for managing automated category assignment rules.
@@ -15,7 +19,7 @@ const SKIP_TOAST_OPTIONS = {context: new HttpContext().set(SKIP_GENERIC_ERROR_TO
  * based on keyword matching in transaction descriptions.
  */
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class CategoryRuleApiService {
   private readonly http: HttpClient = inject(HttpClient);
@@ -36,7 +40,7 @@ export class CategoryRuleApiService {
   createRule(data: CategoryRuleCreateRequest): Observable<number> {
     const userId: number | undefined = this.authService.user()?.id;
 
-    return this.http.post<number>(this.apiUrl, {...data, userId});
+    return this.http.post<number>(this.apiUrl, { ...data, userId });
   }
 
   /**

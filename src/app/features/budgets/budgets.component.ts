@@ -1,31 +1,41 @@
-import {ChangeDetectionStrategy, Component, computed, DestroyRef, inject, OnInit, Signal, signal, WritableSignal} from '@angular/core';
-import {CommonModule} from '@angular/common';
-import {FormsModule} from '@angular/forms';
-import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
-import {ActivatedRoute, Params, Router} from '@angular/router';
-import {finalize, skip} from 'rxjs';
-import {CardModule} from 'primeng/card';
-import {ButtonModule} from 'primeng/button';
-import {TableModule} from 'primeng/table';
-import {ProgressBarModule} from 'primeng/progressbar';
-import {Select} from 'primeng/select';
-import {SelectButton} from 'primeng/selectbutton';
-import {CheckboxModule} from 'primeng/checkbox';
-import {ProgressSpinnerModule} from 'primeng/progressspinner';
-import {Tooltip} from 'primeng/tooltip';
-import {ConfirmationService} from 'primeng/api';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  DestroyRef,
+  inject,
+  OnInit,
+  Signal,
+  signal,
+  WritableSignal,
+} from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Params, Router } from '@angular/router';
+import { finalize, skip } from 'rxjs';
+import { CardModule } from 'primeng/card';
+import { ButtonModule } from 'primeng/button';
+import { TableModule } from 'primeng/table';
+import { ProgressBarModule } from 'primeng/progressbar';
+import { Select } from 'primeng/select';
+import { SelectButton } from 'primeng/selectbutton';
+import { CheckboxModule } from 'primeng/checkbox';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
+import { Tooltip } from 'primeng/tooltip';
+import { ConfirmationService } from 'primeng/api';
 
-import {Budget, BudgetStatus} from '@models/budget.model';
-import {Category} from '@models/category.model';
-import {MonthOption, YearOption} from '@models/dashboard.model';
-import {BudgetApiService} from './services/budget-api.service';
-import {CategoryApiService} from '@features/categories/services/category-api.service';
-import {ToastService} from '@core/services/toast.service';
-import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-toolbar';
-import {BudgetFormDialogComponent} from './components/budget-form-dialog/budget-form-dialog.component';
-import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
-import {getCategoryColor} from '@shared/utils/category.utils';
-import {PageErrorStateComponent} from '@shared/components/page-error-state/page-error-state.component';
+import { Budget, BudgetStatus } from '@models/budget.model';
+import { Category } from '@models/category.model';
+import { MonthOption, YearOption } from '@models/dashboard.model';
+import { BudgetApiService } from './services/budget-api.service';
+import { CategoryApiService } from '@features/categories/services/category-api.service';
+import { ToastService } from '@core/services/toast.service';
+import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen-toolbar';
+import { BudgetFormDialogComponent } from './components/budget-form-dialog/budget-form-dialog.component';
+import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
+import { getCategoryColor } from '@shared/utils/category.utils';
+import { PageErrorStateComponent } from '@shared/components/page-error-state/page-error-state.component';
 
 /**
  * Component for managing and tracking monthly budgets.
@@ -52,10 +62,10 @@ import {PageErrorStateComponent} from '@shared/components/page-error-state/page-
     BudgetFormDialogComponent,
     FormatCurrencyPipe,
     Tooltip,
-    PageErrorStateComponent
+    PageErrorStateComponent,
   ],
   templateUrl: './budgets.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BudgetsComponent implements OnInit {
   private readonly budgetApi: BudgetApiService = inject(BudgetApiService);
@@ -95,17 +105,17 @@ export class BudgetsComponent implements OnInit {
 
   /** Sum of all budgeted amounts for the selected period. */
   readonly totalBudgeted: Signal<number> = computed((): number =>
-    this.budgetStatuses().reduce((acc, curr): number => acc + curr.budgetedAmount, 0)
+    this.budgetStatuses().reduce((acc, curr): number => acc + curr.budgetedAmount, 0),
   );
 
   /** Sum of all spent amounts for the selected period. */
   readonly totalSpent: Signal<number> = computed((): number =>
-    this.budgetStatuses().reduce((acc, curr): number => acc + curr.spentAmount, 0)
+    this.budgetStatuses().reduce((acc, curr): number => acc + curr.spentAmount, 0),
   );
 
   /** Difference between total budgeted and total spent. */
-  readonly totalRemaining: Signal<number> = computed((): number =>
-    this.totalBudgeted() - this.totalSpent()
+  readonly totalRemaining: Signal<number> = computed(
+    (): number => this.totalBudgeted() - this.totalSpent(),
   );
 
   /** Overall percentage of the total budget spent. */
@@ -119,17 +129,23 @@ export class BudgetsComponent implements OnInit {
   });
 
   readonly viewOptions = [
-    {label: 'Monthly Status', value: 'monthly', icon: 'pi pi-calendar'},
-    {label: 'Manage All', value: 'all', icon: 'pi pi-list'}
+    { label: 'Monthly Status', value: 'monthly', icon: 'pi pi-calendar' },
+    { label: 'Manage All', value: 'all', icon: 'pi pi-list' },
   ];
 
   readonly monthOptions: MonthOption[] = [
-    {label: 'January', value: 1}, {label: 'February', value: 2},
-    {label: 'March', value: 3}, {label: 'April', value: 4},
-    {label: 'May', value: 5}, {label: 'June', value: 6},
-    {label: 'July', value: 7}, {label: 'August', value: 8},
-    {label: 'September', value: 9}, {label: 'October', value: 10},
-    {label: 'November', value: 11}, {label: 'December', value: 12}
+    { label: 'January', value: 1 },
+    { label: 'February', value: 2 },
+    { label: 'March', value: 3 },
+    { label: 'April', value: 4 },
+    { label: 'May', value: 5 },
+    { label: 'June', value: 6 },
+    { label: 'July', value: 7 },
+    { label: 'August', value: 8 },
+    { label: 'September', value: 9 },
+    { label: 'October', value: 10 },
+    { label: 'November', value: 11 },
+    { label: 'December', value: 12 },
   ];
 
   yearOptions: YearOption[] = [];
@@ -177,9 +193,9 @@ export class BudgetsComponent implements OnInit {
    */
   private updateUrlParams(): void {
     this.router.navigate([], {
-      queryParams: {month: this.selectedMonth(), year: this.selectedYear()},
+      queryParams: { month: this.selectedMonth(), year: this.selectedYear() },
       queryParamsHandling: 'replace',
-      replaceUrl: true
+      replaceUrl: true,
     });
   }
 
@@ -190,8 +206,8 @@ export class BudgetsComponent implements OnInit {
     const currentYear: number = new Date().getFullYear();
     const years: YearOption[] = [];
 
-    for (let year: number = 2020; year <= currentYear + 1; year++) {
-      years.push({label: year.toString(), value: year});
+    for (let year = 2020; year <= currentYear + 1; year++) {
+      years.push({ label: year.toString(), value: year });
     }
     this.yearOptions = years;
   }
@@ -200,14 +216,15 @@ export class BudgetsComponent implements OnInit {
    * Fetches all categories from the API.
    */
   private loadCategories(): void {
-    this.categoryApi.getCategories()
+    this.categoryApi
+      .getCategories()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (categories: Category[]): void => this.categories.set(categories),
         error: (err: any): void => {
           console.error('Failed to load categories:', err);
           this.toast.error('Failed to load categories');
-        }
+        },
       });
   }
 
@@ -228,10 +245,11 @@ export class BudgetsComponent implements OnInit {
   private loadBudgetStatus(): void {
     this.loading.set(true);
     this.loadError.set(false);
-    this.budgetApi.getBudgetStatus(this.selectedMonth(), this.selectedYear())
+    this.budgetApi
+      .getBudgetStatus(this.selectedMonth(), this.selectedYear())
       .pipe(
         takeUntilDestroyed(this.destroyRef),
-        finalize((): void => this.loading.set(false))
+        finalize((): void => this.loading.set(false)),
       )
       .subscribe({
         next: (status: BudgetStatus[]): void => this.budgetStatuses.set(status),
@@ -239,7 +257,7 @@ export class BudgetsComponent implements OnInit {
           console.error('Failed to load budget status:', err);
           this.toast.error('Failed to load budget status');
           this.loadError.set(true);
-        }
+        },
       });
   }
 
@@ -249,10 +267,11 @@ export class BudgetsComponent implements OnInit {
   private loadAllBudgets(): void {
     this.loading.set(true);
     this.loadError.set(false);
-    this.budgetApi.getAllBudgets()
+    this.budgetApi
+      .getAllBudgets()
       .pipe(
         takeUntilDestroyed(this.destroyRef),
-        finalize((): void => this.loading.set(false))
+        finalize((): void => this.loading.set(false)),
       )
       .subscribe({
         next: (budgets: Budget[]): void => this.allBudgets.set(budgets),
@@ -260,7 +279,7 @@ export class BudgetsComponent implements OnInit {
           console.error('Failed to load all budgets:', err);
           this.toast.error('Failed to load all budgets');
           this.loadError.set(true);
-        }
+        },
       });
   }
 
@@ -307,7 +326,8 @@ export class BudgetsComponent implements OnInit {
       rejectLabel: 'Cancel',
       acceptButtonStyleClass: 'p-button-danger',
       accept: (): void => {
-        this.budgetApi.deleteBudget(budget.id)
+        this.budgetApi
+          .deleteBudget(budget.id)
           .pipe(takeUntilDestroyed(this.destroyRef))
           .subscribe({
             next: (): void => {
@@ -317,9 +337,9 @@ export class BudgetsComponent implements OnInit {
             error: (err: any): void => {
               console.error('Failed to delete budget:', err);
               this.toast.error('Failed to delete budget');
-            }
+            },
           });
-      }
+      },
     });
   }
 
@@ -328,7 +348,10 @@ export class BudgetsComponent implements OnInit {
    * @param month The month number (1-12).
    */
   getMonthName(month: number): string {
-    return this.monthOptions.find((m: MonthOption): boolean => m.value === month)?.label || month.toString();
+    return (
+      this.monthOptions.find((m: MonthOption): boolean => m.value === month)?.label ||
+      month.toString()
+    );
   }
 
   /**

@@ -1,7 +1,7 @@
-import {Merchant} from '@models/merchant.model';
-import {Category} from '@models/category.model';
-import {Account, BankName} from "./account.model";
-import {Tag} from '@models/tag.model';
+import { Merchant } from '@models/merchant.model';
+import { Category } from '@models/category.model';
+import { Account, BankName } from './account.model';
+import { Tag } from '@models/tag.model';
 
 /**
  * Represents a transaction object.
@@ -42,7 +42,7 @@ export enum TransactionType {
   TRANSFER = 'TRANSFER',
   TRANSFER_IN = 'TRANSFER_IN',
   TRANSFER_OUT = 'TRANSFER_OUT',
-  ADJUSTMENT = 'ADJUSTMENT'
+  ADJUSTMENT = 'ADJUSTMENT',
 }
 
 /**

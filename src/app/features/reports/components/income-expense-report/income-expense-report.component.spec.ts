@@ -1,6 +1,6 @@
-import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {IncomeExpenseReportComponent} from './income-expense-report.component';
-import {Transaction, TransactionType} from '@models/transaction.model';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { IncomeExpenseReportComponent } from './income-expense-report.component';
+import { Transaction, TransactionType } from '@models/transaction.model';
 
 describe('IncomeExpenseReportComponent', () => {
   let component: IncomeExpenseReportComponent;
@@ -15,14 +15,14 @@ describe('IncomeExpenseReportComponent', () => {
       date,
       description: 'test',
       type,
-      merchant: {} as Transaction['merchant']
+      merchant: {} as Transaction['merchant'],
     }) as Transaction;
 
   const mockTransactions: Transaction[] = [
     txn('2026-01-10T00:00:00Z', TransactionType.INCOME, 4000),
     txn('2026-01-15T00:00:00Z', TransactionType.EXPENSE, 2500),
     txn('2026-02-05T00:00:00Z', TransactionType.INCOME, 4200),
-    txn('2026-02-20T00:00:00Z', TransactionType.EXPENSE, 4800)
+    txn('2026-02-20T00:00:00Z', TransactionType.EXPENSE, 4800),
   ];
 
   const setTransactions = (data: Transaction[]): void => {
@@ -32,7 +32,7 @@ describe('IncomeExpenseReportComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [IncomeExpenseReportComponent]
+      imports: [IncomeExpenseReportComponent],
     }).compileComponents();
 
     fixture = TestBed.createComponent(IncomeExpenseReportComponent);
@@ -53,8 +53,8 @@ describe('IncomeExpenseReportComponent', () => {
       // assert & verify -- exhaustive aggregation-logic coverage lives in
       // reports-data.service.spec.ts; this just confirms the component wires its input through
       expect(component.monthlyData()).toEqual([
-        {month: '2026-01', income: 4000, expense: 2500, netSavings: 1500},
-        {month: '2026-02', income: 4200, expense: 4800, netSavings: -600}
+        { month: '2026-01', income: 4000, expense: 2500, netSavings: 1500 },
+        { month: '2026-02', income: 4200, expense: 4800, netSavings: -600 },
       ]);
     });
   });
@@ -88,8 +88,8 @@ describe('IncomeExpenseReportComponent', () => {
       const [income, expense] = component.stackedBarData().datasets;
 
       // assert & verify
-      expect(income).toMatchObject({label: 'Income', data: [4000, 4200]});
-      expect(expense).toMatchObject({label: 'Expenses', data: [2500, 4800]});
+      expect(income).toMatchObject({ label: 'Income', data: [4000, 4200] });
+      expect(expense).toMatchObject({ label: 'Expenses', data: [2500, 4800] });
     });
   });
 
@@ -102,7 +102,7 @@ describe('IncomeExpenseReportComponent', () => {
       expect(component.lineChartData().labels).toEqual(['Jan 26', 'Feb 26']);
       expect(component.lineChartData().datasets[0]).toMatchObject({
         label: 'Net Savings',
-        data: [1500, -600]
+        data: [1500, -600],
       });
     });
   });

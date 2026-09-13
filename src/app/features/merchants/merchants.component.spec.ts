@@ -1,12 +1,12 @@
-import {vi} from 'vitest';
-import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {NoopAnimationsModule} from '@angular/platform-browser/animations';
-import {of, throwError} from 'rxjs';
+import { vi } from 'vitest';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { of, throwError } from 'rxjs';
 
-import {MerchantsComponent} from './merchants.component';
-import {MerchantApiService} from './services/merchant-api.service';
-import {ToastService} from '@core/services/toast.service';
-import {Merchant} from '@models/merchant.model';
+import { MerchantsComponent } from './merchants.component';
+import { MerchantApiService } from './services/merchant-api.service';
+import { ToastService } from '@core/services/toast.service';
+import { Merchant } from '@models/merchant.model';
 
 describe('MerchantsComponent', () => {
   let component: MerchantsComponent;
@@ -15,24 +15,24 @@ describe('MerchantsComponent', () => {
   let mockToast: any;
 
   const mockMerchants: Merchant[] = [
-    {id: 1, userId: 1, originalName: 'STARBUCKS #1234', cleanName: 'Starbucks'},
-    {id: 2, userId: 1, originalName: 'WHOLEFDS 5678', cleanName: 'Whole Foods'},
-    {id: 3, userId: 1, originalName: 'CHEVRON 00123 WA', cleanName: 'Chevron'}
+    { id: 1, userId: 1, originalName: 'STARBUCKS #1234', cleanName: 'Starbucks' },
+    { id: 2, userId: 1, originalName: 'WHOLEFDS 5678', cleanName: 'Whole Foods' },
+    { id: 3, userId: 1, originalName: 'CHEVRON 00123 WA', cleanName: 'Chevron' },
   ];
 
   beforeEach(async () => {
     mockMerchantApi = {
       getMerchants: vi.fn().mockReturnValue(of(mockMerchants)),
-      updateMerchant: vi.fn()
+      updateMerchant: vi.fn(),
     };
-    mockToast = {success: vi.fn(), error: vi.fn()};
+    mockToast = { success: vi.fn(), error: vi.fn() };
 
     await TestBed.configureTestingModule({
       imports: [MerchantsComponent, NoopAnimationsModule],
       providers: [
-        {provide: MerchantApiService, useValue: mockMerchantApi},
-        {provide: ToastService, useValue: mockToast}
-      ]
+        { provide: MerchantApiService, useValue: mockMerchantApi },
+        { provide: ToastService, useValue: mockToast },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(MerchantsComponent);
@@ -80,7 +80,7 @@ describe('MerchantsComponent', () => {
       component.searchTerm.set('starbu');
 
       // assert & verify
-      expect(component.filteredMerchants().map(m => m.id)).toEqual([1]);
+      expect(component.filteredMerchants().map((m) => m.id)).toEqual([1]);
     });
 
     it('should match on the original bank description, case-insensitively', () => {
@@ -88,7 +88,7 @@ describe('MerchantsComponent', () => {
       component.searchTerm.set('wholefds');
 
       // assert & verify
-      expect(component.filteredMerchants().map(m => m.id)).toEqual([2]);
+      expect(component.filteredMerchants().map((m) => m.id)).toEqual([2]);
     });
 
     it('should return every merchant, sorted by display name, when the search term is empty', () => {
@@ -96,7 +96,11 @@ describe('MerchantsComponent', () => {
       component.searchTerm.set('');
 
       // assert & verify
-      expect(component.filteredMerchants().map(m => m.cleanName)).toEqual(['Chevron', 'Starbucks', 'Whole Foods']);
+      expect(component.filteredMerchants().map((m) => m.cleanName)).toEqual([
+        'Chevron',
+        'Starbucks',
+        'Whole Foods',
+      ]);
     });
 
     it('should report noSearchResults when a search matches nothing, distinct from isEmpty', () => {

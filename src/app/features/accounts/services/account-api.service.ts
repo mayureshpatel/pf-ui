@@ -1,21 +1,21 @@
-import {inject, Injectable} from '@angular/core';
-import {HttpClient, HttpContext} from '@angular/common/http';
-import {Observable} from 'rxjs';
-import {environment} from '@env';
+import { inject, Injectable } from '@angular/core';
+import { HttpClient, HttpContext } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { environment } from '@env';
 import {
   Account,
   AccountCreateRequest,
   AccountReconcileRequest,
   AccountType,
-  AccountUpdateRequest
+  AccountUpdateRequest,
 } from '@models/account.model';
-import {Currency} from '@models/currency.model';
-import {SKIP_GENERIC_ERROR_TOAST} from '@core/auth/error.interceptor';
+import { Currency } from '@models/currency.model';
+import { SKIP_GENERIC_ERROR_TOAST } from '@core/auth/error.interceptor';
 
-const SKIP_TOAST_OPTIONS = {context: new HttpContext().set(SKIP_GENERIC_ERROR_TOAST, true)};
+const SKIP_TOAST_OPTIONS = { context: new HttpContext().set(SKIP_GENERIC_ERROR_TOAST, true) };
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class AccountApiService {
   private readonly http: HttpClient = inject(HttpClient);

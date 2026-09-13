@@ -4,7 +4,7 @@ import {
   FormGroup,
   ReactiveFormsModule,
   ValidationErrors,
-  Validators
+  Validators,
 } from '@angular/forms';
 import {
   ChangeDetectionStrategy,
@@ -19,31 +19,31 @@ import {
   OutputEmitterRef,
   Signal,
   signal,
-  WritableSignal
+  WritableSignal,
 } from '@angular/core';
-import {CommonModule} from '@angular/common';
-import {finalize} from 'rxjs';
-import {ButtonModule} from 'primeng/button';
-import {InputNumberModule} from 'primeng/inputnumber';
-import {SelectModule} from 'primeng/select';
-import {DatePicker} from 'primeng/datepicker';
-import {ToggleSwitchModule} from 'primeng/toggleswitch';
-import {MessageModule} from 'primeng/message';
+import { CommonModule } from '@angular/common';
+import { finalize } from 'rxjs';
+import { ButtonModule } from 'primeng/button';
+import { InputNumberModule } from 'primeng/inputnumber';
+import { SelectModule } from 'primeng/select';
+import { DatePicker } from 'primeng/datepicker';
+import { ToggleSwitchModule } from 'primeng/toggleswitch';
+import { MessageModule } from 'primeng/message';
 
-import {Account} from '@models/account.model';
-import {Merchant} from '@models/merchant.model';
+import { Account } from '@models/account.model';
+import { Merchant } from '@models/merchant.model';
 import {
   RecurringFrequency,
   RecurringSuggestion,
   RecurringTransaction,
   RecurringTransactionCreateRequest,
-  RecurringTransactionUpdateRequest
+  RecurringTransactionUpdateRequest,
 } from '@models/recurring.model';
-import {RecurringApiService} from '../../services/recurring-api.service';
-import {ToastService} from '@core/services/toast.service';
-import {AuthService} from '@core/auth/auth.service';
-import {DrawerComponent} from '@shared/components/drawer/drawer.component';
-import {fromLocalDateString, toLocalDateString} from '@shared/utils/transaction.utils';
+import { RecurringApiService } from '../../services/recurring-api.service';
+import { ToastService } from '@core/services/toast.service';
+import { AuthService } from '@core/auth/auth.service';
+import { DrawerComponent } from '@shared/components/drawer/drawer.component';
+import { fromLocalDateString, toLocalDateString } from '@shared/utils/transaction.utils';
 
 /**
  * Custom validator ensuring a date is in the future.
@@ -56,7 +56,7 @@ function futureDateValidator(control: AbstractControl): ValidationErrors | null 
   const date: Date = control.value instanceof Date ? control.value : new Date(control.value);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  return date > today ? null : {notFuture: true};
+  return date > today ? null : { notFuture: true };
 }
 
 /**
@@ -81,10 +81,10 @@ function futureDateValidator(control: AbstractControl): ValidationErrors | null 
     DatePicker,
     ToggleSwitchModule,
     MessageModule,
-    DrawerComponent
+    DrawerComponent,
   ],
   templateUrl: './recurring-form-dialog.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RecurringFormDialogComponent {
   private readonly recurringApi: RecurringApiService = inject(RecurringApiService);
@@ -101,10 +101,14 @@ export class RecurringFormDialogComponent {
   readonly merchants: InputSignal<Merchant[]> = input.required<Merchant[]>();
 
   /** Existing recurring entry for editing. */
-  readonly recurring: InputSignal<RecurringTransaction | null> = input<RecurringTransaction | null>(null);
+  readonly recurring: InputSignal<RecurringTransaction | null> = input<RecurringTransaction | null>(
+    null,
+  );
 
   /** A pattern suggestion to pre-fill the form. */
-  readonly suggestion: InputSignal<RecurringSuggestion | null> = input<RecurringSuggestion | null>(null);
+  readonly suggestion: InputSignal<RecurringSuggestion | null> = input<RecurringSuggestion | null>(
+    null,
+  );
 
   /** Emitted when a record is successfully saved to the backend. */
   readonly saved: OutputEmitterRef<void> = output<void>();
@@ -117,25 +121,29 @@ export class RecurringFormDialogComponent {
 
   /** Options for payment frequency. */
   readonly frequencyOptions = [
-    {label: 'Weekly', value: 'WEEKLY' as RecurringFrequency},
-    {label: 'Bi-Weekly', value: 'BI_WEEKLY' as RecurringFrequency},
-    {label: 'Monthly', value: 'MONTHLY' as RecurringFrequency},
-    {label: 'Quarterly', value: 'QUARTERLY' as RecurringFrequency},
-    {label: 'Yearly', value: 'YEARLY' as RecurringFrequency}
+    { label: 'Weekly', value: 'WEEKLY' as RecurringFrequency },
+    { label: 'Bi-Weekly', value: 'BI_WEEKLY' as RecurringFrequency },
+    { label: 'Monthly', value: 'MONTHLY' as RecurringFrequency },
+    { label: 'Quarterly', value: 'QUARTERLY' as RecurringFrequency },
+    { label: 'Yearly', value: 'YEARLY' as RecurringFrequency },
   ];
 
   /**
    * Strongly typed form for recurring transaction details.
    */
   readonly form = new FormGroup({
-    accountId: new FormControl<number | null>(null, {validators: [Validators.required]}),
-    merchantId: new FormControl<number | null>(null, {validators: [Validators.required]}),
+    accountId: new FormControl<number | null>(null, { validators: [Validators.required] }),
+    merchantId: new FormControl<number | null>(null, { validators: [Validators.required] }),
     amount: new FormControl<number | null>(null, {
-      validators: [Validators.required, Validators.min(0.01), Validators.max(99999999)]
+      validators: [Validators.required, Validators.min(0.01), Validators.max(99999999)],
     }),
-    frequency: new FormControl<RecurringFrequency | null>(null, {validators: [Validators.required]}),
-    nextDate: new FormControl<Date | null>(null, {validators: [Validators.required, futureDateValidator]}),
-    active: new FormControl<boolean>(true, {nonNullable: true})
+    frequency: new FormControl<RecurringFrequency | null>(null, {
+      validators: [Validators.required],
+    }),
+    nextDate: new FormControl<Date | null>(null, {
+      validators: [Validators.required, futureDateValidator],
+    }),
+    active: new FormControl<boolean>(true, { nonNullable: true }),
   });
 
   /** Indicates if the form is in edit mode. */
@@ -143,12 +151,15 @@ export class RecurringFormDialogComponent {
 
   /** Derived options for the account selection dropdown. */
   readonly accountOptions = computed(() =>
-    this.accounts().map((a: Account) => ({label: a.name, value: a.id, type: a.type.label}))
+    this.accounts().map((a: Account) => ({ label: a.name, value: a.id, type: a.type.label })),
   );
 
   /** Derived options for the merchant selection dropdown. */
   readonly merchantOptions = computed(() =>
-    this.merchants().map((m: Merchant) => ({label: m.cleanName || m.originalName || 'Unknown Merchant', value: m.id}))
+    this.merchants().map((m: Merchant) => ({
+      label: m.cleanName || m.originalName || 'Unknown Merchant',
+      value: m.id,
+    })),
   );
 
   /**
@@ -166,7 +177,7 @@ export class RecurringFormDialogComponent {
         amount: rec.amount,
         frequency: rec.frequency,
         nextDate: rec.nextDate ? fromLocalDateString(rec.nextDate) : null,
-        active: rec.active
+        active: rec.active,
       });
     } else if (sug) {
       this.form.patchValue({
@@ -174,10 +185,10 @@ export class RecurringFormDialogComponent {
         amount: sug.amount,
         frequency: sug.frequency,
         nextDate: sug.nextDate ? fromLocalDateString(sug.nextDate) : null,
-        active: true
+        active: true,
       });
     } else {
-      this.form.reset({active: true});
+      this.form.reset({ active: true });
     }
     this.errorMessage.set(null);
   }
@@ -212,14 +223,15 @@ export class RecurringFormDialogComponent {
         amount: raw.amount!,
         frequency: raw.frequency!,
         nextDate: nextDateISO,
-        active: raw.active
+        active: raw.active,
       };
 
-      this.recurringApi.update(updateReq)
+      this.recurringApi
+        .update(updateReq)
         .pipe(finalize(() => this.loading.set(false)))
         .subscribe({
           next: () => this.handleSuccess('Recurring entry updated'),
-          error: (err) => this.handleError(err, 'Failed to update entry')
+          error: (err) => this.handleError(err, 'Failed to update entry'),
         });
     } else {
       // CREATE
@@ -230,14 +242,15 @@ export class RecurringFormDialogComponent {
         amount: raw.amount!,
         frequency: raw.frequency!,
         nextDate: nextDateISO,
-        active: raw.active
+        active: raw.active,
       };
 
-      this.recurringApi.create(createReq)
+      this.recurringApi
+        .create(createReq)
         .pipe(finalize((): void => this.loading.set(false)))
         .subscribe({
           next: (): void => this.handleSuccess('Recurring entry created'),
-          error: (err: any): void => this.handleError(err, 'Failed to create entry')
+          error: (err: any): void => this.handleError(err, 'Failed to create entry'),
         });
     }
   }

@@ -1,12 +1,12 @@
-import {vi} from 'vitest';
-import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {By} from '@angular/platform-browser';
-import {of, throwError} from 'rxjs';
-import {InputNumber} from 'primeng/inputnumber';
-import {BudgetFormDialogComponent} from './budget-form-dialog.component';
-import {BudgetApiService} from '../../services/budget-api.service';
-import {ToastService} from '@core/services/toast.service';
-import {Category, CategoryType} from '@models/category.model';
+import { vi } from 'vitest';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { of, throwError } from 'rxjs';
+import { InputNumber } from 'primeng/inputnumber';
+import { BudgetFormDialogComponent } from './budget-form-dialog.component';
+import { BudgetApiService } from '../../services/budget-api.service';
+import { ToastService } from '@core/services/toast.service';
+import { Category, CategoryType } from '@models/category.model';
 
 describe('BudgetFormDialogComponent', () => {
   let component: BudgetFormDialogComponent;
@@ -14,22 +14,36 @@ describe('BudgetFormDialogComponent', () => {
   let mockBudgetApi: any;
   let mockToast: any;
 
-  const rent = {id: 1, userId: 1, name: 'Rent', type: CategoryType.EXPENSE, parent: null, icon: '', color: ''} as Category;
+  const rent = {
+    id: 1,
+    userId: 1,
+    name: 'Rent',
+    type: CategoryType.EXPENSE,
+    parent: null,
+    icon: '',
+    color: '',
+  } as Category;
   const subscriptions = {
-    id: 2, userId: 1, name: 'Subscriptions', type: CategoryType.EXPENSE, parent: rent, icon: '', color: ''
+    id: 2,
+    userId: 1,
+    name: 'Subscriptions',
+    type: CategoryType.EXPENSE,
+    parent: rent,
+    icon: '',
+    color: '',
   } as Category;
   const mockCategories: Category[] = [rent, subscriptions];
 
   beforeEach(async () => {
-    mockBudgetApi = {createBudget: vi.fn().mockReturnValue(of({}))};
-    mockToast = {success: vi.fn(), error: vi.fn(), info: vi.fn()};
+    mockBudgetApi = { createBudget: vi.fn().mockReturnValue(of({})) };
+    mockToast = { success: vi.fn(), error: vi.fn(), info: vi.fn() };
 
     await TestBed.configureTestingModule({
       imports: [BudgetFormDialogComponent],
       providers: [
-        {provide: BudgetApiService, useValue: mockBudgetApi},
-        {provide: ToastService, useValue: mockToast}
-      ]
+        { provide: BudgetApiService, useValue: mockBudgetApi },
+        { provide: ToastService, useValue: mockToast },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(BudgetFormDialogComponent);
@@ -49,14 +63,14 @@ describe('BudgetFormDialogComponent', () => {
     it('should group parent categories under "Main Categories"', () => {
       expect(component.categoryGroups()[0]).toEqual({
         label: 'Main Categories',
-        items: [{label: 'Rent', value: 1}]
+        items: [{ label: 'Rent', value: 1 }],
       });
     });
 
     it("should group a parent's children under '<Parent> (Sub-categories)'", () => {
       expect(component.categoryGroups()[1]).toEqual({
         label: 'Rent (Sub-categories)',
-        items: [{label: 'Subscriptions', value: 2}]
+        items: [{ label: 'Subscriptions', value: 2 }],
       });
     });
 
@@ -65,7 +79,7 @@ describe('BudgetFormDialogComponent', () => {
       fixture.detectChanges();
 
       expect(component.categoryGroups()).toEqual([
-        {label: 'Main Categories', items: [{label: 'Rent', value: 1}]}
+        { label: 'Main Categories', items: [{ label: 'Rent', value: 1 }] },
       ]);
     });
   });
@@ -146,7 +160,9 @@ describe('BudgetFormDialogComponent', () => {
 
     it('should surface the API error message and leave the dialog open on failure', () => {
       // arrange
-      mockBudgetApi.createBudget.mockReturnValue(throwError(() => ({error: {detail: 'Budget already locked'}})));
+      mockBudgetApi.createBudget.mockReturnValue(
+        throwError(() => ({ error: { detail: 'Budget already locked' } })),
+      );
       component.form.controls.categoryId.setValue(1);
       component.form.controls.amount.setValue(200);
 
@@ -161,7 +177,7 @@ describe('BudgetFormDialogComponent', () => {
 
     it('should fall back to a generic error message when the API error has no detail', () => {
       // arrange
-      mockBudgetApi.createBudget.mockReturnValue(throwError(() => ({error: {}})));
+      mockBudgetApi.createBudget.mockReturnValue(throwError(() => ({ error: {} })));
       component.form.controls.categoryId.setValue(1);
       component.form.controls.amount.setValue(200);
 

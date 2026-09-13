@@ -1,4 +1,5 @@
 import {
+  ChangeDetectionStrategy,
   Component,
   computed,
   effect,
@@ -11,20 +12,20 @@ import {
   OutputEmitterRef,
   Signal,
   signal,
-  WritableSignal
+  WritableSignal,
 } from '@angular/core';
-import {CommonModule} from '@angular/common';
-import {FormsModule} from '@angular/forms';
-import {finalize} from 'rxjs';
-import {DialogModule} from 'primeng/dialog';
-import {ButtonModule} from 'primeng/button';
-import {RadioButtonModule} from 'primeng/radiobutton';
-import {MessageModule} from 'primeng/message';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { finalize } from 'rxjs';
+import { DialogModule } from 'primeng/dialog';
+import { ButtonModule } from 'primeng/button';
+import { RadioButtonModule } from 'primeng/radiobutton';
+import { MessageModule } from 'primeng/message';
 
-import {Merchant} from '@models/merchant.model';
-import {MerchantApiService} from '../../services/merchant-api.service';
-import {ToastService} from '@core/services/toast.service';
-import {RestoreFocusOnHideDirective} from '@shared/directives/restore-focus-on-hide.directive';
+import { Merchant } from '@models/merchant.model';
+import { MerchantApiService } from '../../services/merchant-api.service';
+import { ToastService } from '@core/services/toast.service';
+import { RestoreFocusOnHideDirective } from '@shared/directives/restore-focus-on-hide.directive';
 
 /**
  * Confirmation dialog for merging two merchant records (PF-222): the user picks which of the two
@@ -42,9 +43,10 @@ import {RestoreFocusOnHideDirective} from '@shared/directives/restore-focus-on-h
     ButtonModule,
     RadioButtonModule,
     MessageModule,
-    RestoreFocusOnHideDirective
+    RestoreFocusOnHideDirective,
   ],
-  templateUrl: './merge-merchants-dialog.component.html'
+  templateUrl: './merge-merchants-dialog.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MergeMerchantsDialogComponent {
   private readonly merchantApi: MerchantApiService = inject(MerchantApiService);
@@ -71,7 +73,9 @@ export class MergeMerchantsDialogComponent {
   /** The merchant that will be merged away and deleted, once a choice has been made. */
   readonly mergedAwayMerchant: Signal<Merchant | null> = computed((): Merchant | null => {
     const survivorId: number | null = this.survivingMerchantId();
-    return survivorId === null ? null : (this.merchants().find((m: Merchant): boolean => m.id !== survivorId) ?? null);
+    return survivorId === null
+      ? null
+      : (this.merchants().find((m: Merchant): boolean => m.id !== survivorId) ?? null);
   });
 
   constructor() {
@@ -106,7 +110,8 @@ export class MergeMerchantsDialogComponent {
     this.saving.set(true);
     this.errorMessage.set(null);
 
-    this.merchantApi.mergeMerchants({survivingMerchantId: survivorId, mergedAwayMerchantId: mergedAway.id})
+    this.merchantApi
+      .mergeMerchants({ survivingMerchantId: survivorId, mergedAwayMerchantId: mergedAway.id })
       .pipe(finalize((): void => this.saving.set(false)))
       .subscribe({
         next: (): void => {
@@ -116,8 +121,10 @@ export class MergeMerchantsDialogComponent {
         },
         error: (err: any): void => {
           console.error('Error merging merchants:', err);
-          this.errorMessage.set(err.error?.detail || 'Failed to merge merchants. Please try again.');
-        }
+          this.errorMessage.set(
+            err.error?.detail || 'Failed to merge merchants. Please try again.',
+          );
+        },
       });
   }
 }

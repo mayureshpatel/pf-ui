@@ -50,7 +50,6 @@ export interface User {
   email: string;
 }
 
-
 /**
  * Represents the payload of a JWT token.
  *

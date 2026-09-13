@@ -1,20 +1,20 @@
-import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {CashFlowTrendComponent} from './cash-flow-trend.component';
-import {CashFlowTrend} from '@models/dashboard.model';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { CashFlowTrendComponent } from './cash-flow-trend.component';
+import { CashFlowTrend } from '@models/dashboard.model';
 
 describe('CashFlowTrendComponent', () => {
   let component: CashFlowTrendComponent;
   let fixture: ComponentFixture<CashFlowTrendComponent>;
 
   const mockTrendData: CashFlowTrend[] = [
-    {month: 12, year: 2025, income: 4800, expense: 3000},
-    {month: 1, year: 2026, income: 5000, expense: 3200},
-    {month: 3, year: 2026, income: 5200, expense: 2800}
+    { month: 12, year: 2025, income: 4800, expense: 3000 },
+    { month: 1, year: 2026, income: 5000, expense: 3200 },
+    { month: 3, year: 2026, income: 5200, expense: 2800 },
   ];
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [CashFlowTrendComponent]
+      imports: [CashFlowTrendComponent],
     }).compileComponents();
 
     fixture = TestBed.createComponent(CashFlowTrendComponent);
@@ -90,7 +90,7 @@ describe('CashFlowTrendComponent', () => {
       expect(component.chartData().labels).toEqual(['Dec 25', 'Jan 26', 'Mar 26']);
 
       // act
-      fixture.componentRef.setInput('data', [{month: 6, year: 2024, income: 100, expense: 50}]);
+      fixture.componentRef.setInput('data', [{ month: 6, year: 2024, income: 100, expense: 50 }]);
 
       // assert & verify
       const result = component.chartData();

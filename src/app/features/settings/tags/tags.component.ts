@@ -1,19 +1,29 @@
-import {Component, computed, DestroyRef, inject, OnInit, Signal, signal, WritableSignal} from '@angular/core';
-import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
-import {CommonModule} from '@angular/common';
-import {finalize} from 'rxjs';
-import {ButtonModule} from 'primeng/button';
-import {TableModule} from 'primeng/table';
-import {CardModule} from 'primeng/card';
-import {ConfirmationService} from 'primeng/api';
-import {TooltipModule} from 'primeng/tooltip';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  DestroyRef,
+  inject,
+  OnInit,
+  Signal,
+  signal,
+  WritableSignal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { CommonModule } from '@angular/common';
+import { finalize } from 'rxjs';
+import { ButtonModule } from 'primeng/button';
+import { TableModule } from 'primeng/table';
+import { CardModule } from 'primeng/card';
+import { ConfirmationService } from 'primeng/api';
+import { TooltipModule } from 'primeng/tooltip';
 
-import {Tag} from '@models/tag.model';
-import {TagApiService} from '@features/tags/services/tag-api.service';
-import {ToastService} from '@core/services/toast.service';
-import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-toolbar';
-import {TagFormDialogComponent} from './components/tag-form-dialog/tag-form-dialog.component';
-import {PageErrorStateComponent} from '@shared/components/page-error-state/page-error-state.component';
+import { Tag } from '@models/tag.model';
+import { TagApiService } from '@features/tags/services/tag-api.service';
+import { ToastService } from '@core/services/toast.service';
+import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen-toolbar';
+import { TagFormDialogComponent } from './components/tag-form-dialog/tag-form-dialog.component';
+import { PageErrorStateComponent } from '@shared/components/page-error-state/page-error-state.component';
 
 /**
  * Dedicated tag management page (PF-309): lists the user's tags and lets them create, rename,
@@ -31,9 +41,10 @@ import {PageErrorStateComponent} from '@shared/components/page-error-state/page-
     TooltipModule,
     ScreenToolbarComponent,
     TagFormDialogComponent,
-    PageErrorStateComponent
+    PageErrorStateComponent,
   ],
-  templateUrl: './tags.component.html'
+  templateUrl: './tags.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TagsComponent implements OnInit {
   private readonly api: TagApiService = inject(TagApiService);
@@ -57,7 +68,9 @@ export class TagsComponent implements OnInit {
   readonly selectedTag: WritableSignal<Tag | null> = signal(null);
 
   /** Indicates if no tags have been defined yet. */
-  readonly isEmpty: Signal<boolean> = computed((): boolean => this.tags().length === 0 && !this.loading());
+  readonly isEmpty: Signal<boolean> = computed(
+    (): boolean => this.tags().length === 0 && !this.loading(),
+  );
 
   ngOnInit(): void {
     this.loadTags();
@@ -69,10 +82,11 @@ export class TagsComponent implements OnInit {
   loadTags(): void {
     this.loading.set(true);
     this.loadError.set(false);
-    this.api.getTags()
+    this.api
+      .getTags()
       .pipe(
         takeUntilDestroyed(this.destroyRef),
-        finalize((): void => this.loading.set(false))
+        finalize((): void => this.loading.set(false)),
       )
       .subscribe({
         next: (data: Tag[]): void => this.tags.set(data),
@@ -80,7 +94,7 @@ export class TagsComponent implements OnInit {
           console.error('Failed to load tags:', err);
           this.toast.error('Failed to load tags.');
           this.loadError.set(true);
-        }
+        },
       });
   }
 
@@ -122,19 +136,22 @@ export class TagsComponent implements OnInit {
       rejectLabel: 'Cancel',
       acceptButtonStyleClass: 'p-button-danger',
       accept: (): void => {
-        this.api.deleteTag(tag.id)
+        this.api
+          .deleteTag(tag.id)
           .pipe(takeUntilDestroyed(this.destroyRef))
           .subscribe({
             next: (): void => {
               this.toast.success('Tag deleted.');
-              this.tags.update((list: Tag[]): Tag[] => list.filter((t: Tag): boolean => t.id !== tag.id));
+              this.tags.update((list: Tag[]): Tag[] =>
+                list.filter((t: Tag): boolean => t.id !== tag.id),
+              );
             },
             error: (err: any): void => {
               console.error('Delete failed:', err);
               this.toast.error('Failed to delete tag.');
-            }
+            },
           });
-      }
+      },
     });
   }
 }

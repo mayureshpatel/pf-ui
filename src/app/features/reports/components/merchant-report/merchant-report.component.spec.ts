@@ -1,16 +1,29 @@
-import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {MerchantReportComponent} from './merchant-report.component';
-import {Transaction, TransactionType} from '@models/transaction.model';
-import {Merchant} from '@models/merchant.model';
-import {Category, CategoryType} from '@models/category.model';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { MerchantReportComponent } from './merchant-report.component';
+import { Transaction, TransactionType } from '@models/transaction.model';
+import { Merchant } from '@models/merchant.model';
+import { Category, CategoryType } from '@models/category.model';
 
 describe('MerchantReportComponent', () => {
   let component: MerchantReportComponent;
   let fixture: ComponentFixture<MerchantReportComponent>;
 
-  const merchant = (id: number, cleanName: string): Merchant => ({id, userId: 1, originalName: cleanName, cleanName});
+  const merchant = (id: number, cleanName: string): Merchant => ({
+    id,
+    userId: 1,
+    originalName: cleanName,
+    cleanName,
+  });
   const category = (name: string): Category =>
-    ({id: 1, userId: 1, name, type: CategoryType.EXPENSE, parent: null, icon: 'pi-tag', color: ''}) as Category;
+    ({
+      id: 1,
+      userId: 1,
+      name,
+      type: CategoryType.EXPENSE,
+      parent: null,
+      icon: 'pi-tag',
+      color: '',
+    }) as Category;
 
   const expense = (id: number, m: Merchant, amount: number, cat?: Category): Transaction =>
     ({
@@ -21,7 +34,7 @@ describe('MerchantReportComponent', () => {
       date: '2026-01-15T00:00:00Z',
       description: 'test',
       type: TransactionType.EXPENSE,
-      merchant: m
+      merchant: m,
     }) as Transaction;
 
   const target = merchant(1, 'Target');
@@ -30,7 +43,7 @@ describe('MerchantReportComponent', () => {
   const mockTransactions: Transaction[] = [
     expense(1, target, 250, category('Shopping')),
     expense(2, target, 90, category('Groceries')),
-    expense(3, amazon, 60, category('Shopping'))
+    expense(3, amazon, 60, category('Shopping')),
   ];
 
   const setTransactions = (data: Transaction[]): void => {
@@ -40,7 +53,7 @@ describe('MerchantReportComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [MerchantReportComponent]
+      imports: [MerchantReportComponent],
     }).compileComponents();
 
     fixture = TestBed.createComponent(MerchantReportComponent);
@@ -60,8 +73,8 @@ describe('MerchantReportComponent', () => {
 
       // assert & verify
       expect(component.merchantData()).toEqual([
-        {merchant: target, total: 340, count: 2, categories: ['Shopping', 'Groceries']},
-        {merchant: amazon, total: 60, count: 1, categories: ['Shopping']}
+        { merchant: target, total: 340, count: 2, categories: ['Shopping', 'Groceries'] },
+        { merchant: amazon, total: 60, count: 1, categories: ['Shopping'] },
       ]);
     });
   });
@@ -92,8 +105,9 @@ describe('MerchantReportComponent', () => {
 
     it('should cap displayed merchants to the top 10 by spend', () => {
       // arrange -- 12 distinct merchants, descending totals
-      const many: Transaction[] = Array.from({length: 12}, (_, i): Transaction =>
-        expense(i, merchant(i, `Merchant ${i}`), 1000 - i * 10));
+      const many: Transaction[] = Array.from({ length: 12 }, (_, i): Transaction =>
+        expense(i, merchant(i, `Merchant ${i}`), 1000 - i * 10),
+      );
 
       // act
       setTransactions(many);
@@ -104,14 +118,14 @@ describe('MerchantReportComponent', () => {
       expect(component.barChartData().labels).not.toContain('Merchant 11');
     });
 
-    it("should assign each bar a deterministic hue-rotated color", () => {
+    it('should assign each bar a deterministic hue-rotated color', () => {
       // arrange & act
       setTransactions(mockTransactions);
 
       // assert & verify -- hsl(i * 36 % 360, 70%, 60%)
       expect(component.barChartData().datasets[0].backgroundColor).toEqual([
         'hsl(0, 70%, 60%)',
-        'hsl(36, 70%, 60%)'
+        'hsl(36, 70%, 60%)',
       ]);
     });
 
@@ -127,8 +141,9 @@ describe('MerchantReportComponent', () => {
   describe('doughnutChartData', () => {
     it('should cap displayed merchants to the top 5 by spend regardless of bar-chart data', () => {
       // arrange
-      const many: Transaction[] = Array.from({length: 8}, (_, i): Transaction =>
-        expense(i, merchant(i, `Merchant ${i}`), 1000 - i * 10));
+      const many: Transaction[] = Array.from({ length: 8 }, (_, i): Transaction =>
+        expense(i, merchant(i, `Merchant ${i}`), 1000 - i * 10),
+      );
 
       // act
       setTransactions(many);
@@ -182,7 +197,12 @@ describe('MerchantReportComponent', () => {
 
     it("should fall back through cleanName -> originalName -> 'Unknown Merchant' in the table", () => {
       // arrange & act -- cleanName blank, originalName present
-      const blankClean: Merchant = {id: 3, userId: 1, originalName: 'RAW MERCHANT NAME', cleanName: ''};
+      const blankClean: Merchant = {
+        id: 3,
+        userId: 1,
+        originalName: 'RAW MERCHANT NAME',
+        cleanName: '',
+      };
       setTransactions([expense(4, blankClean, 15)]);
 
       // assert & verify

@@ -1,5 +1,5 @@
-import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {YtdSummaryComponent} from './ytd-summary.component';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { YtdSummaryComponent } from './ytd-summary.component';
 
 describe('YtdSummaryComponent', () => {
   let component: YtdSummaryComponent;
@@ -7,14 +7,19 @@ describe('YtdSummaryComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [YtdSummaryComponent]
+      imports: [YtdSummaryComponent],
     }).compileComponents();
 
     fixture = TestBed.createComponent(YtdSummaryComponent);
     component = fixture.componentInstance;
   });
 
-  function setInputs(year: number, totalIncome: number, totalExpense: number, avgSavingsRate: number): void {
+  function setInputs(
+    year: number,
+    totalIncome: number,
+    totalExpense: number,
+    avgSavingsRate: number,
+  ): void {
     fixture.componentRef.setInput('year', year);
     fixture.componentRef.setInput('totalIncome', totalIncome);
     fixture.componentRef.setInput('totalExpense', totalExpense);

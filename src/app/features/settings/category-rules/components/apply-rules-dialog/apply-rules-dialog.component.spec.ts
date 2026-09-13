@@ -1,14 +1,17 @@
-import {vi} from 'vitest';
-import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {ApplyRulesDialogComponent} from './apply-rules-dialog.component';
-import {RuleChangePreview} from '@models/category-rule.model';
+import { vi } from 'vitest';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ApplyRulesDialogComponent } from './apply-rules-dialog.component';
+import { RuleChangePreview } from '@models/category-rule.model';
 
 describe('ApplyRulesDialogComponent', () => {
   let component: ApplyRulesDialogComponent;
   let fixture: ComponentFixture<ApplyRulesDialogComponent>;
 
-  const preview = (description: string, oldValue: string, newValue: string): RuleChangePreview =>
-    ({description, oldValue, newValue});
+  const preview = (description: string, oldValue: string, newValue: string): RuleChangePreview => ({
+    description,
+    oldValue,
+    newValue,
+  });
 
   const setPreviewItems = (items: RuleChangePreview[]): void => {
     fixture.componentRef.setInput('previewItems', items);
@@ -17,7 +20,7 @@ describe('ApplyRulesDialogComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [ApplyRulesDialogComponent]
+      imports: [ApplyRulesDialogComponent],
     }).compileComponents();
 
     fixture = TestBed.createComponent(ApplyRulesDialogComponent);
@@ -33,7 +36,10 @@ describe('ApplyRulesDialogComponent', () => {
 
   describe('totalCount', () => {
     it('should equal the number of preview items', () => {
-      setPreviewItems([preview('AMZN', 'Uncategorized', 'Shopping'), preview('WALMART', '', 'Groceries')]);
+      setPreviewItems([
+        preview('AMZN', 'Uncategorized', 'Shopping'),
+        preview('WALMART', '', 'Groceries'),
+      ]);
 
       expect(component.totalCount()).toBe(2);
     });
@@ -47,13 +53,13 @@ describe('ApplyRulesDialogComponent', () => {
 
   describe('isLargeUpdate', () => {
     it('should be false at exactly the 50-item threshold', () => {
-      setPreviewItems(Array.from({length: 50}, (_, i) => preview(`txn ${i}`, '', 'Shopping')));
+      setPreviewItems(Array.from({ length: 50 }, (_, i) => preview(`txn ${i}`, '', 'Shopping')));
 
       expect(component.isLargeUpdate()).toBe(false);
     });
 
     it('should be true just above the 50-item threshold', () => {
-      setPreviewItems(Array.from({length: 51}, (_, i) => preview(`txn ${i}`, '', 'Shopping')));
+      setPreviewItems(Array.from({ length: 51 }, (_, i) => preview(`txn ${i}`, '', 'Shopping')));
 
       expect(component.isLargeUpdate()).toBe(true);
     });
@@ -117,12 +123,12 @@ describe('ApplyRulesDialogComponent', () => {
     });
 
     it('should show the large-batch warning once over 50 matches', () => {
-      setPreviewItems(Array.from({length: 51}, (_, i) => preview(`txn ${i}`, '', 'Shopping')));
+      setPreviewItems(Array.from({ length: 51 }, (_, i) => preview(`txn ${i}`, '', 'Shopping')));
 
       expect(fixture.nativeElement.textContent).toContain('Large batch detected');
     });
 
-    it("should render the field label in the header and summary copy", () => {
+    it('should render the field label in the header and summary copy', () => {
       fixture.componentRef.setInput('fieldLabel', 'Merchant');
       setPreviewItems([]);
 
@@ -154,7 +160,10 @@ describe('ApplyRulesDialogComponent', () => {
     });
 
     it('should render one ledger row per preview item with description and new value', () => {
-      setPreviewItems([preview('AMZN MKTP US', 'Uncategorized', 'Shopping'), preview('WALMART', '', 'Groceries')]);
+      setPreviewItems([
+        preview('AMZN MKTP US', 'Uncategorized', 'Shopping'),
+        preview('WALMART', '', 'Groceries'),
+      ]);
 
       const rows = fixture.nativeElement.querySelectorAll('tbody tr');
       expect(rows).toHaveLength(2);

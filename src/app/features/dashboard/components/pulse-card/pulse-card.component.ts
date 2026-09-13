@@ -1,7 +1,14 @@
-import {ChangeDetectionStrategy, Component, computed, input, InputSignal, Signal} from '@angular/core';
-import {CommonModule, formatCurrency} from '@angular/common';
-import {CardModule} from 'primeng/card';
-import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  input,
+  InputSignal,
+  Signal,
+} from '@angular/core';
+import { CommonModule, formatCurrency } from '@angular/common';
+import { CardModule } from 'primeng/card';
+import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
 
 /**
  * A reusable KPI card for the dashboard that displays a metric, its trend,
@@ -12,7 +19,7 @@ import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
   standalone: true,
   imports: [CommonModule, CardModule, FormatCurrencyPipe],
   templateUrl: './pulse-card.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PulseCardComponent {
   /** The descriptive title of the metric. */

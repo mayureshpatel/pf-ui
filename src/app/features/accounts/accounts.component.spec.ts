@@ -1,12 +1,18 @@
-import {vi} from 'vitest';
-import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {AccountsComponent} from './accounts.component';
-import {AccountApiService} from './services/account-api.service';
-import {ToastService} from '@core/services/toast.service';
-import {ConfirmationService} from 'primeng/api';
-import {Account, AccountCreateRequest, AccountType, AccountUpdateRequest, BankName} from '@models/account.model';
-import {of, throwError} from 'rxjs';
-import {NoopAnimationsModule} from '@angular/platform-browser/animations';
+import { vi } from 'vitest';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { AccountsComponent } from './accounts.component';
+import { AccountApiService } from './services/account-api.service';
+import { ToastService } from '@core/services/toast.service';
+import { ConfirmationService } from 'primeng/api';
+import {
+  Account,
+  AccountCreateRequest,
+  AccountType,
+  AccountUpdateRequest,
+  BankName,
+} from '@models/account.model';
+import { of, throwError } from 'rxjs';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 
 describe('AccountsComponent', () => {
   let component: AccountsComponent;
@@ -16,7 +22,15 @@ describe('AccountsComponent', () => {
   let mockConfirmationService: any;
 
   const mockAccountTypes: AccountType[] = [
-    {code: 'CHECKING', label: 'Checking', isAsset: true, sortOrder: 1, isActive: true, icon: 'pi', color: 'blue'}
+    {
+      code: 'CHECKING',
+      label: 'Checking',
+      isAsset: true,
+      sortOrder: 1,
+      isActive: true,
+      icon: 'pi',
+      color: 'blue',
+    },
   ];
 
   const mockAccounts: Account[] = [
@@ -25,11 +39,11 @@ describe('AccountsComponent', () => {
       name: 'Test Checking',
       type: mockAccountTypes[0],
       currentBalance: 1000,
-      currency: {code: 'USD', name: 'US Dollar', symbol: '$', isActive: true},
+      currency: { code: 'USD', name: 'US Dollar', symbol: '$', isActive: true },
       bank: BankName.STANDARD,
       version: 1,
-      user: {id: 1}
-    } as Account
+      user: { id: 1 },
+    } as Account,
   ];
 
   beforeEach(async () => {
@@ -38,10 +52,10 @@ describe('AccountsComponent', () => {
       getAccountTypes: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
-      delete: vi.fn()
+      delete: vi.fn(),
     };
-    mockToast = {success: vi.fn(), error: vi.fn()};
-    mockConfirmationService = {confirm: vi.fn()};
+    mockToast = { success: vi.fn(), error: vi.fn() };
+    mockConfirmationService = { confirm: vi.fn() };
 
     mockAccountApi.getAccounts.mockReturnValue(of(mockAccounts));
     mockAccountApi.getAccountTypes.mockReturnValue(of(mockAccountTypes));
@@ -49,10 +63,10 @@ describe('AccountsComponent', () => {
     await TestBed.configureTestingModule({
       imports: [AccountsComponent, NoopAnimationsModule],
       providers: [
-        {provide: AccountApiService, useValue: mockAccountApi},
-        {provide: ToastService, useValue: mockToast},
-        {provide: ConfirmationService, useValue: mockConfirmationService}
-      ]
+        { provide: AccountApiService, useValue: mockAccountApi },
+        { provide: ToastService, useValue: mockToast },
+        { provide: ConfirmationService, useValue: mockConfirmationService },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(AccountsComponent);
@@ -93,8 +107,12 @@ describe('AccountsComponent', () => {
 
   describe('keyboard accessibility', () => {
     function findButtonByLabel(label: string): HTMLButtonElement {
-      const buttons: HTMLButtonElement[] = Array.from(fixture.nativeElement.querySelectorAll('button'));
-      const match = buttons.find((b: HTMLButtonElement): boolean => b.textContent?.includes(label) ?? false);
+      const buttons: HTMLButtonElement[] = Array.from(
+        fixture.nativeElement.querySelectorAll('button'),
+      );
+      const match = buttons.find(
+        (b: HTMLButtonElement): boolean => b.textContent?.includes(label) ?? false,
+      );
       expect(match, `expected a rendered <button> containing "${label}"`).toBeTruthy();
       return match!;
     }
@@ -106,7 +124,7 @@ describe('AccountsComponent', () => {
       const button = findButtonByLabel('New Account');
 
       // Act
-      button.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowDown', bubbles: true}));
+      button.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
 
       // Assert
       expect(openSpy).not.toHaveBeenCalled();
@@ -120,7 +138,7 @@ describe('AccountsComponent', () => {
       const button = findButtonByLabel('Add Your First Account');
 
       // Act
-      button.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowDown', bubbles: true}));
+      button.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
 
       // Assert
       expect(openSpy).not.toHaveBeenCalled();
@@ -157,7 +175,7 @@ describe('AccountsComponent', () => {
         type: 'CHECKING',
         startingBalance: 0,
         currencyCode: 'USD',
-        bankName: 'STANDARD'
+        bankName: 'STANDARD',
       };
 
       mockAccountApi.create.mockReturnValue(of(2));
@@ -172,7 +190,9 @@ describe('AccountsComponent', () => {
 
     it('should handle createAccount error', () => {
       component.selectedAccount.set(null);
-      mockAccountApi.create.mockReturnValue(throwError(() => ({error: {detail: 'Create error'}})));
+      mockAccountApi.create.mockReturnValue(
+        throwError(() => ({ error: { detail: 'Create error' } })),
+      );
 
       component.onSave({} as AccountCreateRequest);
 
@@ -187,7 +207,7 @@ describe('AccountsComponent', () => {
         type: 'CHECKING',
         currencyCode: 'USD',
         bankName: 'STANDARD',
-        version: 1
+        version: 1,
       };
 
       mockAccountApi.update.mockReturnValue(of(1));
@@ -244,7 +264,9 @@ describe('AccountsComponent', () => {
         return mockConfirmationService;
       });
 
-      mockAccountApi.delete.mockReturnValue(throwError(() => ({error: {detail: 'Cannot delete'}})));
+      mockAccountApi.delete.mockReturnValue(
+        throwError(() => ({ error: { detail: 'Cannot delete' } })),
+      );
 
       component.deleteAccount(mockAccounts[0]);
 

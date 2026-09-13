@@ -1,5 +1,5 @@
-import {describe, it, expect} from 'vitest';
-import {FormatCurrencyPipe} from './format-currency.pipe';
+import { describe, it, expect } from 'vitest';
+import { FormatCurrencyPipe } from './format-currency.pipe';
 
 describe('FormatCurrencyPipe', () => {
   const pipe = new FormatCurrencyPipe();

@@ -1,5 +1,12 @@
-import {ChangeDetectionStrategy, Component, input, InputSignal, output, OutputEmitterRef} from '@angular/core';
-import {ButtonModule} from 'primeng/button';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  input,
+  InputSignal,
+  output,
+  OutputEmitterRef,
+} from '@angular/core';
+import { ButtonModule } from 'primeng/button';
 
 /**
  * Persistent, on-page "something went wrong" state for a failed initial-load request --
@@ -15,7 +22,7 @@ import {ButtonModule} from 'primeng/button';
   standalone: true,
   imports: [ButtonModule],
   templateUrl: './page-error-state.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PageErrorStateComponent {
   /**

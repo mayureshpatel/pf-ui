@@ -1,21 +1,36 @@
-import {ChangeDetectionStrategy, Component, computed, DestroyRef, inject, OnInit, Signal, signal, WritableSignal} from '@angular/core';
-import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
-import {CommonModule} from '@angular/common';
-import {ButtonModule} from 'primeng/button';
-import {TableModule} from 'primeng/table';
-import {CardModule} from 'primeng/card';
-import {TooltipModule} from 'primeng/tooltip';
-import {ConfirmationService} from 'primeng/api';
-import {Account, AccountCreateRequest, AccountType, AccountUpdateRequest} from '@models/account.model';
-import {AccountApiService} from './services/account-api.service';
-import {AccountSummaryCardsComponent} from './components/account-summary-cards/account-summary-cards.component';
-import {AccountFormDrawerComponent} from './components/account-form-drawer/account-form-drawer.component';
-import {ReconcileDrawerComponent} from './components/reconcile-dialog/reconcile-dialog.component';
-import {ToastService} from '@core/services/toast.service';
-import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-toolbar';
-import {finalize, forkJoin} from 'rxjs';
-import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
-import {PageErrorStateComponent} from '@shared/components/page-error-state/page-error-state.component';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  DestroyRef,
+  inject,
+  OnInit,
+  Signal,
+  signal,
+  WritableSignal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { CommonModule } from '@angular/common';
+import { ButtonModule } from 'primeng/button';
+import { TableModule } from 'primeng/table';
+import { CardModule } from 'primeng/card';
+import { TooltipModule } from 'primeng/tooltip';
+import { ConfirmationService } from 'primeng/api';
+import {
+  Account,
+  AccountCreateRequest,
+  AccountType,
+  AccountUpdateRequest,
+} from '@models/account.model';
+import { AccountApiService } from './services/account-api.service';
+import { AccountSummaryCardsComponent } from './components/account-summary-cards/account-summary-cards.component';
+import { AccountFormDrawerComponent } from './components/account-form-drawer/account-form-drawer.component';
+import { ReconcileDrawerComponent } from './components/reconcile-dialog/reconcile-dialog.component';
+import { ToastService } from '@core/services/toast.service';
+import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen-toolbar';
+import { finalize, forkJoin } from 'rxjs';
+import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
+import { PageErrorStateComponent } from '@shared/components/page-error-state/page-error-state.component';
 
 @Component({
   selector: 'app-accounts',
@@ -31,10 +46,10 @@ import {PageErrorStateComponent} from '@shared/components/page-error-state/page-
     AccountFormDrawerComponent,
     ReconcileDrawerComponent,
     FormatCurrencyPipe,
-    PageErrorStateComponent
+    PageErrorStateComponent,
   ],
   templateUrl: './accounts.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AccountsComponent implements OnInit {
   private readonly accountApi: AccountApiService = inject(AccountApiService);
@@ -50,7 +65,9 @@ export class AccountsComponent implements OnInit {
   showReconcileDrawer: WritableSignal<boolean> = signal(false);
   selectedAccount: WritableSignal<Account | null> = signal(null);
 
-  isEmpty: Signal<boolean> = computed((): boolean => this.accounts().length === 0 && !this.loading());
+  isEmpty: Signal<boolean> = computed(
+    (): boolean => this.accounts().length === 0 && !this.loading(),
+  );
 
   /**
    * Lifecycle hook that initializes the component.
@@ -68,22 +85,23 @@ export class AccountsComponent implements OnInit {
 
     forkJoin({
       accounts: this.accountApi.getAccounts(),
-      accountTypes: this.accountApi.getAccountTypes()
+      accountTypes: this.accountApi.getAccountTypes(),
     })
       .pipe(
         takeUntilDestroyed(this.destroyRef),
-        finalize((): void => this.loading.set(false))
-      ).subscribe({
-      next: ({accounts, accountTypes}): void => {
-        this.accounts.set(accounts);
-        this.accountTypes.set(accountTypes);
-      },
-      error: (error: any): void => {
-        console.error('Error loading accounts:', error);
-        this.toast.error('Failed to load accounts');
-        this.loadError.set(true);
-      }
-    });
+        finalize((): void => this.loading.set(false)),
+      )
+      .subscribe({
+        next: ({ accounts, accountTypes }): void => {
+          this.accounts.set(accounts);
+          this.accountTypes.set(accountTypes);
+        },
+        error: (error: any): void => {
+          console.error('Error loading accounts:', error);
+          this.toast.error('Failed to load accounts');
+          this.loadError.set(true);
+        },
+      });
   }
 
   /**
@@ -127,7 +145,8 @@ export class AccountsComponent implements OnInit {
    * @param data The account data to create.
    */
   private createAccount(data: AccountCreateRequest): void {
-    this.accountApi.create(data)
+    this.accountApi
+      .create(data)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (): void => {
@@ -138,7 +157,7 @@ export class AccountsComponent implements OnInit {
         error: (error: any): void => {
           console.error('Error creating account:', error);
           this.toast.error(error.error?.detail || 'Failed to create account');
-        }
+        },
       });
   }
 
@@ -147,7 +166,8 @@ export class AccountsComponent implements OnInit {
    * @param data The updated account data.
    */
   private editAccount(data: AccountUpdateRequest): void {
-    this.accountApi.update(data)
+    this.accountApi
+      .update(data)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (): void => {
@@ -158,7 +178,7 @@ export class AccountsComponent implements OnInit {
         error: (error: any): void => {
           console.error('Error updating account:', error);
           this.toast.error(error.error?.detail || 'Failed to update account');
-        }
+        },
       });
   }
 
@@ -175,20 +195,23 @@ export class AccountsComponent implements OnInit {
       rejectLabel: 'Cancel',
       acceptButtonStyleClass: 'p-button-danger',
       accept: (): void => {
-        this.accountApi.delete(account.id)
+        this.accountApi
+          .delete(account.id)
           .pipe(takeUntilDestroyed(this.destroyRef))
           .subscribe({
             next: (): void => {
-              this.accounts.set(this.accounts().filter((a: Account): boolean => a.id !== account.id));
+              this.accounts.set(
+                this.accounts().filter((a: Account): boolean => a.id !== account.id),
+              );
               this.toast.success('Account deleted successfully');
             },
             error: (error: any): void => {
               console.error('Error deleting account:', error);
               const message = error.error?.detail || 'Failed to delete account';
               this.toast.error(message);
-            }
+            },
           });
-      }
+      },
     });
   }
 }

@@ -1,13 +1,17 @@
-import {ApplicationConfig, provideAppInitializer, provideBrowserGlobalErrorListeners} from '@angular/core';
-import {provideRouter} from '@angular/router';
-import {provideHttpClient, withInterceptors} from '@angular/common/http';
-import {providePrimeNG} from 'primeng/config';
-import {ConfirmationService, MessageService} from 'primeng/api';
+import {
+  ApplicationConfig,
+  provideAppInitializer,
+  provideBrowserGlobalErrorListeners,
+} from '@angular/core';
+import { provideRouter } from '@angular/router';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { providePrimeNG } from 'primeng/config';
+import { ConfirmationService, MessageService } from 'primeng/api';
 
-import {routes} from './app.routes';
-import {jwtInterceptor} from '@core/auth/jwt.interceptor';
-import {errorInterceptor} from '@core/auth/error.interceptor';
-import {FinancePreset} from './custom-presets';
+import { routes } from './app.routes';
+import { jwtInterceptor } from '@core/auth/jwt.interceptor';
+import { errorInterceptor } from '@core/auth/error.interceptor';
+import { FinancePreset } from './custom-presets';
 
 /**
  * Fixes an issue with PrimeNG animations where elements are not hidden properly after leaving animations.
@@ -22,10 +26,7 @@ function initPrimengLeaveAnimationFix(): void {
   document.addEventListener(
     'animationend',
     (event: AnimationEvent) => {
-      if (
-        event.animationName.startsWith('p-animate-') &&
-        event.animationName.includes('leave')
-      ) {
+      if (event.animationName.startsWith('p-animate-') && event.animationName.includes('leave')) {
         (event.target as HTMLElement).style.visibility = 'hidden';
       }
     },
@@ -46,13 +47,13 @@ export const appConfig: ApplicationConfig = {
           darkModeSelector: '.my-app-dark',
           cssLayer: {
             name: 'primeng',
-            order: 'theme, base, primeng'
-          }
-        }
+            order: 'theme, base, primeng',
+          },
+        },
       },
-      ripple: true
+      ripple: true,
     }),
     MessageService,
-    ConfirmationService
-  ]
+    ConfirmationService,
+  ],
 };

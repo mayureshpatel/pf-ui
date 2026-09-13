@@ -1,14 +1,14 @@
-import {ChangeDetectionStrategy, Component, inject, signal, WritableSignal} from '@angular/core';
-import {FormControl, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
-import {finalize} from 'rxjs';
-import {RouterLink} from '@angular/router';
-import {ButtonModule} from 'primeng/button';
-import {CardModule} from 'primeng/card';
-import {CheckboxModule} from 'primeng/checkbox';
-import {InputTextModule} from 'primeng/inputtext';
-import {PasswordModule} from 'primeng/password';
-import {MessageModule} from 'primeng/message';
-import {AuthService} from '@core/auth/auth.service';
+import { ChangeDetectionStrategy, Component, inject, signal, WritableSignal } from '@angular/core';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { finalize } from 'rxjs';
+import { RouterLink } from '@angular/router';
+import { ButtonModule } from 'primeng/button';
+import { CardModule } from 'primeng/card';
+import { CheckboxModule } from 'primeng/checkbox';
+import { InputTextModule } from 'primeng/inputtext';
+import { PasswordModule } from 'primeng/password';
+import { MessageModule } from 'primeng/message';
+import { AuthService } from '@core/auth/auth.service';
 
 /**
  * Component for handling user authentication via the login form.
@@ -27,10 +27,10 @@ import {AuthService} from '@core/auth/auth.service';
     CheckboxModule,
     InputTextModule,
     PasswordModule,
-    MessageModule
+    MessageModule,
   ],
   templateUrl: './login.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LoginComponent {
   private readonly authService: AuthService = inject(AuthService);
@@ -41,15 +41,15 @@ export class LoginComponent {
   readonly form = new FormGroup({
     username: new FormControl<string>('', {
       nonNullable: true,
-      validators: [Validators.required]
+      validators: [Validators.required],
     }),
     password: new FormControl<string>('', {
       nonNullable: true,
-      validators: [Validators.required]
+      validators: [Validators.required],
     }),
     rememberMe: new FormControl<boolean>(false, {
-      nonNullable: true
-    })
+      nonNullable: true,
+    }),
   });
 
   /**
@@ -78,14 +78,15 @@ export class LoginComponent {
     this.isSubmitting.set(true);
     this.errorMessage.set(null);
 
-    const {username, password, rememberMe} = this.form.getRawValue();
+    const { username, password, rememberMe } = this.form.getRawValue();
 
-    this.authService.login({username, password}, rememberMe)
+    this.authService
+      .login({ username, password }, rememberMe)
       .pipe(finalize((): void => this.isSubmitting.set(false)))
       .subscribe({
         error: (err: Error): void => {
           this.errorMessage.set(err.message);
-        }
+        },
       });
   }
 }

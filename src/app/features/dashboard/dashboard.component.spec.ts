@@ -1,14 +1,14 @@
-import {vi} from 'vitest';
-import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {By} from '@angular/platform-browser';
-import {of, throwError} from 'rxjs';
-import {DashboardComponent} from './dashboard.component';
-import {DashboardApiService} from './services/dashboard-api.service';
-import {CategoryApiService} from '@features/categories/services/category-api.service';
-import {ToastService} from '@core/services/toast.service';
-import {DashboardPulse} from '@models/dashboard.model';
-import {PulseCardComponent} from './components/pulse-card/pulse-card.component';
-import {YtdSummaryComponent} from './components/ytd-summary/ytd-summary.component';
+import { vi } from 'vitest';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { of, throwError } from 'rxjs';
+import { DashboardComponent } from './dashboard.component';
+import { DashboardApiService } from './services/dashboard-api.service';
+import { CategoryApiService } from '@features/categories/services/category-api.service';
+import { ToastService } from '@core/services/toast.service';
+import { DashboardPulse } from '@models/dashboard.model';
+import { PulseCardComponent } from './components/pulse-card/pulse-card.component';
+import { YtdSummaryComponent } from './components/ytd-summary/ytd-summary.component';
 
 describe('DashboardComponent', () => {
   let fixture: ComponentFixture<DashboardComponent>;
@@ -17,13 +17,16 @@ describe('DashboardComponent', () => {
   let mockToast: any;
 
   const mockPulse: DashboardPulse = {
-    currentIncome: 1000, previousIncome: 900,
-    currentExpense: 500, previousExpense: 450,
-    currentSavingsRate: 50, previousSavingsRate: 50
+    currentIncome: 1000,
+    previousIncome: 900,
+    currentExpense: 500,
+    previousExpense: 450,
+    currentSavingsRate: 50,
+    previousSavingsRate: 50,
   };
   const mockMerchants = [1, 2, 3, 4, 5, 6, 7].map((id) => ({
-    merchant: {id, cleanName: `Merchant ${id}`, originalName: `Merchant ${id}`},
-    total: id * 10
+    merchant: { id, cleanName: `Merchant ${id}`, originalName: `Merchant ${id}` },
+    total: id * 10,
   }));
 
   function setUp(now: Date): void {
@@ -36,17 +39,17 @@ describe('DashboardComponent', () => {
       getYtdSummary: vi.fn().mockReturnValue(of({})),
       getActionItems: vi.fn().mockReturnValue(of([])),
       getCategoryBreakdown: vi.fn().mockReturnValue(of([])),
-      getMerchantBreakdown: vi.fn().mockReturnValue(of(mockMerchants))
+      getMerchantBreakdown: vi.fn().mockReturnValue(of(mockMerchants)),
     };
-    mockToast = {success: vi.fn(), error: vi.fn(), info: vi.fn()};
+    mockToast = { success: vi.fn(), error: vi.fn(), info: vi.fn() };
 
     TestBed.configureTestingModule({
       imports: [DashboardComponent],
       providers: [
-        {provide: DashboardApiService, useValue: mockDashboardApi},
-        {provide: CategoryApiService, useValue: {}},
-        {provide: ToastService, useValue: mockToast}
-      ]
+        { provide: DashboardApiService, useValue: mockDashboardApi },
+        { provide: CategoryApiService, useValue: {} },
+        { provide: ToastService, useValue: mockToast },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(DashboardComponent);
@@ -95,7 +98,7 @@ describe('DashboardComponent', () => {
       component.selectedPreset.set('THIS_MONTH');
 
       // assert & verify
-      expect(component.periodRange()).toEqual({start: '2026-06-01', end: '2026-06-15'});
+      expect(component.periodRange()).toEqual({ start: '2026-06-01', end: '2026-06-15' });
     });
 
     it('should compute LAST_MONTH as the full previous calendar month', () => {
@@ -103,7 +106,7 @@ describe('DashboardComponent', () => {
       component.selectedPreset.set('LAST_MONTH');
 
       // assert & verify
-      expect(component.periodRange()).toEqual({start: '2026-05-01', end: '2026-05-31'});
+      expect(component.periodRange()).toEqual({ start: '2026-05-01', end: '2026-05-31' });
     });
 
     it('should compute THIS_YEAR as Jan 1 through today', () => {
@@ -111,7 +114,7 @@ describe('DashboardComponent', () => {
       component.selectedPreset.set('THIS_YEAR');
 
       // assert & verify
-      expect(component.periodRange()).toEqual({start: '2026-01-01', end: '2026-06-15'});
+      expect(component.periodRange()).toEqual({ start: '2026-01-01', end: '2026-06-15' });
     });
 
     it('should compute LAST_YEAR as the full previous calendar year', () => {
@@ -119,7 +122,7 @@ describe('DashboardComponent', () => {
       component.selectedPreset.set('LAST_YEAR');
 
       // assert & verify
-      expect(component.periodRange()).toEqual({start: '2025-01-01', end: '2025-12-31'});
+      expect(component.periodRange()).toEqual({ start: '2025-01-01', end: '2025-12-31' });
     });
 
     it('should return null for CUSTOM, signaling month/year filtering instead of a range', () => {
@@ -143,7 +146,12 @@ describe('DashboardComponent', () => {
       fixture.detectChanges();
 
       // assert & verify
-      expect(mockDashboardApi.getPulse).toHaveBeenCalledWith(undefined, undefined, '2026-05-01', '2026-05-31');
+      expect(mockDashboardApi.getPulse).toHaveBeenCalledWith(
+        undefined,
+        undefined,
+        '2026-05-01',
+        '2026-05-31',
+      );
     });
 
     it('should call getPulse with month/year (no range) for CUSTOM', () => {
@@ -179,9 +187,14 @@ describe('DashboardComponent', () => {
 
     it('should pass loaded ytd data down to the ytd summary widget', () => {
       // arrange
-      mockDashboardApi.getYtdSummary.mockReturnValue(of({
-        year: 2026, totalIncome: 12000, totalExpense: 8000, avgSavingsRate: 33.3
-      }));
+      mockDashboardApi.getYtdSummary.mockReturnValue(
+        of({
+          year: 2026,
+          totalIncome: 12000,
+          totalExpense: 8000,
+          avgSavingsRate: 33.3,
+        }),
+      );
 
       // act
       fixture.detectChanges();

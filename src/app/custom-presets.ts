@@ -1,6 +1,6 @@
-import {definePreset} from '@primeuix/themes';
+import { definePreset } from '@primeuix/themes';
 import Aura from '@primeuix/themes/aura';
-import {Preset} from '@primeuix/themes/types';
+import { Preset } from '@primeuix/themes/types';
 
 /**
  * Base Emerald Preset
@@ -18,7 +18,7 @@ export const FinancePreset: Preset = definePreset(Aura, {
       700: '#047857',
       800: '#065f46',
       900: '#064e3b',
-      950: '#022c22'
+      950: '#022c22',
     },
     colorScheme: {
       light: {
@@ -34,8 +34,8 @@ export const FinancePreset: Preset = definePreset(Aura, {
           700: '#44403c',
           800: '#292524',
           900: '#1c1917',
-          950: '#0c0a09'
-        }
+          950: '#0c0a09',
+        },
       },
       dark: {
         surface: {
@@ -50,9 +50,9 @@ export const FinancePreset: Preset = definePreset(Aura, {
           700: '#44403c',
           800: '#292524',
           900: '#1c1917',
-          950: '#0c0a09'
-        }
-      }
-    }
-  }
+          950: '#0c0a09',
+        },
+      },
+    },
+  },
 });

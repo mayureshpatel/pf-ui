@@ -10,19 +10,25 @@ import {
   OutputEmitterRef,
   Signal,
   signal,
-  WritableSignal
+  WritableSignal,
 } from '@angular/core';
-import {CommonModule} from '@angular/common';
-import {FormControl, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
-import {ButtonModule} from 'primeng/button';
-import {InputTextModule} from 'primeng/inputtext';
-import {SelectModule} from 'primeng/select';
-import {InputNumberModule} from 'primeng/inputnumber';
-import {MessageModule} from 'primeng/message';
-import {Account, AccountCreateRequest, AccountType, AccountUpdateRequest, BankName} from '@models/account.model';
-import {DrawerComponent} from '@shared/components/drawer/drawer.component';
-import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
-import {BankOption} from '@models/transaction.model';
+import { CommonModule } from '@angular/common';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ButtonModule } from 'primeng/button';
+import { InputTextModule } from 'primeng/inputtext';
+import { SelectModule } from 'primeng/select';
+import { InputNumberModule } from 'primeng/inputnumber';
+import { MessageModule } from 'primeng/message';
+import {
+  Account,
+  AccountCreateRequest,
+  AccountType,
+  AccountUpdateRequest,
+  BankName,
+} from '@models/account.model';
+import { DrawerComponent } from '@shared/components/drawer/drawer.component';
+import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
+import { BankOption } from '@models/transaction.model';
 
 @Component({
   selector: 'app-account-form-drawer',
@@ -35,10 +41,10 @@ import {BankOption} from '@models/transaction.model';
     InputNumberModule,
     MessageModule,
     DrawerComponent,
-    FormatCurrencyPipe
+    FormatCurrencyPipe,
   ],
   templateUrl: './account-form-drawer.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AccountFormDrawerComponent {
   visible: ModelSignal<boolean> = model.required<boolean>();
@@ -46,35 +52,63 @@ export class AccountFormDrawerComponent {
   accountTypes: InputSignal<AccountType[]> = input.required<AccountType[]>();
   saving: InputSignal<boolean> = input<boolean>(false);
 
-  save: OutputEmitterRef<AccountUpdateRequest | AccountCreateRequest> = output<AccountUpdateRequest | AccountCreateRequest>();
+  save: OutputEmitterRef<AccountUpdateRequest | AccountCreateRequest> = output<
+    AccountUpdateRequest | AccountCreateRequest
+  >();
 
   errorMessage: WritableSignal<string | null> = signal(null);
 
   isEditMode: Signal<boolean> = computed((): boolean => this.account() !== null);
-  drawerTitle: Signal<string> = computed((): string => this.isEditMode() ? 'Edit Account' : 'Create Account');
-  drawerIcon: Signal<string> = computed((): string => this.isEditMode() ? 'pi-wallet' : 'pi-plus');
+  drawerTitle: Signal<string> = computed((): string =>
+    this.isEditMode() ? 'Edit Account' : 'Create Account',
+  );
+  drawerIcon: Signal<string> = computed((): string =>
+    this.isEditMode() ? 'pi-wallet' : 'pi-plus',
+  );
 
   bankOptions: BankOption[] = [
-    {label: 'Standard CSV', value: BankName.STANDARD, description: 'Generic format (Date, Description, Amount, Type)'},
-    {label: 'Capital One', value: BankName.CAPITAL_ONE, description: 'Capital One bank export format'},
-    {label: 'Discover', value: BankName.DISCOVER, description: 'Discover credit card export format'},
-    {label: 'Synovus', value: BankName.SYNOVUS, description: 'Synovus bank export format'},
-    {label: 'Universal CSV', value: BankName.UNIVERSAL, description: 'Auto-detect columns (Date, Amount, Description)'}
+    {
+      label: 'Standard CSV',
+      value: BankName.STANDARD,
+      description: 'Generic format (Date, Description, Amount, Type)',
+    },
+    {
+      label: 'Capital One',
+      value: BankName.CAPITAL_ONE,
+      description: 'Capital One bank export format',
+    },
+    {
+      label: 'Discover',
+      value: BankName.DISCOVER,
+      description: 'Discover credit card export format',
+    },
+    { label: 'Synovus', value: BankName.SYNOVUS, description: 'Synovus bank export format' },
+    {
+      label: 'Universal CSV',
+      value: BankName.UNIVERSAL,
+      description: 'Auto-detect columns (Date, Amount, Description)',
+    },
   ];
 
-  private readonly defaultCurrency: string = Intl.NumberFormat().resolvedOptions().currency ?? 'USD';
+  private readonly defaultCurrency: string =
+    Intl.NumberFormat().resolvedOptions().currency ?? 'USD';
 
   form = new FormGroup({
-    id: new FormControl<number | null>({value: null, disabled: true}),
+    id: new FormControl<number | null>({ value: null, disabled: true }),
     name: new FormControl('', {
-      nonNullable: true, validators: [Validators.required, Validators.maxLength(100)]
+      nonNullable: true,
+      validators: [Validators.required, Validators.maxLength(100)],
     }),
-    type: new FormControl<AccountType | null>(null, {validators: [Validators.required]}),
-    currencyCode: new FormControl({value: this.defaultCurrency, disabled: true}, {
-      nonNullable: true, validators: [Validators.required]
-    }),
-    currentBalance: new FormControl(0, {nonNullable: true, validators: [Validators.required]}),
-    bankName: new FormControl<BankName | null>(null)
+    type: new FormControl<AccountType | null>(null, { validators: [Validators.required] }),
+    currencyCode: new FormControl(
+      { value: this.defaultCurrency, disabled: true },
+      {
+        nonNullable: true,
+        validators: [Validators.required],
+      },
+    ),
+    currentBalance: new FormControl(0, { nonNullable: true, validators: [Validators.required] }),
+    bankName: new FormControl<BankName | null>(null),
   });
 
   /**
@@ -97,7 +131,7 @@ export class AccountFormDrawerComponent {
         type: rawValue.type!.code,
         currencyCode: rawValue.currencyCode,
         bankName: rawValue.bankName ?? null,
-        version: selectedAccount.version
+        version: selectedAccount.version,
       };
 
       this.save.emit(updateRequest);
@@ -107,7 +141,7 @@ export class AccountFormDrawerComponent {
         type: rawValue.type!.code,
         startingBalance: rawValue.currentBalance,
         currencyCode: rawValue.currencyCode,
-        bankName: rawValue.bankName ?? null
+        bankName: rawValue.bankName ?? null,
       };
 
       this.save.emit(createRequest);
@@ -131,7 +165,7 @@ export class AccountFormDrawerComponent {
         type: account.type,
         currencyCode: account.currency.code,
         currentBalance: account.currentBalance,
-        bankName: account.bank
+        bankName: account.bank,
       });
       this.form.controls.currentBalance.disable();
     } else {
@@ -141,7 +175,7 @@ export class AccountFormDrawerComponent {
         type: null,
         currencyCode: this.defaultCurrency,
         currentBalance: 0,
-        bankName: null
+        bankName: null,
       });
       this.form.controls.currentBalance.enable();
     }

@@ -1,5 +1,5 @@
-import {Component, input, InputSignal} from '@angular/core';
-import {CommonModule} from '@angular/common';
+import { ChangeDetectionStrategy, Component, input, InputSignal } from '@angular/core';
+import { CommonModule } from '@angular/common';
 
 /**
  * Toolbar component for table operations.
@@ -20,6 +20,7 @@ import {CommonModule} from '@angular/common';
   imports: [CommonModule],
   templateUrl: './table-toolbar.html',
   styleUrl: './table-toolbar.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TableToolbarComponent {
   /**
@@ -38,5 +39,7 @@ export class TableToolbarComponent {
    * Color theme for the toolbar.
    * Default: 'primary'
    */
-  severity: InputSignal<'primary' | 'info' | 'success'> = input<'primary' | 'info' | 'success'>('primary');
+  severity: InputSignal<'primary' | 'info' | 'success'> = input<'primary' | 'info' | 'success'>(
+    'primary',
+  );
 }

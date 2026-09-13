@@ -1,8 +1,14 @@
-import {HttpContextToken, HttpErrorResponse, HttpHandlerFn, HttpInterceptorFn, HttpRequest} from '@angular/common/http';
-import {inject} from '@angular/core';
-import {catchError, Observable, throwError} from 'rxjs';
-import {AuthService} from './auth.service';
-import {ToastService} from '../services/toast.service';
+import {
+  HttpContextToken,
+  HttpErrorResponse,
+  HttpHandlerFn,
+  HttpInterceptorFn,
+  HttpRequest,
+} from '@angular/common/http';
+import { inject } from '@angular/core';
+import { catchError, Observable, throwError } from 'rxjs';
+import { AuthService } from './auth.service';
+import { ToastService } from '../services/toast.service';
 
 /**
  * Set on a request's `HttpContext` to opt out of the interceptor's generic error toast --
@@ -21,7 +27,7 @@ export const SKIP_GENERIC_ERROR_TOAST = new HttpContextToken<boolean>((): boolea
  */
 export const errorInterceptor: HttpInterceptorFn = (
   req: HttpRequest<unknown>,
-  next: HttpHandlerFn
+  next: HttpHandlerFn,
 ) => {
   const authService: AuthService = inject(AuthService);
   const toastService: ToastService = inject(ToastService);
@@ -37,6 +43,6 @@ export const errorInterceptor: HttpInterceptorFn = (
         toastService.error('Something went wrong', 'Please try again.');
       }
       return throwError((): HttpErrorResponse => error);
-    })
+    }),
   );
 };

@@ -1,13 +1,13 @@
-import {vi} from 'vitest';
-import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {NoopAnimationsModule} from '@angular/platform-browser/animations';
-import {of, throwError} from 'rxjs';
+import { vi } from 'vitest';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { of, throwError } from 'rxjs';
 
-import {TagFormDialogComponent} from './tag-form-dialog.component';
-import {TagApiService} from '@features/tags/services/tag-api.service';
-import {AuthService} from '@core/auth/auth.service';
-import {ToastService} from '@core/services/toast.service';
-import {Tag} from '@models/tag.model';
+import { TagFormDialogComponent } from './tag-form-dialog.component';
+import { TagApiService } from '@features/tags/services/tag-api.service';
+import { AuthService } from '@core/auth/auth.service';
+import { ToastService } from '@core/services/toast.service';
+import { Tag } from '@models/tag.model';
 
 describe('TagFormDialogComponent', () => {
   let component: TagFormDialogComponent;
@@ -16,23 +16,23 @@ describe('TagFormDialogComponent', () => {
   let mockAuthService: any;
   let mockToast: any;
 
-  const existingTag: Tag = {id: 5, userId: 1, name: 'Travel', color: '#ff6b6b'};
+  const existingTag: Tag = { id: 5, userId: 1, name: 'Travel', color: '#ff6b6b' };
 
   beforeEach(async () => {
     mockTagApi = {
       createTag: vi.fn().mockReturnValue(of(9)),
-      updateTag: vi.fn().mockReturnValue(of(1))
+      updateTag: vi.fn().mockReturnValue(of(1)),
     };
-    mockAuthService = {user: vi.fn().mockReturnValue({id: 1, username: 'test'})};
-    mockToast = {success: vi.fn(), error: vi.fn()};
+    mockAuthService = { user: vi.fn().mockReturnValue({ id: 1, username: 'test' }) };
+    mockToast = { success: vi.fn(), error: vi.fn() };
 
     await TestBed.configureTestingModule({
       imports: [TagFormDialogComponent, NoopAnimationsModule],
       providers: [
-        {provide: TagApiService, useValue: mockTagApi},
-        {provide: AuthService, useValue: mockAuthService},
-        {provide: ToastService, useValue: mockToast}
-      ]
+        { provide: TagApiService, useValue: mockTagApi },
+        { provide: AuthService, useValue: mockAuthService },
+        { provide: ToastService, useValue: mockToast },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(TagFormDialogComponent);
@@ -87,13 +87,17 @@ describe('TagFormDialogComponent', () => {
     // arrange
     component.visible.set(true);
     fixture.detectChanges();
-    component.form.setValue({name: 'Reimbursable', color: '00ff00'});
+    component.form.setValue({ name: 'Reimbursable', color: '00ff00' });
 
     // act
     component.onSubmit();
 
     // assert & verify
-    expect(mockTagApi.createTag).toHaveBeenCalledWith({userId: 1, name: 'Reimbursable', color: '#00ff00'});
+    expect(mockTagApi.createTag).toHaveBeenCalledWith({
+      userId: 1,
+      name: 'Reimbursable',
+      color: '#00ff00',
+    });
   });
 
   it("should call updateTag with the tag's id and the '#'-prefixed color when editing", () => {
@@ -101,13 +105,17 @@ describe('TagFormDialogComponent', () => {
     fixture.componentRef.setInput('tag', existingTag);
     component.visible.set(true);
     fixture.detectChanges();
-    component.form.setValue({name: 'Travel Updated', color: '123456'});
+    component.form.setValue({ name: 'Travel Updated', color: '123456' });
 
     // act
     component.onSubmit();
 
     // assert & verify
-    expect(mockTagApi.updateTag).toHaveBeenCalledWith({id: 5, name: 'Travel Updated', color: '#123456'});
+    expect(mockTagApi.updateTag).toHaveBeenCalledWith({
+      id: 5,
+      name: 'Travel Updated',
+      color: '#123456',
+    });
     expect(mockTagApi.createTag).not.toHaveBeenCalled();
   });
 
@@ -130,7 +138,9 @@ describe('TagFormDialogComponent', () => {
 
   it('should show an error message and keep the dialog open when the save fails', () => {
     // arrange
-    mockTagApi.createTag.mockReturnValue(throwError(() => ({error: {detail: 'A tag with this name already exists.'}})));
+    mockTagApi.createTag.mockReturnValue(
+      throwError(() => ({ error: { detail: 'A tag with this name already exists.' } })),
+    );
     component.visible.set(true);
     fixture.detectChanges();
     component.form.controls.name.setValue('Duplicate');

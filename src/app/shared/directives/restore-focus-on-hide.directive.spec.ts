@@ -1,9 +1,9 @@
-import {Component, signal, WritableSignal} from '@angular/core';
-import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {By} from '@angular/platform-browser';
-import {NoopAnimationsModule} from '@angular/platform-browser/animations';
-import {Dialog} from 'primeng/dialog';
-import {RestoreFocusOnHideDirective} from './restore-focus-on-hide.directive';
+import { ChangeDetectionStrategy, Component, signal, WritableSignal } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { Dialog } from 'primeng/dialog';
+import { RestoreFocusOnHideDirective } from './restore-focus-on-hide.directive';
 
 @Component({
   imports: [Dialog, RestoreFocusOnHideDirective],
@@ -12,7 +12,8 @@ import {RestoreFocusOnHideDirective} from './restore-focus-on-hide.directive';
     <p-dialog [(visible)]="visible" appRestoreFocusOnHide header="Test Dialog">
       <input id="inside-field" />
     </p-dialog>
-  `
+  `,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 class HostComponent {
   visible: WritableSignal<boolean> = signal(false);
@@ -23,7 +24,7 @@ describe('RestoreFocusOnHideDirective', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [HostComponent, NoopAnimationsModule]
+      imports: [HostComponent, NoopAnimationsModule],
     }).compileComponents();
 
     fixture = TestBed.createComponent(HostComponent);
@@ -32,7 +33,8 @@ describe('RestoreFocusOnHideDirective', () => {
 
   it('restores focus to the trigger element once the dialog reports onHide', () => {
     // arrange
-    const trigger = fixture.debugElement.query(By.css('#trigger')).nativeElement as HTMLButtonElement;
+    const trigger = fixture.debugElement.query(By.css('#trigger'))
+      .nativeElement as HTMLButtonElement;
     trigger.focus();
 
     // act -- open (the directive must capture `trigger` here, via ngDoCheck)
@@ -42,7 +44,8 @@ describe('RestoreFocusOnHideDirective', () => {
     // simulate what p-dialog's own focusOnShow does in the real app: move focus into the dialog.
     // Asserting this first is what makes the final assertion meaningful -- without it, a broken
     // capture (never actually storing `trigger`) would pass trivially, since focus never left.
-    const insideField = fixture.debugElement.query(By.css('#inside-field')).nativeElement as HTMLInputElement;
+    const insideField = fixture.debugElement.query(By.css('#inside-field'))
+      .nativeElement as HTMLInputElement;
     insideField.focus();
     expect(document.activeElement).toBe(insideField);
 

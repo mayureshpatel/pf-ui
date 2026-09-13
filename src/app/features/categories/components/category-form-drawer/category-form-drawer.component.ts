@@ -10,20 +10,25 @@ import {
   OutputEmitterRef,
   signal,
   Signal,
-  WritableSignal
+  WritableSignal,
 } from '@angular/core';
-import {CommonModule} from '@angular/common';
-import {FormControl, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
-import {ButtonModule} from 'primeng/button';
-import {InputTextModule} from 'primeng/inputtext';
-import {SelectModule} from 'primeng/select';
-import {RadioButtonModule} from 'primeng/radiobutton';
-import {TooltipModule} from 'primeng/tooltip';
-import {MessageModule} from 'primeng/message';
+import { CommonModule } from '@angular/common';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ButtonModule } from 'primeng/button';
+import { InputTextModule } from 'primeng/inputtext';
+import { SelectModule } from 'primeng/select';
+import { RadioButtonModule } from 'primeng/radiobutton';
+import { TooltipModule } from 'primeng/tooltip';
+import { MessageModule } from 'primeng/message';
 
-import {Category, CategoryCreateRequest, CategoryType, CategoryUpdateRequest} from '@models/category.model';
-import {CATEGORY_COLORS, getCategoryColor} from '@shared/utils/category.utils';
-import {DrawerComponent} from '@shared/components/drawer/drawer.component';
+import {
+  Category,
+  CategoryCreateRequest,
+  CategoryType,
+  CategoryUpdateRequest,
+} from '@models/category.model';
+import { CATEGORY_COLORS, getCategoryColor } from '@shared/utils/category.utils';
+import { DrawerComponent } from '@shared/components/drawer/drawer.component';
 
 /**
  * Drawer component for creating and editing transaction categories.
@@ -43,10 +48,10 @@ import {DrawerComponent} from '@shared/components/drawer/drawer.component';
     RadioButtonModule,
     TooltipModule,
     MessageModule,
-    DrawerComponent
+    DrawerComponent,
   ],
   templateUrl: './category-form-drawer.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CategoryFormDrawerComponent {
   /** Indicates if the drawer is currently visible. */
@@ -62,7 +67,9 @@ export class CategoryFormDrawerComponent {
   readonly saving: InputSignal<boolean> = input(false);
 
   /** Emitted when the category data is successfully validated and ready to save. */
-  readonly save: OutputEmitterRef<CategoryCreateRequest | CategoryUpdateRequest> = output<CategoryCreateRequest | CategoryUpdateRequest>();
+  readonly save: OutputEmitterRef<CategoryCreateRequest | CategoryUpdateRequest> = output<
+    CategoryCreateRequest | CategoryUpdateRequest
+  >();
 
   /** Holds API or validation error messages. */
   readonly errorMessage: WritableSignal<string | null> = signal<string | null>(null);
@@ -72,53 +79,73 @@ export class CategoryFormDrawerComponent {
 
   /** Optional icons to give to categories. */
   readonly iconOptions: string[] = [
-    'pi-shopping-cart', 'pi-home', 'pi-car', 'pi-money-bill', 'pi-briefcase',
-    'pi-heart', 'pi-bolt', 'pi-globe', 'pi-gift', 'pi-users',
-    'pi-book', 'pi-desktop', 'pi-phone', 'pi-wrench', 'pi-shield',
-    'pi-tag', 'pi-ticket', 'pi-wallet', 'pi-star', 'pi-key'
+    'pi-shopping-cart',
+    'pi-home',
+    'pi-car',
+    'pi-money-bill',
+    'pi-briefcase',
+    'pi-heart',
+    'pi-bolt',
+    'pi-globe',
+    'pi-gift',
+    'pi-users',
+    'pi-book',
+    'pi-desktop',
+    'pi-phone',
+    'pi-wrench',
+    'pi-shield',
+    'pi-tag',
+    'pi-ticket',
+    'pi-wallet',
+    'pi-star',
+    'pi-key',
   ];
 
   /** Options for category classification. */
   readonly typeOptions = [
-    {label: 'Expense', value: CategoryType.EXPENSE},
-    {label: 'Income', value: CategoryType.INCOME},
-    {label: 'Both', value: CategoryType.BOTH}
+    { label: 'Expense', value: CategoryType.EXPENSE },
+    { label: 'Income', value: CategoryType.INCOME },
+    { label: 'Both', value: CategoryType.BOTH },
   ];
 
   /**
    * The reactive form group for category details.
    */
   readonly form = new FormGroup({
-    id: new FormControl<number | null>({value: null, disabled: true}),
+    id: new FormControl<number | null>({ value: null, disabled: true }),
     name: new FormControl<string>('', {
       nonNullable: true,
-      validators: [Validators.required, Validators.maxLength(50)]
+      validators: [Validators.required, Validators.maxLength(50)],
     }),
     color: new FormControl<string>(''),
     icon: new FormControl<string>(''),
-    type: new FormControl<CategoryType>(CategoryType.EXPENSE, {nonNullable: true}),
-    parentId: new FormControl<number | null>(null)
+    type: new FormControl<CategoryType>(CategoryType.EXPENSE, { nonNullable: true }),
+    parentId: new FormControl<number | null>(null),
   });
 
   /** Indicates if the component is in edit mode. */
   readonly isEditMode: Signal<boolean> = computed((): boolean => this.category() !== null);
 
   /** Title displayed in the drawer header. */
-  readonly drawerTitle: Signal<string> = computed((): string => this.isEditMode() ? 'Edit Category' : 'Create Category');
+  readonly drawerTitle: Signal<string> = computed((): string =>
+    this.isEditMode() ? 'Edit Category' : 'Create Category',
+  );
 
   /** Icon displayed in the drawer header. */
-  readonly drawerIcon: Signal<string> = computed((): string => this.isEditMode() ? 'pi-tag' : 'pi-plus');
+  readonly drawerIcon: Signal<string> = computed((): string =>
+    this.isEditMode() ? 'pi-tag' : 'pi-plus',
+  );
 
   /**
    * Options for selecting a parent category.
    * Filters out the current category to prevent self-parenting loops.
    */
-  readonly parentOptions: Signal<{ label: string, value: number }[]> = computed(() => {
+  readonly parentOptions: Signal<{ label: string; value: number }[]> = computed(() => {
     const currentId: number | undefined = this.category()?.id;
 
     return this.categoryOptions()
       .filter((c: Category): boolean => c.id !== currentId && !c.parent)
-      .map((c: Category) => ({label: c.name, value: c.id}));
+      .map((c: Category) => ({ label: c.name, value: c.id }));
   });
 
   onShow(): void {
@@ -134,7 +161,7 @@ export class CategoryFormDrawerComponent {
         color: category.color || getCategoryColor(category.name),
         icon: category.icon || '',
         type: category.type || CategoryType.EXPENSE,
-        parentId: category.parent?.id ?? null
+        parentId: category.parent?.id ?? null,
       });
     } else {
       this.form.patchValue({
@@ -143,7 +170,7 @@ export class CategoryFormDrawerComponent {
         color: '',
         icon: '',
         type: CategoryType.EXPENSE,
-        parentId: null
+        parentId: null,
       });
     }
   }
@@ -166,14 +193,17 @@ export class CategoryFormDrawerComponent {
       return;
     }
 
-    const isDuplicate: boolean = this.categoryOptions().some((c: Category): boolean =>
-      c.name.toLowerCase() === trimmedName.toLowerCase() &&
-      (c.parent?.id ?? null) === (rawValue.parentId ?? null) &&
-      c.id !== selectedCategory?.id
+    const isDuplicate: boolean = this.categoryOptions().some(
+      (c: Category): boolean =>
+        c.name.toLowerCase() === trimmedName.toLowerCase() &&
+        (c.parent?.id ?? null) === (rawValue.parentId ?? null) &&
+        c.id !== selectedCategory?.id,
     );
 
     if (isDuplicate) {
-      const context: string = rawValue.parentId ? 'under the same parent' : 'as a top-level category';
+      const context: string = rawValue.parentId
+        ? 'under the same parent'
+        : 'as a top-level category';
       this.errorMessage.set(`A category with this name already exists ${context}.`);
       return;
     }
@@ -185,7 +215,7 @@ export class CategoryFormDrawerComponent {
         type: rawValue.type,
         color: rawValue.color || getCategoryColor(trimmedName),
         icon: rawValue.icon ?? undefined,
-        parentId: rawValue.parentId ?? undefined
+        parentId: rawValue.parentId ?? undefined,
       };
       this.save.emit(updateRequest);
     } else {
@@ -194,7 +224,7 @@ export class CategoryFormDrawerComponent {
         type: rawValue.type,
         color: rawValue.color || getCategoryColor(trimmedName),
         icon: rawValue.icon ?? undefined,
-        parentId: rawValue.parentId ?? undefined
+        parentId: rawValue.parentId ?? undefined,
       };
       this.save.emit(createRequest);
     }
@@ -210,7 +240,7 @@ export class CategoryFormDrawerComponent {
       return;
     }
 
-    this.form.patchValue({color});
+    this.form.patchValue({ color });
   }
 
   /**
@@ -223,7 +253,7 @@ export class CategoryFormDrawerComponent {
       return;
     }
 
-    this.form.patchValue({icon});
+    this.form.patchValue({ icon });
   }
 
   /**

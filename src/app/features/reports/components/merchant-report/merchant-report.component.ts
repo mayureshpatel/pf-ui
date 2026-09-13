@@ -1,14 +1,22 @@
-import {ChangeDetectionStrategy, Component, computed, inject, input, InputSignal, Signal} from '@angular/core';
-import {CommonModule, formatCurrency} from '@angular/common';
-import {CardModule} from 'primeng/card';
-import {ChartModule} from 'primeng/chart';
-import {TableModule} from 'primeng/table';
-import {TagModule} from 'primeng/tag';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  input,
+  InputSignal,
+  Signal,
+} from '@angular/core';
+import { CommonModule, formatCurrency } from '@angular/common';
+import { CardModule } from 'primeng/card';
+import { ChartModule } from 'primeng/chart';
+import { TableModule } from 'primeng/table';
+import { TagModule } from 'primeng/tag';
 
-import {Transaction} from '@models/transaction.model';
-import {ReportsDataService} from '../../services/reports-data.service';
-import {MerchantReportData} from '../../models/reports.model';
-import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
+import { Transaction } from '@models/transaction.model';
+import { ReportsDataService } from '../../services/reports-data.service';
+import { MerchantReportData } from '../../models/reports.model';
+import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
 
 /**
  * Sub-report component for analyzing spending volume by merchant.
@@ -21,7 +29,7 @@ import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
   standalone: true,
   imports: [CommonModule, CardModule, ChartModule, TableModule, TagModule, FormatCurrencyPipe],
   templateUrl: './merchant-report.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MerchantReportComponent {
   private readonly dataService: ReportsDataService = inject(ReportsDataService);
@@ -31,7 +39,7 @@ export class MerchantReportComponent {
 
   /** Aggregated report data calculated reactively from transactions. */
   readonly merchantData: Signal<MerchantReportData[]> = computed((): MerchantReportData[] =>
-    this.dataService.aggregateByMerchant(this.transactions())
+    this.dataService.aggregateByMerchant(this.transactions()),
   );
 
   /** Indicates if there is sufficient data to render visuals. */
@@ -45,13 +53,17 @@ export class MerchantReportComponent {
 
     return {
       labels: data.map((v: MerchantReportData): string => v.merchant.cleanName || 'Unknown'),
-      datasets: [{
-        label: 'Total Spent',
-        data: data.map((v: MerchantReportData): number => v.total),
-        backgroundColor: data.map((_: MerchantReportData, i: number): string => `hsl(${(i * 36) % 360}, 70%, 60%)`),
-        borderRadius: 8,
-        barThickness: 32
-      }]
+      datasets: [
+        {
+          label: 'Total Spent',
+          data: data.map((v: MerchantReportData): number => v.total),
+          backgroundColor: data.map(
+            (_: MerchantReportData, i: number): string => `hsl(${(i * 36) % 360}, 70%, 60%)`,
+          ),
+          borderRadius: 8,
+          barThickness: 32,
+        },
+      ],
     };
   });
 
@@ -63,12 +75,14 @@ export class MerchantReportComponent {
 
     return {
       labels: data.map((v: MerchantReportData): string => v.merchant.cleanName || 'Unknown'),
-      datasets: [{
-        data: data.map((v: MerchantReportData): number => v.total),
-        backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'],
-        hoverOffset: 20,
-        borderWidth: 0
-      }]
+      datasets: [
+        {
+          data: data.map((v: MerchantReportData): number => v.total),
+          backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'],
+          hoverOffset: 20,
+          borderWidth: 0,
+        },
+      ],
     };
   });
 
@@ -79,27 +93,28 @@ export class MerchantReportComponent {
     indexAxis: 'y',
     maintainAspectRatio: false,
     plugins: {
-      legend: {display: false},
+      legend: { display: false },
       tooltip: {
         backgroundColor: '#1e293b',
         padding: 12,
         usePointStyle: true,
         callbacks: {
-          label: (context: any): string => ` Total: ${formatCurrency(context.parsed.x || 0, 'en-US', '$', '1.2-2')}`
-        }
-      }
+          label: (context: any): string =>
+            ` Total: ${formatCurrency(context.parsed.x || 0, 'en-US', '$', '1.2-2')}`,
+        },
+      },
     },
     scales: {
       x: {
         beginAtZero: true,
-        grid: {color: 'rgba(148, 163, 184, 0.1)', drawBorder: false},
-        ticks: {color: '#94a3b8', font: {size: 11, family: 'monospace'}}
+        grid: { color: 'rgba(148, 163, 184, 0.1)', drawBorder: false },
+        ticks: { color: '#94a3b8', font: { size: 11, family: 'monospace' } },
       },
       y: {
-        grid: {display: false},
-        ticks: {color: '#64748b', font: {size: 12, weight: '700'}}
-      }
-    }
+        grid: { display: false },
+        ticks: { color: '#64748b', font: { size: 12, weight: '700' } },
+      },
+    },
   };
 
   /**
@@ -111,7 +126,12 @@ export class MerchantReportComponent {
     plugins: {
       legend: {
         position: 'bottom',
-        labels: {usePointStyle: true, pointStyle: 'circle', padding: 20, font: {size: 11, weight: 'bold'}}
+        labels: {
+          usePointStyle: true,
+          pointStyle: 'circle',
+          padding: 20,
+          font: { size: 11, weight: 'bold' },
+        },
       },
       tooltip: {
         backgroundColor: '#1e293b',
@@ -119,12 +139,15 @@ export class MerchantReportComponent {
         callbacks: {
           label: (context: any): string => {
             const val: any = context.parsed || 0;
-            const total: number = context.dataset.data.reduce((a: number, b: number): number => a + b, 0);
+            const total: number = context.dataset.data.reduce(
+              (a: number, b: number): number => a + b,
+              0,
+            );
             const pct: string = ((val / total) * 100).toFixed(1);
             return ` ${context.label}: ${formatCurrency(val, 'en-US', '$', '1.2-2')} (${pct}%)`;
-          }
-        }
-      }
-    }
+          },
+        },
+      },
+    },
   };
 }

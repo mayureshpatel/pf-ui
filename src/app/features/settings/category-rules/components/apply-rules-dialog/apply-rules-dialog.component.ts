@@ -8,14 +8,14 @@ import {
   ModelSignal,
   output,
   OutputEmitterRef,
-  Signal
+  Signal,
 } from '@angular/core';
-import {CommonModule} from '@angular/common';
-import {DialogModule} from 'primeng/dialog';
-import {ButtonModule} from 'primeng/button';
-import {TableModule} from 'primeng/table';
-import {RuleChangePreview} from '@models/category-rule.model';
-import {RestoreFocusOnHideDirective} from '@shared/directives/restore-focus-on-hide.directive';
+import { CommonModule } from '@angular/common';
+import { DialogModule } from 'primeng/dialog';
+import { ButtonModule } from 'primeng/button';
+import { TableModule } from 'primeng/table';
+import { RuleChangePreview } from '@models/category-rule.model';
+import { RestoreFocusOnHideDirective } from '@shared/directives/restore-focus-on-hide.directive';
 
 /**
  * Dialog for previewing and confirming bulk rule applications -- shows users which transactions
@@ -25,15 +25,9 @@ import {RestoreFocusOnHideDirective} from '@shared/directives/restore-focus-on-h
 @Component({
   selector: 'app-apply-rules-dialog',
   standalone: true,
-  imports: [
-    CommonModule,
-    DialogModule,
-    ButtonModule,
-    TableModule,
-    RestoreFocusOnHideDirective
-  ],
+  imports: [CommonModule, DialogModule, ButtonModule, TableModule, RestoreFocusOnHideDirective],
   templateUrl: './apply-rules-dialog.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ApplyRulesDialogComponent {
   /** Two-way binding for dialog visibility. */

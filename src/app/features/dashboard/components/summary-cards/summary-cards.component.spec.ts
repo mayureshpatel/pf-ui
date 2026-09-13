@@ -1,34 +1,40 @@
-import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {SummaryCardsComponent} from './summary-cards.component';
-import {DashboardData} from '@models/dashboard.model';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { SummaryCardsComponent } from './summary-cards.component';
+import { DashboardData } from '@models/dashboard.model';
 
 describe('SummaryCardsComponent', () => {
-  let component: SummaryCardsComponent;
   let fixture: ComponentFixture<SummaryCardsComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [SummaryCardsComponent]
+      imports: [SummaryCardsComponent],
     }).compileComponents();
 
     fixture = TestBed.createComponent(SummaryCardsComponent);
-    component = fixture.componentInstance;
   });
 
-  it("bug regression: should not throw when data is null -- the input's own type "
-      + '(InputSignal<DashboardData | null>) explicitly allows it, but the template used a '
-      + "non-null assertion (data()!) everywhere instead of a real null guard, so the type system's "
-      + "own promise of safety didn't hold at runtime", () => {
-    // arrange
-    fixture.componentRef.setInput('data', null);
+  it(
+    "bug regression: should not throw when data is null -- the input's own type " +
+      '(InputSignal<DashboardData | null>) explicitly allows it, but the template used a ' +
+      "non-null assertion (data()!) everywhere instead of a real null guard, so the type system's " +
+      "own promise of safety didn't hold at runtime",
+    () => {
+      // arrange
+      fixture.componentRef.setInput('data', null);
 
-    // act & assert & verify
-    expect(() => fixture.detectChanges()).not.toThrow();
-  });
+      // act & assert & verify
+      expect(() => fixture.detectChanges()).not.toThrow();
+    },
+  );
 
   it('should render all three card values given real data', () => {
     // arrange
-    const data: DashboardData = {totalIncome: 5000, totalExpense: 3200, netSavings: 1800, categoryBreakdown: []};
+    const data: DashboardData = {
+      totalIncome: 5000,
+      totalExpense: 3200,
+      netSavings: 1800,
+      categoryBreakdown: [],
+    };
     fixture.componentRef.setInput('data', data);
 
     // act
@@ -43,7 +49,12 @@ describe('SummaryCardsComponent', () => {
 
   it('should style net savings as positive (non-red) when non-negative', () => {
     // arrange
-    const data: DashboardData = {totalIncome: 5000, totalExpense: 3200, netSavings: 1800, categoryBreakdown: []};
+    const data: DashboardData = {
+      totalIncome: 5000,
+      totalExpense: 3200,
+      netSavings: 1800,
+      categoryBreakdown: [],
+    };
     fixture.componentRef.setInput('data', data);
 
     // act
@@ -57,7 +68,12 @@ describe('SummaryCardsComponent', () => {
 
   it('should style net savings as negative (red) when spending exceeded income', () => {
     // arrange
-    const data: DashboardData = {totalIncome: 2000, totalExpense: 3200, netSavings: -1200, categoryBreakdown: []};
+    const data: DashboardData = {
+      totalIncome: 2000,
+      totalExpense: 3200,
+      netSavings: -1200,
+      categoryBreakdown: [],
+    };
     fixture.componentRef.setInput('data', data);
 
     // act

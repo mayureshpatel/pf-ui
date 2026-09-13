@@ -1,9 +1,8 @@
-import {inject, Pipe, PipeTransform} from '@angular/core';
-import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
+import { inject, Pipe, PipeTransform } from '@angular/core';
+import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
 
-@Pipe({name: 'formatTransactionTypeAmount'})
+@Pipe({ name: 'formatTransactionTypeAmount' })
 export class FormatTransactionTypeAmountPipe implements PipeTransform {
-
   private readonly formatCurrencyPipe: FormatCurrencyPipe = inject(FormatCurrencyPipe);
 
   transform(amount: number, type: string): string {

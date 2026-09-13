@@ -1,5 +1,5 @@
-import {Merchant} from '@models/merchant.model';
-import {Account} from '@models/account.model';
+import { Merchant } from '@models/merchant.model';
+import { Account } from '@models/account.model';
 
 /**
  * Represents the frequency at which recurring transactions occur.
@@ -48,7 +48,7 @@ export interface RecurringTransaction {
  * @property confidenceScore - The confidence score of the suggestion.
  */
 export interface RecurringSuggestion {
-  merchant: Merchant
+  merchant: Merchant;
   amount: number;
   frequency: RecurringFrequency;
   lastDate: string;

@@ -1,16 +1,16 @@
-import {vi} from 'vitest';
-import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {NoopAnimationsModule} from '@angular/platform-browser/animations';
-import {ActivatedRoute, Router} from '@angular/router';
-import {of} from 'rxjs';
-import {ConfirmationService} from 'primeng/api';
+import { vi } from 'vitest';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { ActivatedRoute, Router } from '@angular/router';
+import { of } from 'rxjs';
+import { ConfirmationService } from 'primeng/api';
 
-import {BudgetsComponent} from './budgets.component';
-import {BudgetApiService} from './services/budget-api.service';
-import {CategoryApiService} from '@features/categories/services/category-api.service';
-import {ToastService} from '@core/services/toast.service';
-import {Budget} from '@models/budget.model';
-import {Category, CategoryType} from '@models/category.model';
+import { BudgetsComponent } from './budgets.component';
+import { BudgetApiService } from './services/budget-api.service';
+import { CategoryApiService } from '@features/categories/services/category-api.service';
+import { ToastService } from '@core/services/toast.service';
+import { Budget } from '@models/budget.model';
+import { Category, CategoryType } from '@models/category.model';
 
 describe('BudgetsComponent', () => {
   let component: BudgetsComponent;
@@ -29,44 +29,44 @@ describe('BudgetsComponent', () => {
     type: CategoryType.EXPENSE,
     parent: null,
     icon: 'pi-home',
-    color: '#3B82F6'
+    color: '#3B82F6',
   } as Category;
 
-  const mockBudget: Budget = {id: 1, userId: 1, category, amount: 1000, month: 1, year: 2026};
+  const mockBudget: Budget = { id: 1, userId: 1, category, amount: 1000, month: 1, year: 2026 };
 
   const mockBudgetStatus = {
     category,
     budgetedAmount: 1000,
     spentAmount: 400,
     remainingAmount: 600,
-    percentageUsed: 40
+    percentageUsed: 40,
   };
 
   beforeEach(async () => {
     mockBudgetApi = {
       getBudgetStatus: vi.fn().mockReturnValue(of([mockBudgetStatus])),
       getAllBudgets: vi.fn().mockReturnValue(of([mockBudget])),
-      deleteBudget: vi.fn().mockReturnValue(of(undefined))
+      deleteBudget: vi.fn().mockReturnValue(of(undefined)),
     };
-    mockCategoryApi = {getCategories: vi.fn().mockReturnValue(of([]))};
-    mockToast = {success: vi.fn(), error: vi.fn()};
-    mockConfirmationService = {confirm: vi.fn()};
-    mockRouter = {navigate: vi.fn()};
+    mockCategoryApi = { getCategories: vi.fn().mockReturnValue(of([])) };
+    mockToast = { success: vi.fn(), error: vi.fn() };
+    mockConfirmationService = { confirm: vi.fn() };
+    mockRouter = { navigate: vi.fn() };
     mockActivatedRoute = {
-      snapshot: {queryParams: {}},
-      queryParams: of({})
+      snapshot: { queryParams: {} },
+      queryParams: of({}),
     };
 
     await TestBed.configureTestingModule({
       imports: [BudgetsComponent, NoopAnimationsModule],
       providers: [
-        {provide: BudgetApiService, useValue: mockBudgetApi},
-        {provide: CategoryApiService, useValue: mockCategoryApi},
-        {provide: ToastService, useValue: mockToast},
-        {provide: ConfirmationService, useValue: mockConfirmationService},
-        {provide: Router, useValue: mockRouter},
-        {provide: ActivatedRoute, useValue: mockActivatedRoute}
-      ]
+        { provide: BudgetApiService, useValue: mockBudgetApi },
+        { provide: CategoryApiService, useValue: mockCategoryApi },
+        { provide: ToastService, useValue: mockToast },
+        { provide: ConfirmationService, useValue: mockConfirmationService },
+        { provide: Router, useValue: mockRouter },
+        { provide: ActivatedRoute, useValue: mockActivatedRoute },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(BudgetsComponent);

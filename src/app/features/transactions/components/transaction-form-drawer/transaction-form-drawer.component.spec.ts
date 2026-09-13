@@ -1,33 +1,33 @@
-import {vi} from 'vitest';
-import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {NoopAnimationsModule} from '@angular/platform-browser/animations';
-import {of} from 'rxjs';
+import { vi } from 'vitest';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { of } from 'rxjs';
 
-import {TransactionFormDrawerComponent} from './transaction-form-drawer.component';
-import {CategoryApiService} from '@features/categories/services/category-api.service';
-import {AccountApiService} from '@features/accounts/services/account-api.service';
-import {MerchantApiService} from '@features/merchants/services/merchant-api.service';
-import {TagApiService} from '@features/tags/services/tag-api.service';
-import {Category} from '@models/category.model';
+import { TransactionFormDrawerComponent } from './transaction-form-drawer.component';
+import { CategoryApiService } from '@features/categories/services/category-api.service';
+import { AccountApiService } from '@features/accounts/services/account-api.service';
+import { MerchantApiService } from '@features/merchants/services/merchant-api.service';
+import { TagApiService } from '@features/tags/services/tag-api.service';
+import { Category } from '@models/category.model';
 
 describe('TransactionFormDrawerComponent', () => {
   let component: TransactionFormDrawerComponent;
   let fixture: ComponentFixture<TransactionFormDrawerComponent>;
 
   beforeEach(async () => {
-    const mockCategoryApi = {getCategories: vi.fn().mockReturnValue(of([]))};
-    const mockAccountApi = {getAccounts: vi.fn().mockReturnValue(of([]))};
-    const mockMerchantApi = {getMerchants: vi.fn().mockReturnValue(of([]))};
-    const mockTagApi = {getTags: vi.fn().mockReturnValue(of([]))};
+    const mockCategoryApi = { getCategories: vi.fn().mockReturnValue(of([])) };
+    const mockAccountApi = { getAccounts: vi.fn().mockReturnValue(of([])) };
+    const mockMerchantApi = { getMerchants: vi.fn().mockReturnValue(of([])) };
+    const mockTagApi = { getTags: vi.fn().mockReturnValue(of([])) };
 
     await TestBed.configureTestingModule({
       imports: [TransactionFormDrawerComponent, NoopAnimationsModule],
       providers: [
-        {provide: CategoryApiService, useValue: mockCategoryApi},
-        {provide: AccountApiService, useValue: mockAccountApi},
-        {provide: MerchantApiService, useValue: mockMerchantApi},
-        {provide: TagApiService, useValue: mockTagApi}
-      ]
+        { provide: CategoryApiService, useValue: mockCategoryApi },
+        { provide: AccountApiService, useValue: mockAccountApi },
+        { provide: MerchantApiService, useValue: mockMerchantApi },
+        { provide: TagApiService, useValue: mockTagApi },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(TransactionFormDrawerComponent);
@@ -35,7 +35,7 @@ describe('TransactionFormDrawerComponent', () => {
     fixture.componentRef.setInput('visible', true);
   });
 
-  it('should default a new transaction\'s date to the local calendar date, not a UTC-shifted one, for a positive-UTC-offset user (PF-199)', () => {
+  it("should default a new transaction's date to the local calendar date, not a UTC-shifted one, for a positive-UTC-offset user (PF-199)", () => {
     // Arrange -- the component builds its own `new Date()` internally, so there's no specific
     // instance to scope-mock; mock Date.prototype's local getters globally for just this test.
     // toISOString() is deliberately left un-mocked, so the old buggy code would still resolve
@@ -65,13 +65,13 @@ describe('TransactionFormDrawerComponent', () => {
     // convention -- no Date object, no timezone conversion, just the string's own first 10 chars.
     fixture.componentRef.setInput('transaction', {
       id: 1,
-      account: {id: 1, name: 'Checking'},
+      account: { id: 1, name: 'Checking' },
       category: null,
       amount: 42.5,
       date: '2026-03-15T00:00:00Z',
       description: 'Test',
       type: 'EXPENSE',
-      merchant: null
+      merchant: null,
     });
     fixture.detectChanges();
 
@@ -82,19 +82,19 @@ describe('TransactionFormDrawerComponent', () => {
     expect(component.form.get('transactionDate')?.value).toBe('2026-03-15');
   });
 
-  it('PF-308: should preload the tags form control with the edited transaction\'s existing tags', () => {
+  it("PF-308: should preload the tags form control with the edited transaction's existing tags", () => {
     // arrange
-    const tags = [{id: 1, userId: 1, name: 'Travel', color: '#123456'}];
+    const tags = [{ id: 1, userId: 1, name: 'Travel', color: '#123456' }];
     fixture.componentRef.setInput('transaction', {
       id: 1,
-      account: {id: 1, name: 'Checking'},
+      account: { id: 1, name: 'Checking' },
       category: null,
       amount: 42.5,
       date: '2026-03-15T00:00:00Z',
       description: 'Test',
       type: 'EXPENSE',
       merchant: null,
-      tags
+      tags,
     });
     fixture.detectChanges();
 
@@ -122,8 +122,11 @@ describe('TransactionFormDrawerComponent', () => {
       accountId: 1,
       amount: 10,
       transactionDate: '2026-03-15',
-      category: {id: 5} as unknown as Category,
-      tags: [{id: 1, userId: 1, name: 'Travel', color: null}, {id: 2, userId: 1, name: 'Work', color: null}]
+      category: { id: 5 } as unknown as Category,
+      tags: [
+        { id: 1, userId: 1, name: 'Travel', color: null },
+        { id: 2, userId: 1, name: 'Work', color: null },
+      ],
     });
     const saveSpy = vi.fn();
     component.save.subscribe(saveSpy);
@@ -132,6 +135,6 @@ describe('TransactionFormDrawerComponent', () => {
     component.onSubmit();
 
     // assert & verify
-    expect(saveSpy).toHaveBeenCalledWith(expect.objectContaining({tagIds: [1, 2]}));
+    expect(saveSpy).toHaveBeenCalledWith(expect.objectContaining({ tagIds: [1, 2] }));
   });
 });

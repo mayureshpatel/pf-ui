@@ -7,23 +7,30 @@ import {
   output,
   OutputEmitterRef,
   signal,
-  WritableSignal
+  WritableSignal,
 } from '@angular/core';
-import {CommonModule} from '@angular/common';
-import {AbstractControl, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors, Validators} from '@angular/forms';
-import {finalize} from 'rxjs';
-import {ButtonModule} from 'primeng/button';
-import {InputTextModule} from 'primeng/inputtext';
-import {InputNumberModule} from 'primeng/inputnumber';
-import {SelectModule} from 'primeng/select';
-import {MessageModule} from 'primeng/message';
+import { CommonModule } from '@angular/common';
+import {
+  AbstractControl,
+  FormControl,
+  FormGroup,
+  ReactiveFormsModule,
+  ValidationErrors,
+  Validators,
+} from '@angular/forms';
+import { finalize } from 'rxjs';
+import { ButtonModule } from 'primeng/button';
+import { InputTextModule } from 'primeng/inputtext';
+import { InputNumberModule } from 'primeng/inputnumber';
+import { SelectModule } from 'primeng/select';
+import { MessageModule } from 'primeng/message';
 
-import {CategoryRuleApiService} from '../../services/category-rule-api.service';
-import {CategoryApiService} from '@features/categories/services/category-api.service';
-import {ToastService} from '@core/services/toast.service';
-import {Category, CategoryGroup} from '@models/category.model';
-import {CategoryRuleCreateRequest, MatchType} from '@models/category-rule.model';
-import {DrawerComponent} from '@shared/components/drawer/drawer.component';
+import { CategoryRuleApiService } from '../../services/category-rule-api.service';
+import { CategoryApiService } from '@features/categories/services/category-api.service';
+import { ToastService } from '@core/services/toast.service';
+import { Category, CategoryGroup } from '@models/category.model';
+import { CategoryRuleCreateRequest, MatchType } from '@models/category-rule.model';
+import { DrawerComponent } from '@shared/components/drawer/drawer.component';
 
 /**
  * Requires at least one non-blank, comma-separated keyword in the raw input string.
@@ -33,13 +40,13 @@ function atLeastOneKeywordValidator(control: AbstractControl<string>): Validatio
     .split(',')
     .map((keyword: string): string => keyword.trim())
     .some((keyword: string): boolean => keyword.length > 0);
-  return hasKeyword ? null : {required: true};
+  return hasKeyword ? null : { required: true };
 }
 
 /** Options for the match-type selector. */
 const MATCH_TYPE_OPTIONS: { label: string; value: MatchType }[] = [
-  {label: 'Match ANY keyword (OR)', value: 'OR'},
-  {label: 'Match ALL keywords (AND)', value: 'AND'}
+  { label: 'Match ANY keyword (OR)', value: 'OR' },
+  { label: 'Match ALL keywords (AND)', value: 'AND' },
 ];
 
 /**
@@ -63,10 +70,10 @@ const MATCH_TYPE_OPTIONS: { label: string; value: MatchType }[] = [
     InputNumberModule,
     SelectModule,
     MessageModule,
-    DrawerComponent
+    DrawerComponent,
   ],
   templateUrl: './category-rule-form-dialog.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CategoryRuleFormDialogComponent {
   private readonly api: CategoryRuleApiService = inject(CategoryRuleApiService);
@@ -98,29 +105,36 @@ export class CategoryRuleFormDialogComponent {
   readonly form = new FormGroup({
     keywordsInput: new FormControl<string>('', {
       nonNullable: true,
-      validators: [atLeastOneKeywordValidator]
+      validators: [atLeastOneKeywordValidator],
     }),
-    matchType: new FormControl<MatchType>('OR', {nonNullable: true}),
+    matchType: new FormControl<MatchType>('OR', { nonNullable: true }),
     category: new FormControl<Category | null>(null, {
-      validators: [Validators.required]
+      validators: [Validators.required],
     }),
     priority: new FormControl<number>(0, {
       nonNullable: true,
-      validators: [Validators.min(0)]
+      validators: [Validators.min(0)],
     }),
     minAmount: new FormControl<number | null>(null, {
-      validators: [Validators.min(0)]
+      validators: [Validators.min(0)],
     }),
     maxAmount: new FormControl<number | null>(null, {
-      validators: [Validators.min(0)]
-    })
+      validators: [Validators.min(0)],
+    }),
   });
 
   /**
    * Resets the form and reloads categories whenever the drawer is shown.
    */
   onShow(): void {
-    this.form.reset({keywordsInput: '', matchType: 'OR', category: null, priority: 0, minAmount: null, maxAmount: null});
+    this.form.reset({
+      keywordsInput: '',
+      matchType: 'OR',
+      category: null,
+      priority: 0,
+      minAmount: null,
+      maxAmount: null,
+    });
     this.errorMessage.set(null);
     this.loadCategories();
   }
@@ -134,7 +148,7 @@ export class CategoryRuleFormDialogComponent {
       error: (err: any): void => {
         console.error('Failed to load categories:', err);
         this.toast.error('Failed to load categories.');
-      }
+      },
     });
   }
 
@@ -145,7 +159,8 @@ export class CategoryRuleFormDialogComponent {
     this.form.markAllAsTouched();
     if (this.form.invalid || this.loading()) return;
 
-    const {keywordsInput, matchType, category, priority, minAmount, maxAmount} = this.form.getRawValue();
+    const { keywordsInput, matchType, category, priority, minAmount, maxAmount } =
+      this.form.getRawValue();
     if (!category) return;
 
     const keywords: string[] = keywordsInput
@@ -162,10 +177,11 @@ export class CategoryRuleFormDialogComponent {
       categoryId: category.id,
       priority,
       minAmount,
-      maxAmount
-    } as CategoryRuleCreateRequest
+      maxAmount,
+    } as CategoryRuleCreateRequest;
 
-    this.api.createRule(request)
+    this.api
+      .createRule(request)
       .pipe(finalize((): void => this.loading.set(false)))
       .subscribe({
         next: (): void => {
@@ -176,7 +192,7 @@ export class CategoryRuleFormDialogComponent {
         error: (err: any): void => {
           console.error('Create rule failed:', err);
           this.errorMessage.set(err.error?.detail || 'Failed to create rule.');
-        }
+        },
       });
   }
 }

@@ -1,20 +1,20 @@
-import {ChangeDetectionStrategy, Component, inject, signal, WritableSignal} from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal, WritableSignal } from '@angular/core';
 import {
   AbstractControl,
   FormControl,
   FormGroup,
   ReactiveFormsModule,
   ValidationErrors,
-  Validators
+  Validators,
 } from '@angular/forms';
-import {finalize} from 'rxjs';
-import {RouterLink} from '@angular/router';
-import {ButtonModule} from 'primeng/button';
-import {CardModule} from 'primeng/card';
-import {InputTextModule} from 'primeng/inputtext';
-import {PasswordModule} from 'primeng/password';
-import {MessageModule} from 'primeng/message';
-import {AuthService} from '@core/auth/auth.service';
+import { finalize } from 'rxjs';
+import { RouterLink } from '@angular/router';
+import { ButtonModule } from 'primeng/button';
+import { CardModule } from 'primeng/card';
+import { InputTextModule } from 'primeng/inputtext';
+import { PasswordModule } from 'primeng/password';
+import { MessageModule } from 'primeng/message';
+import { AuthService } from '@core/auth/auth.service';
 
 /**
  * Validator to ensure the password and confirm password fields match.
@@ -25,7 +25,7 @@ import {AuthService} from '@core/auth/auth.service';
 function passwordMatchValidator(group: AbstractControl): ValidationErrors | null {
   const password = group.get('password')?.value;
   const confirm = group.get('confirmPassword')?.value;
-  return password && confirm && password !== confirm ? {passwordMismatch: true} : null;
+  return password && confirm && password !== confirm ? { passwordMismatch: true } : null;
 }
 
 /**
@@ -44,50 +44,54 @@ function passwordMatchValidator(group: AbstractControl): ValidationErrors | null
     CardModule,
     InputTextModule,
     PasswordModule,
-    MessageModule
+    MessageModule,
   ],
   templateUrl: './register.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RegisterComponent {
   private readonly authService: AuthService = inject(AuthService);
 
   private readonly USERNAME_PATTERN: RegExp = /^\w{3,50}$/;
-  private readonly PASSWORD_PATTERN: RegExp = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,100}$/;
+  private readonly PASSWORD_PATTERN: RegExp =
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,100}$/;
 
   /**
    * The reactive form group for user registration.
    */
-  readonly form = new FormGroup({
-    username: new FormControl<string>('', {
-      nonNullable: true,
-      validators: [
-        Validators.required,
-        Validators.minLength(3),
-        Validators.maxLength(50),
-        Validators.pattern(this.USERNAME_PATTERN)
-      ]
-    }),
-    email: new FormControl<string>('', {
-      nonNullable: true,
-      validators: [Validators.required, Validators.email]
-    }),
-    password: new FormControl<string>('', {
-      nonNullable: true,
-      validators: [
-        Validators.required,
-        Validators.minLength(8),
-        Validators.maxLength(100),
-        Validators.pattern(this.PASSWORD_PATTERN)
-      ]
-    }),
-    confirmPassword: new FormControl<string>('', {
-      nonNullable: true,
-      validators: [Validators.required]
-    }),
-    /** Honeypot -- rendered off-screen; a real user never sees or fills this. */
-    website: new FormControl<string>('', {nonNullable: true})
-  }, {validators: passwordMatchValidator});
+  readonly form = new FormGroup(
+    {
+      username: new FormControl<string>('', {
+        nonNullable: true,
+        validators: [
+          Validators.required,
+          Validators.minLength(3),
+          Validators.maxLength(50),
+          Validators.pattern(this.USERNAME_PATTERN),
+        ],
+      }),
+      email: new FormControl<string>('', {
+        nonNullable: true,
+        validators: [Validators.required, Validators.email],
+      }),
+      password: new FormControl<string>('', {
+        nonNullable: true,
+        validators: [
+          Validators.required,
+          Validators.minLength(8),
+          Validators.maxLength(100),
+          Validators.pattern(this.PASSWORD_PATTERN),
+        ],
+      }),
+      confirmPassword: new FormControl<string>('', {
+        nonNullable: true,
+        validators: [Validators.required],
+      }),
+      /** Honeypot -- rendered off-screen; a real user never sees or fills this. */
+      website: new FormControl<string>('', { nonNullable: true }),
+    },
+    { validators: passwordMatchValidator },
+  );
 
   /**
    * Signal tracking the registration status to prevent duplicate submissions.
@@ -115,14 +119,15 @@ export class RegisterComponent {
     this.isSubmitting.set(true);
     this.errorMessage.set(null);
 
-    const {username, email, password, website} = this.form.getRawValue();
+    const { username, email, password, website } = this.form.getRawValue();
 
-    this.authService.register({username, email, password, website})
+    this.authService
+      .register({ username, email, password, website })
       .pipe(finalize((): void => this.isSubmitting.set(false)))
       .subscribe({
         error: (err: Error): void => {
           this.errorMessage.set(err.message);
-        }
+        },
       });
   }
 }

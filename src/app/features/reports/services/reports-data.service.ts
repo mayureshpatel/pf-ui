@@ -1,18 +1,17 @@
-import {Injectable} from '@angular/core';
-import {Transaction, TransactionType} from '@models/transaction.model';
-import {CategoryReportData, MerchantReportData, MonthlyReportData} from '../models/reports.model';
-import {Category} from '@models/category.model';
-import {Merchant} from '@models/merchant.model';
+import { Injectable } from '@angular/core';
+import { Transaction, TransactionType } from '@models/transaction.model';
+import { CategoryReportData, MerchantReportData, MonthlyReportData } from '../models/reports.model';
+import { Category } from '@models/category.model';
+import { Merchant } from '@models/merchant.model';
 
 /**
  * Service responsible for aggregating and transforming raw transaction data
  * into report-ready formats.
  */
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ReportsDataService {
-
   /**
    * Aggregates total spending and transaction counts by category.
    *
@@ -30,7 +29,7 @@ export class ReportsDataService {
         const category: Category = txn.category;
 
         if (!categoryMap.has(category.id)) {
-          categoryMap.set(category.id, {category, total: 0, count: 0});
+          categoryMap.set(category.id, { category, total: 0, count: 0 });
         }
 
         const entry = categoryMap.get(category.id)!;
@@ -44,7 +43,7 @@ export class ReportsDataService {
         category: item.category,
         total: item.total,
         count: item.count,
-        avgTransaction: item.count > 0 ? item.total / item.count : 0
+        avgTransaction: item.count > 0 ? item.total / item.count : 0,
       }))
       .sort((a: CategoryReportData, b: CategoryReportData): number => b.total - a.total);
   }
@@ -59,23 +58,26 @@ export class ReportsDataService {
    * @returns An array of MerchantReportData objects sorted by highest total volume.
    */
   aggregateByMerchant(transactions: Transaction[]): MerchantReportData[] {
-    const merchantMap = new Map<number, {
-      merchant: Merchant;
-      total: number;
-      count: number;
-      categories: Set<string>;
-    }>();
+    const merchantMap = new Map<
+      number,
+      {
+        merchant: Merchant;
+        total: number;
+        count: number;
+        categories: Set<string>;
+      }
+    >();
 
     for (const txn of transactions) {
       if (txn.type === TransactionType.EXPENSE && txn.merchant) {
-        const {merchant} = txn;
+        const { merchant } = txn;
 
         if (!merchantMap.has(merchant.id)) {
           merchantMap.set(merchant.id, {
             merchant,
             total: 0,
             count: 0,
-            categories: new Set<string>()
+            categories: new Set<string>(),
           });
         }
 
@@ -94,7 +96,7 @@ export class ReportsDataService {
         merchant: item.merchant,
         total: item.total,
         count: item.count,
-        categories: Array.from(item.categories)
+        categories: Array.from(item.categories),
       }))
       .sort((a, b) => b.total - a.total);
   }
@@ -117,7 +119,7 @@ export class ReportsDataService {
       const monthKey: string = this.getYearMonthKey(txn.date);
 
       if (!monthMap.has(monthKey)) {
-        monthMap.set(monthKey, {income: 0, expense: 0});
+        monthMap.set(monthKey, { income: 0, expense: 0 });
       }
 
       const entry = monthMap.get(monthKey)!;
@@ -134,7 +136,7 @@ export class ReportsDataService {
         month,
         income: data.income,
         expense: data.expense,
-        netSavings: data.income - data.expense
+        netSavings: data.income - data.expense,
       }))
       .sort((a, b) => a.month.localeCompare(b.month));
   }

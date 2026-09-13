@@ -1,23 +1,23 @@
-import {vi} from 'vitest';
-import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {provideRouter} from '@angular/router';
-import {NoopAnimationsModule} from '@angular/platform-browser/animations';
+import { vi } from 'vitest';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 
-import {ActionCenterComponent} from './action-center.component';
-import {ActionItem, ActionType} from '@models/dashboard.model';
+import { ActionCenterComponent } from './action-center.component';
+import { ActionItem, ActionType } from '@models/dashboard.model';
 
 describe('ActionCenterComponent', () => {
   let component: ActionCenterComponent;
   let fixture: ComponentFixture<ActionCenterComponent>;
 
   const mockItems: ActionItem[] = [
-    {type: ActionType.UNCATEGORIZED, count: 3, message: 'Review uncategorized transactions'}
+    { type: ActionType.UNCATEGORIZED, count: 3, message: 'Review uncategorized transactions' },
   ];
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [ActionCenterComponent, NoopAnimationsModule],
-      providers: [provideRouter([])]
+      providers: [provideRouter([])],
     }).compileComponents();
 
     fixture = TestBed.createComponent(ActionCenterComponent);

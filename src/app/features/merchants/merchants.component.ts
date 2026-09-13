@@ -1,20 +1,30 @@
-import {Component, computed, DestroyRef, inject, OnInit, Signal, signal, WritableSignal} from '@angular/core';
-import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
-import {CommonModule} from '@angular/common';
-import {FormsModule} from '@angular/forms';
-import {ButtonModule} from 'primeng/button';
-import {TableModule} from 'primeng/table';
-import {CardModule} from 'primeng/card';
-import {InputTextModule} from 'primeng/inputtext';
-import {IconFieldModule} from 'primeng/iconfield';
-import {InputIconModule} from 'primeng/inputicon';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  DestroyRef,
+  inject,
+  OnInit,
+  Signal,
+  signal,
+  WritableSignal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { ButtonModule } from 'primeng/button';
+import { TableModule } from 'primeng/table';
+import { CardModule } from 'primeng/card';
+import { InputTextModule } from 'primeng/inputtext';
+import { IconFieldModule } from 'primeng/iconfield';
+import { InputIconModule } from 'primeng/inputicon';
 
-import {MerchantApiService} from './services/merchant-api.service';
-import {ToastService} from '@core/services/toast.service';
-import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-toolbar';
-import {MerchantFormDialogComponent} from './components/merchant-form-dialog/merchant-form-dialog.component';
-import {MergeMerchantsDialogComponent} from './components/merge-merchants-dialog/merge-merchants-dialog.component';
-import {Merchant} from '@models/merchant.model';
+import { MerchantApiService } from './services/merchant-api.service';
+import { ToastService } from '@core/services/toast.service';
+import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen-toolbar';
+import { MerchantFormDialogComponent } from './components/merchant-form-dialog/merchant-form-dialog.component';
+import { MergeMerchantsDialogComponent } from './components/merge-merchants-dialog/merge-merchants-dialog.component';
+import { Merchant } from '@models/merchant.model';
 
 /**
  * Dedicated page for viewing, searching, and correcting the authenticated user's merchants
@@ -35,9 +45,10 @@ import {Merchant} from '@models/merchant.model';
     InputIconModule,
     ScreenToolbarComponent,
     MerchantFormDialogComponent,
-    MergeMerchantsDialogComponent
+    MergeMerchantsDialogComponent,
   ],
-  templateUrl: './merchants.component.html'
+  templateUrl: './merchants.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MerchantsComponent implements OnInit {
   private readonly merchantApi: MerchantApiService = inject(MerchantApiService);
@@ -70,20 +81,24 @@ export class MerchantsComponent implements OnInit {
     const term: string = this.searchTerm().trim().toLowerCase();
     const all: Merchant[] = this.merchants();
     const matches: Merchant[] = term
-      ? all.filter((m: Merchant): boolean =>
-          m.cleanName.toLowerCase().includes(term) || m.originalName.toLowerCase().includes(term))
+      ? all.filter(
+          (m: Merchant): boolean =>
+            m.cleanName.toLowerCase().includes(term) || m.originalName.toLowerCase().includes(term),
+        )
       : all;
-    return [...matches].sort((a: Merchant, b: Merchant): number => a.cleanName.localeCompare(b.cleanName));
+    return [...matches].sort((a: Merchant, b: Merchant): number =>
+      a.cleanName.localeCompare(b.cleanName),
+    );
   });
 
   /** Indicates if the user has no merchants at all (distinct from a search finding nothing). */
-  readonly isEmpty: Signal<boolean> = computed((): boolean =>
-    this.merchants().length === 0 && !this.loading()
+  readonly isEmpty: Signal<boolean> = computed(
+    (): boolean => this.merchants().length === 0 && !this.loading(),
   );
 
   /** Indicates if a search is active but matched nothing. */
-  readonly noSearchResults: Signal<boolean> = computed((): boolean =>
-    !this.isEmpty() && this.filteredMerchants().length === 0
+  readonly noSearchResults: Signal<boolean> = computed(
+    (): boolean => !this.isEmpty() && this.filteredMerchants().length === 0,
   );
 
   ngOnInit(): void {
@@ -95,7 +110,8 @@ export class MerchantsComponent implements OnInit {
    */
   loadData(): void {
     this.loading.set(true);
-    this.merchantApi.getMerchants()
+    this.merchantApi
+      .getMerchants()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (data: Merchant[]): void => {
@@ -106,7 +122,7 @@ export class MerchantsComponent implements OnInit {
           console.error('Failed to load merchants:', err);
           this.toast.error('Failed to load merchants');
           this.loading.set(false);
-        }
+        },
       });
   }
 

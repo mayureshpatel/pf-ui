@@ -1,6 +1,6 @@
-import {TestBed} from '@angular/core/testing';
-import {ConfirmationService, MessageService} from 'primeng/api';
-import {App} from './app';
+import { TestBed } from '@angular/core/testing';
+import { ConfirmationService, MessageService } from 'primeng/api';
+import { App } from './app';
 
 describe('App', () => {
   beforeEach(async () => {

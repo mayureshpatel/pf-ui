@@ -1,8 +1,15 @@
-import {ChangeDetectionStrategy, Component, computed, input, InputSignal, Signal} from '@angular/core';
-import {CommonModule} from '@angular/common';
-import {CardModule} from 'primeng/card';
-import {Account, AccountSummary} from '@models/account.model';
-import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  input,
+  InputSignal,
+  Signal,
+} from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { CardModule } from 'primeng/card';
+import { Account, AccountSummary } from '@models/account.model';
+import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
 
 /**
  * Component for displaying summary cards of all financial accounts.
@@ -16,10 +23,9 @@ import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
   standalone: true,
   imports: [CommonModule, CardModule, FormatCurrencyPipe],
   templateUrl: './account-summary-cards.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AccountSummaryCardsComponent {
-
   /**
    * The list of accounts to summarize.
    * Required input signal that triggers recalculation when changed.
@@ -35,19 +41,22 @@ export class AccountSummaryCardsComponent {
   summary: Signal<AccountSummary> = computed(() => {
     const accountList = this.accounts();
 
-    const totals = accountList.reduce((acc, account) => {
-      if (account.type.isAsset) {
-        acc.totalAssets += account.currentBalance;
-      } else {
-        acc.totalLiabilities += Math.abs(account.currentBalance);
-      }
-      return acc;
-    }, { totalAssets: 0, totalLiabilities: 0 });
+    const totals = accountList.reduce(
+      (acc, account) => {
+        if (account.type.isAsset) {
+          acc.totalAssets += account.currentBalance;
+        } else {
+          acc.totalLiabilities += Math.abs(account.currentBalance);
+        }
+        return acc;
+      },
+      { totalAssets: 0, totalLiabilities: 0 },
+    );
 
     return {
       totalAssets: totals.totalAssets,
       totalLiabilities: totals.totalLiabilities,
-      netWorth: totals.totalAssets - totals.totalLiabilities
+      netWorth: totals.totalAssets - totals.totalLiabilities,
     };
   });
 }

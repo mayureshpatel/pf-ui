@@ -1,4 +1,5 @@
 import {
+  ChangeDetectionStrategy,
   Component,
   effect,
   inject,
@@ -9,20 +10,20 @@ import {
   output,
   OutputEmitterRef,
   signal,
-  WritableSignal
+  WritableSignal,
 } from '@angular/core';
-import {CommonModule} from '@angular/common';
-import {FormControl, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
-import {finalize} from 'rxjs';
-import {DialogModule} from 'primeng/dialog';
-import {ButtonModule} from 'primeng/button';
-import {InputTextModule} from 'primeng/inputtext';
-import {MessageModule} from 'primeng/message';
+import { CommonModule } from '@angular/common';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { finalize } from 'rxjs';
+import { DialogModule } from 'primeng/dialog';
+import { ButtonModule } from 'primeng/button';
+import { InputTextModule } from 'primeng/inputtext';
+import { MessageModule } from 'primeng/message';
 
-import {Merchant} from '@models/merchant.model';
-import {MerchantApiService} from '../../services/merchant-api.service';
-import {ToastService} from '@core/services/toast.service';
-import {RestoreFocusOnHideDirective} from '@shared/directives/restore-focus-on-hide.directive';
+import { Merchant } from '@models/merchant.model';
+import { MerchantApiService } from '../../services/merchant-api.service';
+import { ToastService } from '@core/services/toast.service';
+import { RestoreFocusOnHideDirective } from '@shared/directives/restore-focus-on-hide.directive';
 
 /**
  * Dialog for correcting a merchant's display name (PF-220's endpoint). A single-field form --
@@ -39,9 +40,10 @@ import {RestoreFocusOnHideDirective} from '@shared/directives/restore-focus-on-h
     ButtonModule,
     InputTextModule,
     MessageModule,
-    RestoreFocusOnHideDirective
+    RestoreFocusOnHideDirective,
   ],
-  templateUrl: './merchant-form-dialog.component.html'
+  templateUrl: './merchant-form-dialog.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MerchantFormDialogComponent {
   private readonly merchantApi: MerchantApiService = inject(MerchantApiService);
@@ -68,8 +70,8 @@ export class MerchantFormDialogComponent {
   readonly form = new FormGroup({
     cleanName: new FormControl<string>('', {
       nonNullable: true,
-      validators: [Validators.required]
-    })
+      validators: [Validators.required],
+    }),
   });
 
   constructor() {
@@ -78,7 +80,7 @@ export class MerchantFormDialogComponent {
      */
     effect((): void => {
       if (this.visible()) {
-        this.form.reset({cleanName: this.merchant()?.cleanName ?? ''});
+        this.form.reset({ cleanName: this.merchant()?.cleanName ?? '' });
         this.errorMessage.set(null);
       }
     });
@@ -105,7 +107,8 @@ export class MerchantFormDialogComponent {
     this.saving.set(true);
     this.errorMessage.set(null);
 
-    this.merchantApi.updateMerchant({id: target.id, cleanName: this.form.getRawValue().cleanName})
+    this.merchantApi
+      .updateMerchant({ id: target.id, cleanName: this.form.getRawValue().cleanName })
       .pipe(finalize((): void => this.saving.set(false)))
       .subscribe({
         next: (): void => {
@@ -115,8 +118,10 @@ export class MerchantFormDialogComponent {
         },
         error: (err: any): void => {
           console.error('Error updating merchant:', err);
-          this.errorMessage.set(err.error?.detail || 'Failed to update merchant. Please try again.');
-        }
+          this.errorMessage.set(
+            err.error?.detail || 'Failed to update merchant. Please try again.',
+          );
+        },
       });
   }
 }

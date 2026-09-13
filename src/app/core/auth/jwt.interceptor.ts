@@ -1,6 +1,6 @@
-import {HttpHandlerFn, HttpInterceptorFn, HttpRequest} from '@angular/common/http';
-import {inject} from '@angular/core';
-import {AuthService} from './auth.service';
+import { HttpHandlerFn, HttpInterceptorFn, HttpRequest } from '@angular/common/http';
+import { inject } from '@angular/core';
+import { AuthService } from './auth.service';
 
 /**
  * Interceptor for adding authorization headers to outgoing requests.
@@ -9,7 +9,7 @@ import {AuthService} from './auth.service';
  */
 export const jwtInterceptor: HttpInterceptorFn = (
   req: HttpRequest<unknown>,
-  next: HttpHandlerFn
+  next: HttpHandlerFn,
 ) => {
   const authService: AuthService = inject(AuthService);
   const token: string | null = authService.getToken();
@@ -17,8 +17,8 @@ export const jwtInterceptor: HttpInterceptorFn = (
   if (token && !req.url.includes('/auth/')) {
     const authReq: HttpRequest<unknown> = req.clone({
       setHeaders: {
-        Authorization: `Bearer ${token}`
-      }
+        Authorization: `Bearer ${token}`,
+      },
     });
     return next(authReq);
   }

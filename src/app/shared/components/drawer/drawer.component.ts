@@ -1,10 +1,23 @@
-import {ChangeDetectionStrategy, Component, effect, ElementRef, input, InputSignal, model, ModelSignal, output, OutputEmitterRef, Signal, viewChild} from '@angular/core';
-import {CommonModule} from '@angular/common';
-import {DrawerModule} from 'primeng/drawer';
-import {ButtonModule} from 'primeng/button';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  effect,
+  ElementRef,
+  input,
+  InputSignal,
+  model,
+  ModelSignal,
+  output,
+  OutputEmitterRef,
+  Signal,
+  viewChild,
+} from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { DrawerModule } from 'primeng/drawer';
+import { ButtonModule } from 'primeng/button';
 
 // Mirrors PrimeNG's own Dialog focusOnShow behavior, which p-drawer has no equivalent for.
-const FOCUSABLE_SELECTOR: string =
+const FOCUSABLE_SELECTOR =
   'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /**
@@ -17,7 +30,7 @@ const FOCUSABLE_SELECTOR: string =
   selector: 'app-drawer',
   imports: [CommonModule, DrawerModule, ButtonModule],
   templateUrl: './drawer.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DrawerComponent {
   /**
@@ -83,7 +96,8 @@ export class DrawerComponent {
    */
   showEmitterRef: OutputEmitterRef<void> = output<void>();
 
-  private readonly focusScope: Signal<ElementRef<HTMLElement> | undefined> = viewChild('focusScope');
+  private readonly focusScope: Signal<ElementRef<HTMLElement> | undefined> =
+    viewChild('focusScope');
 
   private triggerElement: HTMLElement | null = null;
 
@@ -145,7 +159,8 @@ export class DrawerComponent {
     // own setTimeout -- under this app's zoneless change detection that call can land later than
     // this one, so prefer an explicit autofocus target here rather than racing on timing.
     const target: HTMLElement | null =
-      container.querySelector<HTMLElement>('[autofocus]') ?? container.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+      container.querySelector<HTMLElement>('[autofocus]') ??
+      container.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
     target?.focus();
   }
 }

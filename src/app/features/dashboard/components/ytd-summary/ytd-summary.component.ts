@@ -1,7 +1,14 @@
-import {ChangeDetectionStrategy, Component, computed, input, InputSignal, Signal} from '@angular/core';
-import {CommonModule} from '@angular/common';
-import {CardModule} from 'primeng/card';
-import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  input,
+  InputSignal,
+  Signal,
+} from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { CardModule } from 'primeng/card';
+import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
 
 /**
  * Component for displaying an annual financial performance summary.
@@ -14,7 +21,7 @@ import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
   standalone: true,
   imports: [CommonModule, CardModule, FormatCurrencyPipe],
   templateUrl: './ytd-summary.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class YtdSummaryComponent {
   /** The year for which the summary is being displayed. */
@@ -32,7 +39,9 @@ export class YtdSummaryComponent {
   /**
    * Derived signal calculating the net savings (Income - Expenses).
    */
-  readonly netSavings: Signal<number> = computed((): number => this.totalIncome() - this.totalExpense());
+  readonly netSavings: Signal<number> = computed(
+    (): number => this.totalIncome() - this.totalExpense(),
+  );
 
   /**
    * Derived signal providing semantic Tailwind classes for the savings rate.

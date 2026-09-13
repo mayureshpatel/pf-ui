@@ -1,15 +1,15 @@
-import {vi} from 'vitest';
-import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {By} from '@angular/platform-browser';
-import {NoopAnimationsModule} from '@angular/platform-browser/animations';
-import {of, throwError} from 'rxjs';
-import {Select} from 'primeng/select';
+import { vi } from 'vitest';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { of, throwError } from 'rxjs';
+import { Select } from 'primeng/select';
 
-import {CategoryRuleFormDialogComponent} from './category-rule-form-dialog.component';
-import {CategoryRuleApiService} from '../../services/category-rule-api.service';
-import {CategoryApiService} from '@features/categories/services/category-api.service';
-import {ToastService} from '@core/services/toast.service';
-import {Category} from '@models/category.model';
+import { CategoryRuleFormDialogComponent } from './category-rule-form-dialog.component';
+import { CategoryRuleApiService } from '../../services/category-rule-api.service';
+import { CategoryApiService } from '@features/categories/services/category-api.service';
+import { ToastService } from '@core/services/toast.service';
+import { Category } from '@models/category.model';
 
 describe('CategoryRuleFormDialogComponent', () => {
   let component: CategoryRuleFormDialogComponent;
@@ -18,20 +18,20 @@ describe('CategoryRuleFormDialogComponent', () => {
   let mockCategoryApi: any;
   let mockToast: any;
 
-  const mockCategory: Category = {id: 50, userId: 1, name: 'Shopping'} as unknown as Category;
+  const mockCategory: Category = { id: 50, userId: 1, name: 'Shopping' } as unknown as Category;
 
   beforeEach(async () => {
-    mockRuleApi = {createRule: vi.fn().mockReturnValue(of(1))};
-    mockCategoryApi = {getGroupedCategories: vi.fn().mockReturnValue(of([]))};
-    mockToast = {success: vi.fn(), error: vi.fn()};
+    mockRuleApi = { createRule: vi.fn().mockReturnValue(of(1)) };
+    mockCategoryApi = { getGroupedCategories: vi.fn().mockReturnValue(of([])) };
+    mockToast = { success: vi.fn(), error: vi.fn() };
 
     await TestBed.configureTestingModule({
       imports: [CategoryRuleFormDialogComponent, NoopAnimationsModule],
       providers: [
-        {provide: CategoryRuleApiService, useValue: mockRuleApi},
-        {provide: CategoryApiService, useValue: mockCategoryApi},
-        {provide: ToastService, useValue: mockToast}
-      ]
+        { provide: CategoryRuleApiService, useValue: mockRuleApi },
+        { provide: CategoryApiService, useValue: mockCategoryApi },
+        { provide: ToastService, useValue: mockToast },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(CategoryRuleFormDialogComponent);
@@ -71,7 +71,7 @@ describe('CategoryRuleFormDialogComponent', () => {
 
     // assert & verify
     expect(mockRuleApi.createRule).toHaveBeenCalledWith(
-      expect.objectContaining({keywords: ['AMZN', 'MKTP', 'US']})
+      expect.objectContaining({ keywords: ['AMZN', 'MKTP', 'US'] }),
     );
   });
 
@@ -85,7 +85,7 @@ describe('CategoryRuleFormDialogComponent', () => {
 
     // assert & verify
     expect(mockRuleApi.createRule).toHaveBeenCalledWith(
-      expect.objectContaining({keywords: ['WALMART'], matchType: 'OR'})
+      expect.objectContaining({ keywords: ['WALMART'], matchType: 'OR' }),
     );
   });
 
@@ -100,7 +100,7 @@ describe('CategoryRuleFormDialogComponent', () => {
 
     // assert & verify
     expect(mockRuleApi.createRule).toHaveBeenCalledWith(
-      expect.objectContaining({matchType: 'AND'})
+      expect.objectContaining({ matchType: 'AND' }),
     );
   });
 
@@ -119,7 +119,7 @@ describe('CategoryRuleFormDialogComponent', () => {
   describe('onShow', () => {
     it('should load and populate the grouped category dropdown', () => {
       // arrange
-      const group = {parent: mockCategory, items: [mockCategory]};
+      const group = { parent: mockCategory, items: [mockCategory] };
       mockCategoryApi.getGroupedCategories.mockReturnValue(of([group]));
 
       // act
@@ -149,7 +149,9 @@ describe('CategoryRuleFormDialogComponent', () => {
 
     it('should toast an error when loading categories fails', () => {
       // arrange
-      mockCategoryApi.getGroupedCategories.mockReturnValue(throwError(() => new Error('network error')));
+      mockCategoryApi.getGroupedCategories.mockReturnValue(
+        throwError(() => new Error('network error')),
+      );
 
       // act
       component.onShow();
@@ -180,7 +182,9 @@ describe('CategoryRuleFormDialogComponent', () => {
       component.onSubmit();
 
       // assert & verify
-      expect(mockRuleApi.createRule).toHaveBeenCalledWith(expect.objectContaining({priority: 10}));
+      expect(mockRuleApi.createRule).toHaveBeenCalledWith(
+        expect.objectContaining({ priority: 10 }),
+      );
     });
   });
 
@@ -215,7 +219,7 @@ describe('CategoryRuleFormDialogComponent', () => {
 
       // assert & verify
       expect(mockRuleApi.createRule).toHaveBeenCalledWith(
-        expect.objectContaining({minAmount: 20, maxAmount: null})
+        expect.objectContaining({ minAmount: 20, maxAmount: null }),
       );
     });
   });
@@ -236,7 +240,9 @@ describe('CategoryRuleFormDialogComponent', () => {
       component.onSubmit();
 
       // assert & verify
-      expect(mockRuleApi.createRule).toHaveBeenCalledWith(expect.objectContaining({categoryId: 50}));
+      expect(mockRuleApi.createRule).toHaveBeenCalledWith(
+        expect.objectContaining({ categoryId: 50 }),
+      );
     });
 
     it("should wire the p-select's group header to the parent's own name field (PF-352)", () => {
@@ -244,7 +250,8 @@ describe('CategoryRuleFormDialogComponent', () => {
       // its own; template previously bound groupLabel="groupLabel" (always undefined -> blank
       // group headers in the real dropdown). PrimeNG's optionGroupLabel resolves dot-paths via
       // resolveFieldData, so "parent.name" is a real, working fix, not a workaround.
-      const categorySelect = fixture.debugElement.queryAll(By.directive(Select))
+      const categorySelect = fixture.debugElement
+        .queryAll(By.directive(Select))
         .find((de): boolean => de.componentInstance.optionLabel === 'name')!;
 
       // assert & verify
@@ -286,7 +293,9 @@ describe('CategoryRuleFormDialogComponent', () => {
 
     it('should surface the API error message and keep the dialog open on failure', () => {
       // arrange
-      mockRuleApi.createRule.mockReturnValue(throwError(() => ({error: {detail: 'Duplicate rule'}})));
+      mockRuleApi.createRule.mockReturnValue(
+        throwError(() => ({ error: { detail: 'Duplicate rule' } })),
+      );
 
       // act
       submitValidForm();
@@ -299,7 +308,7 @@ describe('CategoryRuleFormDialogComponent', () => {
 
     it('should fall back to a generic error message when the API error has no detail', () => {
       // arrange
-      mockRuleApi.createRule.mockReturnValue(throwError(() => ({error: {}})));
+      mockRuleApi.createRule.mockReturnValue(throwError(() => ({ error: {} })));
 
       // act
       submitValidForm();

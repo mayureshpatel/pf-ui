@@ -1,16 +1,16 @@
-import {inject, Injectable} from '@angular/core';
-import {HttpClient, HttpContext} from '@angular/common/http';
-import {Observable} from 'rxjs';
-import {environment} from '@env';
+import { inject, Injectable } from '@angular/core';
+import { HttpClient, HttpContext } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { environment } from '@env';
 import {
   RecurringSuggestion,
   RecurringTransaction,
   RecurringTransactionCreateRequest,
-  RecurringTransactionUpdateRequest
+  RecurringTransactionUpdateRequest,
 } from '@models/recurring.model';
-import {SKIP_GENERIC_ERROR_TOAST} from '@core/auth/error.interceptor';
+import { SKIP_GENERIC_ERROR_TOAST } from '@core/auth/error.interceptor';
 
-const SKIP_TOAST_OPTIONS = {context: new HttpContext().set(SKIP_GENERIC_ERROR_TOAST, true)};
+const SKIP_TOAST_OPTIONS = { context: new HttpContext().set(SKIP_GENERIC_ERROR_TOAST, true) };
 
 /**
  * Service responsible for managing recurring transactions and subscription patterns.
@@ -19,7 +19,7 @@ const SKIP_TOAST_OPTIONS = {context: new HttpContext().set(SKIP_GENERIC_ERROR_TO
  * retrieving pattern-based suggestions from transaction history.
  */
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class RecurringApiService {
   private readonly http: HttpClient = inject(HttpClient);

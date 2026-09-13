@@ -1,27 +1,35 @@
-import {ChangeDetectionStrategy, Component, computed, DestroyRef, inject, OnInit, Signal, signal, WritableSignal} from '@angular/core';
-import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
-import {CommonModule} from '@angular/common';
-import {finalize} from 'rxjs';
-import {ButtonModule} from 'primeng/button';
-import {TableModule} from 'primeng/table';
-import {CardModule} from 'primeng/card';
-import {TagModule} from 'primeng/tag';
-import {TooltipModule} from 'primeng/tooltip';
-import {ConfirmationService} from 'primeng/api';
-
-import {RecurringSuggestion, RecurringTransaction} from '@models/recurring.model';
-import {Account} from '@models/account.model';
-import {Merchant} from '@models/merchant.model';
-import {RecurringApiService} from './services/recurring-api.service';
-import {AccountApiService} from '@features/accounts/services/account-api.service';
-import {CategoryApiService} from '@features/categories/services/category-api.service';
-import {ToastService} from '@core/services/toast.service';
-import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-toolbar';
-import {RecurringFormDialogComponent} from './components/recurring-form-dialog/recurring-form-dialog.component';
 import {
-  RecurringSuggestionsDialogComponent
-} from './components/recurring-suggestions-dialog/recurring-suggestions-dialog.component';
-import {PageErrorStateComponent} from '@shared/components/page-error-state/page-error-state.component';
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  DestroyRef,
+  inject,
+  OnInit,
+  Signal,
+  signal,
+  WritableSignal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { CommonModule } from '@angular/common';
+import { finalize } from 'rxjs';
+import { ButtonModule } from 'primeng/button';
+import { TableModule } from 'primeng/table';
+import { CardModule } from 'primeng/card';
+import { TagModule } from 'primeng/tag';
+import { TooltipModule } from 'primeng/tooltip';
+import { ConfirmationService } from 'primeng/api';
+
+import { RecurringSuggestion, RecurringTransaction } from '@models/recurring.model';
+import { Account } from '@models/account.model';
+import { Merchant } from '@models/merchant.model';
+import { RecurringApiService } from './services/recurring-api.service';
+import { AccountApiService } from '@features/accounts/services/account-api.service';
+import { CategoryApiService } from '@features/categories/services/category-api.service';
+import { ToastService } from '@core/services/toast.service';
+import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen-toolbar';
+import { RecurringFormDialogComponent } from './components/recurring-form-dialog/recurring-form-dialog.component';
+import { RecurringSuggestionsDialogComponent } from './components/recurring-suggestions-dialog/recurring-suggestions-dialog.component';
+import { PageErrorStateComponent } from '@shared/components/page-error-state/page-error-state.component';
 
 /**
  * Component for managing recurring financial obligations and income.
@@ -43,10 +51,10 @@ import {PageErrorStateComponent} from '@shared/components/page-error-state/page-
     ScreenToolbarComponent,
     RecurringFormDialogComponent,
     RecurringSuggestionsDialogComponent,
-    PageErrorStateComponent
+    PageErrorStateComponent,
   ],
   templateUrl: './recurring.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RecurringComponent implements OnInit {
   private readonly recurringApi: RecurringApiService = inject(RecurringApiService);
@@ -84,14 +92,16 @@ export class RecurringComponent implements OnInit {
   readonly pendingSuggestion: WritableSignal<RecurringSuggestion | null> = signal(null);
 
   /** Indicates if there are no recurring transactions to display. */
-  readonly isEmpty: Signal<boolean> = computed(() => this.recurringTransactions().length === 0 && !this.loading());
+  readonly isEmpty: Signal<boolean> = computed(
+    () => this.recurringTransactions().length === 0 && !this.loading(),
+  );
 
   readonly frequencyLabels: Record<string, string> = {
     WEEKLY: 'Weekly',
     BI_WEEKLY: 'Bi-Weekly',
     MONTHLY: 'Monthly',
     QUARTERLY: 'Quarterly',
-    YEARLY: 'Yearly'
+    YEARLY: 'Yearly',
   };
 
   /**
@@ -109,10 +119,11 @@ export class RecurringComponent implements OnInit {
   refreshAll(): void {
     this.loading.set(true);
     this.loadError.set(false);
-    this.recurringApi.getAll()
+    this.recurringApi
+      .getAll()
       .pipe(
         takeUntilDestroyed(this.destroyRef),
-        finalize(() => this.loading.set(false))
+        finalize(() => this.loading.set(false)),
       )
       .subscribe({
         next: (data: RecurringTransaction[]): void => this.recurringTransactions.set(data),
@@ -120,7 +131,7 @@ export class RecurringComponent implements OnInit {
           console.error('Failed to load recurring data:', err);
           this.toast.error('Failed to load recurring transactions');
           this.loadError.set(true);
-        }
+        },
       });
   }
 
@@ -128,14 +139,15 @@ export class RecurringComponent implements OnInit {
    * Loads the list of available bank/financial accounts.
    */
   private loadAccounts(): void {
-    this.accountApi.getAccounts()
+    this.accountApi
+      .getAccounts()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (data: Account[]): void => this.accounts.set(data),
         error: (err: any): void => {
           console.error('Failed to load accounts for selection:', err);
           this.toast.error('Failed to load accounts');
-        }
+        },
       });
   }
 
@@ -143,11 +155,12 @@ export class RecurringComponent implements OnInit {
    * Loads the list of known merchants for the selection dropdown.
    */
   private loadMerchants(): void {
-    this.categoryApi.getMerchantsWithTransactions()
+    this.categoryApi
+      .getMerchantsWithTransactions()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (data: Merchant[]): void => this.merchants.set(data),
-        error: (err: any): void => console.error('Failed to load merchants for selection:', err)
+        error: (err: any): void => console.error('Failed to load merchants for selection:', err),
       });
   }
 
@@ -200,7 +213,8 @@ export class RecurringComponent implements OnInit {
       rejectLabel: 'Cancel',
       acceptButtonStyleClass: 'p-button-danger',
       accept: (): void => {
-        this.recurringApi.delete(rec.id)
+        this.recurringApi
+          .delete(rec.id)
           .pipe(takeUntilDestroyed(this.destroyRef))
           .subscribe({
             next: (): void => {
@@ -210,9 +224,9 @@ export class RecurringComponent implements OnInit {
             error: (error: any): void => {
               console.error('Failed to delete recurring entry:', error);
               this.toast.error(error.error?.detail || 'Failed to delete entry');
-            }
+            },
           });
-      }
+      },
     });
   }
 }

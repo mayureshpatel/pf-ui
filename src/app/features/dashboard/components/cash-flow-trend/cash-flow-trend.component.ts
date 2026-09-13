@@ -1,8 +1,15 @@
-import {ChangeDetectionStrategy, Component, computed, input, InputSignal, Signal} from '@angular/core';
-import {CommonModule, formatDate} from '@angular/common';
-import {CardModule} from 'primeng/card';
-import {ChartModule} from 'primeng/chart';
-import {CashFlowTrend} from '@models/dashboard.model';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  input,
+  InputSignal,
+  Signal,
+} from '@angular/core';
+import { CommonModule, formatDate } from '@angular/common';
+import { CardModule } from 'primeng/card';
+import { ChartModule } from 'primeng/chart';
+import { CashFlowTrend } from '@models/dashboard.model';
 
 /**
  * Component for displaying a bar chart comparison of income and expenses over time.
@@ -14,7 +21,7 @@ import {CashFlowTrend} from '@models/dashboard.model';
   standalone: true,
   imports: [CommonModule, CardModule, ChartModule],
   templateUrl: './cash-flow-trend.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CashFlowTrendComponent {
   /** The trend data to visualize. */
@@ -40,15 +47,15 @@ export class CashFlowTrendComponent {
           label: 'Income',
           backgroundColor: '#10b981', // emerald-500
           borderRadius: 6,
-          data: trendData.map((d: CashFlowTrend): number => d.income)
+          data: trendData.map((d: CashFlowTrend): number => d.income),
         },
         {
           label: 'Expenses',
           backgroundColor: '#f43f5e', // rose-500
           borderRadius: 6,
-          data: trendData.map((d: CashFlowTrend): number => d.expense)
-        }
-      ]
+          data: trendData.map((d: CashFlowTrend): number => d.expense),
+        },
+      ],
     };
   });
 
@@ -66,41 +73,41 @@ export class CashFlowTrendComponent {
           usePointStyle: true,
           pointStyle: 'circle',
           padding: 20,
-          font: {size: 12, weight: '700'},
-          color: '#64748b' // surface-500
-        }
+          font: { size: 12, weight: '700' },
+          color: '#64748b', // surface-500
+        },
       },
       tooltip: {
         backgroundColor: '#1e293b',
         padding: 12,
-        titleFont: {size: 14, weight: 'bold'},
-        bodyFont: {size: 13},
-        usePointStyle: true
-      }
+        titleFont: { size: 14, weight: 'bold' },
+        bodyFont: { size: 13 },
+        usePointStyle: true,
+      },
     },
     scales: {
       x: {
         ticks: {
           color: '#94a3b8',
-          font: {size: 11, weight: '600'}
+          font: { size: 11, weight: '600' },
         },
         grid: {
           display: false,
-          drawBorder: false
-        }
+          drawBorder: false,
+        },
       },
       y: {
         beginAtZero: true,
         ticks: {
           color: '#94a3b8',
-          font: {size: 11, family: 'monospace'},
-          callback: (value: number): string => `$${value >= 1000 ? (value / 1000) + 'k' : value}`
+          font: { size: 11, family: 'monospace' },
+          callback: (value: number): string => `$${value >= 1000 ? value / 1000 + 'k' : value}`,
         },
         grid: {
           color: 'rgba(148, 163, 184, 0.1)',
-          drawBorder: false
-        }
-      }
-    }
+          drawBorder: false,
+        },
+      },
+    },
   };
 }

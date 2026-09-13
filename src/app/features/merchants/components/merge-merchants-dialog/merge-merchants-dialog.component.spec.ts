@@ -1,12 +1,12 @@
-import {vi} from 'vitest';
-import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {NoopAnimationsModule} from '@angular/platform-browser/animations';
-import {of, throwError} from 'rxjs';
+import { vi } from 'vitest';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { of, throwError } from 'rxjs';
 
-import {MergeMerchantsDialogComponent} from './merge-merchants-dialog.component';
-import {MerchantApiService} from '../../services/merchant-api.service';
-import {ToastService} from '@core/services/toast.service';
-import {Merchant} from '@models/merchant.model';
+import { MergeMerchantsDialogComponent } from './merge-merchants-dialog.component';
+import { MerchantApiService } from '../../services/merchant-api.service';
+import { ToastService } from '@core/services/toast.service';
+import { Merchant } from '@models/merchant.model';
 
 describe('MergeMerchantsDialogComponent', () => {
   let component: MergeMerchantsDialogComponent;
@@ -14,19 +14,29 @@ describe('MergeMerchantsDialogComponent', () => {
   let mockMerchantApi: any;
   let mockToast: any;
 
-  const merchantA: Merchant = {id: 1, userId: 1, originalName: 'STARBUCKS #100', cleanName: 'Starbucks'};
-  const merchantB: Merchant = {id: 2, userId: 1, originalName: 'STARBUCKS #200', cleanName: 'Starbucks Coffee'};
+  const merchantA: Merchant = {
+    id: 1,
+    userId: 1,
+    originalName: 'STARBUCKS #100',
+    cleanName: 'Starbucks',
+  };
+  const merchantB: Merchant = {
+    id: 2,
+    userId: 1,
+    originalName: 'STARBUCKS #200',
+    cleanName: 'Starbucks Coffee',
+  };
 
   beforeEach(async () => {
-    mockMerchantApi = {mergeMerchants: vi.fn().mockReturnValue(of(undefined))};
-    mockToast = {success: vi.fn(), error: vi.fn()};
+    mockMerchantApi = { mergeMerchants: vi.fn().mockReturnValue(of(undefined)) };
+    mockToast = { success: vi.fn(), error: vi.fn() };
 
     await TestBed.configureTestingModule({
       imports: [MergeMerchantsDialogComponent, NoopAnimationsModule],
       providers: [
-        {provide: MerchantApiService, useValue: mockMerchantApi},
-        {provide: ToastService, useValue: mockToast}
-      ]
+        { provide: MerchantApiService, useValue: mockMerchantApi },
+        { provide: ToastService, useValue: mockToast },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(MergeMerchantsDialogComponent);
@@ -89,7 +99,7 @@ describe('MergeMerchantsDialogComponent', () => {
     // assert & verify
     expect(mockMerchantApi.mergeMerchants).toHaveBeenCalledWith({
       survivingMerchantId: merchantB.id,
-      mergedAwayMerchantId: merchantA.id
+      mergedAwayMerchantId: merchantA.id,
     });
   });
 
@@ -113,7 +123,7 @@ describe('MergeMerchantsDialogComponent', () => {
   it('should show an error message and keep the dialog open when the merge fails', () => {
     // arrange
     mockMerchantApi.mergeMerchants.mockReturnValue(
-      throwError(() => ({error: {detail: 'Surviving merchant not found.'}}))
+      throwError(() => ({ error: { detail: 'Surviving merchant not found.' } })),
     );
     component.visible.set(true);
     fixture.detectChanges();
