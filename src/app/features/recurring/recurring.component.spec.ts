@@ -1,15 +1,15 @@
-import {vi} from 'vitest';
-import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {NoopAnimationsModule} from '@angular/platform-browser/animations';
-import {of} from 'rxjs';
-import {ConfirmationService} from 'primeng/api';
+import { vi } from 'vitest';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { of } from 'rxjs';
+import { ConfirmationService } from 'primeng/api';
 
-import {RecurringComponent} from './recurring.component';
-import {RecurringApiService} from './services/recurring-api.service';
-import {AccountApiService} from '@features/accounts/services/account-api.service';
-import {CategoryApiService} from '@features/categories/services/category-api.service';
-import {ToastService} from '@core/services/toast.service';
-import {RecurringTransaction} from '@models/recurring.model';
+import { RecurringComponent } from './recurring.component';
+import { RecurringApiService } from './services/recurring-api.service';
+import { AccountApiService } from '@features/accounts/services/account-api.service';
+import { CategoryApiService } from '@features/categories/services/category-api.service';
+import { ToastService } from '@core/services/toast.service';
+import { RecurringTransaction } from '@models/recurring.model';
 
 describe('RecurringComponent', () => {
   let component: RecurringComponent;
@@ -23,33 +23,33 @@ describe('RecurringComponent', () => {
   const mockRecurring: RecurringTransaction = {
     id: 1,
     userId: 1,
-    account: {name: 'Checking'},
-    merchant: {cleanName: 'Netflix'},
+    account: { name: 'Checking' },
+    merchant: { cleanName: 'Netflix' },
     amount: 15.99,
     frequency: 'MONTHLY',
     nextDate: '2026-02-01',
-    active: true
+    active: true,
   } as unknown as RecurringTransaction;
 
   beforeEach(async () => {
     mockRecurringApi = {
       getAll: vi.fn().mockReturnValue(of([mockRecurring])),
-      delete: vi.fn().mockReturnValue(of(undefined))
+      delete: vi.fn().mockReturnValue(of(undefined)),
     };
-    mockAccountApi = {getAccounts: vi.fn().mockReturnValue(of([]))};
-    mockCategoryApi = {getMerchantsWithTransactions: vi.fn().mockReturnValue(of([]))};
-    mockToast = {success: vi.fn(), error: vi.fn()};
-    mockConfirmationService = {confirm: vi.fn()};
+    mockAccountApi = { getAccounts: vi.fn().mockReturnValue(of([])) };
+    mockCategoryApi = { getMerchantsWithTransactions: vi.fn().mockReturnValue(of([])) };
+    mockToast = { success: vi.fn(), error: vi.fn() };
+    mockConfirmationService = { confirm: vi.fn() };
 
     await TestBed.configureTestingModule({
       imports: [RecurringComponent, NoopAnimationsModule],
       providers: [
-        {provide: RecurringApiService, useValue: mockRecurringApi},
-        {provide: AccountApiService, useValue: mockAccountApi},
-        {provide: CategoryApiService, useValue: mockCategoryApi},
-        {provide: ToastService, useValue: mockToast},
-        {provide: ConfirmationService, useValue: mockConfirmationService}
-      ]
+        { provide: RecurringApiService, useValue: mockRecurringApi },
+        { provide: AccountApiService, useValue: mockAccountApi },
+        { provide: CategoryApiService, useValue: mockCategoryApi },
+        { provide: ToastService, useValue: mockToast },
+        { provide: ConfirmationService, useValue: mockConfirmationService },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(RecurringComponent);

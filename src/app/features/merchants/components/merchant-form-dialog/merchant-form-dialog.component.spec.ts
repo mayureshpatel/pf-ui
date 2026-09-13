@@ -1,12 +1,12 @@
-import {vi} from 'vitest';
-import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {NoopAnimationsModule} from '@angular/platform-browser/animations';
-import {of, throwError} from 'rxjs';
+import { vi } from 'vitest';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { of, throwError } from 'rxjs';
 
-import {MerchantFormDialogComponent} from './merchant-form-dialog.component';
-import {MerchantApiService} from '../../services/merchant-api.service';
-import {ToastService} from '@core/services/toast.service';
-import {Merchant} from '@models/merchant.model';
+import { MerchantFormDialogComponent } from './merchant-form-dialog.component';
+import { MerchantApiService } from '../../services/merchant-api.service';
+import { ToastService } from '@core/services/toast.service';
+import { Merchant } from '@models/merchant.model';
 
 describe('MerchantFormDialogComponent', () => {
   let component: MerchantFormDialogComponent;
@@ -14,18 +14,23 @@ describe('MerchantFormDialogComponent', () => {
   let mockMerchantApi: any;
   let mockToast: any;
 
-  const mockMerchant: Merchant = {id: 7, userId: 1, originalName: 'STARBUCKS #100', cleanName: 'Starbucks'};
+  const mockMerchant: Merchant = {
+    id: 7,
+    userId: 1,
+    originalName: 'STARBUCKS #100',
+    cleanName: 'Starbucks',
+  };
 
   beforeEach(async () => {
-    mockMerchantApi = {updateMerchant: vi.fn().mockReturnValue(of(1))};
-    mockToast = {success: vi.fn(), error: vi.fn()};
+    mockMerchantApi = { updateMerchant: vi.fn().mockReturnValue(of(1)) };
+    mockToast = { success: vi.fn(), error: vi.fn() };
 
     await TestBed.configureTestingModule({
       imports: [MerchantFormDialogComponent, NoopAnimationsModule],
       providers: [
-        {provide: MerchantApiService, useValue: mockMerchantApi},
-        {provide: ToastService, useValue: mockToast}
-      ]
+        { provide: MerchantApiService, useValue: mockMerchantApi },
+        { provide: ToastService, useValue: mockToast },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(MerchantFormDialogComponent);
@@ -73,7 +78,10 @@ describe('MerchantFormDialogComponent', () => {
     component.onSubmit();
 
     // assert & verify
-    expect(mockMerchantApi.updateMerchant).toHaveBeenCalledWith({id: 7, cleanName: 'Starbucks Coffee'});
+    expect(mockMerchantApi.updateMerchant).toHaveBeenCalledWith({
+      id: 7,
+      cleanName: 'Starbucks Coffee',
+    });
   });
 
   it('should emit save, toast success, and close the dialog once the update succeeds', () => {
@@ -96,7 +104,7 @@ describe('MerchantFormDialogComponent', () => {
   it('should show an error message and keep the dialog open when the update fails', () => {
     // arrange
     mockMerchantApi.updateMerchant.mockReturnValue(
-      throwError(() => ({error: {detail: 'Merchant not found.'}}))
+      throwError(() => ({ error: { detail: 'Merchant not found.' } })),
     );
     component.visible.set(true);
     fixture.detectChanges();

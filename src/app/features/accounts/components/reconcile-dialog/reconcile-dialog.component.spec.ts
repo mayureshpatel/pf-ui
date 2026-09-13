@@ -1,11 +1,11 @@
-import {vi} from 'vitest';
-import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {ReconcileDrawerComponent} from './reconcile-dialog.component';
-import {AccountApiService} from '@features/accounts/services/account-api.service';
-import {ToastService} from '@core/services/toast.service';
-import {Account} from '@models/account.model';
-import {of, throwError} from 'rxjs';
-import {NoopAnimationsModule} from '@angular/platform-browser/animations';
+import { vi } from 'vitest';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ReconcileDrawerComponent } from './reconcile-dialog.component';
+import { AccountApiService } from '@features/accounts/services/account-api.service';
+import { ToastService } from '@core/services/toast.service';
+import { Account } from '@models/account.model';
+import { of, throwError } from 'rxjs';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 
 describe('ReconcileDrawerComponent', () => {
   let component: ReconcileDrawerComponent;
@@ -17,20 +17,20 @@ describe('ReconcileDrawerComponent', () => {
     id: 1,
     name: 'Checking',
     currentBalance: 100,
-    currency: {code: 'USD', name: 'US Dollar', symbol: '$', isActive: true},
-    version: 1
+    currency: { code: 'USD', name: 'US Dollar', symbol: '$', isActive: true },
+    version: 1,
   } as Account;
 
   beforeEach(async () => {
-    mockAccountApiService = {reconcile: vi.fn()};
-    mockToastService = {success: vi.fn(), error: vi.fn()};
+    mockAccountApiService = { reconcile: vi.fn() };
+    mockToastService = { success: vi.fn(), error: vi.fn() };
 
     await TestBed.configureTestingModule({
       imports: [ReconcileDrawerComponent, NoopAnimationsModule],
       providers: [
-        {provide: AccountApiService, useValue: mockAccountApiService},
-        {provide: ToastService, useValue: mockToastService}
-      ]
+        { provide: AccountApiService, useValue: mockAccountApiService },
+        { provide: ToastService, useValue: mockToastService },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(ReconcileDrawerComponent);
@@ -98,7 +98,7 @@ describe('ReconcileDrawerComponent', () => {
     expect(mockAccountApiService.reconcile).toHaveBeenCalledWith({
       accountId: mockAccount.id,
       newBalance: 150,
-      version: mockAccount.version
+      version: mockAccount.version,
     });
     expect(mockToastService.success).toHaveBeenCalledWith('Account reconciled successfully');
     expect(component.reconciled.emit).toHaveBeenCalled();
@@ -111,7 +111,7 @@ describe('ReconcileDrawerComponent', () => {
       mockAccountApiService.reconcile.mockReturnValue(of(1));
       component.form.controls.targetBalance.setValue(150);
 
-      component.onBalanceKeyDown({key: 'Enter'} as KeyboardEvent);
+      component.onBalanceKeyDown({ key: 'Enter' } as KeyboardEvent);
 
       expect(mockAccountApiService.reconcile).toHaveBeenCalled();
     });
@@ -120,7 +120,7 @@ describe('ReconcileDrawerComponent', () => {
       fixture.detectChanges();
       component.form.controls.targetBalance.setValue(150);
 
-      component.onBalanceKeyDown({key: '1'} as KeyboardEvent);
+      component.onBalanceKeyDown({ key: '1' } as KeyboardEvent);
 
       expect(mockAccountApiService.reconcile).not.toHaveBeenCalled();
     });
@@ -128,7 +128,7 @@ describe('ReconcileDrawerComponent', () => {
 
   it('should handle submit error', () => {
     fixture.detectChanges();
-    const errorResponse = {error: {detail: 'Backend error'}};
+    const errorResponse = { error: { detail: 'Backend error' } };
     mockAccountApiService.reconcile.mockReturnValue(throwError(() => errorResponse));
 
     component.form.controls.targetBalance.setValue(150);

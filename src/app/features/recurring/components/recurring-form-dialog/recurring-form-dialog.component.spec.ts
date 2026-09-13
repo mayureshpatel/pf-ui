@@ -1,15 +1,15 @@
-import {vi} from 'vitest';
-import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {of, throwError} from 'rxjs';
-import {signal} from '@angular/core';
-import {RecurringFormDialogComponent} from './recurring-form-dialog.component';
-import {RecurringApiService} from '../../services/recurring-api.service';
-import {ToastService} from '@core/services/toast.service';
-import {AuthService} from '@core/auth/auth.service';
-import {Account} from '@models/account.model';
-import {Merchant} from '@models/merchant.model';
-import {RecurringSuggestion, RecurringTransaction} from '@models/recurring.model';
-import {User} from '@models/auth.model';
+import { vi } from 'vitest';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { of, throwError } from 'rxjs';
+import { signal } from '@angular/core';
+import { RecurringFormDialogComponent } from './recurring-form-dialog.component';
+import { RecurringApiService } from '../../services/recurring-api.service';
+import { ToastService } from '@core/services/toast.service';
+import { AuthService } from '@core/auth/auth.service';
+import { Account } from '@models/account.model';
+import { Merchant } from '@models/merchant.model';
+import { RecurringSuggestion, RecurringTransaction } from '@models/recurring.model';
+import { User } from '@models/auth.model';
 
 describe('RecurringFormDialogComponent', () => {
   let component: RecurringFormDialogComponent;
@@ -18,25 +18,37 @@ describe('RecurringFormDialogComponent', () => {
   let mockToast: any;
   let mockAuth: any;
 
-  const checking = {id: 1, name: 'Checking', type: {label: 'Checking Account'}} as unknown as Account;
-  const netflix = {id: 1, userId: 1, originalName: 'NETFLIX.COM', cleanName: 'Netflix'} as Merchant;
-  const noCleanName = {id: 2, userId: 1, originalName: 'RAW CO', cleanName: ''} as Merchant;
+  const checking = {
+    id: 1,
+    name: 'Checking',
+    type: { label: 'Checking Account' },
+  } as unknown as Account;
+  const netflix = {
+    id: 1,
+    userId: 1,
+    originalName: 'NETFLIX.COM',
+    cleanName: 'Netflix',
+  } as Merchant;
+  const noCleanName = { id: 2, userId: 1, originalName: 'RAW CO', cleanName: '' } as Merchant;
   const mockAccounts: Account[] = [checking];
   const mockMerchants: Merchant[] = [netflix, noCleanName];
-  const mockUser: User = {id: 42, username: 'jdoe', email: 'jdoe@test.com'};
+  const mockUser: User = { id: 42, username: 'jdoe', email: 'jdoe@test.com' };
 
   beforeEach(async () => {
-    mockRecurringApi = {create: vi.fn().mockReturnValue(of({})), update: vi.fn().mockReturnValue(of({}))};
-    mockToast = {success: vi.fn(), error: vi.fn(), info: vi.fn()};
-    mockAuth = {user: signal<User | null>(mockUser)};
+    mockRecurringApi = {
+      create: vi.fn().mockReturnValue(of({})),
+      update: vi.fn().mockReturnValue(of({})),
+    };
+    mockToast = { success: vi.fn(), error: vi.fn(), info: vi.fn() };
+    mockAuth = { user: signal<User | null>(mockUser) };
 
     await TestBed.configureTestingModule({
       imports: [RecurringFormDialogComponent],
       providers: [
-        {provide: RecurringApiService, useValue: mockRecurringApi},
-        {provide: ToastService, useValue: mockToast},
-        {provide: AuthService, useValue: mockAuth}
-      ]
+        { provide: RecurringApiService, useValue: mockRecurringApi },
+        { provide: ToastService, useValue: mockToast },
+        { provide: AuthService, useValue: mockAuth },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(RecurringFormDialogComponent);
@@ -55,7 +67,7 @@ describe('RecurringFormDialogComponent', () => {
       amount: 15.99,
       frequency: 'MONTHLY',
       nextDate: new Date(2099, 0, 1),
-      active: true
+      active: true,
     });
   };
 
@@ -69,7 +81,7 @@ describe('RecurringFormDialogComponent', () => {
     });
 
     it('should be true when an existing recurring entry is provided', () => {
-      fixture.componentRef.setInput('recurring', {id: 5} as RecurringTransaction);
+      fixture.componentRef.setInput('recurring', { id: 5 } as RecurringTransaction);
       fixture.detectChanges();
 
       expect(component.isEditMode()).toBe(true);
@@ -78,13 +90,15 @@ describe('RecurringFormDialogComponent', () => {
 
   describe('derived dropdown options', () => {
     it("should label accounts with their name and include the account type's label", () => {
-      expect(component.accountOptions()).toEqual([{label: 'Checking', value: 1, type: 'Checking Account'}]);
+      expect(component.accountOptions()).toEqual([
+        { label: 'Checking', value: 1, type: 'Checking Account' },
+      ]);
     });
 
     it("should fall back through cleanName -> originalName -> 'Unknown Merchant'", () => {
       expect(component.merchantOptions()).toEqual([
-        {label: 'Netflix', value: 1},
-        {label: 'RAW CO', value: 2}
+        { label: 'Netflix', value: 1 },
+        { label: 'RAW CO', value: 2 },
       ]);
     });
   });
@@ -107,8 +121,14 @@ describe('RecurringFormDialogComponent', () => {
     it('should patch every field, including the account, from an existing entry in edit mode', () => {
       // arrange
       const rec: RecurringTransaction = {
-        id: 9, userId: 42, account: checking, merchant: netflix,
-        amount: 15.99, frequency: 'MONTHLY', nextDate: '2026-06-15', active: false
+        id: 9,
+        userId: 42,
+        account: checking,
+        merchant: netflix,
+        amount: 15.99,
+        frequency: 'MONTHLY',
+        nextDate: '2026-06-15',
+        active: false,
       };
       fixture.componentRef.setInput('recurring', rec);
 
@@ -126,8 +146,13 @@ describe('RecurringFormDialogComponent', () => {
     it('should patch merchant/amount/frequency/date from a suggestion, always as active, with no account', () => {
       // arrange
       const sug: RecurringSuggestion = {
-        merchant: netflix, amount: 9.99, frequency: 'MONTHLY',
-        lastDate: '2026-05-15', nextDate: '2026-06-15', occurrenceCount: 3, confidenceScore: 0.9
+        merchant: netflix,
+        amount: 9.99,
+        frequency: 'MONTHLY',
+        lastDate: '2026-05-15',
+        nextDate: '2026-06-15',
+        occurrenceCount: 3,
+        confidenceScore: 0.9,
       };
       fixture.componentRef.setInput('suggestion', sug);
 
@@ -164,7 +189,7 @@ describe('RecurringFormDialogComponent', () => {
       today.setHours(0, 0, 0, 0);
       component.form.controls.nextDate.setValue(today);
 
-      expect(component.form.controls.nextDate.errors).toEqual({notFuture: true});
+      expect(component.form.controls.nextDate.errors).toEqual({ notFuture: true });
     });
 
     it('should accept a next-payment date in the future', () => {
@@ -211,9 +236,16 @@ describe('RecurringFormDialogComponent', () => {
 
         component.onSubmit();
 
-        expect(mockRecurringApi.create).toHaveBeenCalledWith(expect.objectContaining({
-          userId: 42, accountId: 1, merchantId: 1, amount: 15.99, frequency: 'MONTHLY', active: true
-        }));
+        expect(mockRecurringApi.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            userId: 42,
+            accountId: 1,
+            merchantId: 1,
+            amount: 15.99,
+            frequency: 'MONTHLY',
+            active: true,
+          }),
+        );
         expect(mockRecurringApi.update).not.toHaveBeenCalled();
       });
 
@@ -232,7 +264,7 @@ describe('RecurringFormDialogComponent', () => {
 
     describe('edit mode (recurring input present)', () => {
       beforeEach(() => {
-        fixture.componentRef.setInput('recurring', {id: 9} as RecurringTransaction);
+        fixture.componentRef.setInput('recurring', { id: 9 } as RecurringTransaction);
         fixture.detectChanges();
       });
 
@@ -241,9 +273,16 @@ describe('RecurringFormDialogComponent', () => {
 
         component.onSubmit();
 
-        expect(mockRecurringApi.update).toHaveBeenCalledWith(expect.objectContaining({
-          id: 9, accountId: 1, merchantId: 1, amount: 15.99, frequency: 'MONTHLY', active: true
-        }));
+        expect(mockRecurringApi.update).toHaveBeenCalledWith(
+          expect.objectContaining({
+            id: 9,
+            accountId: 1,
+            merchantId: 1,
+            amount: 15.99,
+            frequency: 'MONTHLY',
+            active: true,
+          }),
+        );
         expect(mockRecurringApi.create).not.toHaveBeenCalled();
       });
 
@@ -258,7 +297,9 @@ describe('RecurringFormDialogComponent', () => {
 
     describe('API failure', () => {
       it('should surface the detail message, stop loading, and keep the dialog open', () => {
-        mockRecurringApi.create.mockReturnValue(throwError(() => ({error: {detail: 'Duplicate schedule'}})));
+        mockRecurringApi.create.mockReturnValue(
+          throwError(() => ({ error: { detail: 'Duplicate schedule' } })),
+        );
         fillValidForm();
 
         component.onSubmit();
@@ -269,7 +310,7 @@ describe('RecurringFormDialogComponent', () => {
       });
 
       it('should fall back to a generic message when the API error has no detail', () => {
-        mockRecurringApi.create.mockReturnValue(throwError(() => ({error: {}})));
+        mockRecurringApi.create.mockReturnValue(throwError(() => ({ error: {} })));
         fillValidForm();
 
         component.onSubmit();
@@ -301,7 +342,12 @@ describe('RecurringFormDialogComponent', () => {
       vi.spyOn(pickedDate, 'getMonth').mockReturnValue(5); // June, 0-indexed
       vi.spyOn(pickedDate, 'getDate').mockReturnValue(15);
       component.form.setValue({
-        accountId: 1, merchantId: 1, amount: 10, frequency: 'MONTHLY', nextDate: pickedDate, active: true
+        accountId: 1,
+        merchantId: 1,
+        amount: 10,
+        frequency: 'MONTHLY',
+        nextDate: pickedDate,
+        active: true,
       });
 
       // act
@@ -309,7 +355,9 @@ describe('RecurringFormDialogComponent', () => {
 
       // assert & verify -- "2099-06-14" would mean it's still reading toISOString(), not the
       // (mocked) local getters
-      expect(mockRecurringApi.create).toHaveBeenCalledWith(expect.objectContaining({nextDate: '2099-06-15'}));
+      expect(mockRecurringApi.create).toHaveBeenCalledWith(
+        expect.objectContaining({ nextDate: '2099-06-15' }),
+      );
     });
 
     it('should parse a stored date string to local midnight on the same day, not UTC midnight', () => {
@@ -318,8 +366,14 @@ describe('RecurringFormDialogComponent', () => {
       // transaction.utils.spec.ts; this only confirms onShow() actually delegates to it instead
       // of the bare `new Date(dateString)` constructor it used before the fix.
       const rec: RecurringTransaction = {
-        id: 9, userId: 42, account: checking, merchant: netflix,
-        amount: 15.99, frequency: 'MONTHLY', nextDate: '2099-06-15', active: true
+        id: 9,
+        userId: 42,
+        account: checking,
+        merchant: netflix,
+        amount: 15.99,
+        frequency: 'MONTHLY',
+        nextDate: '2099-06-15',
+        active: true,
       };
       fixture.componentRef.setInput('recurring', rec);
 

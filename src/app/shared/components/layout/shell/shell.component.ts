@@ -1,13 +1,20 @@
-import {ChangeDetectionStrategy, Component, inject, Signal, signal, WritableSignal} from '@angular/core';
-import {RouterLink, RouterLinkActive, RouterOutlet} from '@angular/router';
-import {AvatarModule} from 'primeng/avatar';
-import {ButtonModule} from 'primeng/button';
-import {DrawerModule} from 'primeng/drawer';
-import {MenuModule} from 'primeng/menu';
-import {RippleModule} from 'primeng/ripple';
-import {MenuItem} from 'primeng/api';
-import {AuthService} from '@core/auth/auth.service';
-import {Tooltip} from 'primeng/tooltip';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  Signal,
+  signal,
+  WritableSignal,
+} from '@angular/core';
+import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { AvatarModule } from 'primeng/avatar';
+import { ButtonModule } from 'primeng/button';
+import { DrawerModule } from 'primeng/drawer';
+import { MenuModule } from 'primeng/menu';
+import { RippleModule } from 'primeng/ripple';
+import { MenuItem } from 'primeng/api';
+import { AuthService } from '@core/auth/auth.service';
+import { Tooltip } from 'primeng/tooltip';
 
 /**
  * Shell component for the application layout.
@@ -26,11 +33,11 @@ import {Tooltip} from 'primeng/tooltip';
     DrawerModule,
     MenuModule,
     RippleModule,
-    Tooltip
+    Tooltip,
   ],
   templateUrl: './shell.component.html',
   styleUrl: './shell.component.css',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ShellComponent {
   private readonly authService: AuthService = inject(AuthService);
@@ -39,23 +46,23 @@ export class ShellComponent {
   username: Signal<string> = this.authService.username;
 
   navItems: MenuItem[] = [
-    {label: 'Dashboard', icon: 'pi pi-home', routerLink: '/dashboard'},
-    {label: 'Transactions', icon: 'pi pi-list', routerLink: '/transactions'},
-    {label: 'Accounts', icon: 'pi pi-wallet', routerLink: '/accounts'},
-    {label: 'Budgets', icon: 'pi pi-calendar', routerLink: '/budgets'},
-    {label: 'Categories', icon: 'pi pi-tags', routerLink: '/categories'},
-    {label: 'Merchants', icon: 'pi pi-shop', routerLink: '/merchants'},
-    {label: 'Recurring', icon: 'pi pi-refresh', routerLink: '/recurring'},
-    {label: 'Settings', icon: 'pi pi-cog', routerLink: '/settings'},
-    {label: 'Reports', icon: 'pi pi-chart-bar', routerLink: '/reports'}
+    { label: 'Dashboard', icon: 'pi pi-home', routerLink: '/dashboard' },
+    { label: 'Transactions', icon: 'pi pi-list', routerLink: '/transactions' },
+    { label: 'Accounts', icon: 'pi pi-wallet', routerLink: '/accounts' },
+    { label: 'Budgets', icon: 'pi pi-calendar', routerLink: '/budgets' },
+    { label: 'Categories', icon: 'pi pi-tags', routerLink: '/categories' },
+    { label: 'Merchants', icon: 'pi pi-shop', routerLink: '/merchants' },
+    { label: 'Recurring', icon: 'pi pi-refresh', routerLink: '/recurring' },
+    { label: 'Settings', icon: 'pi pi-cog', routerLink: '/settings' },
+    { label: 'Reports', icon: 'pi pi-chart-bar', routerLink: '/reports' },
   ];
 
   userMenuItems: MenuItem[] = [
     {
       label: 'Logout',
       icon: 'pi pi-sign-out',
-      command: (): void => this.logout()
-    }
+      command: (): void => this.logout(),
+    },
   ];
 
   /**

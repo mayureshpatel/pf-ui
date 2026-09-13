@@ -11,41 +11,41 @@ import {
   OutputEmitterRef,
   Signal,
   signal,
-  WritableSignal
+  WritableSignal,
 } from '@angular/core';
-import {CommonModule} from '@angular/common';
-import {FormControl, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
-import {AutoCompleteModule} from 'primeng/autocomplete';
-import {ButtonModule} from 'primeng/button';
-import {InputNumberModule} from 'primeng/inputnumber';
-import {InputTextModule} from 'primeng/inputtext';
-import {SelectModule} from 'primeng/select';
-import {MultiSelectModule} from 'primeng/multiselect';
-import {DatePicker} from 'primeng/datepicker';
-import {MessageModule} from 'primeng/message';
+import { CommonModule } from '@angular/common';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AutoCompleteModule } from 'primeng/autocomplete';
+import { ButtonModule } from 'primeng/button';
+import { InputNumberModule } from 'primeng/inputnumber';
+import { InputTextModule } from 'primeng/inputtext';
+import { SelectModule } from 'primeng/select';
+import { MultiSelectModule } from 'primeng/multiselect';
+import { DatePicker } from 'primeng/datepicker';
+import { MessageModule } from 'primeng/message';
 
 import {
   Transaction,
   TransactionCreateRequest,
   TransactionFormSaveEvent,
   TransactionType,
-  TransactionUpdateRequest
+  TransactionUpdateRequest,
 } from '@models/transaction.model';
-import {Account} from '@models/account.model';
-import {Category} from '@models/category.model';
-import {Merchant} from '@models/merchant.model';
-import {Tag} from '@models/tag.model';
-import {DrawerComponent} from '@shared/components/drawer/drawer.component';
-import {toLocalDateString} from '@shared/utils/transaction.utils';
-import {finalize, forkJoin} from 'rxjs';
-import {CategoryApiService} from '@features/categories/services/category-api.service';
-import {AccountApiService} from '@features/accounts/services/account-api.service';
-import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
-import {MerchantApiService} from '@features/merchants/services/merchant-api.service';
-import {TagApiService} from '@features/tags/services/tag-api.service';
-import {ProgressSpinner} from 'primeng/progressspinner';
-import {Tooltip} from 'primeng/tooltip';
-import {SelectItemGroup} from 'primeng/api';
+import { Account } from '@models/account.model';
+import { Category } from '@models/category.model';
+import { Merchant } from '@models/merchant.model';
+import { Tag } from '@models/tag.model';
+import { DrawerComponent } from '@shared/components/drawer/drawer.component';
+import { toLocalDateString } from '@shared/utils/transaction.utils';
+import { finalize, forkJoin } from 'rxjs';
+import { CategoryApiService } from '@features/categories/services/category-api.service';
+import { AccountApiService } from '@features/accounts/services/account-api.service';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { MerchantApiService } from '@features/merchants/services/merchant-api.service';
+import { TagApiService } from '@features/tags/services/tag-api.service';
+import { ProgressSpinner } from 'primeng/progressspinner';
+import { Tooltip } from 'primeng/tooltip';
+import { SelectItemGroup } from 'primeng/api';
 
 /**
  * Drawer component for creating or editing individual ledger transactions.
@@ -69,10 +69,10 @@ import {SelectItemGroup} from 'primeng/api';
     MessageModule,
     DrawerComponent,
     ProgressSpinner,
-    Tooltip
+    Tooltip,
   ],
   templateUrl: './transaction-form-drawer.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TransactionFormDrawerComponent {
   private readonly categoryApi: CategoryApiService = inject(CategoryApiService);
@@ -118,38 +118,63 @@ export class TransactionFormDrawerComponent {
 
   /** Options for the transaction type selector. */
   readonly typeOptions = [
-    {label: 'Expense', value: TransactionType.EXPENSE, icon: 'pi-minus-circle', color: 'text-rose-500'},
-    {label: 'Income', value: TransactionType.INCOME, icon: 'pi-plus-circle', color: 'text-emerald-500'},
-    {label: 'Transfer', value: TransactionType.TRANSFER, icon: 'pi-sync', color: 'text-surface-500'}
+    {
+      label: 'Expense',
+      value: TransactionType.EXPENSE,
+      icon: 'pi-minus-circle',
+      color: 'text-rose-500',
+    },
+    {
+      label: 'Income',
+      value: TransactionType.INCOME,
+      icon: 'pi-plus-circle',
+      color: 'text-emerald-500',
+    },
+    {
+      label: 'Transfer',
+      value: TransactionType.TRANSFER,
+      icon: 'pi-sync',
+      color: 'text-surface-500',
+    },
   ];
 
   /**
    * Strongly typed reactive form for transaction details.
    */
   readonly form = new FormGroup({
-    id: new FormControl<number | null>({value: null, disabled: true}),
-    accountId: new FormControl<number>(0, {nonNullable: true, validators: [Validators.required]}),
-    amount: new FormControl<number>(0, {nonNullable: true, validators: [Validators.required, Validators.min(0.01)]}),
-    transactionDate: new FormControl<string>('', {nonNullable: true, validators: [Validators.required]}),
-    description: new FormControl<string>('', {nonNullable: true}),
+    id: new FormControl<number | null>({ value: null, disabled: true }),
+    accountId: new FormControl<number>(0, { nonNullable: true, validators: [Validators.required] }),
+    amount: new FormControl<number>(0, {
+      nonNullable: true,
+      validators: [Validators.required, Validators.min(0.01)],
+    }),
+    transactionDate: new FormControl<string>('', {
+      nonNullable: true,
+      validators: [Validators.required],
+    }),
+    description: new FormControl<string>('', { nonNullable: true }),
     type: new FormControl<TransactionType>(TransactionType.EXPENSE, {
       nonNullable: true,
-      validators: [Validators.required]
+      validators: [Validators.required],
     }),
-    category: new FormControl<Category | null>(null, {validators: [Validators.required]}),
+    category: new FormControl<Category | null>(null, { validators: [Validators.required] }),
     postDate: new FormControl<string | null>(null),
     merchant: new FormControl<Merchant | null>(null),
-    tags: new FormControl<Tag[]>([], {nonNullable: true})
+    tags: new FormControl<Tag[]>([], { nonNullable: true }),
   });
 
   /** Indicates if the component is in edit mode. */
   readonly isEditMode: Signal<boolean> = computed((): boolean => this.transaction() !== null);
 
   /** Title displayed in the drawer header. */
-  readonly drawerTitle: Signal<string> = computed((): string => this.isEditMode() ? 'Edit Transaction' : 'New Transaction');
+  readonly drawerTitle: Signal<string> = computed((): string =>
+    this.isEditMode() ? 'Edit Transaction' : 'New Transaction',
+  );
 
   /** Reactive signal bridge for the merchant form control value. */
-  private readonly selectedMerchant: WritableSignal<Merchant | null> = signal<Merchant | null>(null);
+  private readonly selectedMerchant: WritableSignal<Merchant | null> = signal<Merchant | null>(
+    null,
+  );
 
   constructor() {
     this.loadData();
@@ -166,12 +191,14 @@ export class TransactionFormDrawerComponent {
     })
       .pipe(
         takeUntilDestroyed(),
-        finalize(() => this.loading.set(false))
+        finalize(() => this.loading.set(false)),
       )
       .subscribe({
-        next: ({categories, accounts, merchants, tags}: any): void => {
+        next: ({ categories, accounts, merchants, tags }: any): void => {
           accounts.sort((a: Account, b: Account): number => a.name.localeCompare(b.name));
-          merchants.sort((a: Merchant, b: Merchant): number => a.originalName.localeCompare(b.originalName));
+          merchants.sort((a: Merchant, b: Merchant): number =>
+            a.originalName.localeCompare(b.originalName),
+          );
           this.accounts.set(accounts);
           this.merchants.set(merchants);
           this.groupedCategories.set(this.getGroupedCategories(categories));
@@ -182,7 +209,7 @@ export class TransactionFormDrawerComponent {
         },
         error: (error: any): void => {
           console.error('Error loading data:', error);
-        }
+        },
       });
   }
 
@@ -211,20 +238,20 @@ export class TransactionFormDrawerComponent {
     const groupedCategoriesMap = new Map<number, SelectItemGroup>();
     categories.forEach((category: Category): void => {
       if (!category.parent) {
-        let header = {
+        const header = {
           label: category.name,
           value: category,
-          items: []
+          items: [],
         };
         groupedCategoriesMap.set(category.id, header);
       } else {
-        let parentId = category.parent.id;
-        let parentHeader = groupedCategoriesMap.get(parentId);
+        const parentId = category.parent.id;
+        const parentHeader = groupedCategoriesMap.get(parentId);
 
         if (parentHeader) {
           parentHeader.items.push({
             label: category.name,
-            value: category
+            value: category,
           });
         }
       }
@@ -239,7 +266,9 @@ export class TransactionFormDrawerComponent {
   filterMerchants(event: any): void {
     const query: any = event.query.toLowerCase();
     this.filteredMerchants.set(
-      this.merchants().filter((m: Merchant): boolean => m.originalName.toLowerCase().includes(query))
+      this.merchants().filter((m: Merchant): boolean =>
+        m.originalName.toLowerCase().includes(query),
+      ),
     );
   }
 
@@ -258,7 +287,7 @@ export class TransactionFormDrawerComponent {
         category: transaction.category,
         merchant: transaction.merchant,
         accountId: transaction.account.id,
-        tags: transaction.tags ?? []
+        tags: transaction.tags ?? [],
       });
     } else {
       this.form.patchValue({
@@ -269,7 +298,7 @@ export class TransactionFormDrawerComponent {
         category: null,
         merchant: null,
         accountId: 0,
-        tags: []
+        tags: [],
       });
     }
   }
@@ -295,12 +324,18 @@ export class TransactionFormDrawerComponent {
         transactionDate: rawValue.transactionDate,
         description: rawValue.description ?? '',
         type: rawValue.type,
-        categoryId: rawValue.category?.id!,
+        categoryId: rawValue.category!.id,
         postDate: rawValue.postDate!,
-        merchantId: rawValue.merchant?.id!
-      }
+        // PF-328 (2026-09-13): `merchant` has no Validators.required (unlike `category`, asserted
+        // safely above), so this can genuinely be undefined -- yet TransactionUpdateRequest and
+        // TransactionCreateRequest both declare merchantId as required (`number`, not `number |
+        // undefined`). Left as-is rather than guessed at in either direction; whether the backend
+        // actually requires merchantId end-to-end is a real open question for its own ticket.
+        // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
+        merchantId: rawValue.merchant?.id!,
+      };
 
-      this.save.emit({request: updateRequest, tagIds});
+      this.save.emit({ request: updateRequest, tagIds });
     } else {
       const createRequest: TransactionCreateRequest = {
         accountId: rawValue.accountId,
@@ -308,12 +343,18 @@ export class TransactionFormDrawerComponent {
         transactionDate: rawValue.transactionDate,
         description: rawValue.description ?? '',
         type: rawValue.type,
-        categoryId: rawValue.category?.id!,
+        categoryId: rawValue.category!.id,
         postDate: rawValue.postDate!,
-        merchantId: rawValue.merchant?.id!
-      }
+        // PF-328 (2026-09-13): `merchant` has no Validators.required (unlike `category`, asserted
+        // safely above), so this can genuinely be undefined -- yet TransactionUpdateRequest and
+        // TransactionCreateRequest both declare merchantId as required (`number`, not `number |
+        // undefined`). Left as-is rather than guessed at in either direction; whether the backend
+        // actually requires merchantId end-to-end is a real open question for its own ticket.
+        // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
+        merchantId: rawValue.merchant?.id!,
+      };
 
-      this.save.emit({request: createRequest, tagIds});
+      this.save.emit({ request: createRequest, tagIds });
     }
   }
 }

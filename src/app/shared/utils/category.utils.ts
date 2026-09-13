@@ -8,7 +8,7 @@ export const CATEGORY_COLORS: string[] = [
   '#6366F1', // Indigo
   '#EF4444', // Red
   '#EAB308', // Yellow
-  '#06B6D4'  // Cyan
+  '#06B6D4', // Cyan
 ];
 
 /**
@@ -22,8 +22,8 @@ export function getCategoryColor(categoryName: string): string {
     return CATEGORY_COLORS[0];
   }
 
-  let hash: number = 0;
-  for (let i: number = 0; i < categoryName.length; i++) {
+  let hash = 0;
+  for (let i = 0; i < categoryName.length; i++) {
     hash = (categoryName.codePointAt(i) || 0) + ((hash << 5) - hash);
   }
 

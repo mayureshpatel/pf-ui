@@ -1,12 +1,12 @@
-import {inject, Injectable} from '@angular/core';
-import {HttpClient} from '@angular/common/http';
-import {AuthService} from '@core/auth/auth.service';
-import {Observable} from 'rxjs';
-import {environment} from '@env';
-import {Merchant, MerchantMergeRequest, MerchantUpdateRequest} from '@models/merchant.model';
+import { inject, Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { AuthService } from '@core/auth/auth.service';
+import { Observable } from 'rxjs';
+import { environment } from '@env';
+import { Merchant, MerchantMergeRequest, MerchantUpdateRequest } from '@models/merchant.model';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class MerchantApiService {
   private readonly http: HttpClient = inject(HttpClient);

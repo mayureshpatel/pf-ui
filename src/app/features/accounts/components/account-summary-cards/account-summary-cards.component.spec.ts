@@ -1,6 +1,6 @@
-import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {AccountSummaryCardsComponent} from './account-summary-cards.component';
-import {Account} from '@models/account.model';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { AccountSummaryCardsComponent } from './account-summary-cards.component';
+import { Account } from '@models/account.model';
 
 describe('AccountSummaryCardsComponent', () => {
   let component: AccountSummaryCardsComponent;
@@ -8,7 +8,7 @@ describe('AccountSummaryCardsComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [AccountSummaryCardsComponent]
+      imports: [AccountSummaryCardsComponent],
     }).compileComponents();
 
     fixture = TestBed.createComponent(AccountSummaryCardsComponent);
@@ -26,14 +26,14 @@ describe('AccountSummaryCardsComponent', () => {
       { currentBalance: 1000, type: { isAsset: true } },
       { currentBalance: -200, type: { isAsset: true } }, // Edge case: asset with negative balance
       { currentBalance: 500, type: { isAsset: false } }, // Liability
-      { currentBalance: -100, type: { isAsset: false } }  // Liability with negative balance
+      { currentBalance: -100, type: { isAsset: false } }, // Liability with negative balance
     ] as Account[];
 
     fixture.componentRef.setInput('accounts', mockAccounts);
     fixture.detectChanges();
 
     const summary = component.summary();
-    
+
     // totalAssets: 1000 + -200 = 800
     // totalLiabilities: abs(500) + abs(-100) = 500 + 100 = 600
     // netWorth: 800 - 600 = 200

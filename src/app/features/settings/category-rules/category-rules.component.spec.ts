@@ -1,16 +1,15 @@
-import {vi} from 'vitest';
-import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {NoopAnimationsModule} from '@angular/platform-browser/animations';
-import {of} from 'rxjs';
-import {ConfirmationService} from 'primeng/api';
+import { vi } from 'vitest';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { of } from 'rxjs';
+import { ConfirmationService } from 'primeng/api';
 
-import {CategoryRulesComponent} from './category-rules.component';
-import {CategoryRuleApiService} from './services/category-rule-api.service';
-import {ToastService} from '@core/services/toast.service';
-import {CategoryRule} from '@models/category-rule.model';
+import { CategoryRulesComponent } from './category-rules.component';
+import { CategoryRuleApiService } from './services/category-rule-api.service';
+import { ToastService } from '@core/services/toast.service';
+import { CategoryRule } from '@models/category-rule.model';
 
 describe('CategoryRulesComponent', () => {
-  let component: CategoryRulesComponent;
   let fixture: ComponentFixture<CategoryRulesComponent>;
   let mockApi: any;
   let mockToast: any;
@@ -26,7 +25,7 @@ describe('CategoryRulesComponent', () => {
     priority: 1,
     category: null,
     minAmount: null,
-    maxAmount: null
+    maxAmount: null,
   } as unknown as CategoryRule;
 
   beforeEach(async () => {
@@ -34,22 +33,21 @@ describe('CategoryRulesComponent', () => {
       getRules: vi.fn().mockReturnValue(of([orphanedRule])),
       previewApply: vi.fn().mockReturnValue(of([])),
       applyRules: vi.fn().mockReturnValue(of(undefined)),
-      deleteRule: vi.fn().mockReturnValue(of(undefined))
+      deleteRule: vi.fn().mockReturnValue(of(undefined)),
     };
-    mockToast = {success: vi.fn(), error: vi.fn(), info: vi.fn()};
-    mockConfirmationService = {confirm: vi.fn()};
+    mockToast = { success: vi.fn(), error: vi.fn(), info: vi.fn() };
+    mockConfirmationService = { confirm: vi.fn() };
 
     await TestBed.configureTestingModule({
       imports: [CategoryRulesComponent, NoopAnimationsModule],
       providers: [
-        {provide: CategoryRuleApiService, useValue: mockApi},
-        {provide: ToastService, useValue: mockToast},
-        {provide: ConfirmationService, useValue: mockConfirmationService}
-      ]
+        { provide: CategoryRuleApiService, useValue: mockApi },
+        { provide: ToastService, useValue: mockToast },
+        { provide: ConfirmationService, useValue: mockConfirmationService },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(CategoryRulesComponent);
-    component = fixture.componentInstance;
   });
 
   it('should render a rule with no associated category without throwing (PF-191)', () => {
@@ -79,7 +77,7 @@ describe('CategoryRulesComponent', () => {
       priority: 1,
       category: null,
       minAmount: 5,
-      maxAmount: 20
+      maxAmount: 20,
     } as unknown as CategoryRule;
     mockApi.getRules.mockReturnValue(of([orphanedRule, rangedRule]));
 
@@ -103,7 +101,7 @@ describe('CategoryRulesComponent', () => {
       priority: 1,
       category: null,
       minAmount: null,
-      maxAmount: null
+      maxAmount: null,
     } as unknown as CategoryRule;
     mockApi.getRules.mockReturnValue(of([multiKeywordRule]));
 

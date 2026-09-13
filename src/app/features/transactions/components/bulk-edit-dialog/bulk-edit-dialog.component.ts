@@ -12,25 +12,25 @@ import {
   OutputEmitterRef,
   Signal,
   signal,
-  WritableSignal
+  WritableSignal,
 } from '@angular/core';
-import {CommonModule} from '@angular/common';
-import {toSignal} from '@angular/core/rxjs-interop';
-import {FormControl, FormGroup, ReactiveFormsModule} from '@angular/forms';
-import {DialogModule} from 'primeng/dialog';
-import {ButtonModule} from 'primeng/button';
-import {InputTextModule} from 'primeng/inputtext';
-import {CheckboxModule} from 'primeng/checkbox';
-import {SelectModule} from 'primeng/select';
-import {SelectItemGroup} from 'primeng/api';
-import {MessageModule} from 'primeng/message';
+import { CommonModule } from '@angular/common';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { DialogModule } from 'primeng/dialog';
+import { ButtonModule } from 'primeng/button';
+import { InputTextModule } from 'primeng/inputtext';
+import { CheckboxModule } from 'primeng/checkbox';
+import { SelectModule } from 'primeng/select';
+import { SelectItemGroup } from 'primeng/api';
+import { MessageModule } from 'primeng/message';
 
-import {Transaction} from '@models/transaction.model';
-import {CategoryApiService} from '../../../categories/services/category-api.service';
-import {MerchantApiService} from '@features/merchants/services/merchant-api.service';
-import {Category, CategoryGroup} from '@models/category.model';
-import {Merchant} from '@models/merchant.model';
-import {RestoreFocusOnHideDirective} from '@shared/directives/restore-focus-on-hide.directive';
+import { Transaction } from '@models/transaction.model';
+import { CategoryApiService } from '../../../categories/services/category-api.service';
+import { MerchantApiService } from '@features/merchants/services/merchant-api.service';
+import { Category, CategoryGroup } from '@models/category.model';
+import { Merchant } from '@models/merchant.model';
+import { RestoreFocusOnHideDirective } from '@shared/directives/restore-focus-on-hide.directive';
 
 /**
  * Data structure for finalized bulk edit operations.
@@ -62,10 +62,10 @@ export interface BulkEditData {
     CheckboxModule,
     SelectModule,
     MessageModule,
-    RestoreFocusOnHideDirective
+    RestoreFocusOnHideDirective,
   ],
   templateUrl: './bulk-edit-dialog.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BulkEditDialogComponent {
   private readonly categoryApi: CategoryApiService = inject(CategoryApiService);
@@ -87,19 +87,19 @@ export class BulkEditDialogComponent {
    * Strongly typed form for mass-update configuration.
    */
   readonly form = new FormGroup({
-    updateCategory: new FormControl<boolean>(false, {nonNullable: true}),
+    updateCategory: new FormControl<boolean>(false, { nonNullable: true }),
     category: new FormControl<Category | null>(null),
-    updateVendor: new FormControl<boolean>(false, {nonNullable: true}),
+    updateVendor: new FormControl<boolean>(false, { nonNullable: true }),
     merchant: new FormControl<Merchant | null>(null),
-    updateDescription: new FormControl<boolean>(false, {nonNullable: true}),
-    description: new FormControl<string>('', {nonNullable: true})
+    updateDescription: new FormControl<boolean>(false, { nonNullable: true }),
+    description: new FormControl<string>('', { nonNullable: true }),
   });
 
   /** Hierarchical category groups for the dropdown. */
   readonly categoryGroups: WritableSignal<SelectItemGroup[]> = signal([]);
 
   /** Merchant options for the reassignment dropdown. */
-  readonly merchantOptions: WritableSignal<{ label: string, value: Merchant }[]> = signal([]);
+  readonly merchantOptions: WritableSignal<{ label: string; value: Merchant }[]> = signal([]);
 
   /** Total number of transactions in the current batch. */
   readonly transactionCount: Signal<number> = computed(() => this.transactions().length);
@@ -113,7 +113,9 @@ export class BulkEditDialogComponent {
    * creates no reactive dependency at all, so it would compute once on first read and then never
    * change again for the lifetime of the component, regardless of any later form edits.
    */
-  private readonly formValue = toSignal(this.form.valueChanges, {initialValue: this.form.getRawValue()});
+  private readonly formValue = toSignal(this.form.valueChanges, {
+    initialValue: this.form.getRawValue(),
+  });
 
   /**
    * Evaluates the logical validity of the bulk form.
@@ -125,8 +127,10 @@ export class BulkEditDialogComponent {
     const hasVendor: boolean = v.updateVendor ? !!v.merchant : false;
     const hasDesc: boolean = v.updateDescription ? !!v.description?.trim() : false;
 
-    const anyToggle: boolean | undefined = v.updateCategory || v.updateVendor || v.updateDescription;
-    const allActiveAreFilled: boolean = (!v.updateCategory || hasCategory) &&
+    const anyToggle: boolean | undefined =
+      v.updateCategory || v.updateVendor || v.updateDescription;
+    const allActiveAreFilled: boolean =
+      (!v.updateCategory || hasCategory) &&
       (!v.updateVendor || hasVendor) &&
       (!v.updateDescription || hasDesc);
 
@@ -155,10 +159,10 @@ export class BulkEditDialogComponent {
       next: (groups: CategoryGroup[]): void => {
         const selectGroups = groups.map((g: CategoryGroup) => ({
           label: g.parent.name ?? 'Uncategorized',
-          items: g.items.map((c: Category) => ({label: c.name, value: c}))
+          items: g.items.map((c: Category) => ({ label: c.name, value: c })),
         }));
         this.categoryGroups.set(selectGroups);
-      }
+      },
     });
   }
 
@@ -168,11 +172,13 @@ export class BulkEditDialogComponent {
   private loadMerchants(): void {
     this.merchantApi.getMerchants().subscribe({
       next: (merchants: Merchant[]): void => {
-        this.merchantOptions.set(merchants.map((m: Merchant) => ({
-          label: m.cleanName || m.originalName || 'Unknown Merchant',
-          value: m
-        })));
-      }
+        this.merchantOptions.set(
+          merchants.map((m: Merchant) => ({
+            label: m.cleanName || m.originalName || 'Unknown Merchant',
+            value: m,
+          })),
+        );
+      },
     });
   }
 
@@ -196,7 +202,7 @@ export class BulkEditDialogComponent {
       updateMerchant: v.updateVendor,
       merchant: v.merchant ?? undefined,
       updateDescription: v.updateDescription,
-      description: v.description?.trim()
+      description: v.description?.trim(),
     });
   }
 
@@ -210,7 +216,7 @@ export class BulkEditDialogComponent {
       updateVendor: false,
       merchant: null,
       updateDescription: false,
-      description: ''
+      description: '',
     });
   }
 }

@@ -1,4 +1,4 @@
-import {Pipe, PipeTransform} from '@angular/core';
+import { Pipe, PipeTransform } from '@angular/core';
 
 /**
  * Formats a number as currency, USD by default.
@@ -16,7 +16,7 @@ import {Pipe, PipeTransform} from '@angular/core';
  * </pre>
  */
 @Pipe({
-  name: 'formatCurrency'
+  name: 'formatCurrency',
 })
 export class FormatCurrencyPipe implements PipeTransform {
   /**
@@ -26,7 +26,7 @@ export class FormatCurrencyPipe implements PipeTransform {
    * @param currencyCode the ISO 4217 currency code to format as (default: 'USD')
    * @returns formatted currency string, formatting 0 if value is null or undefined
    */
-  transform(value: number | null | undefined, showCents: boolean = true, currencyCode: string = 'USD'): string {
+  transform(value: number | null | undefined, showCents = true, currencyCode = 'USD'): string {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: currencyCode,

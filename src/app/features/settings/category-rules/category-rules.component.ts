@@ -1,25 +1,31 @@
-import {ChangeDetectionStrategy, Component, computed, DestroyRef, inject, OnInit, Signal, signal, WritableSignal} from '@angular/core';
-import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
-import {CommonModule} from '@angular/common';
-import {finalize} from 'rxjs';
-import {ButtonModule} from 'primeng/button';
-import {TableModule} from 'primeng/table';
-import {CardModule} from 'primeng/card';
-import {ConfirmationService} from 'primeng/api';
-import {TooltipModule} from 'primeng/tooltip';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  DestroyRef,
+  inject,
+  OnInit,
+  Signal,
+  signal,
+  WritableSignal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { CommonModule } from '@angular/common';
+import { finalize } from 'rxjs';
+import { ButtonModule } from 'primeng/button';
+import { TableModule } from 'primeng/table';
+import { CardModule } from 'primeng/card';
+import { ConfirmationService } from 'primeng/api';
+import { TooltipModule } from 'primeng/tooltip';
 
-import {CategoryRule, RuleChangePreview} from '@models/category-rule.model';
-import {CategoryRuleApiService} from './services/category-rule-api.service';
-import {ToastService} from '@core/services/toast.service';
-import {
-  CategoryRuleFormDialogComponent
-} from './components/category-rule-form-dialog/category-rule-form-dialog.component';
-import {
-  ApplyRulesDialogComponent
-} from './components/apply-rules-dialog/apply-rules-dialog.component';
-import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-toolbar';
-import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
-import {PageErrorStateComponent} from '@shared/components/page-error-state/page-error-state.component';
+import { CategoryRule, RuleChangePreview } from '@models/category-rule.model';
+import { CategoryRuleApiService } from './services/category-rule-api.service';
+import { ToastService } from '@core/services/toast.service';
+import { CategoryRuleFormDialogComponent } from './components/category-rule-form-dialog/category-rule-form-dialog.component';
+import { ApplyRulesDialogComponent } from './components/apply-rules-dialog/apply-rules-dialog.component';
+import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen-toolbar';
+import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
+import { PageErrorStateComponent } from '@shared/components/page-error-state/page-error-state.component';
 
 /**
  * Component for managing transaction categorization rules.
@@ -41,10 +47,10 @@ import {PageErrorStateComponent} from '@shared/components/page-error-state/page-
     CategoryRuleFormDialogComponent,
     ApplyRulesDialogComponent,
     FormatCurrencyPipe,
-    PageErrorStateComponent
+    PageErrorStateComponent,
   ],
   templateUrl: './category-rules.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CategoryRulesComponent implements OnInit {
   private readonly api: CategoryRuleApiService = inject(CategoryRuleApiService);
@@ -71,7 +77,9 @@ export class CategoryRulesComponent implements OnInit {
   readonly previewItems: WritableSignal<RuleChangePreview[]> = signal([]);
 
   /** Indicates if no rules have been defined yet. */
-  readonly isEmpty: Signal<boolean> = computed((): boolean => this.rules().length === 0 && !this.loading());
+  readonly isEmpty: Signal<boolean> = computed(
+    (): boolean => this.rules().length === 0 && !this.loading(),
+  );
 
   /**
    * Initializes component data on load.
@@ -86,10 +94,11 @@ export class CategoryRulesComponent implements OnInit {
   loadRules(): void {
     this.loading.set(true);
     this.loadError.set(false);
-    this.api.getRules()
+    this.api
+      .getRules()
       .pipe(
         takeUntilDestroyed(this.destroyRef),
-        finalize((): void => this.loading.set(false))
+        finalize((): void => this.loading.set(false)),
       )
       .subscribe({
         next: (data: CategoryRule[]): void => this.rules.set(data),
@@ -97,7 +106,7 @@ export class CategoryRulesComponent implements OnInit {
           console.error('Failed to load rules:', err);
           this.toast.error('Failed to load category rules.');
           this.loadError.set(true);
-        }
+        },
       });
   }
 
@@ -122,10 +131,11 @@ export class CategoryRulesComponent implements OnInit {
    */
   openApplyPreview(): void {
     this.loading.set(true);
-    this.api.previewApply()
+    this.api
+      .previewApply()
       .pipe(
         takeUntilDestroyed(this.destroyRef),
-        finalize((): void => this.loading.set(false))
+        finalize((): void => this.loading.set(false)),
       )
       .subscribe({
         next: (items: RuleChangePreview[]): void => {
@@ -139,7 +149,7 @@ export class CategoryRulesComponent implements OnInit {
         error: (err: any): void => {
           console.error('Preview failed:', err);
           this.toast.error(err.error?.detail || 'Failed to generate rule preview.');
-        }
+        },
       });
   }
 
@@ -148,10 +158,11 @@ export class CategoryRulesComponent implements OnInit {
    */
   confirmApply(): void {
     this.loading.set(true);
-    this.api.applyRules()
+    this.api
+      .applyRules()
       .pipe(
         takeUntilDestroyed(this.destroyRef),
-        finalize((): void => this.loading.set(false))
+        finalize((): void => this.loading.set(false)),
       )
       .subscribe({
         next: (): void => {
@@ -162,7 +173,7 @@ export class CategoryRulesComponent implements OnInit {
         error: (err: any): void => {
           console.error('Rule application failed:', err);
           this.toast.error(err.error?.detail || 'Failed to apply rules.');
-        }
+        },
       });
   }
 
@@ -179,19 +190,22 @@ export class CategoryRulesComponent implements OnInit {
       rejectLabel: 'Cancel',
       acceptButtonStyleClass: 'p-button-danger',
       accept: (): void => {
-        this.api.deleteRule(rule.id)
+        this.api
+          .deleteRule(rule.id)
           .pipe(takeUntilDestroyed(this.destroyRef))
           .subscribe({
             next: (): void => {
               this.toast.success('Rule deleted.');
-              this.rules.update((list: CategoryRule[]): CategoryRule[] => list.filter((r: CategoryRule): boolean => r.id !== rule.id));
+              this.rules.update((list: CategoryRule[]): CategoryRule[] =>
+                list.filter((r: CategoryRule): boolean => r.id !== rule.id),
+              );
             },
             error: (err: any): void => {
               console.error('Delete failed:', err);
               this.toast.error('Failed to delete rule.');
-            }
+            },
           });
-      }
+      },
     });
   }
 }

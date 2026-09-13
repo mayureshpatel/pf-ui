@@ -8,20 +8,20 @@ import {
   output,
   OutputEmitterRef,
   signal,
-  WritableSignal
+  WritableSignal,
 } from '@angular/core';
-import {CommonModule} from '@angular/common';
-import {ButtonModule} from 'primeng/button';
-import {DialogModule} from 'primeng/dialog';
-import {TableModule} from 'primeng/table';
-import {TooltipModule} from 'primeng/tooltip';
-import {TagModule} from 'primeng/tag';
+import { CommonModule } from '@angular/common';
+import { ButtonModule } from 'primeng/button';
+import { DialogModule } from 'primeng/dialog';
+import { TableModule } from 'primeng/table';
+import { TooltipModule } from 'primeng/tooltip';
+import { TagModule } from 'primeng/tag';
 
-import {TransferSuggestion} from '@models/transaction.model';
-import {TransactionApiService} from '../../services/transaction-api.service';
-import {ToastService} from '@core/services/toast.service';
-import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
-import {RestoreFocusOnHideDirective} from '@shared/directives/restore-focus-on-hide.directive';
+import { TransferSuggestion } from '@models/transaction.model';
+import { TransactionApiService } from '../../services/transaction-api.service';
+import { ToastService } from '@core/services/toast.service';
+import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
+import { RestoreFocusOnHideDirective } from '@shared/directives/restore-focus-on-hide.directive';
 
 /**
  * Intelligent dialog for reconciling potential bank transfers.
@@ -41,10 +41,10 @@ import {RestoreFocusOnHideDirective} from '@shared/directives/restore-focus-on-h
     TooltipModule,
     TagModule,
     FormatCurrencyPipe,
-    RestoreFocusOnHideDirective
+    RestoreFocusOnHideDirective,
   ],
   templateUrl: './transfer-matching-dialog.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TransferMatchingDialogComponent {
   private readonly transactionApi: TransactionApiService = inject(TransactionApiService);
@@ -91,7 +91,7 @@ export class TransferMatchingDialogComponent {
       error: (): void => {
         this.toast.error('Failed to analyze transfer patterns.');
         this.loading.set(false);
-      }
+      },
     });
   }
 
@@ -125,7 +125,10 @@ export class TransferMatchingDialogComponent {
     if (items.length === 0) return;
 
     this.processing.set(true);
-    const ids: number[] = items.flatMap((s: TransferSuggestion): number[] => [s.sourceTransaction.id, s.targetTransaction.id]);
+    const ids: number[] = items.flatMap((s: TransferSuggestion): number[] => [
+      s.sourceTransaction.id,
+      s.targetTransaction.id,
+    ]);
 
     this.transactionApi.markAsTransfer(ids).subscribe({
       next: (): void => {
@@ -133,7 +136,11 @@ export class TransferMatchingDialogComponent {
 
         const processedIds = new Set(ids);
         this.suggestions.update((current: TransferSuggestion[]): TransferSuggestion[] =>
-          current.filter((s: TransferSuggestion): boolean => !processedIds.has(s.sourceTransaction.id) && !processedIds.has(s.targetTransaction.id))
+          current.filter(
+            (s: TransferSuggestion): boolean =>
+              !processedIds.has(s.sourceTransaction.id) &&
+              !processedIds.has(s.targetTransaction.id),
+          ),
         );
 
         this.processing.set(false);
@@ -146,7 +153,7 @@ export class TransferMatchingDialogComponent {
       error: (): void => {
         this.toast.error('Failed to synchronize transfers.');
         this.processing.set(false);
-      }
+      },
     });
   }
 
@@ -154,6 +161,8 @@ export class TransferMatchingDialogComponent {
    * Removes a suggestion from the active review list without taking action.
    */
   ignoreMatch(suggestion: TransferSuggestion): void {
-    this.suggestions.update((current: TransferSuggestion[]): TransferSuggestion[] => current.filter((s: TransferSuggestion): boolean => s !== suggestion));
+    this.suggestions.update((current: TransferSuggestion[]): TransferSuggestion[] =>
+      current.filter((s: TransferSuggestion): boolean => s !== suggestion),
+    );
   }
 }

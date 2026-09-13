@@ -1,8 +1,8 @@
-import {ChangeDetectionStrategy, Component, input, InputSignal} from '@angular/core';
-import {CardModule} from 'primeng/card';
-import {DashboardData} from '@models/dashboard.model';
-import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
-import {NgClass} from '@angular/common';
+import { ChangeDetectionStrategy, Component, input, InputSignal } from '@angular/core';
+import { CardModule } from 'primeng/card';
+import { DashboardData } from '@models/dashboard.model';
+import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
+import { NgClass } from '@angular/common';
 
 /**
  * Displays the dashboard's summary metric cards (income, expenses, net savings, etc.)
@@ -13,7 +13,7 @@ import {NgClass} from '@angular/common';
   standalone: true,
   imports: [CardModule, FormatCurrencyPipe, NgClass],
   templateUrl: './summary-cards.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SummaryCardsComponent {
   data: InputSignal<DashboardData | null> = input.required<DashboardData | null>();

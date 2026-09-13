@@ -1,14 +1,14 @@
-import {vi} from 'vitest';
-import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {By} from '@angular/platform-browser';
-import {of} from 'rxjs';
-import {Select} from 'primeng/select';
-import {BulkEditDialogComponent} from './bulk-edit-dialog.component';
-import {CategoryApiService} from '@features/categories/services/category-api.service';
-import {MerchantApiService} from '@features/merchants/services/merchant-api.service';
-import {Category, CategoryGroup, CategoryType} from '@models/category.model';
-import {Merchant} from '@models/merchant.model';
-import {Transaction} from '@models/transaction.model';
+import { vi } from 'vitest';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { of } from 'rxjs';
+import { Select } from 'primeng/select';
+import { BulkEditDialogComponent } from './bulk-edit-dialog.component';
+import { CategoryApiService } from '@features/categories/services/category-api.service';
+import { MerchantApiService } from '@features/merchants/services/merchant-api.service';
+import { Category, CategoryGroup, CategoryType } from '@models/category.model';
+import { Merchant } from '@models/merchant.model';
+import { Transaction } from '@models/transaction.model';
 
 describe('BulkEditDialogComponent', () => {
   let component: BulkEditDialogComponent;
@@ -17,27 +17,40 @@ describe('BulkEditDialogComponent', () => {
   let mockMerchantApi: any;
 
   const category = (id: number, name: string): Category =>
-    ({id, userId: 1, name, type: CategoryType.EXPENSE, parent: null, icon: '', color: ''}) as Category;
+    ({
+      id,
+      userId: 1,
+      name,
+      type: CategoryType.EXPENSE,
+      parent: null,
+      icon: '',
+      color: '',
+    }) as Category;
 
   const rent = category(1, 'Rent');
-  const mockGroups: CategoryGroup[] = [{parent: rent, items: [rent]}];
+  const mockGroups: CategoryGroup[] = [{ parent: rent, items: [rent] }];
 
-  const costco: Merchant = {id: 1, userId: 1, originalName: 'COSTCO WHSE #123', cleanName: 'Costco'};
-  const noCleanName: Merchant = {id: 2, userId: 1, originalName: 'RAW MERCHANT', cleanName: ''};
+  const costco: Merchant = {
+    id: 1,
+    userId: 1,
+    originalName: 'COSTCO WHSE #123',
+    cleanName: 'Costco',
+  };
+  const noCleanName: Merchant = { id: 2, userId: 1, originalName: 'RAW MERCHANT', cleanName: '' };
   const mockMerchants: Merchant[] = [costco, noCleanName];
 
-  const mockTransactions: Transaction[] = [{id: 1} as Transaction];
+  const mockTransactions: Transaction[] = [{ id: 1 } as Transaction];
 
   beforeEach(async () => {
-    mockCategoryApi = {getGroupedCategories: vi.fn().mockReturnValue(of(mockGroups))};
-    mockMerchantApi = {getMerchants: vi.fn().mockReturnValue(of(mockMerchants))};
+    mockCategoryApi = { getGroupedCategories: vi.fn().mockReturnValue(of(mockGroups)) };
+    mockMerchantApi = { getMerchants: vi.fn().mockReturnValue(of(mockMerchants)) };
 
     await TestBed.configureTestingModule({
       imports: [BulkEditDialogComponent],
       providers: [
-        {provide: CategoryApiService, useValue: mockCategoryApi},
-        {provide: MerchantApiService, useValue: mockMerchantApi}
-      ]
+        { provide: CategoryApiService, useValue: mockCategoryApi },
+        { provide: MerchantApiService, useValue: mockMerchantApi },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(BulkEditDialogComponent);
@@ -55,7 +68,7 @@ describe('BulkEditDialogComponent', () => {
     it('should load and reshape grouped categories into PrimeNG-default-compatible SelectItemGroups', () => {
       expect(mockCategoryApi.getGroupedCategories).toHaveBeenCalled();
       expect(component.categoryGroups()).toEqual([
-        {label: 'Rent', items: [{label: 'Rent', value: rent}]}
+        { label: 'Rent', items: [{ label: 'Rent', value: rent }] },
       ]);
     });
   });
@@ -64,40 +77,54 @@ describe('BulkEditDialogComponent', () => {
     it('should load and reshape the full merchant list into PrimeNG-default-compatible options', () => {
       expect(mockMerchantApi.getMerchants).toHaveBeenCalled();
       expect(component.merchantOptions()).toEqual([
-        {label: 'Costco', value: costco},
-        {label: 'RAW MERCHANT', value: noCleanName}
+        { label: 'Costco', value: costco },
+        { label: 'RAW MERCHANT', value: noCleanName },
       ]);
     });
 
     it("should fall back through cleanName -> originalName -> 'Unknown Merchant'", () => {
-      mockMerchantApi.getMerchants.mockReturnValue(of([{id: 3, userId: 1, originalName: '', cleanName: ''}]));
+      mockMerchantApi.getMerchants.mockReturnValue(
+        of([{ id: 3, userId: 1, originalName: '', cleanName: '' }]),
+      );
 
       fixture = TestBed.createComponent(BulkEditDialogComponent);
       fixture.componentRef.setInput('visible', true);
       fixture.componentRef.setInput('transactions', mockTransactions);
       fixture.detectChanges();
 
-      expect(fixture.componentInstance.merchantOptions()).toEqual([{
-        label: 'Unknown Merchant', value: {id: 3, userId: 1, originalName: '', cleanName: ''}
-      }]);
+      expect(fixture.componentInstance.merchantOptions()).toEqual([
+        {
+          label: 'Unknown Merchant',
+          value: { id: 3, userId: 1, originalName: '', cleanName: '' },
+        },
+      ]);
     });
   });
 
   describe('transactionCount / isLargeUpdate', () => {
     it('should count the current transaction batch', () => {
-      fixture.componentRef.setInput('transactions', [{id: 1} as Transaction, {id: 2} as Transaction]);
+      fixture.componentRef.setInput('transactions', [
+        { id: 1 } as Transaction,
+        { id: 2 } as Transaction,
+      ]);
 
       expect(component.transactionCount()).toBe(2);
     });
 
     it('should not be a large update at exactly 50', () => {
-      fixture.componentRef.setInput('transactions', Array.from({length: 50}, (_, i) => ({id: i}) as Transaction));
+      fixture.componentRef.setInput(
+        'transactions',
+        Array.from({ length: 50 }, (_, i) => ({ id: i }) as Transaction),
+      );
 
       expect(component.isLargeUpdate()).toBe(false);
     });
 
     it('should be a large update just above 50', () => {
-      fixture.componentRef.setInput('transactions', Array.from({length: 51}, (_, i) => ({id: i}) as Transaction));
+      fixture.componentRef.setInput(
+        'transactions',
+        Array.from({ length: 51 }, (_, i) => ({ id: i }) as Transaction),
+      );
 
       expect(component.isLargeUpdate()).toBe(true);
     });
@@ -191,9 +218,14 @@ describe('BulkEditDialogComponent', () => {
       component.onSave();
 
       // assert & verify
-      expect(saveSpy).toHaveBeenCalledWith(expect.objectContaining({
-        updateCategory: true, category: rent, updateMerchant: false, updateDescription: false
-      }));
+      expect(saveSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          updateCategory: true,
+          category: rent,
+          updateMerchant: false,
+          updateDescription: false,
+        }),
+      );
     });
 
     it('should emit the real, selected Merchant object -- no more unsafe cast around a typed name', () => {
@@ -208,7 +240,9 @@ describe('BulkEditDialogComponent', () => {
       component.onSave();
 
       // assert & verify
-      expect(saveSpy).toHaveBeenCalledWith(expect.objectContaining({updateMerchant: true, merchant: costco}));
+      expect(saveSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ updateMerchant: true, merchant: costco }),
+      );
     });
 
     it('should trim the emitted description override', () => {
@@ -219,7 +253,9 @@ describe('BulkEditDialogComponent', () => {
 
       component.onSave();
 
-      expect(saveSpy).toHaveBeenCalledWith(expect.objectContaining({description: 'Business trip'}));
+      expect(saveSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ description: 'Business trip' }),
+      );
     });
 
     it("bug-adjacent characterization: a field's value is emitted even if its own toggle is off, as long as the form overall is valid", () => {
@@ -241,7 +277,9 @@ describe('BulkEditDialogComponent', () => {
       component.onSave();
 
       // assert & verify
-      expect(saveSpy).toHaveBeenCalledWith(expect.objectContaining({updateMerchant: false, merchant: costco}));
+      expect(saveSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ updateMerchant: false, merchant: costco }),
+      );
     });
   });
 
@@ -282,28 +320,34 @@ describe('BulkEditDialogComponent', () => {
   });
 
   describe('rendering', () => {
-    it("bug found, not fixed here: [disabled]=\"!form.value.x\" on a native formControlName " +
-      "input never actually disables it, despite that clearly being the intent (label text and " +
-      "ring-highlight styling both treat this field as gated by its toggle) -- Angular's own " +
-      "reactive-forms directive manages a native element's disabled state and overrides a plain " +
-      "property binding attempting the same thing (confirmed via Angular's own runtime warning: " +
-      "\"It looks like you're using the disabled attribute with a reactive form directive\"). " +
-      "Fixing this properly means enabling/disabling the FormControl itself, a real design " +
-      "decision -- left to a dedicated bug ticket, not fixed as part of PF-395 (scoped only to " +
-      "the merchant-mapping gap).",
+    it(
+      'bug found, not fixed here: [disabled]="!form.value.x" on a native formControlName ' +
+        'input never actually disables it, despite that clearly being the intent (label text and ' +
+        "ring-highlight styling both treat this field as gated by its toggle) -- Angular's own " +
+        "reactive-forms directive manages a native element's disabled state and overrides a plain " +
+        "property binding attempting the same thing (confirmed via Angular's own runtime warning: " +
+        '"It looks like you\'re using the disabled attribute with a reactive form directive"). ' +
+        'Fixing this properly means enabling/disabling the FormControl itself, a real design ' +
+        'decision -- left to a dedicated bug ticket, not fixed as part of PF-395 (scoped only to ' +
+        'the merchant-mapping gap).',
       () => {
         // arrange & act
-        const descriptionInput = fixture.nativeElement.querySelector('input[formcontrolname="description"]');
+        const descriptionInput = fixture.nativeElement.querySelector(
+          'input[formcontrolname="description"]',
+        );
 
         // assert & verify -- documents current (broken) behavior, unchanged by PF-395
         expect(descriptionInput.disabled).toBe(false);
-      });
+      },
+    );
 
     // Two <p-select>s exist in this template now (category, then merchant) -- By.directive(Select)
     // alone matches the first one found (category), so this filters by `group`, which only the
     // category select sets, to reliably target the merchant one specifically.
-    const findMerchantSelect = (): any => fixture.debugElement.queryAll(By.directive(Select))
-      .find((de: any): boolean => !de.componentInstance.group)!;
+    const findMerchantSelect = (): any =>
+      fixture.debugElement
+        .queryAll(By.directive(Select))
+        .find((de: any): boolean => !de.componentInstance.group)!;
 
     it('should correctly disable the merchant p-select until its own toggle is switched on', () => {
       // Unlike the native <input> above, PrimeNG's Select inherits a real, dedicated `disabled`

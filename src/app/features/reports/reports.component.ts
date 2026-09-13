@@ -1,22 +1,36 @@
-import {ChangeDetectionStrategy, Component, DestroyRef, effect, inject, OnInit, signal, WritableSignal} from '@angular/core';
-import {CommonModule} from '@angular/common';
-import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
-import {ActivatedRoute, Params, Router} from '@angular/router';
-import {finalize, skip} from 'rxjs';
-import {TabsModule} from 'primeng/tabs';
-import {ProgressSpinnerModule} from 'primeng/progressspinner';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  effect,
+  inject,
+  OnInit,
+  signal,
+  WritableSignal,
+} from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Params, Router } from '@angular/router';
+import { finalize, skip } from 'rxjs';
+import { TabsModule } from 'primeng/tabs';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 
-import {PageRequest, PageResponse, Transaction, TransactionFilter} from '@models/transaction.model';
-import {TransactionApiService} from '../transactions/services/transaction-api.service';
-import {ToastService} from '@core/services/toast.service';
-import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-toolbar';
-import {DateRangeFilterComponent} from './components/date-range-filter/date-range-filter.component';
-import {CategoryReportComponent} from './components/category-report/category-report.component';
-import {MerchantReportComponent} from './components/merchant-report/merchant-report.component';
-import {IncomeExpenseReportComponent} from './components/income-expense-report/income-expense-report.component';
-import {DateRange} from './models/reports.model';
-import {fromLocalDateString, toLocalDateString} from '@shared/utils/transaction.utils';
-import {PageErrorStateComponent} from '@shared/components/page-error-state/page-error-state.component';
+import {
+  PageRequest,
+  PageResponse,
+  Transaction,
+  TransactionFilter,
+} from '@models/transaction.model';
+import { TransactionApiService } from '../transactions/services/transaction-api.service';
+import { ToastService } from '@core/services/toast.service';
+import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen-toolbar';
+import { DateRangeFilterComponent } from './components/date-range-filter/date-range-filter.component';
+import { CategoryReportComponent } from './components/category-report/category-report.component';
+import { MerchantReportComponent } from './components/merchant-report/merchant-report.component';
+import { IncomeExpenseReportComponent } from './components/income-expense-report/income-expense-report.component';
+import { DateRange } from './models/reports.model';
+import { fromLocalDateString, toLocalDateString } from '@shared/utils/transaction.utils';
+import { PageErrorStateComponent } from '@shared/components/page-error-state/page-error-state.component';
 
 /**
  * Main reporting hub providing visual analytics and deep-dive spending patterns.
@@ -36,10 +50,10 @@ import {PageErrorStateComponent} from '@shared/components/page-error-state/page-
     CategoryReportComponent,
     MerchantReportComponent,
     IncomeExpenseReportComponent,
-    PageErrorStateComponent
+    PageErrorStateComponent,
   ],
   templateUrl: './reports.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ReportsComponent implements OnInit {
   private readonly transactionApi: TransactionApiService = inject(TransactionApiService);
@@ -101,19 +115,20 @@ export class ReportsComponent implements OnInit {
 
     const filter: TransactionFilter = {
       startDate: fromLocalDateString(range.startDate),
-      endDate: fromLocalDateString(range.endDate)
+      endDate: fromLocalDateString(range.endDate),
     };
 
     const pageRequest: PageRequest = {
       page: 0,
       size: 1000,
-      sort: 'date,desc'
+      sort: 'date,desc',
     };
 
-    this.transactionApi.getTransactions(filter, pageRequest)
+    this.transactionApi
+      .getTransactions(filter, pageRequest)
       .pipe(
         takeUntilDestroyed(this.destroyRef),
-        finalize((): void => this.loading.set(false))
+        finalize((): void => this.loading.set(false)),
       )
       .subscribe({
         next: (page: PageResponse<Transaction>): void => this.transactions.set(page.content),
@@ -121,7 +136,7 @@ export class ReportsComponent implements OnInit {
           console.error('Report data load failed:', err);
           this.toast.error('Failed to load report data. Please try again.');
           this.loadError.set(true);
-        }
+        },
       });
   }
 
@@ -139,7 +154,7 @@ export class ReportsComponent implements OnInit {
 
     const current: DateRange = this.dateRange();
     if (startDate !== current.startDate || endDate !== current.endDate) {
-      this.dateRange.set({startDate, endDate, label: params['label'] || 'Custom Range'});
+      this.dateRange.set({ startDate, endDate, label: params['label'] || 'Custom Range' });
     }
   }
 
@@ -150,9 +165,9 @@ export class ReportsComponent implements OnInit {
    */
   private updateUrlParams(range: DateRange): void {
     this.router.navigate([], {
-      queryParams: {startDate: range.startDate, endDate: range.endDate, label: range.label},
+      queryParams: { startDate: range.startDate, endDate: range.endDate, label: range.label },
       queryParamsHandling: 'replace',
-      replaceUrl: true
+      replaceUrl: true,
     });
   }
 
@@ -168,7 +183,7 @@ export class ReportsComponent implements OnInit {
     return {
       startDate: toLocalDateString(start),
       endDate: toLocalDateString(end),
-      label: 'Last 3 Months'
+      label: 'Last 3 Months',
     };
   }
 }

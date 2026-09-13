@@ -1,5 +1,5 @@
-import {describe, it, expect, beforeEach} from 'vitest';
-import {ThemeService} from './theme.service';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { ThemeService } from './theme.service';
 
 describe('ThemeService', () => {
   beforeEach(() => {

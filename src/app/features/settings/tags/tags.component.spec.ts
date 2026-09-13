@@ -1,13 +1,13 @@
-import {vi} from 'vitest';
-import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {NoopAnimationsModule} from '@angular/platform-browser/animations';
-import {of} from 'rxjs';
-import {ConfirmationService} from 'primeng/api';
+import { vi } from 'vitest';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { of } from 'rxjs';
+import { ConfirmationService } from 'primeng/api';
 
-import {TagsComponent} from './tags.component';
-import {TagApiService} from '@features/tags/services/tag-api.service';
-import {ToastService} from '@core/services/toast.service';
-import {Tag} from '@models/tag.model';
+import { TagsComponent } from './tags.component';
+import { TagApiService } from '@features/tags/services/tag-api.service';
+import { ToastService } from '@core/services/toast.service';
+import { Tag } from '@models/tag.model';
 
 describe('TagsComponent', () => {
   let component: TagsComponent;
@@ -16,24 +16,24 @@ describe('TagsComponent', () => {
   let mockToast: any;
   let mockConfirmationService: any;
 
-  const travelTag: Tag = {id: 1, userId: 1, name: 'Travel', color: '#ff6b6b'};
-  const reimbursableTag: Tag = {id: 2, userId: 1, name: 'Reimbursable', color: null};
+  const travelTag: Tag = { id: 1, userId: 1, name: 'Travel', color: '#ff6b6b' };
+  const reimbursableTag: Tag = { id: 2, userId: 1, name: 'Reimbursable', color: null };
 
   beforeEach(async () => {
     mockApi = {
       getTags: vi.fn().mockReturnValue(of([travelTag, reimbursableTag])),
-      deleteTag: vi.fn().mockReturnValue(of(undefined))
+      deleteTag: vi.fn().mockReturnValue(of(undefined)),
     };
-    mockToast = {success: vi.fn(), error: vi.fn()};
-    mockConfirmationService = {confirm: vi.fn()};
+    mockToast = { success: vi.fn(), error: vi.fn() };
+    mockConfirmationService = { confirm: vi.fn() };
 
     await TestBed.configureTestingModule({
       imports: [TagsComponent, NoopAnimationsModule],
       providers: [
-        {provide: TagApiService, useValue: mockApi},
-        {provide: ToastService, useValue: mockToast},
-        {provide: ConfirmationService, useValue: mockConfirmationService}
-      ]
+        { provide: TagApiService, useValue: mockApi },
+        { provide: ToastService, useValue: mockToast },
+        { provide: ConfirmationService, useValue: mockConfirmationService },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(TagsComponent);
@@ -107,8 +107,10 @@ describe('TagsComponent', () => {
     fixture.detectChanges();
 
     // assert & verify
-    const editButton: HTMLButtonElement = fixture.nativeElement.querySelector('button:has(.pi-pencil)');
-    const deleteButton: HTMLButtonElement = fixture.nativeElement.querySelector('button:has(.pi-trash)');
+    const editButton: HTMLButtonElement =
+      fixture.nativeElement.querySelector('button:has(.pi-pencil)');
+    const deleteButton: HTMLButtonElement =
+      fixture.nativeElement.querySelector('button:has(.pi-trash)');
     expect(editButton.getAttribute('aria-label')).toBe('Edit tag');
     expect(deleteButton.getAttribute('aria-label')).toBe('Delete tag');
   });
@@ -123,8 +125,10 @@ describe('TagsComponent', () => {
     // assert & verify
     expect(mockConfirmationService.confirm).toHaveBeenCalledWith(
       expect.objectContaining({
-        message: expect.stringContaining('removes it from any transactions currently tagged with it')
-      })
+        message: expect.stringContaining(
+          'removes it from any transactions currently tagged with it',
+        ),
+      }),
     );
   });
 

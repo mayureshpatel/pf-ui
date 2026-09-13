@@ -1,4 +1,4 @@
-import {Component, input, InputSignal} from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, InputSignal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 // todo: check if we can remove this
@@ -18,6 +18,7 @@ import { CommonModule } from '@angular/common';
   imports: [CommonModule],
   templateUrl: './screen-toolbar.html',
   styleUrl: './screen-toolbar.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ScreenToolbarComponent {
   /**

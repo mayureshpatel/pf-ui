@@ -1,15 +1,15 @@
-import {vi} from 'vitest';
-import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {By} from '@angular/platform-browser';
-import {ActivatedRoute, Router} from '@angular/router';
-import {of, throwError} from 'rxjs';
-import {ReportsComponent} from './reports.component';
-import {TransactionApiService} from '@features/transactions/services/transaction-api.service';
-import {ToastService} from '@core/services/toast.service';
-import {Transaction} from '@models/transaction.model';
-import {CategoryReportComponent} from './components/category-report/category-report.component';
-import {MerchantReportComponent} from './components/merchant-report/merchant-report.component';
-import {IncomeExpenseReportComponent} from './components/income-expense-report/income-expense-report.component';
+import { vi } from 'vitest';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { ActivatedRoute, Router } from '@angular/router';
+import { of, throwError } from 'rxjs';
+import { ReportsComponent } from './reports.component';
+import { TransactionApiService } from '@features/transactions/services/transaction-api.service';
+import { ToastService } from '@core/services/toast.service';
+import { Transaction } from '@models/transaction.model';
+import { CategoryReportComponent } from './components/category-report/category-report.component';
+import { MerchantReportComponent } from './components/merchant-report/merchant-report.component';
+import { IncomeExpenseReportComponent } from './components/income-expense-report/income-expense-report.component';
 
 describe('ReportsComponent', () => {
   let fixture: ComponentFixture<ReportsComponent>;
@@ -19,11 +19,19 @@ describe('ReportsComponent', () => {
   let mockRouter: any;
   let mockActivatedRoute: any;
 
-  const mockTransactions = [{
-    id: 1, description: 'Test Txn', date: '2026-01-15', amount: 42.5, type: 'EXPENSE',
-    account: {id: 1, name: 'Checking'}, category: {id: 1, name: 'Groceries'},
-    merchant: {id: 1, cleanName: 'Test Merchant'}, tags: []
-  }] as unknown as Transaction[];
+  const mockTransactions = [
+    {
+      id: 1,
+      description: 'Test Txn',
+      date: '2026-01-15',
+      amount: 42.5,
+      type: 'EXPENSE',
+      account: { id: 1, name: 'Checking' },
+      category: { id: 1, name: 'Groceries' },
+      merchant: { id: 1, cleanName: 'Test Merchant' },
+      tags: [],
+    },
+  ] as unknown as Transaction[];
 
   // p-tabs' TabList calls ngAfterViewInit -> bindResizeObserver(), which JSDOM doesn't implement.
   beforeAll(() => {
@@ -36,23 +44,25 @@ describe('ReportsComponent', () => {
 
   beforeEach(async () => {
     mockTransactionApi = {
-      getTransactions: vi.fn().mockReturnValue(of({content: mockTransactions, page: {totalElements: 1}}))
+      getTransactions: vi
+        .fn()
+        .mockReturnValue(of({ content: mockTransactions, page: { totalElements: 1 } })),
     };
-    mockToast = {success: vi.fn(), error: vi.fn(), info: vi.fn()};
-    mockRouter = {navigate: vi.fn()};
+    mockToast = { success: vi.fn(), error: vi.fn(), info: vi.fn() };
+    mockRouter = { navigate: vi.fn() };
     mockActivatedRoute = {
-      snapshot: {queryParams: {}},
-      queryParams: of({})
+      snapshot: { queryParams: {} },
+      queryParams: of({}),
     };
 
     await TestBed.configureTestingModule({
       imports: [ReportsComponent],
       providers: [
-        {provide: TransactionApiService, useValue: mockTransactionApi},
-        {provide: ToastService, useValue: mockToast},
-        {provide: Router, useValue: mockRouter},
-        {provide: ActivatedRoute, useValue: mockActivatedRoute}
-      ]
+        { provide: TransactionApiService, useValue: mockTransactionApi },
+        { provide: ToastService, useValue: mockToast },
+        { provide: Router, useValue: mockRouter },
+        { provide: ActivatedRoute, useValue: mockActivatedRoute },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(ReportsComponent);
@@ -73,8 +83,8 @@ describe('ReportsComponent', () => {
 
     // assert & verify
     expect(mockTransactionApi.getTransactions).toHaveBeenCalledWith(
-      expect.objectContaining({startDate: expect.any(Date), endDate: expect.any(Date)}),
-      expect.objectContaining({page: 0, size: 1000, sort: 'date,desc'})
+      expect.objectContaining({ startDate: expect.any(Date), endDate: expect.any(Date) }),
+      expect.objectContaining({ page: 0, size: 1000, sort: 'date,desc' }),
     );
     expect(component.dateRange().label).toBe('Last 3 Months');
   });
@@ -83,7 +93,11 @@ describe('ReportsComponent', () => {
     // act
     fixture.detectChanges();
     mockTransactionApi.getTransactions.mockClear();
-    component.dateRange.set({startDate: '2026-01-01', endDate: '2026-01-31', label: 'Custom Range'});
+    component.dateRange.set({
+      startDate: '2026-01-01',
+      endDate: '2026-01-31',
+      label: 'Custom Range',
+    });
     fixture.detectChanges();
 
     // assert & verify
@@ -99,9 +113,12 @@ describe('ReportsComponent', () => {
     fixture.detectChanges();
 
     // assert & verify
-    const category = fixture.debugElement.query(By.directive(CategoryReportComponent)).componentInstance as CategoryReportComponent;
-    const merchant = fixture.debugElement.query(By.directive(MerchantReportComponent)).componentInstance as MerchantReportComponent;
-    const incomeExpense = fixture.debugElement.query(By.directive(IncomeExpenseReportComponent)).componentInstance as IncomeExpenseReportComponent;
+    const category = fixture.debugElement.query(By.directive(CategoryReportComponent))
+      .componentInstance as CategoryReportComponent;
+    const merchant = fixture.debugElement.query(By.directive(MerchantReportComponent))
+      .componentInstance as MerchantReportComponent;
+    const incomeExpense = fixture.debugElement.query(By.directive(IncomeExpenseReportComponent))
+      .componentInstance as IncomeExpenseReportComponent;
 
     expect(category.transactions()).toEqual(mockTransactions);
     expect(merchant.transactions()).toEqual(mockTransactions);
@@ -128,7 +145,9 @@ describe('ReportsComponent', () => {
 
   it('should show an error toast and stop loading when the request fails', () => {
     // arrange
-    mockTransactionApi.getTransactions.mockReturnValue(throwError(() => new Error('network error')));
+    mockTransactionApi.getTransactions.mockReturnValue(
+      throwError(() => new Error('network error')),
+    );
 
     // act
     fixture.detectChanges();

@@ -1,28 +1,36 @@
-import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {CategoryChartComponent} from './category-chart.component';
-import {CategoryBreakdown} from '@models/dashboard.model';
-import {Category, CategoryType} from '@models/category.model';
-import {getCategoryColor} from '@shared/utils/category.utils';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { CategoryChartComponent } from './category-chart.component';
+import { CategoryBreakdown } from '@models/dashboard.model';
+import { Category, CategoryType } from '@models/category.model';
+import { getCategoryColor } from '@shared/utils/category.utils';
 
 describe('CategoryChartComponent', () => {
   let component: CategoryChartComponent;
   let fixture: ComponentFixture<CategoryChartComponent>;
 
   const category = (name: string, color: string): Category =>
-    ({id: 1, userId: 1, name, type: CategoryType.EXPENSE, parent: null, icon: 'pi-tag', color}) as Category;
+    ({
+      id: 1,
+      userId: 1,
+      name,
+      type: CategoryType.EXPENSE,
+      parent: null,
+      icon: 'pi-tag',
+      color,
+    }) as Category;
 
   const mockBreakdown: CategoryBreakdown[] = [
-    {category: category('Rent', '#3B82F6'), total: -900},
-    {category: category('Groceries', '#10B981'), total: -450.75},
-    {category: category('Dining Out', ''), total: -120},
-    {category: category('Gas', '#F97316'), total: -80},
-    {category: category('Subscriptions', ''), total: -35},
-    {category: category('Coffee', '#EC4899'), total: -10}
+    { category: category('Rent', '#3B82F6'), total: -900 },
+    { category: category('Groceries', '#10B981'), total: -450.75 },
+    { category: category('Dining Out', ''), total: -120 },
+    { category: category('Gas', '#F97316'), total: -80 },
+    { category: category('Subscriptions', ''), total: -35 },
+    { category: category('Coffee', '#EC4899'), total: -10 },
   ];
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [CategoryChartComponent]
+      imports: [CategoryChartComponent],
     }).compileComponents();
 
     fixture = TestBed.createComponent(CategoryChartComponent);
@@ -60,7 +68,13 @@ describe('CategoryChartComponent', () => {
       setCategories(mockBreakdown);
 
       // assert & verify
-      expect(component.chartData().labels).toEqual(['Rent', 'Groceries', 'Dining Out', 'Gas', 'Subscriptions']);
+      expect(component.chartData().labels).toEqual([
+        'Rent',
+        'Groceries',
+        'Dining Out',
+        'Gas',
+        'Subscriptions',
+      ]);
     });
 
     it('should limit displayed items to the default topX of 5', () => {
@@ -95,10 +109,7 @@ describe('CategoryChartComponent', () => {
 
     it("should label an item with no category as 'Uncategorized'", () => {
       // arrange & act
-      setCategories([
-        {category: null as unknown as Category, total: -75},
-        ...mockBreakdown
-      ]);
+      setCategories([{ category: null as unknown as Category, total: -75 }, ...mockBreakdown]);
 
       // assert & verify -- -75 sorts ahead of Gas/Subscriptions/Coffee but behind Rent/Groceries
       expect(component.chartData().labels).toContain('Uncategorized');
@@ -112,14 +123,16 @@ describe('CategoryChartComponent', () => {
       // assert & verify
       expect(component.chartData()).toEqual({
         labels: [],
-        datasets: [{
-          label: 'Total Spent',
-          data: [],
-          backgroundColor: [],
-          borderRadius: 8,
-          barThickness: 32,
-          hoverBackgroundColor: []
-        }]
+        datasets: [
+          {
+            label: 'Total Spent',
+            data: [],
+            backgroundColor: [],
+            borderRadius: 8,
+            barThickness: 32,
+            hoverBackgroundColor: [],
+          },
+        ],
       });
     });
 

@@ -1,4 +1,4 @@
-import {JwtPayload, User} from '@models/auth.model';
+import { JwtPayload, User } from '@models/auth.model';
 
 /**
  * Decodes a JWT token and returns its payload.
@@ -54,6 +54,6 @@ export function getUserFromToken(token: string | null): User | null {
   return {
     id: payload.userId,
     username: payload.sub,
-    email: payload.email
+    email: payload.email,
   };
 }

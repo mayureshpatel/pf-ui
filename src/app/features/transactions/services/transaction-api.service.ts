@@ -9,17 +9,17 @@ import {
   TransactionUpdateRequest,
   PageRequest,
   PageResponse,
-  TransferSuggestion
+  TransferSuggestion,
 } from '@models/transaction.model';
-import {Category} from '@models/category.model';
-import {toLocalDateString} from '@shared/utils/transaction.utils';
-import {SKIP_GENERIC_ERROR_TOAST} from '@core/auth/error.interceptor';
+import { Category } from '@models/category.model';
+import { toLocalDateString } from '@shared/utils/transaction.utils';
+import { SKIP_GENERIC_ERROR_TOAST } from '@core/auth/error.interceptor';
 
 const SKIP_TOAST_CONTEXT = new HttpContext().set(SKIP_GENERIC_ERROR_TOAST, true);
-const SKIP_TOAST_OPTIONS = {context: SKIP_TOAST_CONTEXT};
+const SKIP_TOAST_OPTIONS = { context: SKIP_TOAST_CONTEXT };
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class TransactionApiService {
   private readonly http: HttpClient = inject(HttpClient);
@@ -33,7 +33,7 @@ export class TransactionApiService {
    */
   getTransactions(
     filter: TransactionFilter,
-    pageRequest: PageRequest
+    pageRequest: PageRequest,
   ): Observable<PageResponse<Transaction>> {
     let params: HttpParams = new HttpParams()
       .set('page', pageRequest.page.toString())
@@ -48,7 +48,8 @@ export class TransactionApiService {
     if (filter.type) params = params.set('type', filter.type);
     if (filter.description) params = params.set('description', filter.description);
     if (filter.categoryName) {
-      const categoryVal: string = filter.categoryName === '__UNDEFINED__' ? '' : filter.categoryName;
+      const categoryVal: string =
+        filter.categoryName === '__UNDEFINED__' ? '' : filter.categoryName;
       params = params.set('categoryName', categoryVal);
     }
     if (filter.merchant) params = params.set('merchantCleanName', filter.merchant);
@@ -58,7 +59,10 @@ export class TransactionApiService {
     if (filter.endDate) params = params.set('endDate', toLocalDateString(filter.endDate));
     if (filter.tagId) params = params.set('tagId', filter.tagId.toString());
 
-    return this.http.get<PageResponse<Transaction>>(this.apiUrl, { params, context: SKIP_TOAST_CONTEXT });
+    return this.http.get<PageResponse<Transaction>>(this.apiUrl, {
+      params,
+      context: SKIP_TOAST_CONTEXT,
+    });
   }
 
   /**
@@ -110,7 +114,10 @@ export class TransactionApiService {
    * @returns the list of suggested transfer matches.
    */
   getTransferSuggestions(): Observable<TransferSuggestion[]> {
-    return this.http.get<TransferSuggestion[]>(`${this.apiUrl}/suggestions/transfers`, SKIP_TOAST_OPTIONS);
+    return this.http.get<TransferSuggestion[]>(
+      `${this.apiUrl}/suggestions/transfers`,
+      SKIP_TOAST_OPTIONS,
+    );
   }
 
   /**

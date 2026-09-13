@@ -1,15 +1,15 @@
-import {inject, Injectable} from '@angular/core';
-import {HttpClient, HttpContext, HttpParams} from '@angular/common/http';
-import {Observable} from 'rxjs';
-import {environment} from '@env';
-import {Budget, BudgetStatus} from '@models/budget.model';
-import {AuthService} from '@core/auth/auth.service';
-import {SKIP_GENERIC_ERROR_TOAST} from '@core/auth/error.interceptor';
+import { inject, Injectable } from '@angular/core';
+import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { environment } from '@env';
+import { Budget, BudgetStatus } from '@models/budget.model';
+import { AuthService } from '@core/auth/auth.service';
+import { SKIP_GENERIC_ERROR_TOAST } from '@core/auth/error.interceptor';
 
 const SKIP_TOAST_CONTEXT = new HttpContext().set(SKIP_GENERIC_ERROR_TOAST, true);
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class BudgetApiService {
   private readonly http: HttpClient = inject(HttpClient);
@@ -26,7 +26,7 @@ export class BudgetApiService {
     const params: HttpParams = new HttpParams()
       .set('month', month.toString())
       .set('year', year.toString());
-    return this.http.get<Budget[]>(this.apiUrl, {params});
+    return this.http.get<Budget[]>(this.apiUrl, { params });
   }
 
   /**
@@ -39,7 +39,10 @@ export class BudgetApiService {
     const params: HttpParams = new HttpParams()
       .set('month', month.toString())
       .set('year', year.toString());
-    return this.http.get<BudgetStatus[]>(`${this.apiUrl}/status`, {params, context: SKIP_TOAST_CONTEXT});
+    return this.http.get<BudgetStatus[]>(`${this.apiUrl}/status`, {
+      params,
+      context: SKIP_TOAST_CONTEXT,
+    });
   }
 
   /**
@@ -47,7 +50,7 @@ export class BudgetApiService {
    * @returns the full list of budgets.
    */
   getAllBudgets(): Observable<Budget[]> {
-    return this.http.get<Budget[]>(`${this.apiUrl}/all`, {context: SKIP_TOAST_CONTEXT});
+    return this.http.get<Budget[]>(`${this.apiUrl}/all`, { context: SKIP_TOAST_CONTEXT });
   }
 
   /**
@@ -58,7 +61,12 @@ export class BudgetApiService {
    * @param year the budget year.
    * @returns the id of the newly created budget.
    */
-  createBudget(categoryId: number, amount: number, month: number, year: number): Observable<number> {
+  createBudget(
+    categoryId: number,
+    amount: number,
+    month: number,
+    year: number,
+  ): Observable<number> {
     const userId = this.authService.user()?.id;
     return this.http.post<number>(this.apiUrl, { userId, categoryId, amount, month, year });
   }
@@ -68,6 +76,6 @@ export class BudgetApiService {
    * @param id the budget id to delete.
    */
   deleteBudget(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${id}`, {context: SKIP_TOAST_CONTEXT});
+    return this.http.delete<void>(`${this.apiUrl}/${id}`, { context: SKIP_TOAST_CONTEXT });
   }
 }

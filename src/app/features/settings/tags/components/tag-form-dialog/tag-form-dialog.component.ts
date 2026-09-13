@@ -1,4 +1,5 @@
 import {
+  ChangeDetectionStrategy,
   Component,
   computed,
   effect,
@@ -11,22 +12,22 @@ import {
   OutputEmitterRef,
   Signal,
   signal,
-  WritableSignal
+  WritableSignal,
 } from '@angular/core';
-import {CommonModule} from '@angular/common';
-import {FormControl, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
-import {finalize} from 'rxjs';
-import {DialogModule} from 'primeng/dialog';
-import {ButtonModule} from 'primeng/button';
-import {InputTextModule} from 'primeng/inputtext';
-import {ColorPickerModule} from 'primeng/colorpicker';
-import {MessageModule} from 'primeng/message';
+import { CommonModule } from '@angular/common';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { finalize } from 'rxjs';
+import { DialogModule } from 'primeng/dialog';
+import { ButtonModule } from 'primeng/button';
+import { InputTextModule } from 'primeng/inputtext';
+import { ColorPickerModule } from 'primeng/colorpicker';
+import { MessageModule } from 'primeng/message';
 
-import {Tag} from '@models/tag.model';
-import {TagApiService} from '@features/tags/services/tag-api.service';
-import {AuthService} from '@core/auth/auth.service';
-import {ToastService} from '@core/services/toast.service';
-import {RestoreFocusOnHideDirective} from '@shared/directives/restore-focus-on-hide.directive';
+import { Tag } from '@models/tag.model';
+import { TagApiService } from '@features/tags/services/tag-api.service';
+import { AuthService } from '@core/auth/auth.service';
+import { ToastService } from '@core/services/toast.service';
+import { RestoreFocusOnHideDirective } from '@shared/directives/restore-focus-on-hide.directive';
 
 const DEFAULT_COLOR = '3b82f6';
 
@@ -53,9 +54,10 @@ const DEFAULT_COLOR = '3b82f6';
     InputTextModule,
     ColorPickerModule,
     MessageModule,
-    RestoreFocusOnHideDirective
+    RestoreFocusOnHideDirective,
   ],
-  templateUrl: './tag-form-dialog.component.html'
+  templateUrl: './tag-form-dialog.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TagFormDialogComponent {
   private readonly tagApi: TagApiService = inject(TagApiService);
@@ -80,15 +82,17 @@ export class TagFormDialogComponent {
   /** Whether this dialog instance is editing an existing tag rather than creating a new one. */
   readonly isEditMode: Signal<boolean> = computed((): boolean => this.tag() !== null);
 
-  readonly dialogTitle: Signal<string> = computed((): string => this.isEditMode() ? 'Edit Tag' : 'New Tag');
+  readonly dialogTitle: Signal<string> = computed((): string =>
+    this.isEditMode() ? 'Edit Tag' : 'New Tag',
+  );
 
   /**
    * Reactive form for the tag's name and color. `color` holds a bare hex string (no `#`), matching
    * `p-colorPicker`'s own value format.
    */
   readonly form = new FormGroup({
-    name: new FormControl<string>('', {nonNullable: true, validators: [Validators.required]}),
-    color: new FormControl<string>(DEFAULT_COLOR, {nonNullable: true})
+    name: new FormControl<string>('', { nonNullable: true, validators: [Validators.required] }),
+    color: new FormControl<string>(DEFAULT_COLOR, { nonNullable: true }),
   });
 
   constructor() {
@@ -101,7 +105,7 @@ export class TagFormDialogComponent {
         const existing: Tag | null = this.tag();
         this.form.reset({
           name: existing?.name ?? '',
-          color: existing?.color ? existing.color.replace('#', '') : DEFAULT_COLOR
+          color: existing?.color ? existing.color.replace('#', '') : DEFAULT_COLOR,
         });
         this.errorMessage.set(null);
       }
@@ -134,20 +138,23 @@ export class TagFormDialogComponent {
     this.errorMessage.set(null);
 
     const op = existing
-      ? this.tagApi.updateTag({id: existing.id, name: rawValue.name, color})
-      : this.tagApi.createTag({userId: this.authService.user()?.id ?? 0, name: rawValue.name, color});
+      ? this.tagApi.updateTag({ id: existing.id, name: rawValue.name, color })
+      : this.tagApi.createTag({
+          userId: this.authService.user()?.id ?? 0,
+          name: rawValue.name,
+          color,
+        });
 
-    op.pipe(finalize((): void => this.saving.set(false)))
-      .subscribe({
-        next: (): void => {
-          this.toast.success(`Tag ${existing ? 'updated' : 'created'}`);
-          this.save.emit();
-          this.onHide();
-        },
-        error: (err: any): void => {
-          console.error('Error saving tag:', err);
-          this.errorMessage.set(err.error?.detail || 'Failed to save tag. Please try again.');
-        }
-      });
+    op.pipe(finalize((): void => this.saving.set(false))).subscribe({
+      next: (): void => {
+        this.toast.success(`Tag ${existing ? 'updated' : 'created'}`);
+        this.save.emit();
+        this.onHide();
+      },
+      error: (err: any): void => {
+        console.error('Error saving tag:', err);
+        this.errorMessage.set(err.error?.detail || 'Failed to save tag. Please try again.');
+      },
+    });
   }
 }

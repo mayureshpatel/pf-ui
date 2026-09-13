@@ -1,10 +1,18 @@
-import {ChangeDetectionStrategy, Component, effect, model, ModelSignal, signal, WritableSignal} from '@angular/core';
-import {CommonModule} from '@angular/common';
-import {FormsModule} from '@angular/forms';
-import {DatePicker} from 'primeng/datepicker';
-import {Button} from 'primeng/button';
-import {DateRange, DateRangePreset} from '../../models/reports.model';
-import {fromLocalDateString, toLocalDateString} from '@shared/utils/transaction.utils';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  effect,
+  model,
+  ModelSignal,
+  signal,
+  WritableSignal,
+} from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { DatePicker } from 'primeng/datepicker';
+import { Button } from 'primeng/button';
+import { DateRange, DateRangePreset } from '../../models/reports.model';
+import { fromLocalDateString, toLocalDateString } from '@shared/utils/transaction.utils';
 
 /**
  * Component for selecting and managing date range filters for reports.
@@ -17,7 +25,7 @@ import {fromLocalDateString, toLocalDateString} from '@shared/utils/transaction.
   standalone: true,
   imports: [CommonModule, FormsModule, DatePicker, Button],
   templateUrl: './date-range-filter.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DateRangeFilterComponent {
   /** Two-way binding for the currently selected date range. */
@@ -28,11 +36,11 @@ export class DateRangeFilterComponent {
 
   /** List of predefined range presets for rapid filtering. */
   protected readonly presets: DateRangePreset[] = [
-    {label: 'This Month', getValue: (): DateRange => this.getThisMonth()},
-    {label: 'Last Month', getValue: (): DateRange => this.getLastMonth()},
-    {label: 'Last 3 Months', getValue: (): DateRange => this.getLast3Months()},
-    {label: 'YTD', getValue: (): DateRange => this.getYTD()},
-    {label: 'Last Year', getValue: (): DateRange => this.getLastYear()}
+    { label: 'This Month', getValue: (): DateRange => this.getThisMonth() },
+    { label: 'Last Month', getValue: (): DateRange => this.getLastMonth() },
+    { label: 'Last 3 Months', getValue: (): DateRange => this.getLast3Months() },
+    { label: 'YTD', getValue: (): DateRange => this.getYTD() },
+    { label: 'Last Year', getValue: (): DateRange => this.getLastYear() },
   ];
 
   constructor() {
@@ -43,7 +51,10 @@ export class DateRangeFilterComponent {
     effect((): void => {
       const range: DateRange = this.dateRange();
       if (range) {
-        this.selectedRange.set([fromLocalDateString(range.startDate), fromLocalDateString(range.endDate)]);
+        this.selectedRange.set([
+          fromLocalDateString(range.startDate),
+          fromLocalDateString(range.endDate),
+        ]);
       }
     });
   }
@@ -66,7 +77,7 @@ export class DateRangeFilterComponent {
       this.dateRange.set({
         startDate: toLocalDateString(dates[0]),
         endDate: toLocalDateString(dates[1]),
-        label: 'Custom Range'
+        label: 'Custom Range',
       });
     }
   }
@@ -74,32 +85,52 @@ export class DateRangeFilterComponent {
   private getThisMonth(): DateRange {
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth(), 1);
-    return {startDate: toLocalDateString(start), endDate: toLocalDateString(now), label: 'This Month'};
+    return {
+      startDate: toLocalDateString(start),
+      endDate: toLocalDateString(now),
+      label: 'This Month',
+    };
   }
 
   private getLastMonth(): DateRange {
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const end = new Date(now.getFullYear(), now.getMonth(), 0);
-    return {startDate: toLocalDateString(start), endDate: toLocalDateString(end), label: 'Last Month'};
+    return {
+      startDate: toLocalDateString(start),
+      endDate: toLocalDateString(end),
+      label: 'Last Month',
+    };
   }
 
   private getLast3Months(): DateRange {
     const now = new Date();
     const start = new Date();
     start.setMonth(start.getMonth() - 3);
-    return {startDate: toLocalDateString(start), endDate: toLocalDateString(now), label: 'Last 3 Months'};
+    return {
+      startDate: toLocalDateString(start),
+      endDate: toLocalDateString(now),
+      label: 'Last 3 Months',
+    };
   }
 
   private getYTD(): DateRange {
     const now = new Date();
     const start = new Date(now.getFullYear(), 0, 1);
-    return {startDate: toLocalDateString(start), endDate: toLocalDateString(now), label: 'Year to Date'};
+    return {
+      startDate: toLocalDateString(start),
+      endDate: toLocalDateString(now),
+      label: 'Year to Date',
+    };
   }
 
   private getLastYear(): DateRange {
     const start = new Date(new Date().getFullYear() - 1, 0, 1);
     const end = new Date(new Date().getFullYear() - 1, 11, 31);
-    return {startDate: toLocalDateString(start), endDate: toLocalDateString(end), label: 'Last Year'};
+    return {
+      startDate: toLocalDateString(start),
+      endDate: toLocalDateString(end),
+      label: 'Last Year',
+    };
   }
 }

@@ -1,4 +1,4 @@
-import {Category} from '@models/category.model';
+import { Category } from '@models/category.model';
 
 /**
  * How a rule's {@link CategoryRule.keywords} combine when matching a transaction description.

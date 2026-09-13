@@ -1,6 +1,6 @@
-import {Directive, DestroyRef, DoCheck, inject} from '@angular/core';
-import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
-import {Dialog} from 'primeng/dialog';
+import { Directive, DestroyRef, DoCheck, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Dialog } from 'primeng/dialog';
 
 /**
  * Restores focus to whatever triggered a `p-dialog`'s opening once it closes.
@@ -22,22 +22,20 @@ import {Dialog} from 'primeng/dialog';
  */
 @Directive({
   selector: '[appRestoreFocusOnHide]',
-  standalone: true
+  standalone: true,
 })
 export class RestoreFocusOnHideDirective implements DoCheck {
-  private readonly dialog: Dialog = inject(Dialog, {self: true});
+  private readonly dialog: Dialog = inject(Dialog, { self: true });
   private readonly destroyRef: DestroyRef = inject(DestroyRef);
 
   private triggerElement: HTMLElement | null = null;
   private wasVisible = false;
 
   constructor() {
-    this.dialog.onHide
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((): void => {
-        this.triggerElement?.focus?.();
-        this.triggerElement = null;
-      });
+    this.dialog.onHide.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((): void => {
+      this.triggerElement?.focus?.();
+      this.triggerElement = null;
+    });
   }
 
   ngDoCheck(): void {

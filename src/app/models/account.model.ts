@@ -1,5 +1,5 @@
-import {User} from '@models/auth.model';
-import {Currency} from '@models/currency.model';
+import { User } from '@models/auth.model';
+import { Currency } from '@models/currency.model';
 
 /**
  * Represents an account object.
@@ -127,7 +127,7 @@ export enum BankName {
   DISCOVER = 'DISCOVER',
   SYNOVUS = 'SYNOVUS',
   STANDARD = 'STANDARD',
-  UNIVERSAL = 'UNIVERSAL'
+  UNIVERSAL = 'UNIVERSAL',
 }
 
 /**

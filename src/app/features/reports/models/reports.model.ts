@@ -1,5 +1,5 @@
-import {Category} from '@models/category.model';
-import {Merchant} from '@models/merchant.model';
+import { Category } from '@models/category.model';
+import { Merchant } from '@models/merchant.model';
 
 /**
  * Represents a date range filter.
@@ -34,7 +34,7 @@ export interface MerchantReportData {
  * Aggregated data for monthly trend reporting.
  */
 export interface MonthlyReportData {
-  month: string;      // "YYYY-MM" format
+  month: string; // "YYYY-MM" format
   income: number;
   expense: number;
   netSavings: number;

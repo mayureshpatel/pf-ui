@@ -1,12 +1,23 @@
-import {ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, OnInit, Signal, signal, WritableSignal} from '@angular/core';
-import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
-import {CommonModule} from '@angular/common';
-import {FormsModule} from '@angular/forms';
-import {finalize, forkJoin} from 'rxjs';
-import {CardModule} from 'primeng/card';
-import {Select} from 'primeng/select';
-import {ProgressSpinnerModule} from 'primeng/progressspinner';
-import {SelectButtonModule} from 'primeng/selectbutton';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  DestroyRef,
+  effect,
+  inject,
+  OnInit,
+  Signal,
+  signal,
+  WritableSignal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { finalize, forkJoin } from 'rxjs';
+import { CardModule } from 'primeng/card';
+import { Select } from 'primeng/select';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
+import { SelectButtonModule } from 'primeng/selectbutton';
 
 import {
   ActionItem,
@@ -16,19 +27,19 @@ import {
   MerchantBreakdown,
   MonthOption,
   YearOption,
-  YtdSummary
+  YtdSummary,
 } from '@models/dashboard.model';
-import {DashboardApiService} from './services/dashboard-api.service';
-import {CategoryApiService} from '@features/categories/services/category-api.service';
-import {ToastService} from '@core/services/toast.service';
-import {PulseCardComponent} from './components/pulse-card/pulse-card.component';
-import {CashFlowTrendComponent} from './components/cash-flow-trend/cash-flow-trend.component';
-import {YtdSummaryComponent} from './components/ytd-summary/ytd-summary.component';
-import {ActionCenterComponent} from './components/action-center/action-center.component';
-import {CategoryChartComponent} from './components/category-chart/category-chart.component';
-import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-toolbar';
-import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
-import {PageErrorStateComponent} from '@shared/components/page-error-state/page-error-state.component';
+import { DashboardApiService } from './services/dashboard-api.service';
+import { CategoryApiService } from '@features/categories/services/category-api.service';
+import { ToastService } from '@core/services/toast.service';
+import { PulseCardComponent } from './components/pulse-card/pulse-card.component';
+import { CashFlowTrendComponent } from './components/cash-flow-trend/cash-flow-trend.component';
+import { YtdSummaryComponent } from './components/ytd-summary/ytd-summary.component';
+import { ActionCenterComponent } from './components/action-center/action-center.component';
+import { CategoryChartComponent } from './components/category-chart/category-chart.component';
+import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen-toolbar';
+import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
+import { PageErrorStateComponent } from '@shared/components/page-error-state/page-error-state.component';
 
 type RangePreset = 'THIS_MONTH' | 'LAST_MONTH' | 'THIS_YEAR' | 'LAST_YEAR' | 'CUSTOM';
 
@@ -55,10 +66,10 @@ type RangePreset = 'THIS_MONTH' | 'LAST_MONTH' | 'THIS_YEAR' | 'LAST_YEAR' | 'CU
     ActionCenterComponent,
     CategoryChartComponent,
     FormatCurrencyPipe,
-    PageErrorStateComponent
+    PageErrorStateComponent,
   ],
   templateUrl: './dashboard.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DashboardComponent implements OnInit {
   private readonly dashboardApi: DashboardApiService = inject(DashboardApiService);
@@ -105,10 +116,8 @@ export class DashboardComponent implements OnInit {
    * Reactively calculates the specific date range based on the selected preset or custom filters.
    * This is used as the primary input for the data-loading engine.
    */
-  readonly periodRange: Signal<{ start: string, end: string } | null> = computed(() => {
+  readonly periodRange: Signal<{ start: string; end: string } | null> = computed(() => {
     const preset: RangePreset = this.selectedPreset();
-    const month: number = this.selectedMonth();
-    const year: number = this.selectedYear();
 
     if (preset === 'CUSTOM') {
       // return null to signal that custom range is selected
@@ -141,25 +150,31 @@ export class DashboardComponent implements OnInit {
 
     return {
       start: start.toISOString().split('T')[0],
-      end: end.toISOString().split('T')[0]
+      end: end.toISOString().split('T')[0],
     };
   });
 
   readonly presetOptions = [
-    {label: 'This Month', value: 'THIS_MONTH'},
-    {label: 'Last Month', value: 'LAST_MONTH'},
-    {label: 'This Year', value: 'THIS_YEAR'},
-    {label: 'Last Year', value: 'LAST_YEAR'},
-    {label: 'Custom Range', value: 'CUSTOM'}
+    { label: 'This Month', value: 'THIS_MONTH' },
+    { label: 'Last Month', value: 'LAST_MONTH' },
+    { label: 'This Year', value: 'THIS_YEAR' },
+    { label: 'Last Year', value: 'LAST_YEAR' },
+    { label: 'Custom Range', value: 'CUSTOM' },
   ];
 
   readonly monthOptions: MonthOption[] = [
-    {label: 'January', value: 1}, {label: 'February', value: 2},
-    {label: 'March', value: 3}, {label: 'April', value: 4},
-    {label: 'May', value: 5}, {label: 'June', value: 6},
-    {label: 'July', value: 7}, {label: 'August', value: 8},
-    {label: 'September', value: 9}, {label: 'October', value: 10},
-    {label: 'November', value: 11}, {label: 'December', value: 12}
+    { label: 'January', value: 1 },
+    { label: 'February', value: 2 },
+    { label: 'March', value: 3 },
+    { label: 'April', value: 4 },
+    { label: 'May', value: 5 },
+    { label: 'June', value: 6 },
+    { label: 'July', value: 7 },
+    { label: 'August', value: 8 },
+    { label: 'September', value: 9 },
+    { label: 'October', value: 10 },
+    { label: 'November', value: 11 },
+    { label: 'December', value: 12 },
   ];
 
   yearOptions: YearOption[] = [];
@@ -212,11 +227,11 @@ export class DashboardComponent implements OnInit {
 
       merchants: range
         ? this.dashboardApi.getMerchantBreakdown(undefined, undefined, range.start, range.end)
-        : this.dashboardApi.getMerchantBreakdown(month, year)
+        : this.dashboardApi.getMerchantBreakdown(month, year),
     })
       .pipe(
         takeUntilDestroyed(this.destroyRef),
-        finalize(() => this.loading.set(false))
+        finalize(() => this.loading.set(false)),
       )
       .subscribe({
         next: (res): void => {
@@ -231,7 +246,7 @@ export class DashboardComponent implements OnInit {
           console.error('Dashboard data load failed:', err);
           this.toast.error('Failed to update dashboard data.');
           this.loadError.set(true);
-        }
+        },
       });
   }
 
@@ -255,7 +270,7 @@ export class DashboardComponent implements OnInit {
     const currentYear = this.currentDate.getFullYear();
     const years: YearOption[] = [];
     for (let year = currentYear - 5; year <= currentYear + 1; year++) {
-      years.push({label: year.toString(), value: year});
+      years.push({ label: year.toString(), value: year });
     }
     this.yearOptions = years;
   }

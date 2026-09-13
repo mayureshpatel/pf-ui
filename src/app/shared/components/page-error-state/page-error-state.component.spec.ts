@@ -1,14 +1,14 @@
-import {describe, it, expect, vi} from 'vitest';
-import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {By} from '@angular/platform-browser';
-import {PageErrorStateComponent} from './page-error-state.component';
+import { describe, it, expect, vi } from 'vitest';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { PageErrorStateComponent } from './page-error-state.component';
 
 describe('PageErrorStateComponent', () => {
   let fixture: ComponentFixture<PageErrorStateComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [PageErrorStateComponent]
+      imports: [PageErrorStateComponent],
     }).compileComponents();
 
     fixture = TestBed.createComponent(PageErrorStateComponent);
@@ -19,7 +19,9 @@ describe('PageErrorStateComponent', () => {
     fixture.detectChanges();
 
     // Assert
-    expect(fixture.nativeElement.textContent).toContain('Something went wrong while loading this page.');
+    expect(fixture.nativeElement.textContent).toContain(
+      'Something went wrong while loading this page.',
+    );
   });
 
   it('should show a custom message when provided', () => {

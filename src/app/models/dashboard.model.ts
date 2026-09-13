@@ -1,5 +1,5 @@
-import {Category} from '@models/category.model';
-import {Merchant} from '@models/merchant.model';
+import { Category } from '@models/category.model';
+import { Merchant } from '@models/merchant.model';
 
 /**
  * Represents the type of action available on the dashboard.

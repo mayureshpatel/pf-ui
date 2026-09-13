@@ -1,9 +1,9 @@
-import {vi} from 'vitest';
-import {Component, signal, WritableSignal} from '@angular/core';
-import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {By} from '@angular/platform-browser';
-import {NoopAnimationsModule} from '@angular/platform-browser/animations';
-import {DrawerComponent} from './drawer.component';
+import { vi } from 'vitest';
+import { ChangeDetectionStrategy, Component, signal, WritableSignal } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { DrawerComponent } from './drawer.component';
 
 /**
  * Host component for exercising content projection and input bindings, since DrawerComponent's
@@ -27,10 +27,12 @@ import {DrawerComponent} from './drawer.component';
       [cancelLabel]="cancelLabel()"
       (saveEmitterRef)="onSave()"
       (cancelEmitterRef)="onCancel()"
-      (showEmitterRef)="onShow()">
+      (showEmitterRef)="onShow()"
+    >
       <div id="projected-content">Projected form content</div>
     </app-drawer>
-  `
+  `,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 class HostComponent {
   visible = signal(true);
@@ -54,7 +56,7 @@ describe('DrawerComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [HostComponent, NoopAnimationsModule]
+      imports: [HostComponent, NoopAnimationsModule],
     }).compileComponents();
 
     hostFixture = TestBed.createComponent(HostComponent);
@@ -130,7 +132,8 @@ describe('DrawerComponent', () => {
     // arrange
     host.valid.set(false);
     hostFixture.detectChanges();
-    const drawer = hostFixture.debugElement.query(By.directive(DrawerComponent)).componentInstance as DrawerComponent;
+    const drawer = hostFixture.debugElement.query(By.directive(DrawerComponent))
+      .componentInstance as DrawerComponent;
     const onSaveSpy = vi.spyOn(host, 'onSave');
 
     // act -- call the component method directly, since the real Save button is disabled and a
@@ -145,7 +148,8 @@ describe('DrawerComponent', () => {
     // arrange
     host.saving.set(true);
     hostFixture.detectChanges();
-    const drawer = hostFixture.debugElement.query(By.directive(DrawerComponent)).componentInstance as DrawerComponent;
+    const drawer = hostFixture.debugElement.query(By.directive(DrawerComponent))
+      .componentInstance as DrawerComponent;
     const onSaveSpy = vi.spyOn(host, 'onSave');
 
     // act

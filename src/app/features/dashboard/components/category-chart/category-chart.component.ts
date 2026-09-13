@@ -1,9 +1,16 @@
-import {ChangeDetectionStrategy, Component, computed, input, InputSignal, Signal} from '@angular/core';
-import {CommonModule} from '@angular/common';
-import {CardModule} from 'primeng/card';
-import {ChartModule} from 'primeng/chart';
-import {CategoryBreakdown} from '@models/dashboard.model';
-import {getCategoryColor} from '@shared/utils/category.utils';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  input,
+  InputSignal,
+  Signal,
+} from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { CardModule } from 'primeng/card';
+import { ChartModule } from 'primeng/chart';
+import { CategoryBreakdown } from '@models/dashboard.model';
+import { getCategoryColor } from '@shared/utils/category.utils';
 
 /**
  * Component for visualizing spending distribution across categories.
@@ -16,7 +23,7 @@ import {getCategoryColor} from '@shared/utils/category.utils';
   standalone: true,
   imports: [CommonModule, CardModule, ChartModule],
   templateUrl: './category-chart.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CategoryChartComponent {
   /** The title of the chart widget. */
@@ -31,21 +38,32 @@ export class CategoryChartComponent {
   /** The reactive chart data configuration. */
   readonly chartData: Signal<any> = computed(() => {
     const topItems: CategoryBreakdown[] = [...this.categories()]
-      .sort((a: CategoryBreakdown, b: CategoryBreakdown): number => Math.abs(b.total) - Math.abs(a.total))
+      .sort(
+        (a: CategoryBreakdown, b: CategoryBreakdown): number =>
+          Math.abs(b.total) - Math.abs(a.total),
+      )
       .slice(0, this.topX());
 
     return {
-      labels: topItems.map((item: CategoryBreakdown): string => item.category?.name || 'Uncategorized'),
+      labels: topItems.map(
+        (item: CategoryBreakdown): string => item.category?.name || 'Uncategorized',
+      ),
       datasets: [
         {
           label: 'Total Spent',
           data: topItems.map((item: CategoryBreakdown): number => Math.abs(item.total)),
-          backgroundColor: topItems.map((item: CategoryBreakdown): string => item.category?.color || getCategoryColor(item.category?.name || '')),
+          backgroundColor: topItems.map(
+            (item: CategoryBreakdown): string =>
+              item.category?.color || getCategoryColor(item.category?.name || ''),
+          ),
           borderRadius: 8,
           barThickness: 32,
-          hoverBackgroundColor: topItems.map((item: CategoryBreakdown): string => item.category?.color || getCategoryColor(item.category?.name || ''))
-        }
-      ]
+          hoverBackgroundColor: topItems.map(
+            (item: CategoryBreakdown): string =>
+              item.category?.color || getCategoryColor(item.category?.name || ''),
+          ),
+        },
+      ],
     };
   });
 
@@ -61,45 +79,45 @@ export class CategoryChartComponent {
     maintainAspectRatio: false,
     plugins: {
       legend: {
-        display: false
+        display: false,
       },
       tooltip: {
         backgroundColor: '#1e293b',
         padding: 12,
-        titleFont: {size: 14, weight: 'bold'},
-        bodyFont: {size: 13, family: 'monospace'},
+        titleFont: { size: 14, weight: 'bold' },
+        bodyFont: { size: 13, family: 'monospace' },
         usePointStyle: true,
         callbacks: {
           label: (context: any): string => {
             const value: any = context.parsed.x || 0;
-            return ` Total Spent: $${value.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
-          }
-        }
-      }
+            return ` Total Spent: $${value.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+          },
+        },
+      },
     },
     scales: {
       x: {
         beginAtZero: true,
         grid: {
           color: 'rgba(148, 163, 184, 0.1)',
-          drawBorder: false
+          drawBorder: false,
         },
         ticks: {
           color: '#94a3b8',
-          font: {size: 11, family: 'monospace'},
-          callback: (value: number): string => `$${value >= 1000 ? (value / 1000) + 'k' : value}`
-        }
+          font: { size: 11, family: 'monospace' },
+          callback: (value: number): string => `$${value >= 1000 ? value / 1000 + 'k' : value}`,
+        },
       },
       y: {
         grid: {
           display: false,
-          drawBorder: false
+          drawBorder: false,
         },
         ticks: {
           color: '#64748b',
-          font: {size: 12, weight: '700'}
-        }
-      }
-    }
+          font: { size: 12, weight: '700' },
+        },
+      },
+    },
   };
 }

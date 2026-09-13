@@ -1,15 +1,14 @@
-import {TestBed} from '@angular/core/testing';
-import {HttpTestingController, provideHttpClientTesting} from '@angular/common/http/testing';
-import {provideHttpClient} from '@angular/common/http';
-import {environment} from '@env';
-import {AccountApiService} from './account-api.service';
+import { TestBed } from '@angular/core/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { environment } from '@env';
+import { AccountApiService } from './account-api.service';
 import {
   Account,
   AccountCreateRequest,
   AccountReconcileRequest,
   AccountType,
   AccountUpdateRequest,
-  BankName
 } from '@models/account.model';
 
 describe('AccountApiService', () => {
@@ -20,11 +19,7 @@ describe('AccountApiService', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [
-        AccountApiService,
-        provideHttpClient(),
-        provideHttpClientTesting()
-      ]
+      providers: [AccountApiService, provideHttpClient(), provideHttpClientTesting()],
     });
     service = TestBed.inject(AccountApiService);
     httpMock = TestBed.inject(HttpTestingController);
@@ -42,7 +37,7 @@ describe('AccountApiService', () => {
     it('should return an Observable<Account[]>', () => {
       const mockAccounts = [{ id: 1, name: 'Test Account' }] as Account[];
 
-      service.getAccounts().subscribe(accounts => {
+      service.getAccounts().subscribe((accounts) => {
         expect(accounts.length).toBe(1);
         expect(accounts).toEqual(mockAccounts);
       });
@@ -60,10 +55,10 @@ describe('AccountApiService', () => {
         type: 'CHECKING',
         startingBalance: 100,
         currencyCode: 'USD',
-        bankName: 'STANDARD'
+        bankName: 'STANDARD',
       };
 
-      service.create(createReq).subscribe(id => {
+      service.create(createReq).subscribe((id) => {
         expect(id).toBe(1);
       });
 
@@ -82,10 +77,10 @@ describe('AccountApiService', () => {
         type: 'SAVINGS',
         currencyCode: 'USD',
         bankName: 'STANDARD',
-        version: 1
+        version: 1,
       };
 
-      service.update(updateReq).subscribe(id => {
+      service.update(updateReq).subscribe((id) => {
         expect(id).toBe(1);
       });
 
@@ -101,10 +96,10 @@ describe('AccountApiService', () => {
       const reconcileReq: AccountReconcileRequest = {
         accountId: 1,
         newBalance: 500,
-        version: 1
+        version: 1,
       };
 
-      service.reconcile(reconcileReq).subscribe(id => {
+      service.reconcile(reconcileReq).subscribe((id) => {
         expect(id).toBe(1);
       });
 
@@ -131,7 +126,7 @@ describe('AccountApiService', () => {
     it('should return an Observable<AccountType[]>', () => {
       const mockTypes = [{ code: 'CHECKING', label: 'Checking' }] as AccountType[];
 
-      service.getAccountTypes().subscribe(types => {
+      service.getAccountTypes().subscribe((types) => {
         expect(types.length).toBe(1);
         expect(types).toEqual(mockTypes);
       });

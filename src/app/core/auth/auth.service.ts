@@ -1,21 +1,21 @@
-import {computed, inject, Injectable, Signal, signal, WritableSignal} from '@angular/core';
-import {HttpClient, HttpContext} from '@angular/common/http';
-import {Router} from '@angular/router';
-import {catchError, Observable, tap, throwError} from 'rxjs';
-import {environment} from '@env';
-import {AuthRequest, AuthResponse, RegistrationRequest, User} from '@models/auth.model';
-import {StorageService} from '../services/storage.service';
-import {ToastService} from '../services/toast.service';
-import {getUserFromToken} from './utils/jwt.utils';
-import {SKIP_GENERIC_ERROR_TOAST} from './error.interceptor';
+import { computed, inject, Injectable, Signal, signal, WritableSignal } from '@angular/core';
+import { HttpClient, HttpContext } from '@angular/common/http';
+import { Router } from '@angular/router';
+import { catchError, Observable, tap, throwError } from 'rxjs';
+import { environment } from '@env';
+import { AuthRequest, AuthResponse, RegistrationRequest, User } from '@models/auth.model';
+import { StorageService } from '../services/storage.service';
+import { ToastService } from '../services/toast.service';
+import { getUserFromToken } from './utils/jwt.utils';
+import { SKIP_GENERIC_ERROR_TOAST } from './error.interceptor';
 
-const SKIP_TOAST_OPTIONS = {context: new HttpContext().set(SKIP_GENERIC_ERROR_TOAST, true)};
+const SKIP_TOAST_OPTIONS = { context: new HttpContext().set(SKIP_GENERIC_ERROR_TOAST, true) };
 
 /**
  * Service responsible for managing authentication state and user operations.
  */
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class AuthService {
   private readonly http: HttpClient = inject(HttpClient);
@@ -23,8 +23,12 @@ export class AuthService {
   private readonly storage: StorageService = inject(StorageService);
   private readonly toast: ToastService = inject(ToastService);
 
-  private readonly _isAuthenticated: WritableSignal<boolean> = signal<boolean>(this.storage.hasToken());
-  private readonly _user: WritableSignal<User | null> = signal<User | null>(getUserFromToken(this.storage.getToken()));
+  private readonly _isAuthenticated: WritableSignal<boolean> = signal<boolean>(
+    this.storage.hasToken(),
+  );
+  private readonly _user: WritableSignal<User | null> = signal<User | null>(
+    getUserFromToken(this.storage.getToken()),
+  );
 
   /**
    * Whether the user is currently authenticated.
@@ -51,7 +55,11 @@ export class AuthService {
    */
   login(credentials: AuthRequest, rememberMe: boolean): Observable<AuthResponse> {
     return this.http
-      .post<AuthResponse>(`${environment.apiUrl}/auth/authenticate`, credentials, SKIP_TOAST_OPTIONS)
+      .post<AuthResponse>(
+        `${environment.apiUrl}/auth/authenticate`,
+        credentials,
+        SKIP_TOAST_OPTIONS,
+      )
       .pipe(
         tap((response: AuthResponse): void => {
           this.storage.setToken(response.token, rememberMe);
@@ -66,7 +74,7 @@ export class AuthService {
               ? 'Invalid username or password'
               : 'An error occurred. Please try again.';
           return throwError(() => new Error(message));
-        })
+        }),
       );
   }
 
@@ -89,14 +97,14 @@ export class AuthService {
           this.router.navigate(['/dashboard']);
         }),
         catchError((error: any): Observable<never> => {
-          let message: string = 'Registration failed. Please try again.';
+          let message = 'Registration failed. Please try again.';
           if (error.status === 409) {
             message = error.error?.detail || 'Username or email already exists';
           } else if (error.status === 400 && error.error?.validationErrors) {
             message = error.error.validationErrors.map((e: any): string => e.message).join('. ');
           }
           return throwError(() => new Error(message));
-        })
+        }),
       );
   }
 

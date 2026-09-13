@@ -1,4 +1,4 @@
-import {Injectable, signal, WritableSignal} from '@angular/core';
+import { Injectable, signal, WritableSignal } from '@angular/core';
 
 const DARK_MODE_KEY = 'pf_dark_mode';
 const DARK_MODE_CLASS = 'my-app-dark';
@@ -13,11 +13,11 @@ const DARK_MODE_CLASS = 'my-app-dark';
  * constructs.
  */
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ThemeService {
   readonly isDarkMode: WritableSignal<boolean> = signal(
-    document.documentElement.classList.contains(DARK_MODE_CLASS)
+    document.documentElement.classList.contains(DARK_MODE_CLASS),
   );
 
   setDarkMode(enabled: boolean): void {

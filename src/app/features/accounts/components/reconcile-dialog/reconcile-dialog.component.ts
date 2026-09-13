@@ -8,20 +8,23 @@ import {
   InputSignal,
   model,
   ModelSignal,
-  output, OutputEmitterRef, Signal,
-  signal, WritableSignal
+  output,
+  OutputEmitterRef,
+  Signal,
+  signal,
+  WritableSignal,
 } from '@angular/core';
-import {CommonModule} from '@angular/common';
-import {FormControl, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
-import {toSignal} from '@angular/core/rxjs-interop';
-import {ButtonModule} from 'primeng/button';
-import {InputNumberModule} from 'primeng/inputnumber';
-import {MessageModule} from 'primeng/message';
-import {Account, AccountReconcileRequest} from '@models/account.model';
-import {AccountApiService} from '@features/accounts/services/account-api.service';
-import {ToastService} from '@core/services/toast.service';
-import {DrawerComponent} from '@shared/components/drawer/drawer.component';
-import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
+import { CommonModule } from '@angular/common';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { ButtonModule } from 'primeng/button';
+import { InputNumberModule } from 'primeng/inputnumber';
+import { MessageModule } from 'primeng/message';
+import { Account, AccountReconcileRequest } from '@models/account.model';
+import { AccountApiService } from '@features/accounts/services/account-api.service';
+import { ToastService } from '@core/services/toast.service';
+import { DrawerComponent } from '@shared/components/drawer/drawer.component';
+import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
 
 /**
  * Component for reconciling an account balance.
@@ -36,10 +39,10 @@ import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
     InputNumberModule,
     MessageModule,
     DrawerComponent,
-    FormatCurrencyPipe
+    FormatCurrencyPipe,
   ],
   templateUrl: './reconcile-dialog.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ReconcileDrawerComponent {
   private readonly accountService: AccountApiService = inject(AccountApiService);
@@ -75,15 +78,15 @@ export class ReconcileDrawerComponent {
    */
   form = new FormGroup({
     targetBalance: new FormControl<number | null>(null, {
-      validators: [Validators.required]
-    })
+      validators: [Validators.required],
+    }),
   });
 
   /**
    * Signal that tracks the current form value for reactive calculations.
    */
   private readonly formValue = toSignal(this.form.valueChanges, {
-    initialValue: this.form.getRawValue()
+    initialValue: this.form.getRawValue(),
   });
 
   /**
@@ -133,7 +136,7 @@ export class ReconcileDrawerComponent {
     const request: AccountReconcileRequest = {
       accountId: this.account().id,
       newBalance: target,
-      version: this.account().version
+      version: this.account().version,
     };
 
     this.accountService.reconcile(request).subscribe({
@@ -147,7 +150,7 @@ export class ReconcileDrawerComponent {
         console.error('Error reconciling account:', error);
         this.errorMessage.set(error.error?.detail || 'Failed to reconcile account');
         this.saving.set(false);
-      }
+      },
     });
   }
 

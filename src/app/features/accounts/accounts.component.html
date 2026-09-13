@@ -69,7 +69,7 @@
               <span
                 class="font-mono text-lg font-bold"
                 [class.text-emerald-600]="account.currentBalance > 0"
-                [class.tet-muted-color]="account.currentBalance == 0"
+                [class.text-muted-color]="account.currentBalance === 0"
                 [class.text-rose-600]="account.currentBalance < 0"
               >
                 {{ account.currentBalance | formatCurrency }}

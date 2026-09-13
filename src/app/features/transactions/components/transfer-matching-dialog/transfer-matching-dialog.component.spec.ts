@@ -1,12 +1,12 @@
-import {vi} from 'vitest';
-import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {NoopAnimationsModule} from '@angular/platform-browser/animations';
-import {of} from 'rxjs';
+import { vi } from 'vitest';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { of } from 'rxjs';
 
-import {TransferMatchingDialogComponent} from './transfer-matching-dialog.component';
-import {TransactionApiService} from '../../services/transaction-api.service';
-import {ToastService} from '@core/services/toast.service';
-import {Transaction, TransferSuggestion} from '@models/transaction.model';
+import { TransferMatchingDialogComponent } from './transfer-matching-dialog.component';
+import { TransactionApiService } from '../../services/transaction-api.service';
+import { ToastService } from '@core/services/toast.service';
+import { Transaction, TransferSuggestion } from '@models/transaction.model';
 
 describe('TransferMatchingDialogComponent', () => {
   let component: TransferMatchingDialogComponent;
@@ -17,32 +17,32 @@ describe('TransferMatchingDialogComponent', () => {
   const txn = (id: number, description: string): Transaction =>
     ({
       id,
-      account: {name: 'Checking'},
+      account: { name: 'Checking' },
       category: null,
       amount: -100,
       date: new Date('2026-01-15'),
       description,
       type: 'TRANSFER',
-      merchant: {originalName: description}
+      merchant: { originalName: description },
     }) as unknown as Transaction;
 
   const mockSuggestions: TransferSuggestion[] = [
-    {sourceTransaction: txn(1, 'Out'), targetTransaction: txn(2, 'In'), confidenceScore: 0.9}
+    { sourceTransaction: txn(1, 'Out'), targetTransaction: txn(2, 'In'), confidenceScore: 0.9 },
   ];
 
   beforeEach(async () => {
     mockTransactionApi = {
       getTransferSuggestions: vi.fn().mockReturnValue(of(mockSuggestions)),
-      markAsTransfer: vi.fn().mockReturnValue(of(undefined))
+      markAsTransfer: vi.fn().mockReturnValue(of(undefined)),
     };
-    mockToast = {success: vi.fn(), error: vi.fn()};
+    mockToast = { success: vi.fn(), error: vi.fn() };
 
     await TestBed.configureTestingModule({
       imports: [TransferMatchingDialogComponent, NoopAnimationsModule],
       providers: [
-        {provide: TransactionApiService, useValue: mockTransactionApi},
-        {provide: ToastService, useValue: mockToast}
-      ]
+        { provide: TransactionApiService, useValue: mockTransactionApi },
+        { provide: ToastService, useValue: mockToast },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(TransferMatchingDialogComponent);

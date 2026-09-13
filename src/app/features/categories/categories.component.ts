@@ -1,21 +1,36 @@
-import {ChangeDetectionStrategy, Component, computed, DestroyRef, inject, OnInit, Signal, signal, WritableSignal} from '@angular/core';
-import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
-import {CommonModule} from '@angular/common';
-import {Router} from '@angular/router';
-import {finalize, forkJoin, Observable} from 'rxjs';
-import {ButtonModule} from 'primeng/button';
-import {TableModule} from 'primeng/table';
-import {ProgressBarModule} from 'primeng/progressbar';
-import {CardModule} from 'primeng/card';
-import {TooltipModule} from 'primeng/tooltip';
-import {ConfirmationService} from 'primeng/api';
-import {CategoryApiService} from './services/category-api.service';
-import {TransactionApiService} from '@features/transactions/services/transaction-api.service';
-import {CategoryFormDrawerComponent} from './components/category-form-drawer/category-form-drawer.component';
-import {ToastService} from '@core/services/toast.service';
-import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-toolbar';
-import {Category, CategoryCreateRequest, CategoryGroup, CategoryUpdateRequest} from '@models/category.model';
-import {PageErrorStateComponent} from '@shared/components/page-error-state/page-error-state.component';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  DestroyRef,
+  inject,
+  OnInit,
+  Signal,
+  signal,
+  WritableSignal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
+import { finalize, forkJoin, Observable } from 'rxjs';
+import { ButtonModule } from 'primeng/button';
+import { TableModule } from 'primeng/table';
+import { ProgressBarModule } from 'primeng/progressbar';
+import { CardModule } from 'primeng/card';
+import { TooltipModule } from 'primeng/tooltip';
+import { ConfirmationService } from 'primeng/api';
+import { CategoryApiService } from './services/category-api.service';
+import { TransactionApiService } from '@features/transactions/services/transaction-api.service';
+import { CategoryFormDrawerComponent } from './components/category-form-drawer/category-form-drawer.component';
+import { ToastService } from '@core/services/toast.service';
+import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen-toolbar';
+import {
+  Category,
+  CategoryCreateRequest,
+  CategoryGroup,
+  CategoryUpdateRequest,
+} from '@models/category.model';
+import { PageErrorStateComponent } from '@shared/components/page-error-state/page-error-state.component';
 
 /**
  * Component for managing financial categories.
@@ -36,10 +51,10 @@ import {PageErrorStateComponent} from '@shared/components/page-error-state/page-
     TooltipModule,
     ScreenToolbarComponent,
     CategoryFormDrawerComponent,
-    PageErrorStateComponent
+    PageErrorStateComponent,
   ],
   templateUrl: './categories.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CategoriesComponent implements OnInit {
   private readonly categoryApi: CategoryApiService = inject(CategoryApiService);
@@ -53,11 +68,11 @@ export class CategoriesComponent implements OnInit {
   readonly categories: WritableSignal<CategoryGroup[]> = signal([]);
 
   /** Controls which rows are expanded in the table. Initialized to empty to start collapsed. */
-  readonly expandedRows: WritableSignal<{ [key: number]: boolean }> = signal({});
+  readonly expandedRows: WritableSignal<Record<number, boolean>> = signal({});
 
   /** Flattened list of all categories for the form drawer. */
   readonly allCategories: Signal<Category[]> = computed(() =>
-    this.categories().flatMap(g => [g.parent, ...g.items])
+    this.categories().flatMap((g) => [g.parent, ...g.items]),
   );
 
   /** Global loading state for API operations. */
@@ -73,8 +88,8 @@ export class CategoriesComponent implements OnInit {
   readonly selectedCategory: WritableSignal<Category | null> = signal(null);
 
   /** Indicates if there are no categories to display. */
-  readonly isEmpty: Signal<boolean> = computed((): boolean =>
-    this.categories().length === 0 && !this.loading()
+  readonly isEmpty: Signal<boolean> = computed(
+    (): boolean => this.categories().length === 0 && !this.loading(),
   );
 
   /**
@@ -96,45 +111,47 @@ export class CategoriesComponent implements OnInit {
 
     forkJoin({
       categories: this.categoryApi.getCategories(),
-      transactionCounts: this.transactionApi.getCountsByCategory()
+      transactionCounts: this.transactionApi.getCountsByCategory(),
     })
       .pipe(
         takeUntilDestroyed(this.destroyRef),
-        finalize((): void => this.loading.set(false))
+        finalize((): void => this.loading.set(false)),
       )
       .subscribe({
-        next: ({categories, transactionCounts}): void => {
+        next: ({ categories, transactionCounts }): void => {
           this.categories.set(this.enrichCategories(categories, transactionCounts));
         },
         error: (err: any): void => {
           console.error('Failed to load category data:', err);
           this.toast.error('Failed to load categories');
           this.loadError.set(true);
-        }
+        },
       });
   }
 
   private enrichCategories(categories: Category[], transactionCounts: Category[]): CategoryGroup[] {
     const countsMap = new Map<number, number>(
-      transactionCounts.map(c => [c.id, c.transactionCount || 0])
+      transactionCounts.map((c) => [c.id, c.transactionCount || 0]),
     );
 
-    const enriched = categories.map(c => ({
+    const enriched = categories.map((c) => ({
       ...c,
-      transactionCount: countsMap.get(c.id) || 0
+      transactionCount: countsMap.get(c.id) || 0,
     }));
 
-    const parents = enriched.filter(c => !c.parent);
-    const children = enriched.filter(c => !!c.parent);
+    const parents = enriched.filter((c) => !c.parent);
+    const children = enriched.filter((c) => !!c.parent);
 
-    const groups: CategoryGroup[] = parents.map(p => {
-      const groupItems = children.filter(c => c.parent?.id === p.id);
-      const totalCount: number = p.transactionCount + groupItems.reduce((sum, c): number => sum + (c.transactionCount || 0), 0);
-      const parentWithTotal = {...p, transactionCount: totalCount};
+    const groups: CategoryGroup[] = parents.map((p) => {
+      const groupItems = children.filter((c) => c.parent?.id === p.id);
+      const totalCount: number =
+        p.transactionCount +
+        groupItems.reduce((sum, c): number => sum + (c.transactionCount || 0), 0);
+      const parentWithTotal = { ...p, transactionCount: totalCount };
 
       return {
         parent: parentWithTotal,
-        items: groupItems.sort((a, b) => a.name.localeCompare(b.name))
+        items: groupItems.sort((a, b) => a.name.localeCompare(b.name)),
       };
     });
 
@@ -145,8 +162,8 @@ export class CategoriesComponent implements OnInit {
    * Expands all parent category groups.
    */
   expandAll(): void {
-    const expanded: { [key: number]: boolean } = {};
-    this.categories().forEach(g => {
+    const expanded: Record<number, boolean> = {};
+    this.categories().forEach((g) => {
       if (g.items.length > 0) {
         expanded[g.parent.id] = true;
       }
@@ -192,7 +209,7 @@ export class CategoriesComponent implements OnInit {
     operation
       .pipe(
         takeUntilDestroyed(this.destroyRef),
-        finalize(() => this.loading.set(false))
+        finalize(() => this.loading.set(false)),
       )
       .subscribe({
         next: (): void => {
@@ -202,8 +219,10 @@ export class CategoriesComponent implements OnInit {
         },
         error: (err: any): void => {
           console.error('Category operation failed:', err);
-          this.toast.error(err.error?.detail || `Failed to ${existing ? 'update' : 'create'} category`);
-        }
+          this.toast.error(
+            err.error?.detail || `Failed to ${existing ? 'update' : 'create'} category`,
+          );
+        },
       });
   }
 
@@ -220,7 +239,8 @@ export class CategoriesComponent implements OnInit {
       rejectLabel: 'Cancel',
       acceptButtonStyleClass: 'p-button-danger',
       accept: (): void => {
-        this.categoryApi.deleteCategory(category.id)
+        this.categoryApi
+          .deleteCategory(category.id)
           .pipe(takeUntilDestroyed(this.destroyRef))
           .subscribe({
             next: (): void => {
@@ -230,9 +250,9 @@ export class CategoriesComponent implements OnInit {
             error: (err: any): void => {
               console.error('Delete failed:', err);
               this.toast.error(err.error?.detail || 'Failed to delete category');
-            }
+            },
           });
-      }
+      },
     });
   }
 
@@ -242,7 +262,7 @@ export class CategoriesComponent implements OnInit {
    */
   viewTransactions(category: Category): void {
     this.router.navigate(['/transactions'], {
-      queryParams: {categoryName: category.name}
+      queryParams: { categoryName: category.name },
     });
   }
 }

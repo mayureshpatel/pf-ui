@@ -1,8 +1,8 @@
-import {vi} from 'vitest';
-import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {AccountFormDrawerComponent} from './account-form-drawer.component';
-import {Account, AccountType, BankName} from '@models/account.model';
-import {NoopAnimationsModule} from '@angular/platform-browser/animations';
+import { vi } from 'vitest';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { AccountFormDrawerComponent } from './account-form-drawer.component';
+import { Account, AccountType, BankName } from '@models/account.model';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 
 describe('AccountFormDrawerComponent', () => {
   let component: AccountFormDrawerComponent;
@@ -16,8 +16,8 @@ describe('AccountFormDrawerComponent', () => {
       sortOrder: 1,
       isActive: true,
       icon: 'pi-money-bill',
-      color: 'green'
-    }
+      color: 'green',
+    },
   ];
 
   const mockAccount = {
@@ -25,15 +25,15 @@ describe('AccountFormDrawerComponent', () => {
     name: 'Existing Account',
     type: mockAccountTypes[0],
     currentBalance: 500,
-    currency: {code: 'USD', name: 'US Dollar', symbol: '$', isActive: true},
+    currency: { code: 'USD', name: 'US Dollar', symbol: '$', isActive: true },
     bank: BankName.STANDARD,
     version: 1,
-    user: {id: 1}
+    user: { id: 1 },
   } as Account;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [AccountFormDrawerComponent, NoopAnimationsModule]
+      imports: [AccountFormDrawerComponent, NoopAnimationsModule],
     }).compileComponents();
 
     fixture = TestBed.createComponent(AccountFormDrawerComponent);
@@ -124,7 +124,7 @@ describe('AccountFormDrawerComponent', () => {
         type: mockAccountTypes[0],
         currencyCode: 'USD',
         currentBalance: 100,
-        bankName: BankName.STANDARD
+        bankName: BankName.STANDARD,
       });
 
       component.onSubmit();
@@ -134,14 +134,15 @@ describe('AccountFormDrawerComponent', () => {
         type: 'CHECKING',
         startingBalance: 100,
         currencyCode: 'USD',
-        bankName: 'STANDARD'
+        bankName: 'STANDARD',
       });
     });
 
-    it("bug regression: should keep a null bankName as null on create, not fall back to an empty "
-        + "string -- the empty string used to slip past the backend's null-only guard in "
-        + "AccountDtoMapper and throw when the row was later read back (BankName.fromString('')), "
-        + "breaking GET /accounts for the whole user, not just the account with no bank",
+    it(
+      'bug regression: should keep a null bankName as null on create, not fall back to an empty ' +
+        "string -- the empty string used to slip past the backend's null-only guard in " +
+        "AccountDtoMapper and throw when the row was later read back (BankName.fromString('')), " +
+        'breaking GET /accounts for the whole user, not just the account with no bank',
       () => {
         vi.spyOn(component.save, 'emit');
         fixture.componentRef.setInput('account', null);
@@ -151,15 +152,18 @@ describe('AccountFormDrawerComponent', () => {
           type: mockAccountTypes[0],
           currencyCode: 'USD',
           currentBalance: 100,
-          bankName: null
+          bankName: null,
         });
 
         component.onSubmit();
 
-        expect(component.save.emit).toHaveBeenCalledWith(expect.objectContaining({
-          bankName: null
-        }));
-      });
+        expect(component.save.emit).toHaveBeenCalledWith(
+          expect.objectContaining({
+            bankName: null,
+          }),
+        );
+      },
+    );
 
     it('should emit update request when account is provided', () => {
       vi.spyOn(component.save, 'emit');
@@ -171,7 +175,7 @@ describe('AccountFormDrawerComponent', () => {
       // User modifies name
       component.form.patchValue({
         name: 'Updated Name',
-        bankName: BankName.CAPITAL_ONE
+        bankName: BankName.CAPITAL_ONE,
       });
 
       component.onSubmit();
@@ -182,7 +186,7 @@ describe('AccountFormDrawerComponent', () => {
         type: 'CHECKING',
         currencyCode: 'USD',
         bankName: 'CAPITAL_ONE',
-        version: mockAccount.version
+        version: mockAccount.version,
       });
     });
 
@@ -193,14 +197,16 @@ describe('AccountFormDrawerComponent', () => {
       component.onShow();
 
       component.form.patchValue({
-        bankName: null
+        bankName: null,
       });
 
       component.onSubmit();
 
-      expect(component.save.emit).toHaveBeenCalledWith(expect.objectContaining({
-        bankName: null
-      }));
+      expect(component.save.emit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          bankName: null,
+        }),
+      );
     });
   });
 });

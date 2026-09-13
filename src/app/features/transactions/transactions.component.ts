@@ -9,25 +9,25 @@ import {
   Signal,
   signal,
   untracked,
-  WritableSignal
-} from "@angular/core";
-import {takeUntilDestroyed} from "@angular/core/rxjs-interop";
-import {CommonModule} from "@angular/common";
-import {FormsModule} from "@angular/forms";
-import {ActivatedRoute, Params, Router} from "@angular/router";
-import {finalize, forkJoin, Observable, of, skip, switchMap} from "rxjs";
-import {ButtonModule} from "primeng/button";
-import {TableModule} from "primeng/table";
-import {CardModule} from "primeng/card";
-import {TooltipModule} from "primeng/tooltip";
-import {CheckboxModule} from "primeng/checkbox";
-import {TagModule} from "primeng/tag";
-import {InputNumberModule} from "primeng/inputnumber";
-import {InputTextModule} from "primeng/inputtext";
-import {ConfirmationService, FilterMetadata} from "primeng/api";
-import {ContextMenuModule} from "primeng/contextmenu";
-import {DatePicker} from "primeng/datepicker";
-import {SelectModule} from "primeng/select";
+  WritableSignal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Params, Router } from '@angular/router';
+import { finalize, forkJoin, Observable, of, skip, switchMap } from 'rxjs';
+import { ButtonModule } from 'primeng/button';
+import { TableModule } from 'primeng/table';
+import { CardModule } from 'primeng/card';
+import { TooltipModule } from 'primeng/tooltip';
+import { CheckboxModule } from 'primeng/checkbox';
+import { TagModule } from 'primeng/tag';
+import { InputNumberModule } from 'primeng/inputnumber';
+import { InputTextModule } from 'primeng/inputtext';
+import { ConfirmationService, FilterMetadata } from 'primeng/api';
+import { ContextMenuModule } from 'primeng/contextmenu';
+import { DatePicker } from 'primeng/datepicker';
+import { SelectModule } from 'primeng/select';
 
 import {
   PageResponse,
@@ -37,28 +37,29 @@ import {
   TransactionFormSaveEvent,
   TransactionState,
   TransactionType,
-  TransactionUpdateRequest
-} from "@models/transaction.model";
-import {Account} from "@models/account.model";
-import {Category} from "@models/category.model";
-import {Merchant} from "@models/merchant.model";
-import {Tag} from "@models/tag.model";
-import {TransactionApiService} from "./services/transaction-api.service";
-import {AccountApiService} from "@features/accounts/services/account-api.service";
-import {CategoryApiService} from "@features/categories/services/category-api.service";
-import {TagApiService} from "@features/tags/services/tag-api.service";
-import {ToastService} from "@core/services/toast.service";
-import {ScreenToolbarComponent} from "@shared/components/screen-toolbar/screen-toolbar";
-import {FormatTransactionTypeAmountPipe} from "@shared/pipes/format-transaction-type-amount.pipe";
-import {TransactionFormDrawerComponent} from "./components/transaction-form-drawer/transaction-form-drawer.component";
-import {CsvImportDialog} from "./components/csv-import-dialog/csv-import-dialog.component";
+  TransactionUpdateRequest,
+} from '@models/transaction.model';
+import { Account } from '@models/account.model';
+import { Category } from '@models/category.model';
+import { Merchant } from '@models/merchant.model';
+import { Tag } from '@models/tag.model';
+import { TransactionApiService } from './services/transaction-api.service';
+import { AccountApiService } from '@features/accounts/services/account-api.service';
+import { CategoryApiService } from '@features/categories/services/category-api.service';
+import { TagApiService } from '@features/tags/services/tag-api.service';
+import { ToastService } from '@core/services/toast.service';
+import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen-toolbar';
+import { FormatTransactionTypeAmountPipe } from '@shared/pipes/format-transaction-type-amount.pipe';
+import { TransactionFormDrawerComponent } from './components/transaction-form-drawer/transaction-form-drawer.component';
+import { CsvImportDialogComponent } from './components/csv-import-dialog/csv-import-dialog.component';
+import { TransferMatchingDialogComponent } from './components/transfer-matching-dialog/transfer-matching-dialog.component';
 import {
-  TransferMatchingDialogComponent
-} from "./components/transfer-matching-dialog/transfer-matching-dialog.component";
-import {BulkEditData, BulkEditDialogComponent} from "./components/bulk-edit-dialog/bulk-edit-dialog.component";
-import {FormatCurrencyPipe} from "@shared/pipes/format-currency.pipe";
-import {toApiDateTimeString} from "@shared/utils/transaction.utils";
-import {PageErrorStateComponent} from "@shared/components/page-error-state/page-error-state.component";
+  BulkEditData,
+  BulkEditDialogComponent,
+} from './components/bulk-edit-dialog/bulk-edit-dialog.component';
+import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
+import { toApiDateTimeString } from '@shared/utils/transaction.utils';
+import { PageErrorStateComponent } from '@shared/components/page-error-state/page-error-state.component';
 
 /**
  * Component for managing and auditing the master transaction ledger.
@@ -67,7 +68,7 @@ import {PageErrorStateComponent} from "@shared/components/page-error-state/page-
  * intelligent transfer matching.
  */
 @Component({
-  selector: "app-transactions",
+  selector: 'app-transactions',
   standalone: true,
   imports: [
     CommonModule,
@@ -85,15 +86,15 @@ import {PageErrorStateComponent} from "@shared/components/page-error-state/page-
     SelectModule,
     ScreenToolbarComponent,
     TransactionFormDrawerComponent,
-    CsvImportDialog,
+    CsvImportDialogComponent,
     TransferMatchingDialogComponent,
     BulkEditDialogComponent,
     FormatTransactionTypeAmountPipe,
-    PageErrorStateComponent
+    PageErrorStateComponent,
   ],
   providers: [FormatCurrencyPipe, FormatTransactionTypeAmountPipe],
-  templateUrl: "./transactions.component.html",
-  changeDetection: ChangeDetectionStrategy.OnPush
+  templateUrl: './transactions.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TransactionsComponent implements OnInit {
   private readonly transactionApi: TransactionApiService = inject(TransactionApiService);
@@ -111,7 +112,7 @@ export class TransactionsComponent implements OnInit {
     filter: {},
     page: 0,
     size: 20,
-    sort: "date,desc"
+    sort: 'date,desc',
   });
 
   /** The dataset of transactions currently loaded in the view. */
@@ -167,16 +168,17 @@ export class TransactionsComponent implements OnInit {
 
   /** Available transaction types for filtering. */
   readonly transactionTypeOptions: { label: string; value: string }[] = [
-    {label: "Income", value: "INCOME"},
-    {label: "Expense", value: "EXPENSE"},
-    {label: "Transfer", value: "TRANSFER"},
-    {label: "Adjustment", value: "ADJUSTMENT"}
+    { label: 'Income', value: 'INCOME' },
+    { label: 'Expense', value: 'EXPENSE' },
+    { label: 'Transfer', value: 'TRANSFER' },
+    { label: 'Adjustment', value: 'ADJUSTMENT' },
   ];
 
   /** Unique merchant names for filtering. */
   readonly uniqueMerchantNames: Signal<string[]> = computed((): string[] => {
-    const names: string[] = this.merchants()
-      .map((m: Merchant): string => m.cleanName || m.originalName || 'Unknown Merchant');
+    const names: string[] = this.merchants().map(
+      (m: Merchant): string => m.cleanName || m.originalName || 'Unknown Merchant',
+    );
     return [...new Set(names)].sort((a: string, b: string): number => a.localeCompare(b));
   });
 
@@ -185,7 +187,7 @@ export class TransactionsComponent implements OnInit {
     const categories: Category[] = this.categories();
     const subCategories: Category[] = categories.filter((c: Category): boolean => !!c.parent);
 
-    const groups: Map<number, any> = new Map();
+    const groups = new Map<number, any>();
 
     subCategories.forEach((cat: Category): void => {
       const parentId: number = cat.parent!.id;
@@ -193,87 +195,105 @@ export class TransactionsComponent implements OnInit {
         groups.set(parentId, {
           label: cat.parent!.name,
           value: parentId,
-          items: []
+          items: [],
         });
       }
       groups.get(parentId).items.push({
         label: cat.name,
-        value: cat.name
+        value: cat.name,
       });
     });
 
-    const result = Array.from(groups.values()).sort((a: any, b: any): number => a.label.localeCompare(b.label));
+    const result = Array.from(groups.values()).sort((a: any, b: any): number =>
+      a.label.localeCompare(b.label),
+    );
     result.unshift({
-      label: "Special",
+      label: 'Special',
       value: -1,
-      items: [{label: "Uncategorized", value: "__UNDEFINED__"}]
+      items: [{ label: 'Uncategorized', value: '__UNDEFINED__' }],
     });
 
     return result;
   });
 
   /** Maps internal transaction state to PrimeNG filter metadata for UI synchronization. */
-  readonly tableFilters: Signal<{ [key: string]: FilterMetadata | FilterMetadata[] }> = computed(() => {
-    const filter: TransactionFilter = this.state().filter;
-    const filters: { [key: string]: FilterMetadata | FilterMetadata[] } = {
-      date: [{value: null, matchMode: "dateIs", operator: "and"}],
-      merchantAndDesc: [{value: null, matchMode: "custom", operator: "and"}],
-      categoryName: [{value: filter.categoryName || null, matchMode: "equals", operator: "and"}],
-      accountId: [{value: filter.accountId || null, matchMode: "equals", operator: "and"}],
-      tagId: [{value: filter.tagId || null, matchMode: "equals", operator: "and"}],
-      amount: [{value: null, matchMode: "custom", operator: "and"}]
-    };
+  readonly tableFilters: Signal<Record<string, FilterMetadata | FilterMetadata[]>> = computed(
+    () => {
+      const filter: TransactionFilter = this.state().filter;
+      const filters: Record<string, FilterMetadata | FilterMetadata[]> = {
+        date: [{ value: null, matchMode: 'dateIs', operator: 'and' }],
+        merchantAndDesc: [{ value: null, matchMode: 'custom', operator: 'and' }],
+        categoryName: [
+          { value: filter.categoryName || null, matchMode: 'equals', operator: 'and' },
+        ],
+        accountId: [{ value: filter.accountId || null, matchMode: 'equals', operator: 'and' }],
+        tagId: [{ value: filter.tagId || null, matchMode: 'equals', operator: 'and' }],
+        amount: [{ value: null, matchMode: 'custom', operator: 'and' }],
+      };
 
-    if (filter.startDate || filter.endDate) {
-      const dateFilters: FilterMetadata[] = [];
-      if (filter.startDate && filter.endDate && filter.startDate.getTime() === filter.endDate.getTime()) {
-        dateFilters.push({value: filter.startDate, matchMode: "dateIs", operator: "and"});
-      } else {
-        if (filter.startDate) {
-          dateFilters.push({value: filter.startDate, matchMode: "dateAfter", operator: "and"});
+      if (filter.startDate || filter.endDate) {
+        const dateFilters: FilterMetadata[] = [];
+        if (
+          filter.startDate &&
+          filter.endDate &&
+          filter.startDate.getTime() === filter.endDate.getTime()
+        ) {
+          dateFilters.push({ value: filter.startDate, matchMode: 'dateIs', operator: 'and' });
+        } else {
+          if (filter.startDate) {
+            dateFilters.push({ value: filter.startDate, matchMode: 'dateAfter', operator: 'and' });
+          }
+          if (filter.endDate) {
+            dateFilters.push({ value: filter.endDate, matchMode: 'dateBefore', operator: 'and' });
+          }
         }
-        if (filter.endDate) {
-          dateFilters.push({value: filter.endDate, matchMode: "dateBefore", operator: "and"});
-        }
+        filters['date'] = dateFilters;
       }
-      filters["date"] = dateFilters;
-    }
 
-    if (filter.merchant || filter.description) {
-      filters["merchantAndDesc"] = [
-        {
-          value: {merchant: filter.merchant || null, description: filter.description || null},
-          matchMode: "custom",
-          operator: "and"
-        }
-      ];
-    }
+      if (filter.merchant || filter.description) {
+        filters['merchantAndDesc'] = [
+          {
+            value: { merchant: filter.merchant || null, description: filter.description || null },
+            matchMode: 'custom',
+            operator: 'and',
+          },
+        ];
+      }
 
-    if (filter.minAmount !== undefined || filter.maxAmount !== undefined || filter.type) {
-      filters["amount"] = [
-        {
-          value: {min: filter.minAmount ?? null, max: filter.maxAmount ?? null, type: filter.type ?? null},
-          matchMode: "custom",
-          operator: "and"
-        }
-      ];
-    }
+      if (filter.minAmount !== undefined || filter.maxAmount !== undefined || filter.type) {
+        filters['amount'] = [
+          {
+            value: {
+              min: filter.minAmount ?? null,
+              max: filter.maxAmount ?? null,
+              type: filter.type ?? null,
+            },
+            matchMode: 'custom',
+            operator: 'and',
+          },
+        ];
+      }
 
-    return filters;
-  });
+      return filters;
+    },
+  );
 
   /** Indicates if the current dataset is empty. */
-  readonly isEmpty: Signal<boolean> = computed((): boolean => this.transactions().length === 0 && !this.loading());
+  readonly isEmpty: Signal<boolean> = computed(
+    (): boolean => this.transactions().length === 0 && !this.loading(),
+  );
 
   /** Indicates if all visible transactions are currently selected. */
   readonly allSelected: Signal<boolean> = computed(
-    (): boolean => this.selectedTransactions().length > 0 && this.selectedTransactions().length === this.transactions().length
+    (): boolean =>
+      this.selectedTransactions().length > 0 &&
+      this.selectedTransactions().length === this.transactions().length,
   );
 
   /** Calculates the number of active filters for UI badges. */
   readonly activeFilterCount: Signal<number> = computed((): number => {
     const filter: TransactionFilter = this.state().filter;
-    let count: number = 0;
+    let count = 0;
     if (filter.accountId) count++;
     if (filter.type) count++;
     if (filter.startDate) count++;
@@ -322,12 +342,13 @@ export class TransactionsComponent implements OnInit {
   loadTransactions(): void {
     this.loading.set(true);
     this.loadError.set(false);
-    const {filter, page, size, sort} = this.state();
+    const { filter, page, size, sort } = this.state();
 
-    this.transactionApi.getTransactions(filter, {page, size, sort})
+    this.transactionApi
+      .getTransactions(filter, { page, size, sort })
       .pipe(
         takeUntilDestroyed(this.destroyRef),
-        finalize((): void => this.loading.set(false))
+        finalize((): void => this.loading.set(false)),
       )
       .subscribe({
         next: (res: PageResponse<Transaction>): void => {
@@ -336,10 +357,10 @@ export class TransactionsComponent implements OnInit {
           this.selectedTransactions.set([]);
         },
         error: (err: any): void => {
-          console.error("Failed to load transactions:", err);
-          this.toast.error("Failed to refresh ledger.");
+          console.error('Failed to load transactions:', err);
+          this.toast.error('Failed to refresh ledger.');
           this.loadError.set(true);
-        }
+        },
       });
   }
 
@@ -349,29 +370,30 @@ export class TransactionsComponent implements OnInit {
    */
   private hydrateFromParams(params: Params): void {
     const filter: TransactionFilter = {
-      accountId: params["accountId"] ? Number(params["accountId"]) : undefined,
-      type: (params["type"] as TransactionType) || undefined,
-      description: params["description"] || undefined,
-      merchant: params["merchant"] || undefined,
-      categoryName: params["categoryName"] || undefined,
+      accountId: params['accountId'] ? Number(params['accountId']) : undefined,
+      type: (params['type'] as TransactionType) || undefined,
+      description: params['description'] || undefined,
+      merchant: params['merchant'] || undefined,
+      categoryName: params['categoryName'] || undefined,
       minAmount: params['minAmount'] === undefined ? undefined : Number(params['minAmount']),
       maxAmount: params['maxAmount'] === undefined ? undefined : Number(params['maxAmount']),
-      startDate: params["startDate"] ? new Date(params["startDate"]) : undefined,
-      endDate: params["endDate"] ? new Date(params["endDate"]) : undefined,
-      tagId: params["tagId"] ? Number(params["tagId"]) : undefined
+      startDate: params['startDate'] ? new Date(params['startDate']) : undefined,
+      endDate: params['endDate'] ? new Date(params['endDate']) : undefined,
+      tagId: params['tagId'] ? Number(params['tagId']) : undefined,
     };
 
-    const page: number = params["page"] ? Number(params["page"]) : 0;
-    const size: number = params["size"] ? Number(params["size"]) : 20;
-    const sort: string = params["sort"] || "date,desc";
+    const page: number = params['page'] ? Number(params['page']) : 0;
+    const size: number = params['size'] ? Number(params['size']) : 20;
+    const sort: string = params['sort'] || 'date,desc';
 
     const currentState: TransactionState = this.state();
-    if (JSON.stringify(filter) !== JSON.stringify(currentState.filter) ||
+    if (
+      JSON.stringify(filter) !== JSON.stringify(currentState.filter) ||
       page !== currentState.page ||
       size !== currentState.size ||
-      sort !== currentState.sort) {
-
-      this.state.set({filter, page, size, sort});
+      sort !== currentState.sort
+    ) {
+      this.state.set({ filter, page, size, sort });
     }
 
     if (this.activeFilterCount() > 0) {
@@ -385,27 +407,27 @@ export class TransactionsComponent implements OnInit {
    */
   private updateUrlParams(state: TransactionState): void {
     const queryParams: Params = {};
-    const {filter, page, size, sort} = state;
+    const { filter, page, size, sort } = state;
 
-    if (filter.accountId) queryParams["accountId"] = filter.accountId;
-    if (filter.type) queryParams["type"] = filter.type;
-    if (filter.description) queryParams["description"] = filter.description;
-    if (filter.merchant) queryParams["merchant"] = filter.merchant;
-    if (filter.categoryName) queryParams["categoryName"] = filter.categoryName;
-    if (filter.minAmount !== undefined) queryParams["minAmount"] = filter.minAmount;
-    if (filter.maxAmount !== undefined) queryParams["maxAmount"] = filter.maxAmount;
-    if (filter.startDate) queryParams["startDate"] = filter.startDate;
-    if (filter.endDate) queryParams["endDate"] = filter.endDate;
-    if (filter.tagId) queryParams["tagId"] = filter.tagId;
+    if (filter.accountId) queryParams['accountId'] = filter.accountId;
+    if (filter.type) queryParams['type'] = filter.type;
+    if (filter.description) queryParams['description'] = filter.description;
+    if (filter.merchant) queryParams['merchant'] = filter.merchant;
+    if (filter.categoryName) queryParams['categoryName'] = filter.categoryName;
+    if (filter.minAmount !== undefined) queryParams['minAmount'] = filter.minAmount;
+    if (filter.maxAmount !== undefined) queryParams['maxAmount'] = filter.maxAmount;
+    if (filter.startDate) queryParams['startDate'] = filter.startDate;
+    if (filter.endDate) queryParams['endDate'] = filter.endDate;
+    if (filter.tagId) queryParams['tagId'] = filter.tagId;
 
-    if (page > 0) queryParams["page"] = page;
-    if (size !== 20) queryParams["size"] = size;
-    if (sort !== "date,desc") queryParams["sort"] = sort;
+    if (page > 0) queryParams['page'] = page;
+    if (size !== 20) queryParams['size'] = size;
+    if (sort !== 'date,desc') queryParams['sort'] = sort;
 
     this.router.navigate([], {
       queryParams,
-      queryParamsHandling: "replace",
-      replaceUrl: true
+      queryParamsHandling: 'replace',
+      replaceUrl: true,
     });
   }
 
@@ -414,7 +436,8 @@ export class TransactionsComponent implements OnInit {
    * @private
    */
   private loadAccounts(): void {
-    this.accountApi.getAccounts()
+    this.accountApi
+      .getAccounts()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((data: Account[]): void => this.accounts.set(data));
   }
@@ -424,7 +447,8 @@ export class TransactionsComponent implements OnInit {
    * @private
    */
   private loadCategories(): void {
-    this.categoryApi.getCategoriesWithTransactions()
+    this.categoryApi
+      .getCategoriesWithTransactions()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((data: Category[]): void => this.categories.set(data));
   }
@@ -436,7 +460,8 @@ export class TransactionsComponent implements OnInit {
    * @private
    */
   private loadMerchants(): void {
-    this.categoryApi.getMerchantsWithTransactions()
+    this.categoryApi
+      .getMerchantsWithTransactions()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((data: Merchant[]): void => this.merchants.set(data));
   }
@@ -446,7 +471,8 @@ export class TransactionsComponent implements OnInit {
    * @private
    */
   private loadTags(): void {
-    this.tagApi.getTags()
+    this.tagApi
+      .getTags()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((data: Tag[]): void => this.tags.set(data));
   }
@@ -458,7 +484,7 @@ export class TransactionsComponent implements OnInit {
     let sort: string = this.state().sort;
 
     if (event.sortField) {
-      const dir: string = event.sortOrder === 1 ? "asc" : "desc";
+      const dir: string = event.sortOrder === 1 ? 'asc' : 'desc';
       sort = `${event.sortField},${dir}`;
     }
 
@@ -474,21 +500,21 @@ export class TransactionsComponent implements OnInit {
         filter,
         page,
         size: rows,
-        sort
+        sort,
       });
     }
   }
 
   hydrateFilters(filterEvent: any): TransactionFilter {
-    const stateFilter: TransactionFilter = {...this.state().filter};
+    const stateFilter: TransactionFilter = { ...this.state().filter };
 
     if (filterEvent) {
-      this.setDateFilter(filterEvent["date"], stateFilter);
-      this.setMerchantFilter(filterEvent["merchantAndDesc"], stateFilter);
-      this.setCategoryFilter(filterEvent["categoryName"], stateFilter);
-      this.setAccountIdFilter(filterEvent["accountId"], stateFilter);
-      this.setTagFilter(filterEvent["tagId"], stateFilter);
-      this.setAmountFilter(filterEvent["amount"], stateFilter);
+      this.setDateFilter(filterEvent['date'], stateFilter);
+      this.setMerchantFilter(filterEvent['merchantAndDesc'], stateFilter);
+      this.setCategoryFilter(filterEvent['categoryName'], stateFilter);
+      this.setAccountIdFilter(filterEvent['accountId'], stateFilter);
+      this.setTagFilter(filterEvent['tagId'], stateFilter);
+      this.setAmountFilter(filterEvent['amount'], stateFilter);
     }
 
     return stateFilter;
@@ -509,12 +535,12 @@ export class TransactionsComponent implements OnInit {
       metadata.forEach((m: FilterMetadata): void => {
         if (m.value) {
           const dateValue = new Date(m.value);
-          if (m.matchMode === "dateIs") {
+          if (m.matchMode === 'dateIs') {
             stateFilter.startDate = dateValue;
             stateFilter.endDate = dateValue;
-          } else if (m.matchMode === "dateAfter") {
+          } else if (m.matchMode === 'dateAfter') {
             stateFilter.startDate = dateValue;
-          } else if (m.matchMode === "dateBefore") {
+          } else if (m.matchMode === 'dateBefore') {
             stateFilter.endDate = dateValue;
           }
         }
@@ -614,7 +640,7 @@ export class TransactionsComponent implements OnInit {
       ...s,
       filter: {},
       page: 0,
-      sort: "date,desc"
+      sort: 'date,desc',
     }));
   }
 
@@ -628,7 +654,7 @@ export class TransactionsComponent implements OnInit {
     if (!merchant && !currentDescription) {
       filterConstraint.value = null;
     } else {
-      filterConstraint.value = {merchant, description: currentDescription};
+      filterConstraint.value = { merchant, description: currentDescription };
     }
   }
 
@@ -643,7 +669,7 @@ export class TransactionsComponent implements OnInit {
     if (!desc && !currentMerchant) {
       filterConstraint.value = null;
     } else {
-      filterConstraint.value = {merchant: currentMerchant, description: desc};
+      filterConstraint.value = { merchant: currentMerchant, description: desc };
     }
   }
 
@@ -658,7 +684,7 @@ export class TransactionsComponent implements OnInit {
     if (min === null && currentMax === null && currentType === null) {
       filterConstraint.value = null;
     } else {
-      filterConstraint.value = {min, max: currentMax, type: currentType};
+      filterConstraint.value = { min, max: currentMax, type: currentType };
     }
   }
 
@@ -673,7 +699,7 @@ export class TransactionsComponent implements OnInit {
     if (max === null && currentMin === null && currentType === null) {
       filterConstraint.value = null;
     } else {
-      filterConstraint.value = {min: currentMin, max, type: currentType};
+      filterConstraint.value = { min: currentMin, max, type: currentType };
     }
   }
 
@@ -688,7 +714,7 @@ export class TransactionsComponent implements OnInit {
     if (type === null && currentMin === null && currentMax === null) {
       filterConstraint.value = null;
     } else {
-      filterConstraint.value = {min: currentMin, max: currentMax, type};
+      filterConstraint.value = { min: currentMin, max: currentMax, type };
     }
   }
 
@@ -716,7 +742,7 @@ export class TransactionsComponent implements OnInit {
    * @param event the form data and the full set of tag ids the user selected
    */
   onSave(event: TransactionFormSaveEvent): void {
-    const {request: formData, tagIds} = event;
+    const { request: formData, tagIds } = event;
     const existing: Transaction | null = this.selectedTransaction();
     this.savingTransaction.set(true);
 
@@ -727,20 +753,20 @@ export class TransactionsComponent implements OnInit {
         accountId: formData.accountId,
         amount: formData.amount,
         transactionDate: toApiDateTimeString(formData.transactionDate),
-        description: formData.description || "",
+        description: formData.description || '',
         type: formData.type,
         categoryId: formData.categoryId,
-        merchantId: formData.merchantId
+        merchantId: formData.merchantId,
       } as TransactionUpdateRequest;
     } else {
       payload = {
         accountId: (formData as TransactionCreateRequest).accountId,
         amount: formData.amount,
         transactionDate: toApiDateTimeString(formData.transactionDate),
-        description: formData.description || "",
+        description: formData.description || '',
         type: formData.type,
         categoryId: formData.categoryId,
-        merchantId: formData.merchantId
+        merchantId: formData.merchantId,
       } as TransactionCreateRequest;
     }
 
@@ -757,14 +783,14 @@ export class TransactionsComponent implements OnInit {
         const previousTagIds: number[] = (existing?.tags ?? []).map((t: Tag): number => t.id);
         return this.syncTags(transactionId, previousTagIds, tagIds);
       }),
-      finalize((): void => this.savingTransaction.set(false))
+      finalize((): void => this.savingTransaction.set(false)),
     ).subscribe({
       next: (): void => {
-        this.toast.success(`Transaction ${existing ? "updated" : "created"}`);
+        this.toast.success(`Transaction ${existing ? 'updated' : 'created'}`);
         this.showDialog.set(false);
         this.loadTransactions();
       },
-      error: (err: any): void => this.toast.error(err.error?.detail || "Operation failed")
+      error: (err: any): void => this.toast.error(err.error?.detail || 'Operation failed'),
     });
   }
 
@@ -777,13 +803,23 @@ export class TransactionsComponent implements OnInit {
    * @param newTagIds the full set of tag ids the user selected
    * @private
    */
-  private syncTags(transactionId: number, previousTagIds: number[], newTagIds: number[]): Observable<unknown> {
+  private syncTags(
+    transactionId: number,
+    previousTagIds: number[],
+    newTagIds: number[],
+  ): Observable<unknown> {
     const toAdd: number[] = newTagIds.filter((id: number): boolean => !previousTagIds.includes(id));
-    const toRemove: number[] = previousTagIds.filter((id: number): boolean => !newTagIds.includes(id));
+    const toRemove: number[] = previousTagIds.filter(
+      (id: number): boolean => !newTagIds.includes(id),
+    );
 
     const ops: Observable<void>[] = [
-      ...toAdd.map((tagId: number): Observable<void> => this.tagApi.assignToTransaction(tagId, transactionId)),
-      ...toRemove.map((tagId: number): Observable<void> => this.tagApi.removeFromTransaction(tagId, transactionId))
+      ...toAdd.map((tagId: number): Observable<void> =>
+        this.tagApi.assignToTransaction(tagId, transactionId),
+      ),
+      ...toRemove.map((tagId: number): Observable<void> =>
+        this.tagApi.removeFromTransaction(tagId, transactionId),
+      ),
     ];
 
     return ops.length > 0 ? forkJoin(ops) : of(null);
@@ -799,27 +835,31 @@ export class TransactionsComponent implements OnInit {
   onBulkSave(data: BulkEditData): void {
     this.bulkSaving.set(true);
 
-    const updates: TransactionUpdateRequest[] = this.selectedTransactions().map((txn: Transaction) => ({
-      id: txn.id,
-      accountId: txn.account.id,
-      amount: txn.amount,
-      transactionDate: txn.date,
-      description: data.updateDescription ? data.description! : txn.description,
-      type: txn.type,
-      categoryId: data.updateCategory ? data.category!.id : txn.category?.id,
-      merchantId: data.updateMerchant ? data.merchant!.id : txn.merchant?.id
-    } as TransactionUpdateRequest));
+    const updates: TransactionUpdateRequest[] = this.selectedTransactions().map(
+      (txn: Transaction) =>
+        ({
+          id: txn.id,
+          accountId: txn.account.id,
+          amount: txn.amount,
+          transactionDate: txn.date,
+          description: data.updateDescription ? data.description! : txn.description,
+          type: txn.type,
+          categoryId: data.updateCategory ? data.category!.id : txn.category?.id,
+          merchantId: data.updateMerchant ? data.merchant!.id : txn.merchant?.id,
+        }) as TransactionUpdateRequest,
+    );
 
-    this.transactionApi.bulkUpdateTransactions(updates)
+    this.transactionApi
+      .bulkUpdateTransactions(updates)
       .pipe(finalize((): void => this.bulkSaving.set(false)))
       .subscribe({
         next: (count: number): void => {
-          this.toast.success(`${count} transaction${count === 1 ? "" : "s"} updated`);
+          this.toast.success(`${count} transaction${count === 1 ? '' : 's'} updated`);
           this.showBulkEditDialog.set(false);
           this.selectedTransactions.set([]);
           this.loadTransactions();
         },
-        error: (err: any): void => this.toast.error(err.error?.detail || "Bulk update failed")
+        error: (err: any): void => this.toast.error(err.error?.detail || 'Bulk update failed'),
       });
   }
 
@@ -829,22 +869,26 @@ export class TransactionsComponent implements OnInit {
    */
   deleteTransaction(txn: Transaction): void {
     this.confirmationService.confirm({
-      header: "Delete Transaction?",
-      message: "This will permanently remove this record. Continue?",
-      acceptLabel: "Delete",
-      rejectLabel: "Cancel",
-      acceptButtonStyleClass: "p-button-danger",
+      header: 'Delete Transaction?',
+      message: 'This will permanently remove this record. Continue?',
+      acceptLabel: 'Delete',
+      rejectLabel: 'Cancel',
+      acceptButtonStyleClass: 'p-button-danger',
       accept: (): void => {
-        this.transactionApi.deleteTransaction(txn.id)
+        this.transactionApi
+          .deleteTransaction(txn.id)
           .pipe(finalize((): void => this.savingTransaction.set(false)))
           .subscribe({
             next: (): void => {
-              this.toast.success("Transaction deleted");
+              this.toast.success('Transaction deleted');
               this.loadTransactions();
             },
-            error: (err: any): void => this.toast.error("Failed to delete transaction.")
+            error: (err: any): void => {
+              console.error('Failed to delete transaction:', err);
+              this.toast.error('Failed to delete transaction.');
+            },
           });
-      }
+      },
     });
   }
 

@@ -11,21 +11,21 @@ import {
   OutputEmitterRef,
   Signal,
   signal,
-  WritableSignal
+  WritableSignal,
 } from '@angular/core';
-import {CommonModule} from '@angular/common';
-import {FormControl, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
-import {finalize} from 'rxjs';
-import {ButtonModule} from 'primeng/button';
-import {SelectModule} from 'primeng/select';
-import {InputNumberModule} from 'primeng/inputnumber';
-import {MessageModule} from 'primeng/message';
-import {SelectItemGroup} from 'primeng/api';
+import { CommonModule } from '@angular/common';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { finalize } from 'rxjs';
+import { ButtonModule } from 'primeng/button';
+import { SelectModule } from 'primeng/select';
+import { InputNumberModule } from 'primeng/inputnumber';
+import { MessageModule } from 'primeng/message';
+import { SelectItemGroup } from 'primeng/api';
 
-import {Category} from '@models/category.model';
-import {BudgetApiService} from '../../services/budget-api.service';
-import {ToastService} from '@core/services/toast.service';
-import {DrawerComponent} from '@shared/components/drawer/drawer.component';
+import { Category } from '@models/category.model';
+import { BudgetApiService } from '../../services/budget-api.service';
+import { ToastService } from '@core/services/toast.service';
+import { DrawerComponent } from '@shared/components/drawer/drawer.component';
 
 /**
  * Drawer component for setting and updating category budgets.
@@ -51,10 +51,10 @@ import {DrawerComponent} from '@shared/components/drawer/drawer.component';
     SelectModule,
     InputNumberModule,
     MessageModule,
-    DrawerComponent
+    DrawerComponent,
   ],
   templateUrl: './budget-form-dialog.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BudgetFormDialogComponent {
   private readonly budgetApi: BudgetApiService = inject(BudgetApiService);
@@ -86,11 +86,11 @@ export class BudgetFormDialogComponent {
    */
   readonly form = new FormGroup({
     categoryId: new FormControl<number | null>(null, {
-      validators: [Validators.required]
+      validators: [Validators.required],
     }),
     amount: new FormControl<number | null>(null, {
-      validators: [Validators.required, Validators.min(0)]
-    })
+      validators: [Validators.required, Validators.min(0)],
+    }),
   });
 
   /**
@@ -107,17 +107,19 @@ export class BudgetFormDialogComponent {
     if (parents.length > 0) {
       groups.push({
         label: 'Main Categories',
-        items: parents.map((p: Category) => ({label: p.name, value: p.id}))
+        items: parents.map((p: Category) => ({ label: p.name, value: p.id })),
       });
     }
 
     // sub-categories that can be budgeted
     parents.forEach((parent: Category): void => {
-      const subCats: Category[] = children.filter((c: Category): boolean => c.parent?.id === parent.id);
+      const subCats: Category[] = children.filter(
+        (c: Category): boolean => c.parent?.id === parent.id,
+      );
       if (subCats.length > 0) {
         groups.push({
           label: `${parent.name} (Sub-categories)`,
-          items: subCats.map((c: Category) => ({label: c.name, value: c.id}))
+          items: subCats.map((c: Category) => ({ label: c.name, value: c.id })),
         });
       }
     });
@@ -143,10 +145,12 @@ export class BudgetFormDialogComponent {
       return;
     }
 
-    const {categoryId, amount} = this.form.getRawValue();
+    const { categoryId, amount } = this.form.getRawValue();
 
     // verify category exists in local state
-    const categoryExists: boolean = this.categories().some((c: Category): boolean => c.id === categoryId);
+    const categoryExists: boolean = this.categories().some(
+      (c: Category): boolean => c.id === categoryId,
+    );
     if (!categoryExists) {
       this.errorMessage.set('Selected category is no longer valid.');
       return;
@@ -155,7 +159,8 @@ export class BudgetFormDialogComponent {
     this.loading.set(true);
     this.errorMessage.set(null);
 
-    this.budgetApi.createBudget(categoryId!, amount!, this.month(), this.year())
+    this.budgetApi
+      .createBudget(categoryId!, amount!, this.month(), this.year())
       .pipe(finalize((): void => this.loading.set(false)))
       .subscribe({
         next: (): void => {
@@ -166,7 +171,7 @@ export class BudgetFormDialogComponent {
         error: (err: any): void => {
           console.error('Error saving budget:', err);
           this.errorMessage.set(err.error?.detail || 'Failed to save budget. Please try again.');
-        }
+        },
       });
   }
 }

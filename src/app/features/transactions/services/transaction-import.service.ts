@@ -1,12 +1,12 @@
-import {inject, Injectable} from '@angular/core';
-import {HttpClient} from '@angular/common/http';
-import {Observable} from 'rxjs';
-import {environment} from '@env';
-import {SaveTransactionRequest, TransactionPreview} from '@models/transaction.model';
-import {BankName} from '@models/account.model';
+import { inject, Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { environment } from '@env';
+import { SaveTransactionRequest, TransactionPreview } from '@models/transaction.model';
+import { BankName } from '@models/account.model';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class TransactionImportService {
   private readonly http: HttpClient = inject(HttpClient);
@@ -20,18 +20,14 @@ export class TransactionImportService {
    * @param bankName the bank format to parse the file as.
    * @returns the previewed transactions parsed from the file.
    */
-  uploadCsv(
-    accountId: number,
-    file: File,
-    bankName: BankName
-  ): Observable<TransactionPreview[]> {
+  uploadCsv(accountId: number, file: File, bankName: BankName): Observable<TransactionPreview[]> {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('bankName', bankName);
 
     return this.http.post<TransactionPreview[]>(
       `${this.apiUrl}/accounts/${accountId}/upload`,
-      formData
+      formData,
     );
   }
 
@@ -41,15 +37,10 @@ export class TransactionImportService {
    * @param request the transaction to save.
    * @returns a confirmation message from the backend.
    */
-  saveTransactions(
-    accountId: number,
-    request: SaveTransactionRequest
-  ): Observable<string> {
-    return this.http.post<string>(
-      `${this.apiUrl}/accounts/${accountId}/transactions`,
-      request,
-      {responseType: 'text' as 'json'}
-    );
+  saveTransactions(accountId: number, request: SaveTransactionRequest): Observable<string> {
+    return this.http.post<string>(`${this.apiUrl}/accounts/${accountId}/transactions`, request, {
+      responseType: 'text' as 'json',
+    });
   }
 
   /**
@@ -57,14 +48,10 @@ export class TransactionImportService {
    * @param requests the transactions to save.
    * @returns a confirmation message from the backend.
    */
-  saveBulkTransactions(
-    requests: SaveTransactionRequest[]
-  ): Observable<string> {
-    return this.http.post<string>(
-      `${this.apiUrl}/transactions/bulk`,
-      requests,
-      {responseType: 'text' as 'json'}
-    );
+  saveBulkTransactions(requests: SaveTransactionRequest[]): Observable<string> {
+    return this.http.post<string>(`${this.apiUrl}/transactions/bulk`, requests, {
+      responseType: 'text' as 'json',
+    });
   }
 
   /**
@@ -81,7 +68,9 @@ export class TransactionImportService {
           const buffer = e.target?.result as ArrayBuffer;
           const hashBuffer: ArrayBuffer = await crypto.subtle.digest('SHA-256', buffer);
           const hashArray: number[] = Array.from(new Uint8Array(hashBuffer));
-          const hashHex: string = hashArray.map((b: number): string => b.toString(16).padStart(2, '0')).join('');
+          const hashHex: string = hashArray
+            .map((b: number): string => b.toString(16).padStart(2, '0'))
+            .join('');
           resolve(hashHex);
         } catch (error) {
           reject(error);

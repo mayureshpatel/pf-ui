@@ -1,5 +1,5 @@
-import {ReportsDataService} from './reports-data.service';
-import {Transaction, TransactionType} from '@models/transaction.model';
+import { ReportsDataService } from './reports-data.service';
+import { Transaction, TransactionType } from '@models/transaction.model';
 
 describe('ReportsDataService', () => {
   let service: ReportsDataService;
@@ -13,7 +13,7 @@ describe('ReportsDataService', () => {
       date,
       description: 'test',
       type,
-      merchant: {} as Transaction['merchant']
+      merchant: {} as Transaction['merchant'],
     }) as Transaction;
 
   beforeEach(() => {
@@ -28,19 +28,19 @@ describe('ReportsDataService', () => {
       const result = service.aggregateByMonth([
         txn('2026-03-15T00:00:00Z', TransactionType.INCOME, 1000),
         txn('2026-03-20T00:00:00Z', TransactionType.EXPENSE, 200),
-        txn('2026-04-01T00:00:00Z', TransactionType.EXPENSE, 50)
+        txn('2026-04-01T00:00:00Z', TransactionType.EXPENSE, 50),
       ]);
 
       // assert & verify
       expect(result.map((r): string => r.month)).toEqual(['2026-03', '2026-04']);
-      expect(result[0]).toEqual({month: '2026-03', income: 1000, expense: 200, netSavings: 800});
-      expect(result[1]).toEqual({month: '2026-04', income: 0, expense: 50, netSavings: -50});
+      expect(result[0]).toEqual({ month: '2026-03', income: 1000, expense: 200, netSavings: 800 });
+      expect(result[1]).toEqual({ month: '2026-04', income: 0, expense: 50, netSavings: -50 });
     });
 
     it('should exclude transfers from both income and expense totals', () => {
       // arrange & act
       const result = service.aggregateByMonth([
-        txn('2026-03-15T00:00:00Z', TransactionType.TRANSFER, 500)
+        txn('2026-03-15T00:00:00Z', TransactionType.TRANSFER, 500),
       ]);
 
       // assert & verify -- a transfer-only month contributes no entry at all

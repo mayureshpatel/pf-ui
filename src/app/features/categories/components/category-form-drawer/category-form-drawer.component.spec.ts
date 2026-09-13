@@ -1,15 +1,26 @@
-import {vi} from 'vitest';
-import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {CategoryFormDrawerComponent} from './category-form-drawer.component';
-import {Category, CategoryCreateRequest, CategoryType, CategoryUpdateRequest} from '@models/category.model';
-import {CATEGORY_COLORS, getCategoryColor} from '@shared/utils/category.utils';
+import { vi } from 'vitest';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { CategoryFormDrawerComponent } from './category-form-drawer.component';
+import {
+  Category,
+  CategoryCreateRequest,
+  CategoryType,
+  CategoryUpdateRequest,
+} from '@models/category.model';
+import { CATEGORY_COLORS, getCategoryColor } from '@shared/utils/category.utils';
 
 describe('CategoryFormDrawerComponent', () => {
   let component: CategoryFormDrawerComponent;
   let fixture: ComponentFixture<CategoryFormDrawerComponent>;
 
-  const cat = (id: number, name: string, parent: Category | null = null, color = '', icon = ''): Category =>
-    ({id, userId: 1, name, type: CategoryType.EXPENSE, parent, color, icon}) as Category;
+  const cat = (
+    id: number,
+    name: string,
+    parent: Category | null = null,
+    color = '',
+    icon = '',
+  ): Category =>
+    ({ id, userId: 1, name, type: CategoryType.EXPENSE, parent, color, icon }) as Category;
 
   const rent = cat(1, 'Rent');
   const subscriptions = cat(2, 'Subscriptions', rent);
@@ -26,7 +37,7 @@ describe('CategoryFormDrawerComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [CategoryFormDrawerComponent]
+      imports: [CategoryFormDrawerComponent],
     }).compileComponents();
 
     fixture = TestBed.createComponent(CategoryFormDrawerComponent);
@@ -62,8 +73,8 @@ describe('CategoryFormDrawerComponent', () => {
       setUp(null);
 
       expect(component.parentOptions()).toEqual([
-        {label: 'Rent', value: 1},
-        {label: 'Dining Out', value: 3}
+        { label: 'Rent', value: 1 },
+        { label: 'Dining Out', value: 3 },
       ]);
     });
 
@@ -93,7 +104,7 @@ describe('CategoryFormDrawerComponent', () => {
       expect(component.errorMessage()).toBeNull();
     });
 
-    it("should patch every field from the category being edited, including its parent", () => {
+    it('should patch every field from the category being edited, including its parent', () => {
       setUp(subscriptions);
 
       expect(component.form.controls.name.value).toBe('Subscriptions');
@@ -122,7 +133,9 @@ describe('CategoryFormDrawerComponent', () => {
 
       component.onSubmit();
 
-      expect(component.errorMessage()).toBe('A category with this name already exists as a top-level category.');
+      expect(component.errorMessage()).toBe(
+        'A category with this name already exists as a top-level category.',
+      );
     });
 
     it('should allow the same name under a different parent', () => {
@@ -148,7 +161,9 @@ describe('CategoryFormDrawerComponent', () => {
 
       component.onSubmit();
 
-      expect(component.errorMessage()).toBe('A category with this name already exists under the same parent.');
+      expect(component.errorMessage()).toBe(
+        'A category with this name already exists under the same parent.',
+      );
     });
 
     it('should not treat editing a category as a duplicate of itself when the name is unchanged', () => {
@@ -168,7 +183,9 @@ describe('CategoryFormDrawerComponent', () => {
 
       component.onSubmit();
 
-      expect(component.errorMessage()).toBe('A category with this name already exists as a top-level category.');
+      expect(component.errorMessage()).toBe(
+        'A category with this name already exists as a top-level category.',
+      );
     });
   });
 
@@ -212,8 +229,11 @@ describe('CategoryFormDrawerComponent', () => {
       component.onSubmit();
 
       const expected: CategoryCreateRequest = {
-        name: 'Utilities', type: CategoryType.EXPENSE, color: getCategoryColor('Utilities'),
-        icon: '', parentId: undefined
+        name: 'Utilities',
+        type: CategoryType.EXPENSE,
+        color: getCategoryColor('Utilities'),
+        icon: '',
+        parentId: undefined,
       };
       expect(saveSpy).toHaveBeenCalledWith(expected);
     });
@@ -227,7 +247,9 @@ describe('CategoryFormDrawerComponent', () => {
 
       component.onSubmit();
 
-      expect(saveSpy).toHaveBeenCalledWith(expect.objectContaining({name: 'Streaming', parentId: 1}));
+      expect(saveSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ name: 'Streaming', parentId: 1 }),
+      );
     });
 
     it('should trim the submitted name', () => {
@@ -238,7 +260,7 @@ describe('CategoryFormDrawerComponent', () => {
 
       component.onSubmit();
 
-      expect(saveSpy).toHaveBeenCalledWith(expect.objectContaining({name: 'Utilities'}));
+      expect(saveSpy).toHaveBeenCalledWith(expect.objectContaining({ name: 'Utilities' }));
     });
 
     it("characterization: an unset icon is submitted as '', not omitted/undefined", () => {
@@ -254,7 +276,7 @@ describe('CategoryFormDrawerComponent', () => {
 
       component.onSubmit();
 
-      expect(saveSpy).toHaveBeenCalledWith(expect.objectContaining({icon: ''}));
+      expect(saveSpy).toHaveBeenCalledWith(expect.objectContaining({ icon: '' }));
     });
   });
 
@@ -268,16 +290,21 @@ describe('CategoryFormDrawerComponent', () => {
       component.onSubmit();
 
       const expected: CategoryUpdateRequest = {
-        id: 3, name: 'Dining & Takeout', type: CategoryType.EXPENSE, color: '#3B82F6', icon: 'pi-shopping-cart',
-        parentId: undefined
+        id: 3,
+        name: 'Dining & Takeout',
+        type: CategoryType.EXPENSE,
+        color: '#3B82F6',
+        icon: 'pi-shopping-cart',
+        parentId: undefined,
       };
       expect(saveSpy).toHaveBeenCalledWith(expected);
     });
 
-    it("bug found and fixed here: clearing a category's color during an edit now correctly " +
-      'falls back to a name-derived color, matching the create path, instead of submitting an ' +
-      "empty color string (the update branch previously used '??', which never substitutes for " +
-      "an empty string -- only for null/undefined -- so the fallback silently never ran)",
+    it(
+      "bug found and fixed here: clearing a category's color during an edit now correctly " +
+        'falls back to a name-derived color, matching the create path, instead of submitting an ' +
+        "empty color string (the update branch previously used '??', which never substitutes for " +
+        'an empty string -- only for null/undefined -- so the fallback silently never ran)',
       () => {
         const saveSpy = vi.fn();
         setUp(dining); // dining starts with a real color, '#3B82F6'
@@ -286,8 +313,11 @@ describe('CategoryFormDrawerComponent', () => {
 
         component.onSubmit();
 
-        expect(saveSpy).toHaveBeenCalledWith(expect.objectContaining({color: getCategoryColor('Dining Out')}));
-      });
+        expect(saveSpy).toHaveBeenCalledWith(
+          expect.objectContaining({ color: getCategoryColor('Dining Out') }),
+        );
+      },
+    );
   });
 
   describe('selectColor / selectIcon', () => {
@@ -343,7 +373,9 @@ describe('CategoryFormDrawerComponent', () => {
       setUp(dining);
       fixture.detectChanges();
 
-      const buttons: HTMLButtonElement[] = Array.from(fixture.nativeElement.querySelectorAll('#color-picker button'));
+      const buttons: HTMLButtonElement[] = Array.from(
+        fixture.nativeElement.querySelectorAll('#color-picker button'),
+      );
       const selectedIndex: number = CATEGORY_COLORS.indexOf('#3B82F6');
       expect(buttons[selectedIndex].className).toContain('ring-4');
       expect(buttons[(selectedIndex + 1) % buttons.length].className).not.toContain('ring-4');
