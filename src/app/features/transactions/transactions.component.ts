@@ -36,7 +36,6 @@ import {
   TransactionFilter,
   TransactionFormSaveEvent,
   TransactionState,
-  TransactionType,
   TransactionUpdateRequest,
 } from '@models/transaction.model';
 import { Account } from '@models/account.model';
@@ -44,6 +43,14 @@ import { Category } from '@models/category.model';
 import { Merchant } from '@models/merchant.model';
 import { Tag } from '@models/tag.model';
 import { TransactionApiService } from './services/transaction-api.service';
+import { TransactionUrlStateService } from './services/transaction-url-state.service';
+import {
+  setAmountFilter,
+  setDateFilter,
+  setEqualsFilter,
+  setMerchantFilter,
+  updateCompositeFilterField,
+} from './services/transaction-filter.util';
 import { AccountApiService } from '@features/accounts/services/account-api.service';
 import { CategoryApiService } from '@features/categories/services/category-api.service';
 import { TagApiService } from '@features/tags/services/tag-api.service';
@@ -98,6 +105,7 @@ import { PageErrorStateComponent } from '@shared/components/page-error-state/pag
 })
 export class TransactionsComponent implements OnInit {
   private readonly transactionApi: TransactionApiService = inject(TransactionApiService);
+  private readonly urlState: TransactionUrlStateService = inject(TransactionUrlStateService);
   private readonly accountApi: AccountApiService = inject(AccountApiService);
   private readonly categoryApi: CategoryApiService = inject(CategoryApiService);
   private readonly tagApi: TagApiService = inject(TagApiService);
@@ -154,9 +162,6 @@ export class TransactionsComponent implements OnInit {
   /** Indicates if the transfer matching dialog is currently open. */
   readonly showTransferDialog: WritableSignal<boolean> = signal(false);
 
-  /** Indicates if the advanced filters dialog is currently open. */
-  readonly showAdvancedFilters: WritableSignal<boolean> = signal(false);
-
   /** User selection state for bulk actions. */
   readonly selectedTransactions: WritableSignal<Transaction[]> = signal([]);
 
@@ -193,7 +198,7 @@ export class TransactionsComponent implements OnInit {
       const parentId: number = cat.parent!.id;
       if (!groups.has(parentId)) {
         groups.set(parentId, {
-          label: cat.parent!.name,
+          label: cat.parent!.name || 'Unknown Category',
           value: parentId,
           items: [],
         });
@@ -290,22 +295,6 @@ export class TransactionsComponent implements OnInit {
       this.selectedTransactions().length === this.transactions().length,
   );
 
-  /** Calculates the number of active filters for UI badges. */
-  readonly activeFilterCount: Signal<number> = computed((): number => {
-    const filter: TransactionFilter = this.state().filter;
-    let count = 0;
-    if (filter.accountId) count++;
-    if (filter.type) count++;
-    if (filter.startDate) count++;
-    if (filter.description) count++;
-    if (filter.merchant) count++;
-    if (filter.categoryName) count++;
-    if (filter.minAmount !== undefined) count++;
-    if (filter.maxAmount !== undefined) count++;
-    if (filter.tagId) count++;
-    return count;
-  });
-
   constructor() {
     /**
      * Core effect that reactively synchronizes the view state with the backend.
@@ -365,64 +354,27 @@ export class TransactionsComponent implements OnInit {
   }
 
   /**
-   * Translates URL query parameters into internal signal state.
+   * Translates URL query parameters into internal signal state, via {@link TransactionUrlStateService}.
+   * Skips the write if the resulting state is unchanged, to avoid redundantly re-triggering the
+   * constructor's sync effect.
    * @param params - The query parameters from the active route.
    */
   private hydrateFromParams(params: Params): void {
-    const filter: TransactionFilter = {
-      accountId: params['accountId'] ? Number(params['accountId']) : undefined,
-      type: (params['type'] as TransactionType) || undefined,
-      description: params['description'] || undefined,
-      merchant: params['merchant'] || undefined,
-      categoryName: params['categoryName'] || undefined,
-      minAmount: params['minAmount'] === undefined ? undefined : Number(params['minAmount']),
-      maxAmount: params['maxAmount'] === undefined ? undefined : Number(params['maxAmount']),
-      startDate: params['startDate'] ? new Date(params['startDate']) : undefined,
-      endDate: params['endDate'] ? new Date(params['endDate']) : undefined,
-      tagId: params['tagId'] ? Number(params['tagId']) : undefined,
-    };
-
-    const page: number = params['page'] ? Number(params['page']) : 0;
-    const size: number = params['size'] ? Number(params['size']) : 20;
-    const sort: string = params['sort'] || 'date,desc';
-
+    const newState: TransactionState = this.urlState.hydrateFromParams(params);
     const currentState: TransactionState = this.state();
-    if (
-      JSON.stringify(filter) !== JSON.stringify(currentState.filter) ||
-      page !== currentState.page ||
-      size !== currentState.size ||
-      sort !== currentState.sort
-    ) {
-      this.state.set({ filter, page, size, sort });
-    }
 
-    if (this.activeFilterCount() > 0) {
-      this.showAdvancedFilters.set(true);
+    if (JSON.stringify(newState) !== JSON.stringify(currentState)) {
+      this.state.set(newState);
     }
   }
 
   /**
-   * Serializes the current signal state to URL query parameters.
+   * Serializes the current signal state to URL query parameters, via
+   * {@link TransactionUrlStateService}, then navigates to reflect them.
    * @param state - The current transaction state.
    */
   private updateUrlParams(state: TransactionState): void {
-    const queryParams: Params = {};
-    const { filter, page, size, sort } = state;
-
-    if (filter.accountId) queryParams['accountId'] = filter.accountId;
-    if (filter.type) queryParams['type'] = filter.type;
-    if (filter.description) queryParams['description'] = filter.description;
-    if (filter.merchant) queryParams['merchant'] = filter.merchant;
-    if (filter.categoryName) queryParams['categoryName'] = filter.categoryName;
-    if (filter.minAmount !== undefined) queryParams['minAmount'] = filter.minAmount;
-    if (filter.maxAmount !== undefined) queryParams['maxAmount'] = filter.maxAmount;
-    if (filter.startDate) queryParams['startDate'] = filter.startDate;
-    if (filter.endDate) queryParams['endDate'] = filter.endDate;
-    if (filter.tagId) queryParams['tagId'] = filter.tagId;
-
-    if (page > 0) queryParams['page'] = page;
-    if (size !== 20) queryParams['size'] = size;
-    if (sort !== 'date,desc') queryParams['sort'] = sort;
+    const queryParams: Params = this.urlState.buildQueryParams(state);
 
     this.router.navigate([], {
       queryParams,
@@ -505,131 +457,21 @@ export class TransactionsComponent implements OnInit {
     }
   }
 
-  hydrateFilters(filterEvent: any): TransactionFilter {
+  hydrateFilters(
+    filterEvent: Record<string, FilterMetadata | FilterMetadata[]>,
+  ): TransactionFilter {
     const stateFilter: TransactionFilter = { ...this.state().filter };
 
     if (filterEvent) {
-      this.setDateFilter(filterEvent['date'], stateFilter);
-      this.setMerchantFilter(filterEvent['merchantAndDesc'], stateFilter);
-      this.setCategoryFilter(filterEvent['categoryName'], stateFilter);
-      this.setAccountIdFilter(filterEvent['accountId'], stateFilter);
-      this.setTagFilter(filterEvent['tagId'], stateFilter);
-      this.setAmountFilter(filterEvent['amount'], stateFilter);
+      setDateFilter(filterEvent['date'], stateFilter);
+      setMerchantFilter(filterEvent['merchantAndDesc'], stateFilter);
+      setEqualsFilter(filterEvent['categoryName'], stateFilter, 'categoryName');
+      setEqualsFilter(filterEvent['accountId'], stateFilter, 'accountId');
+      setEqualsFilter(filterEvent['tagId'], stateFilter, 'tagId');
+      setAmountFilter(filterEvent['amount'], stateFilter);
     }
 
     return stateFilter;
-  }
-
-  /**
-   * Sets the date filter for the current transaction filter state.
-   * @param dateFilter the date filter object; from the event
-   * @param stateFilter the transaction filter state object
-   * @private
-   */
-  private setDateFilter(dateFilter: any, stateFilter: TransactionFilter): void {
-    if (dateFilter) {
-      const metadata = Array.isArray(dateFilter) ? dateFilter : [dateFilter];
-      stateFilter.startDate = undefined;
-      stateFilter.endDate = undefined;
-
-      metadata.forEach((m: FilterMetadata): void => {
-        if (m.value) {
-          const dateValue = new Date(m.value);
-          if (m.matchMode === 'dateIs') {
-            stateFilter.startDate = dateValue;
-            stateFilter.endDate = dateValue;
-          } else if (m.matchMode === 'dateAfter') {
-            stateFilter.startDate = dateValue;
-          } else if (m.matchMode === 'dateBefore') {
-            stateFilter.endDate = dateValue;
-          }
-        }
-      });
-    } else {
-      stateFilter.startDate = undefined;
-      stateFilter.endDate = undefined;
-    }
-  }
-
-  /**
-   * Sets the merchant filter for the current transaction filter state.
-   * @param merchantFilter the merchant filter object from the event; contains the merchant name and description
-   * @param stateFilter the transaction filter state object
-   * @private
-   */
-  private setMerchantFilter(merchantFilter: any, stateFilter: TransactionFilter): void {
-    if (merchantFilter) {
-      const metadata = Array.isArray(merchantFilter) ? merchantFilter[0] : merchantFilter;
-      stateFilter.merchant = metadata.value?.merchant || undefined;
-      stateFilter.description = metadata.value?.description || undefined;
-    } else {
-      stateFilter.merchant = undefined;
-      stateFilter.description = undefined;
-    }
-  }
-
-  /**
-   * Sets the category filter for the current transaction filter state.
-   * @param categoryFilter the category filter object from the event; contains the category name
-   * @param stateFilter the transaction filter state object
-   * @private
-   */
-  private setCategoryFilter(categoryFilter: any, stateFilter: TransactionFilter): void {
-    if (categoryFilter) {
-      const metadata = Array.isArray(categoryFilter) ? categoryFilter[0] : categoryFilter;
-      stateFilter.categoryName = metadata.value || undefined;
-    } else {
-      stateFilter.categoryName = undefined;
-    }
-  }
-
-  /**
-   * Sets the account ID filter for the current transaction filter state.
-   * @param accountFilter the account filter object from the event; contains the account ID
-   * @param stateFilter the transaction filter state object
-   * @private
-   */
-  private setAccountIdFilter(accountFilter: any, stateFilter: TransactionFilter): void {
-    if (accountFilter) {
-      const metadata = Array.isArray(accountFilter) ? accountFilter[0] : accountFilter;
-      stateFilter.accountId = metadata.value || undefined;
-    } else {
-      stateFilter.accountId = undefined;
-    }
-  }
-
-  /**
-   * Sets the tag filter for the current transaction filter state.
-   * @param tagFilter the tag filter object from the event; contains the tag ID
-   * @param stateFilter the transaction filter state object
-   * @private
-   */
-  private setTagFilter(tagFilter: any, stateFilter: TransactionFilter): void {
-    if (tagFilter) {
-      const metadata = Array.isArray(tagFilter) ? tagFilter[0] : tagFilter;
-      stateFilter.tagId = metadata.value || undefined;
-    } else {
-      stateFilter.tagId = undefined;
-    }
-  }
-
-  /**
-   * Sets the amount filter for the current transaction filter state.
-   * @param amountFilter the amount filter object from the event; contains min, max, and type
-   * @param stateFilter the transaction filter state object
-   * @private
-   */
-  private setAmountFilter(amountFilter: any, stateFilter: TransactionFilter): void {
-    if (amountFilter) {
-      const metadata = Array.isArray(amountFilter) ? amountFilter[0] : amountFilter;
-      stateFilter.minAmount = metadata.value?.min ?? undefined;
-      stateFilter.maxAmount = metadata.value?.max ?? undefined;
-      stateFilter.type = metadata.value?.type ?? undefined;
-    } else {
-      stateFilter.minAmount = undefined;
-      stateFilter.maxAmount = undefined;
-      stateFilter.type = undefined;
-    }
   }
 
   /**
@@ -649,13 +491,16 @@ export class TransactionsComponent implements OnInit {
    * @param filterConstraint the new filter constraint
    * @param merchant the new merchant name
    */
-  updateMerchantFilter(filterConstraint: any, merchant: string | null): void {
-    const currentDescription = filterConstraint.value?.description || null;
-    if (!merchant && !currentDescription) {
-      filterConstraint.value = null;
-    } else {
-      filterConstraint.value = { merchant, description: currentDescription };
-    }
+  updateMerchantFilter(filterConstraint: FilterMetadata, merchant: string | null): void {
+    updateCompositeFilterField(
+      filterConstraint,
+      ['merchant', 'description'],
+      'merchant',
+      merchant,
+      {
+        isEmpty: (v: unknown): boolean => !v,
+      },
+    );
   }
 
   /**
@@ -663,14 +508,17 @@ export class TransactionsComponent implements OnInit {
    * @param filterConstraint the new filter constraint
    * @param description the new description
    */
-  updateDescriptionFilter(filterConstraint: any, description: string | null): void {
-    const currentMerchant = filterConstraint.value?.merchant || null;
-    const desc = description?.trim() || null;
-    if (!desc && !currentMerchant) {
-      filterConstraint.value = null;
-    } else {
-      filterConstraint.value = { merchant: currentMerchant, description: desc };
-    }
+  updateDescriptionFilter(filterConstraint: FilterMetadata, description: string | null): void {
+    updateCompositeFilterField(
+      filterConstraint,
+      ['merchant', 'description'],
+      'description',
+      description,
+      {
+        normalize: (v: unknown): unknown => (v as string | null)?.trim() || null,
+        isEmpty: (v: unknown): boolean => !v,
+      },
+    );
   }
 
   /**
@@ -678,14 +526,8 @@ export class TransactionsComponent implements OnInit {
    * @param filterConstraint the new filter constraint
    * @param min the new minimum amount
    */
-  updateMinAmountFilter(filterConstraint: any, min: number | null): void {
-    const currentMax = filterConstraint.value?.max ?? null;
-    const currentType = filterConstraint.value?.type ?? null;
-    if (min === null && currentMax === null && currentType === null) {
-      filterConstraint.value = null;
-    } else {
-      filterConstraint.value = { min, max: currentMax, type: currentType };
-    }
+  updateMinAmountFilter(filterConstraint: FilterMetadata, min: number | null): void {
+    updateCompositeFilterField(filterConstraint, ['min', 'max', 'type'], 'min', min);
   }
 
   /**
@@ -693,14 +535,8 @@ export class TransactionsComponent implements OnInit {
    * @param filterConstraint the new filter constraint
    * @param max the new maximum amount
    */
-  updateMaxAmountFilter(filterConstraint: any, max: number | null): void {
-    const currentMin = filterConstraint.value?.min ?? null;
-    const currentType = filterConstraint.value?.type ?? null;
-    if (max === null && currentMin === null && currentType === null) {
-      filterConstraint.value = null;
-    } else {
-      filterConstraint.value = { min: currentMin, max, type: currentType };
-    }
+  updateMaxAmountFilter(filterConstraint: FilterMetadata, max: number | null): void {
+    updateCompositeFilterField(filterConstraint, ['min', 'max', 'type'], 'max', max);
   }
 
   /**
@@ -708,14 +544,8 @@ export class TransactionsComponent implements OnInit {
    * @param filterConstraint the new filter constraint
    * @param type the new transaction type
    */
-  updateTypeFilter(filterConstraint: any, type: string | null): void {
-    const currentMin = filterConstraint.value?.min ?? null;
-    const currentMax = filterConstraint.value?.max ?? null;
-    if (type === null && currentMin === null && currentMax === null) {
-      filterConstraint.value = null;
-    } else {
-      filterConstraint.value = { min: currentMin, max: currentMax, type };
-    }
+  updateTypeFilter(filterConstraint: FilterMetadata, type: string | null): void {
+    updateCompositeFilterField(filterConstraint, ['min', 'max', 'type'], 'type', type);
   }
 
   /**
