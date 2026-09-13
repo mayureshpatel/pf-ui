@@ -22,6 +22,7 @@ import {MessageModule} from 'primeng/message';
 import {Merchant} from '@models/merchant.model';
 import {MerchantApiService} from '../../services/merchant-api.service';
 import {ToastService} from '@core/services/toast.service';
+import {RestoreFocusOnHideDirective} from '@shared/directives/restore-focus-on-hide.directive';
 
 /**
  * Dialog for correcting a merchant's display name (PF-220's endpoint). A single-field form --
@@ -37,7 +38,8 @@ import {ToastService} from '@core/services/toast.service';
     DialogModule,
     ButtonModule,
     InputTextModule,
-    MessageModule
+    MessageModule,
+    RestoreFocusOnHideDirective
   ],
   templateUrl: './merchant-form-dialog.component.html'
 })

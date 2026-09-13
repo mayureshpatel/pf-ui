@@ -24,6 +24,7 @@ import {MessageModule} from 'primeng/message';
 import {Merchant} from '@models/merchant.model';
 import {MerchantApiService} from '../../services/merchant-api.service';
 import {ToastService} from '@core/services/toast.service';
+import {RestoreFocusOnHideDirective} from '@shared/directives/restore-focus-on-hide.directive';
 
 /**
  * Confirmation dialog for merging two merchant records (PF-222): the user picks which of the two
@@ -40,7 +41,8 @@ import {ToastService} from '@core/services/toast.service';
     DialogModule,
     ButtonModule,
     RadioButtonModule,
-    MessageModule
+    MessageModule,
+    RestoreFocusOnHideDirective
   ],
   templateUrl: './merge-merchants-dialog.component.html'
 })

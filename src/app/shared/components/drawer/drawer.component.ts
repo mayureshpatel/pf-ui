@@ -1,7 +1,11 @@
-import {ChangeDetectionStrategy, Component, input, InputSignal, model, ModelSignal, output, OutputEmitterRef} from '@angular/core';
+import {ChangeDetectionStrategy, Component, effect, ElementRef, input, InputSignal, model, ModelSignal, output, OutputEmitterRef, Signal, viewChild} from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {DrawerModule} from 'primeng/drawer';
 import {ButtonModule} from 'primeng/button';
+
+// Mirrors PrimeNG's own Dialog focusOnShow behavior, which p-drawer has no equivalent for.
+const FOCUSABLE_SELECTOR: string =
+  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /**
  * Drawer component for displaying forms.
@@ -79,6 +83,21 @@ export class DrawerComponent {
    */
   showEmitterRef: OutputEmitterRef<void> = output<void>();
 
+  private readonly focusScope: Signal<ElementRef<HTMLElement> | undefined> = viewChild('focusScope');
+
+  private triggerElement: HTMLElement | null = null;
+
+  constructor() {
+    // Captured as early as possible -- before p-drawer's own open transition runs -- so it's
+    // reliably the element the user actually triggered the drawer from, not whatever p-drawer's
+    // own overlay/mask machinery may have focused by the time (onShow) fires.
+    effect((): void => {
+      if (this.visible()) {
+        this.triggerElement = document.activeElement as HTMLElement;
+      }
+    });
+  }
+
   /**
    * Emits the save event when the form is valid and not already saving.
    */
@@ -96,5 +115,37 @@ export class DrawerComponent {
       event.stopPropagation();
     }
     this.visible.set(false);
+  }
+
+  /**
+   * Moves focus into the drawer once it's fully shown, unless something inside it (e.g. an
+   * `[autofocus]` field) already claimed focus first.
+   */
+  onShow(): void {
+    this.showEmitterRef.emit();
+    setTimeout((): void => this.focusIntoDrawerIfUnclaimed(), 50);
+  }
+
+  /**
+   * Restores focus to whatever triggered the drawer's opening.
+   */
+  onHide(): void {
+    this.cancelEmitterRef.emit();
+    this.triggerElement?.focus?.();
+    this.triggerElement = null;
+  }
+
+  private focusIntoDrawerIfUnclaimed(): void {
+    const container: HTMLElement | undefined = this.focusScope()?.nativeElement;
+    if (!container || !container.isConnected || container.contains(document.activeElement)) {
+      return;
+    }
+    // PrimeNG's own [autofocus]/pAutoFocus (e.g. transaction-form-drawer's amount field) sets the
+    // real `autofocus` DOM attribute synchronously, but defers its actual .focus() call via its
+    // own setTimeout -- under this app's zoneless change detection that call can land later than
+    // this one, so prefer an explicit autofocus target here rather than racing on timing.
+    const target: HTMLElement | null =
+      container.querySelector<HTMLElement>('[autofocus]') ?? container.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+    target?.focus();
   }
 }

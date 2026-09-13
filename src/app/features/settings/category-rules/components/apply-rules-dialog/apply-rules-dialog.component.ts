@@ -15,6 +15,7 @@ import {DialogModule} from 'primeng/dialog';
 import {ButtonModule} from 'primeng/button';
 import {TableModule} from 'primeng/table';
 import {RuleChangePreview} from '@models/category-rule.model';
+import {RestoreFocusOnHideDirective} from '@shared/directives/restore-focus-on-hide.directive';
 
 /**
  * Dialog for previewing and confirming bulk rule applications -- shows users which transactions
@@ -28,7 +29,8 @@ import {RuleChangePreview} from '@models/category-rule.model';
     CommonModule,
     DialogModule,
     ButtonModule,
-    TableModule
+    TableModule,
+    RestoreFocusOnHideDirective
   ],
   templateUrl: './apply-rules-dialog.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush

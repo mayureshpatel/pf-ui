@@ -30,6 +30,7 @@ import {CategoryApiService} from '../../../categories/services/category-api.serv
 import {MerchantApiService} from '@features/merchants/services/merchant-api.service';
 import {Category, CategoryGroup} from '@models/category.model';
 import {Merchant} from '@models/merchant.model';
+import {RestoreFocusOnHideDirective} from '@shared/directives/restore-focus-on-hide.directive';
 
 /**
  * Data structure for finalized bulk edit operations.
@@ -60,7 +61,8 @@ export interface BulkEditData {
     InputTextModule,
     CheckboxModule,
     SelectModule,
-    MessageModule
+    MessageModule,
+    RestoreFocusOnHideDirective
   ],
   templateUrl: './bulk-edit-dialog.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
