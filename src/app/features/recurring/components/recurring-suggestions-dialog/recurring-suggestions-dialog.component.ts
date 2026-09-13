@@ -21,6 +21,7 @@ import {TooltipModule} from 'primeng/tooltip';
 import {RecurringSuggestion} from '@models/recurring.model';
 import {RecurringApiService} from '../../services/recurring-api.service';
 import {ToastService} from '@core/services/toast.service';
+import {RestoreFocusOnHideDirective} from '@shared/directives/restore-focus-on-hide.directive';
 
 /**
  * Dialog component for reviewing detected recurring patterns.
@@ -38,6 +39,7 @@ import {ToastService} from '@core/services/toast.service';
     TagModule,
     TableModule,
     MessageModule,
+    RestoreFocusOnHideDirective,
     TooltipModule
   ],
   templateUrl: './recurring-suggestions-dialog.component.html',

@@ -38,6 +38,7 @@ import {Account, BankName} from "@models/account.model";
 import {TransactionImportService} from "@features/transactions/services/transaction-import.service";
 import {ToastService} from "@core/services/toast.service";
 import {FileSelectEvent, FileUpload} from 'primeng/fileupload';
+import {RestoreFocusOnHideDirective} from "@shared/directives/restore-focus-on-hide.directive";
 
 /**
  * Represents a single file in a multi-file import batch.
@@ -72,7 +73,8 @@ interface BatchImportItem {
     ProgressSpinnerModule,
     TagModule,
     TooltipModule,
-    FileUpload
+    FileUpload,
+    RestoreFocusOnHideDirective
   ],
   templateUrl: "./csv-import-dialog.component.html",
   changeDetection: ChangeDetectionStrategy.OnPush

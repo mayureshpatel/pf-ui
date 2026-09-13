@@ -21,6 +21,7 @@ import {TransferSuggestion} from '@models/transaction.model';
 import {TransactionApiService} from '../../services/transaction-api.service';
 import {ToastService} from '@core/services/toast.service';
 import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
+import {RestoreFocusOnHideDirective} from '@shared/directives/restore-focus-on-hide.directive';
 
 /**
  * Intelligent dialog for reconciling potential bank transfers.
@@ -39,7 +40,8 @@ import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
     TableModule,
     TooltipModule,
     TagModule,
-    FormatCurrencyPipe
+    FormatCurrencyPipe,
+    RestoreFocusOnHideDirective
   ],
   templateUrl: './transfer-matching-dialog.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush

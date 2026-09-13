@@ -26,6 +26,7 @@ import {Tag} from '@models/tag.model';
 import {TagApiService} from '@features/tags/services/tag-api.service';
 import {AuthService} from '@core/auth/auth.service';
 import {ToastService} from '@core/services/toast.service';
+import {RestoreFocusOnHideDirective} from '@shared/directives/restore-focus-on-hide.directive';
 
 const DEFAULT_COLOR = '3b82f6';
 
@@ -51,7 +52,8 @@ const DEFAULT_COLOR = '3b82f6';
     ButtonModule,
     InputTextModule,
     ColorPickerModule,
-    MessageModule
+    MessageModule,
+    RestoreFocusOnHideDirective
   ],
   templateUrl: './tag-form-dialog.component.html'
 })
