@@ -19,6 +19,7 @@ import {
 } from './components/apply-rules-dialog/apply-rules-dialog.component';
 import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-toolbar';
 import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
+import {PageErrorStateComponent} from '@shared/components/page-error-state/page-error-state.component';
 
 /**
  * Component for managing transaction categorization rules.
@@ -39,7 +40,8 @@ import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
     ScreenToolbarComponent,
     CategoryRuleFormDialogComponent,
     ApplyRulesDialogComponent,
-    FormatCurrencyPipe
+    FormatCurrencyPipe,
+    PageErrorStateComponent
   ],
   templateUrl: './category-rules.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -55,6 +57,9 @@ export class CategoryRulesComponent implements OnInit {
 
   /** Global loading state for API operations. */
   readonly loading: WritableSignal<boolean> = signal(false);
+
+  /** Whether the most recent load attempt failed. */
+  readonly loadError: WritableSignal<boolean> = signal(false);
 
   /** Visibility of the rule creation dialog. */
   readonly showDialog: WritableSignal<boolean> = signal(false);
@@ -80,6 +85,7 @@ export class CategoryRulesComponent implements OnInit {
    */
   loadRules(): void {
     this.loading.set(true);
+    this.loadError.set(false);
     this.api.getRules()
       .pipe(
         takeUntilDestroyed(this.destroyRef),
@@ -90,6 +96,7 @@ export class CategoryRulesComponent implements OnInit {
         error: (err: any): void => {
           console.error('Failed to load rules:', err);
           this.toast.error('Failed to load category rules.');
+          this.loadError.set(true);
         }
       });
   }

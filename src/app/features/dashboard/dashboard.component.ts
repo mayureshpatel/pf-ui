@@ -28,6 +28,7 @@ import {ActionCenterComponent} from './components/action-center/action-center.co
 import {CategoryChartComponent} from './components/category-chart/category-chart.component';
 import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-toolbar';
 import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
+import {PageErrorStateComponent} from '@shared/components/page-error-state/page-error-state.component';
 
 type RangePreset = 'THIS_MONTH' | 'LAST_MONTH' | 'THIS_YEAR' | 'LAST_YEAR' | 'CUSTOM';
 
@@ -53,7 +54,8 @@ type RangePreset = 'THIS_MONTH' | 'LAST_MONTH' | 'THIS_YEAR' | 'LAST_YEAR' | 'CU
     YtdSummaryComponent,
     ActionCenterComponent,
     CategoryChartComponent,
-    FormatCurrencyPipe
+    FormatCurrencyPipe,
+    PageErrorStateComponent
   ],
   templateUrl: './dashboard.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -95,6 +97,9 @@ export class DashboardComponent implements OnInit {
 
   /** Global loading state for dashboard refresh. */
   readonly loading: WritableSignal<boolean> = signal(false);
+
+  /** Whether the most recent load attempt failed. */
+  readonly loadError: WritableSignal<boolean> = signal(false);
 
   /**
    * Reactively calculates the specific date range based on the selected preset or custom filters.
@@ -185,8 +190,9 @@ export class DashboardComponent implements OnInit {
   /**
    * Fetches and aggregates all data points for the current filter set.
    */
-  private loadAllData(): void {
+  loadAllData(): void {
     this.loading.set(true);
+    this.loadError.set(false);
     const range = this.periodRange();
     const month: number = this.selectedMonth();
     const year: number = this.selectedYear();
@@ -224,6 +230,7 @@ export class DashboardComponent implements OnInit {
         error: (err: any): void => {
           console.error('Dashboard data load failed:', err);
           this.toast.error('Failed to update dashboard data.');
+          this.loadError.set(true);
         }
       });
   }

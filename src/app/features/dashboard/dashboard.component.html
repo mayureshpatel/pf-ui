@@ -47,6 +47,8 @@
       <span
         class="text-muted-color font-bold uppercase tracking-widest animate-pulse">Synchronizing Intelligence...</span>
     </div>
+  } @else if (loadError() && !pulse()) {
+    <app-page-error-state message="Failed to load dashboard data." (retry)="loadAllData()"/>
   } @else {
     <!-- Row 1: High Level Pulse (Key Metrics) -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">

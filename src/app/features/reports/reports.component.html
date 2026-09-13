@@ -18,6 +18,8 @@
       <span
         class="text-muted-color font-bold uppercase tracking-widest animate-pulse">Aggregating Fiscal Intel...</span>
     </div>
+  } @else if (loadError() && transactions().length === 0) {
+    <app-page-error-state message="Failed to load report data." (retry)="loadTransactions()"/>
   } @else {
     <!-- Tabs with Report Components -->
     <p-tabs [(value)]="activeTabIndex" class="card-soft">

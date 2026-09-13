@@ -65,6 +65,8 @@
       <p-progressSpinner strokeWidth="4"/>
       <span class="text-muted-color font-medium animate-pulse">Loading budget data...</span>
     </div>
+  } @else if (loadError() && (viewMode() === 'monthly' ? budgetStatuses().length === 0 : allBudgets().length === 0)) {
+    <app-page-error-state message="Failed to load budget data." (retry)="refreshData()"/>
   } @else {
     @if (viewMode() === 'monthly') {
       <!-- Summary Cards -->

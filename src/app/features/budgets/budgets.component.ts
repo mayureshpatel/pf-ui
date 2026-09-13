@@ -24,6 +24,7 @@ import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-t
 import {BudgetFormDialogComponent} from './components/budget-form-dialog/budget-form-dialog.component';
 import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
 import {getCategoryColor} from '@shared/utils/category.utils';
+import {PageErrorStateComponent} from '@shared/components/page-error-state/page-error-state.component';
 
 /**
  * Component for managing and tracking monthly budgets.
@@ -49,7 +50,8 @@ import {getCategoryColor} from '@shared/utils/category.utils';
     ScreenToolbarComponent,
     BudgetFormDialogComponent,
     FormatCurrencyPipe,
-    Tooltip
+    Tooltip,
+    PageErrorStateComponent
   ],
   templateUrl: './budgets.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -72,6 +74,9 @@ export class BudgetsComponent implements OnInit {
 
   /** Global loading state for API operations. */
   readonly loading: WritableSignal<boolean> = signal(false);
+
+  /** Whether the most recent load attempt for the active view mode failed. */
+  readonly loadError: WritableSignal<boolean> = signal(false);
 
   /** Visibility of the set-budget dialog. */
   readonly showDialog: WritableSignal<boolean> = signal(false);
@@ -180,6 +185,7 @@ export class BudgetsComponent implements OnInit {
    */
   private loadBudgetStatus(): void {
     this.loading.set(true);
+    this.loadError.set(false);
     this.budgetApi.getBudgetStatus(this.selectedMonth(), this.selectedYear())
       .pipe(
         takeUntilDestroyed(this.destroyRef),
@@ -190,6 +196,7 @@ export class BudgetsComponent implements OnInit {
         error: (err: any): void => {
           console.error('Failed to load budget status:', err);
           this.toast.error('Failed to load budget status');
+          this.loadError.set(true);
         }
       });
   }
@@ -199,6 +206,7 @@ export class BudgetsComponent implements OnInit {
    */
   private loadAllBudgets(): void {
     this.loading.set(true);
+    this.loadError.set(false);
     this.budgetApi.getAllBudgets()
       .pipe(
         takeUntilDestroyed(this.destroyRef),
@@ -209,6 +217,7 @@ export class BudgetsComponent implements OnInit {
         error: (err: any): void => {
           console.error('Failed to load all budgets:', err);
           this.toast.error('Failed to load all budgets');
+          this.loadError.set(true);
         }
       });
   }

@@ -58,6 +58,7 @@ import {
 import {BulkEditData, BulkEditDialogComponent} from "./components/bulk-edit-dialog/bulk-edit-dialog.component";
 import {FormatCurrencyPipe} from "@shared/pipes/format-currency.pipe";
 import {toApiDateTimeString} from "@shared/utils/transaction.utils";
+import {PageErrorStateComponent} from "@shared/components/page-error-state/page-error-state.component";
 
 /**
  * Component for managing and auditing the master transaction ledger.
@@ -87,7 +88,8 @@ import {toApiDateTimeString} from "@shared/utils/transaction.utils";
     CsvImportDialog,
     TransferMatchingDialogComponent,
     BulkEditDialogComponent,
-    FormatTransactionTypeAmountPipe
+    FormatTransactionTypeAmountPipe,
+    PageErrorStateComponent
   ],
   providers: [FormatCurrencyPipe, FormatTransactionTypeAmountPipe],
   templateUrl: "./transactions.component.html",
@@ -129,6 +131,9 @@ export class TransactionsComponent implements OnInit {
 
   /** Global loading state for ledger refresh. */
   readonly loading: WritableSignal<boolean> = signal(false);
+
+  /** Whether the most recent load attempt failed. */
+  readonly loadError: WritableSignal<boolean> = signal(false);
 
   /** Indicates if a single transaction is currently being saved. */
   readonly savingTransaction: WritableSignal<boolean> = signal(false);
@@ -314,8 +319,9 @@ export class TransactionsComponent implements OnInit {
   /**
    * Fetches the transaction dataset from the API based on current state.
    */
-  private loadTransactions(): void {
+  loadTransactions(): void {
     this.loading.set(true);
+    this.loadError.set(false);
     const {filter, page, size, sort} = this.state();
 
     this.transactionApi.getTransactions(filter, {page, size, sort})
@@ -332,6 +338,7 @@ export class TransactionsComponent implements OnInit {
         error: (err: any): void => {
           console.error("Failed to load transactions:", err);
           this.toast.error("Failed to refresh ledger.");
+          this.loadError.set(true);
         }
       });
   }

@@ -15,6 +15,7 @@ import {ToastService} from '@core/services/toast.service';
 import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-toolbar';
 import {finalize, forkJoin} from 'rxjs';
 import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
+import {PageErrorStateComponent} from '@shared/components/page-error-state/page-error-state.component';
 
 @Component({
   selector: 'app-accounts',
@@ -29,7 +30,8 @@ import {FormatCurrencyPipe} from '@shared/pipes/format-currency.pipe';
     AccountSummaryCardsComponent,
     AccountFormDrawerComponent,
     ReconcileDrawerComponent,
-    FormatCurrencyPipe
+    FormatCurrencyPipe,
+    PageErrorStateComponent
   ],
   templateUrl: './accounts.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -43,6 +45,7 @@ export class AccountsComponent implements OnInit {
   accounts: WritableSignal<Account[]> = signal([]);
   accountTypes: WritableSignal<AccountType[]> = signal([]);
   loading: WritableSignal<boolean> = signal(false);
+  loadError: WritableSignal<boolean> = signal(false);
   showDialog: WritableSignal<boolean> = signal(false);
   showReconcileDrawer: WritableSignal<boolean> = signal(false);
   selectedAccount: WritableSignal<Account | null> = signal(null);
@@ -61,6 +64,7 @@ export class AccountsComponent implements OnInit {
    */
   loadAccounts(): void {
     this.loading.set(true);
+    this.loadError.set(false);
 
     forkJoin({
       accounts: this.accountApi.getAccounts(),
@@ -77,6 +81,7 @@ export class AccountsComponent implements OnInit {
       error: (error: any): void => {
         console.error('Error loading accounts:', error);
         this.toast.error('Failed to load accounts');
+        this.loadError.set(true);
       }
     });
   }

@@ -15,6 +15,7 @@ import {MerchantReportComponent} from './components/merchant-report/merchant-rep
 import {IncomeExpenseReportComponent} from './components/income-expense-report/income-expense-report.component';
 import {DateRange} from './models/reports.model';
 import {fromLocalDateString, toLocalDateString} from '@shared/utils/transaction.utils';
+import {PageErrorStateComponent} from '@shared/components/page-error-state/page-error-state.component';
 
 /**
  * Main reporting hub providing visual analytics and deep-dive spending patterns.
@@ -33,7 +34,8 @@ import {fromLocalDateString, toLocalDateString} from '@shared/utils/transaction.
     DateRangeFilterComponent,
     CategoryReportComponent,
     MerchantReportComponent,
-    IncomeExpenseReportComponent
+    IncomeExpenseReportComponent,
+    PageErrorStateComponent
   ],
   templateUrl: './reports.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -51,6 +53,9 @@ export class ReportsComponent {
 
   /** Global loading state for report generation. */
   readonly loading: WritableSignal<boolean> = signal(false);
+
+  /** Whether the most recent load attempt failed. */
+  readonly loadError: WritableSignal<boolean> = signal(false);
 
   /** Currently selected tab (0: Category, 1: Merchant, 2: Monthly). */
   readonly activeTabIndex: WritableSignal<number> = signal(0);
@@ -72,9 +77,10 @@ export class ReportsComponent {
    * Requests a large page size (1000) to ensure the aggregation engine
    * has a comprehensive dataset for visual analytics.
    */
-  private loadTransactions(): void {
+  loadTransactions(): void {
     const range: DateRange = this.dateRange();
     this.loading.set(true);
+    this.loadError.set(false);
 
     const filter: TransactionFilter = {
       startDate: fromLocalDateString(range.startDate),
@@ -97,6 +103,7 @@ export class ReportsComponent {
         error: (err: any): void => {
           console.error('Report data load failed:', err);
           this.toast.error('Failed to load report data. Please try again.');
+          this.loadError.set(true);
         }
       });
   }
