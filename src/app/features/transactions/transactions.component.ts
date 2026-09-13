@@ -162,9 +162,6 @@ export class TransactionsComponent implements OnInit {
   /** Indicates if the transfer matching dialog is currently open. */
   readonly showTransferDialog: WritableSignal<boolean> = signal(false);
 
-  /** Indicates if the advanced filters dialog is currently open. */
-  readonly showAdvancedFilters: WritableSignal<boolean> = signal(false);
-
   /** User selection state for bulk actions. */
   readonly selectedTransactions: WritableSignal<Transaction[]> = signal([]);
 
@@ -298,22 +295,6 @@ export class TransactionsComponent implements OnInit {
       this.selectedTransactions().length === this.transactions().length,
   );
 
-  /** Calculates the number of active filters for UI badges. */
-  readonly activeFilterCount: Signal<number> = computed((): number => {
-    const filter: TransactionFilter = this.state().filter;
-    let count = 0;
-    if (filter.accountId) count++;
-    if (filter.type) count++;
-    if (filter.startDate) count++;
-    if (filter.description) count++;
-    if (filter.merchant) count++;
-    if (filter.categoryName) count++;
-    if (filter.minAmount !== undefined) count++;
-    if (filter.maxAmount !== undefined) count++;
-    if (filter.tagId) count++;
-    return count;
-  });
-
   constructor() {
     /**
      * Core effect that reactively synchronizes the view state with the backend.
@@ -384,10 +365,6 @@ export class TransactionsComponent implements OnInit {
 
     if (JSON.stringify(newState) !== JSON.stringify(currentState)) {
       this.state.set(newState);
-    }
-
-    if (this.activeFilterCount() > 0) {
-      this.showAdvancedFilters.set(true);
     }
   }
 
