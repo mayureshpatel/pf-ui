@@ -1,7 +1,8 @@
-import {ChangeDetectionStrategy, Component, DestroyRef, effect, inject, signal, WritableSignal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, DestroyRef, effect, inject, OnInit, signal, WritableSignal} from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
-import {finalize} from 'rxjs';
+import {ActivatedRoute, Params, Router} from '@angular/router';
+import {finalize, skip} from 'rxjs';
 import {TabsModule} from 'primeng/tabs';
 import {ProgressSpinnerModule} from 'primeng/progressspinner';
 
@@ -40,10 +41,12 @@ import {PageErrorStateComponent} from '@shared/components/page-error-state/page-
   templateUrl: './reports.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class ReportsComponent {
+export class ReportsComponent implements OnInit {
   private readonly transactionApi: TransactionApiService = inject(TransactionApiService);
   private readonly toast: ToastService = inject(ToastService);
   private readonly destroyRef: DestroyRef = inject(DestroyRef);
+  private readonly route: ActivatedRoute = inject(ActivatedRoute);
+  private readonly router: Router = inject(Router);
 
   /** The currently active date range for the reports. */
   readonly dateRange: WritableSignal<DateRange> = signal(this.getDefaultDateRange());
@@ -62,13 +65,27 @@ export class ReportsComponent {
 
   constructor() {
     /**
-     * Core effect that reactively reloads the transaction dataset
+     * Core effect that reactively reloads the transaction dataset and syncs the URL
      * whenever the user changes the global date range filters.
      */
     effect((): void => {
-      this.dateRange();
+      const range: DateRange = this.dateRange();
+      this.updateUrlParams(range);
       this.loadTransactions();
     });
+  }
+
+  /**
+   * Hydrates the date range from URL query params on load, then keeps it in sync with later
+   * external navigation (e.g. browser back/forward), so the selection survives a refresh and is
+   * shareable as a link.
+   */
+  ngOnInit(): void {
+    this.hydrateFromParams(this.route.snapshot.queryParams);
+
+    this.route.queryParams
+      .pipe(skip(1), takeUntilDestroyed(this.destroyRef))
+      .subscribe((params: Params): void => this.hydrateFromParams(params));
   }
 
   /**
@@ -106,6 +123,37 @@ export class ReportsComponent {
           this.loadError.set(true);
         }
       });
+  }
+
+  /**
+   * Translates URL query params into the date-range signal, only writing when the parsed value
+   * actually differs from the current one -- avoids re-triggering the sync effect for a URL
+   * change that just echoes the state that produced it.
+   */
+  private hydrateFromParams(params: Params): void {
+    const startDate: string | undefined = params['startDate'];
+    const endDate: string | undefined = params['endDate'];
+    if (!startDate || !endDate) {
+      return;
+    }
+
+    const current: DateRange = this.dateRange();
+    if (startDate !== current.startDate || endDate !== current.endDate) {
+      this.dateRange.set({startDate, endDate, label: params['label'] || 'Custom Range'});
+    }
+  }
+
+  /**
+   * Serializes the current date range to URL query params. Always written (never omitted as a
+   * "default"), since reports always has some active range -- unlike transactions' filters, there's
+   * no meaningful "no range selected" state to treat as elidable.
+   */
+  private updateUrlParams(range: DateRange): void {
+    this.router.navigate([], {
+      queryParams: {startDate: range.startDate, endDate: range.endDate, label: range.label},
+      queryParamsHandling: 'replace',
+      replaceUrl: true
+    });
   }
 
   /**
