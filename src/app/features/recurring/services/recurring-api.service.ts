@@ -1,5 +1,5 @@
 import {inject, Injectable} from '@angular/core';
-import {HttpClient} from '@angular/common/http';
+import {HttpClient, HttpContext} from '@angular/common/http';
 import {Observable} from 'rxjs';
 import {environment} from '@env';
 import {
@@ -8,6 +8,9 @@ import {
   RecurringTransactionCreateRequest,
   RecurringTransactionUpdateRequest
 } from '@models/recurring.model';
+import {SKIP_GENERIC_ERROR_TOAST} from '@core/auth/error.interceptor';
+
+const SKIP_TOAST_OPTIONS = {context: new HttpContext().set(SKIP_GENERIC_ERROR_TOAST, true)};
 
 /**
  * Service responsible for managing recurring transactions and subscription patterns.
@@ -27,7 +30,7 @@ export class RecurringApiService {
    * @returns An observable array of recurring transactions.
    */
   getAll(): Observable<RecurringTransaction[]> {
-    return this.http.get<RecurringTransaction[]>(this.apiUrl);
+    return this.http.get<RecurringTransaction[]>(this.apiUrl, SKIP_TOAST_OPTIONS);
   }
 
   /**
@@ -35,7 +38,7 @@ export class RecurringApiService {
    * @returns An observable array of suggested recurring transactions.
    */
   getSuggestions(): Observable<RecurringSuggestion[]> {
-    return this.http.get<RecurringSuggestion[]>(`${this.apiUrl}/suggestions`);
+    return this.http.get<RecurringSuggestion[]>(`${this.apiUrl}/suggestions`, SKIP_TOAST_OPTIONS);
   }
 
   /**
@@ -62,6 +65,6 @@ export class RecurringApiService {
    * @returns An observable that completes when the deletion is successful.
    */
   delete(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${id}`);
+    return this.http.delete<void>(`${this.apiUrl}/${id}`, SKIP_TOAST_OPTIONS);
   }
 }

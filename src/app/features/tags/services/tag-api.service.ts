@@ -1,9 +1,12 @@
 import {inject, Injectable} from '@angular/core';
-import {HttpClient} from '@angular/common/http';
+import {HttpClient, HttpContext} from '@angular/common/http';
 import {Observable} from 'rxjs';
 import {environment} from '@env';
 import {Tag, TagCreateRequest, TagUpdateRequest} from '@models/tag.model';
 import {AuthService} from '@core/auth/auth.service';
+import {SKIP_GENERIC_ERROR_TOAST} from '@core/auth/error.interceptor';
+
+const SKIP_TOAST_OPTIONS = {context: new HttpContext().set(SKIP_GENERIC_ERROR_TOAST, true)};
 
 /**
  * Service for managing user-defined tags: CRUD, and assigning/removing a tag on a transaction.
@@ -45,7 +48,7 @@ export class TagApiService {
    * @param id - The unique identifier of the tag.
    */
   deleteTag(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${id}`);
+    return this.http.delete<void>(`${this.apiUrl}/${id}`, SKIP_TOAST_OPTIONS);
   }
 
   /**
@@ -54,7 +57,7 @@ export class TagApiService {
    * @param transactionId - The transaction to assign it to.
    */
   assignToTransaction(tagId: number, transactionId: number): Observable<void> {
-    return this.http.post<void>(`${this.apiUrl}/${tagId}/transactions/${transactionId}`, {});
+    return this.http.post<void>(`${this.apiUrl}/${tagId}/transactions/${transactionId}`, {}, SKIP_TOAST_OPTIONS);
   }
 
   /**
@@ -63,6 +66,6 @@ export class TagApiService {
    * @param transactionId - The transaction to remove it from.
    */
   removeFromTransaction(tagId: number, transactionId: number): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${tagId}/transactions/${transactionId}`);
+    return this.http.delete<void>(`${this.apiUrl}/${tagId}/transactions/${transactionId}`, SKIP_TOAST_OPTIONS);
   }
 }

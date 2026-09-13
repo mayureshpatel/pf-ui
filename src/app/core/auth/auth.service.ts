@@ -1,5 +1,5 @@
 import {computed, inject, Injectable, Signal, signal, WritableSignal} from '@angular/core';
-import {HttpClient} from '@angular/common/http';
+import {HttpClient, HttpContext} from '@angular/common/http';
 import {Router} from '@angular/router';
 import {catchError, Observable, tap, throwError} from 'rxjs';
 import {environment} from '@env';
@@ -7,6 +7,9 @@ import {AuthRequest, AuthResponse, RegistrationRequest, User} from '@models/auth
 import {StorageService} from '../services/storage.service';
 import {ToastService} from '../services/toast.service';
 import {getUserFromToken} from './utils/jwt.utils';
+import {SKIP_GENERIC_ERROR_TOAST} from './error.interceptor';
+
+const SKIP_TOAST_OPTIONS = {context: new HttpContext().set(SKIP_GENERIC_ERROR_TOAST, true)};
 
 /**
  * Service responsible for managing authentication state and user operations.
@@ -48,7 +51,7 @@ export class AuthService {
    */
   login(credentials: AuthRequest, rememberMe: boolean): Observable<AuthResponse> {
     return this.http
-      .post<AuthResponse>(`${environment.apiUrl}/auth/authenticate`, credentials)
+      .post<AuthResponse>(`${environment.apiUrl}/auth/authenticate`, credentials, SKIP_TOAST_OPTIONS)
       .pipe(
         tap((response: AuthResponse): void => {
           this.storage.setToken(response.token, rememberMe);
@@ -76,7 +79,7 @@ export class AuthService {
    */
   register(request: RegistrationRequest): Observable<AuthResponse> {
     return this.http
-      .post<AuthResponse>(`${environment.apiUrl}/auth/register`, request)
+      .post<AuthResponse>(`${environment.apiUrl}/auth/register`, request, SKIP_TOAST_OPTIONS)
       .pipe(
         tap((response: AuthResponse): void => {
           this.storage.setToken(response.token, false);

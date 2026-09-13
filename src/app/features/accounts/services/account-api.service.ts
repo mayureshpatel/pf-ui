@@ -1,5 +1,5 @@
 import {inject, Injectable} from '@angular/core';
-import {HttpClient} from '@angular/common/http';
+import {HttpClient, HttpContext} from '@angular/common/http';
 import {Observable} from 'rxjs';
 import {environment} from '@env';
 import {
@@ -10,6 +10,9 @@ import {
   AccountUpdateRequest
 } from '@models/account.model';
 import {Currency} from '@models/currency.model';
+import {SKIP_GENERIC_ERROR_TOAST} from '@core/auth/error.interceptor';
+
+const SKIP_TOAST_OPTIONS = {context: new HttpContext().set(SKIP_GENERIC_ERROR_TOAST, true)};
 
 @Injectable({
   providedIn: 'root'
@@ -34,7 +37,7 @@ export class AccountApiService {
    * @returns the id of the newly created account.
    */
   create(data: AccountCreateRequest): Observable<number> {
-    return this.http.post<number>(this.apiUrl, data);
+    return this.http.post<number>(this.apiUrl, data, SKIP_TOAST_OPTIONS);
   }
 
   /**
@@ -43,7 +46,7 @@ export class AccountApiService {
    * @returns the id of the updated account.
    */
   update(data: AccountUpdateRequest): Observable<number> {
-    return this.http.put<number>(this.apiUrl, data);
+    return this.http.put<number>(this.apiUrl, data, SKIP_TOAST_OPTIONS);
   }
 
   /**
@@ -61,7 +64,7 @@ export class AccountApiService {
    * @param id the account id to delete.
    */
   delete(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${id}`);
+    return this.http.delete<void>(`${this.apiUrl}/${id}`, SKIP_TOAST_OPTIONS);
   }
 
   /**
@@ -69,7 +72,7 @@ export class AccountApiService {
    * @returns the list of account types.
    */
   getAccountTypes(): Observable<AccountType[]> {
-    return this.http.get<AccountType[]>(this.accountTypeApiUrl);
+    return this.http.get<AccountType[]>(this.accountTypeApiUrl, SKIP_TOAST_OPTIONS);
   }
 
   /**

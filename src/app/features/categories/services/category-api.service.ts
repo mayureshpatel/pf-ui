@@ -1,10 +1,13 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { map, Observable } from 'rxjs';
 import { environment } from '@env';
 import {Category, CategoryCreateRequest, CategoryGroup, CategoryUpdateRequest} from '@models/category.model';
 import {Merchant} from '@models/merchant.model';
 import {AuthService} from '@core/auth/auth.service';
+import {SKIP_GENERIC_ERROR_TOAST} from '@core/auth/error.interceptor';
+
+const SKIP_TOAST_OPTIONS = {context: new HttpContext().set(SKIP_GENERIC_ERROR_TOAST, true)};
 
 @Injectable({
   providedIn: 'root'
@@ -80,7 +83,7 @@ export class CategoryApiService {
    */
   createCategory(data: CategoryCreateRequest): Observable<number> {
     const userId: number | undefined = this.authService.user()?.id;
-    return this.http.post<number>(this.apiUrl, { ...data, userId });
+    return this.http.post<number>(this.apiUrl, { ...data, userId }, SKIP_TOAST_OPTIONS);
   }
 
   /**
@@ -91,7 +94,7 @@ export class CategoryApiService {
    */
   updateCategory(id: number, data: CategoryUpdateRequest): Observable<number> {
     const userId: number | undefined = this.authService.user()?.id;
-    return this.http.put<number>(this.apiUrl, { ...data, id, userId });
+    return this.http.put<number>(this.apiUrl, { ...data, id, userId }, SKIP_TOAST_OPTIONS);
   }
 
   /**
@@ -99,6 +102,6 @@ export class CategoryApiService {
    * @param id the category id to delete.
    */
   deleteCategory(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${id}`);
+    return this.http.delete<void>(`${this.apiUrl}/${id}`, SKIP_TOAST_OPTIONS);
   }
 }

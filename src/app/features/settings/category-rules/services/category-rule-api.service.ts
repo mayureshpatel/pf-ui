@@ -1,9 +1,12 @@
 import {inject, Injectable} from '@angular/core';
-import {HttpClient} from '@angular/common/http';
+import {HttpClient, HttpContext} from '@angular/common/http';
 import {Observable} from 'rxjs';
 import {environment} from '@env';
 import {CategoryRule, CategoryRuleCreateRequest, RuleChangePreview} from '@models/category-rule.model';
 import {AuthService} from '@core/auth/auth.service';
+import {SKIP_GENERIC_ERROR_TOAST} from '@core/auth/error.interceptor';
+
+const SKIP_TOAST_OPTIONS = {context: new HttpContext().set(SKIP_GENERIC_ERROR_TOAST, true)};
 
 /**
  * Service for managing automated category assignment rules.
@@ -23,7 +26,7 @@ export class CategoryRuleApiService {
    * Retrieves all defined category rules for the current user.
    */
   getRules(): Observable<CategoryRule[]> {
-    return this.http.get<CategoryRule[]>(this.apiUrl);
+    return this.http.get<CategoryRule[]>(this.apiUrl, SKIP_TOAST_OPTIONS);
   }
 
   /**
@@ -40,14 +43,14 @@ export class CategoryRuleApiService {
    * Generates a preview of transactions that would be updated by the current ruleset.
    */
   previewApply(): Observable<RuleChangePreview[]> {
-    return this.http.get<RuleChangePreview[]>(`${this.apiUrl}/preview`);
+    return this.http.get<RuleChangePreview[]>(`${this.apiUrl}/preview`, SKIP_TOAST_OPTIONS);
   }
 
   /**
    * Executes the rule engine on all current uncategorized transactions.
    */
   applyRules(): Observable<void> {
-    return this.http.post<void>(`${this.apiUrl}/apply`, {});
+    return this.http.post<void>(`${this.apiUrl}/apply`, {}, SKIP_TOAST_OPTIONS);
   }
 
   /**
@@ -55,6 +58,6 @@ export class CategoryRuleApiService {
    * @param id - The unique identifier of the rule.
    */
   deleteRule(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${id}`);
+    return this.http.delete<void>(`${this.apiUrl}/${id}`, SKIP_TOAST_OPTIONS);
   }
 }
