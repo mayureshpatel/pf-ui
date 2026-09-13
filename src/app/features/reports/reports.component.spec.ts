@@ -1,6 +1,7 @@
 import {vi} from 'vitest';
 import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {By} from '@angular/platform-browser';
+import {ActivatedRoute, Router} from '@angular/router';
 import {of, throwError} from 'rxjs';
 import {ReportsComponent} from './reports.component';
 import {TransactionApiService} from '@features/transactions/services/transaction-api.service';
@@ -15,6 +16,8 @@ describe('ReportsComponent', () => {
   let component: ReportsComponent;
   let mockTransactionApi: any;
   let mockToast: any;
+  let mockRouter: any;
+  let mockActivatedRoute: any;
 
   const mockTransactions = [{
     id: 1, description: 'Test Txn', date: '2026-01-15', amount: 42.5, type: 'EXPENSE',
@@ -36,12 +39,19 @@ describe('ReportsComponent', () => {
       getTransactions: vi.fn().mockReturnValue(of({content: mockTransactions, page: {totalElements: 1}}))
     };
     mockToast = {success: vi.fn(), error: vi.fn(), info: vi.fn()};
+    mockRouter = {navigate: vi.fn()};
+    mockActivatedRoute = {
+      snapshot: {queryParams: {}},
+      queryParams: of({})
+    };
 
     await TestBed.configureTestingModule({
       imports: [ReportsComponent],
       providers: [
         {provide: TransactionApiService, useValue: mockTransactionApi},
-        {provide: ToastService, useValue: mockToast}
+        {provide: ToastService, useValue: mockToast},
+        {provide: Router, useValue: mockRouter},
+        {provide: ActivatedRoute, useValue: mockActivatedRoute}
       ]
     }).compileComponents();
 

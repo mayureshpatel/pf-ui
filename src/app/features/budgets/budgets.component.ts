@@ -2,7 +2,8 @@ import {ChangeDetectionStrategy, Component, computed, DestroyRef, inject, OnInit
 import {CommonModule} from '@angular/common';
 import {FormsModule} from '@angular/forms';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
-import {finalize} from 'rxjs';
+import {ActivatedRoute, Params, Router} from '@angular/router';
+import {finalize, skip} from 'rxjs';
 import {CardModule} from 'primeng/card';
 import {ButtonModule} from 'primeng/button';
 import {TableModule} from 'primeng/table';
@@ -62,6 +63,8 @@ export class BudgetsComponent implements OnInit {
   private readonly toast: ToastService = inject(ToastService);
   private readonly confirmationService: ConfirmationService = inject(ConfirmationService);
   private readonly destroyRef: DestroyRef = inject(DestroyRef);
+  private readonly route: ActivatedRoute = inject(ActivatedRoute);
+  private readonly router: Router = inject(Router);
 
   /** The list of budgets status for the selected month/year. */
   readonly budgetStatuses: WritableSignal<BudgetStatus[]> = signal([]);
@@ -133,12 +136,51 @@ export class BudgetsComponent implements OnInit {
   getCategoryColor = getCategoryColor;
 
   /**
-   * Initializes component data.
+   * Initializes component data. Hydrates the month/year selection from URL query params first
+   * (if present) so the initial load reflects a shared/refreshed link, then keeps it in sync with
+   * later external navigation (e.g. browser back/forward).
    */
   ngOnInit(): void {
+    this.hydrateFromParams(this.route.snapshot.queryParams);
     this.initializeYearOptions();
     this.loadCategories();
+    this.updateUrlParams();
     this.refreshData();
+
+    this.route.queryParams
+      .pipe(skip(1), takeUntilDestroyed(this.destroyRef))
+      .subscribe((params: Params): void => {
+        this.hydrateFromParams(params);
+        this.refreshData();
+      });
+  }
+
+  /**
+   * Translates URL query params into the month/year signals, only writing when the parsed value
+   * actually differs from the current one.
+   */
+  private hydrateFromParams(params: Params): void {
+    const month: number | undefined = params['month'] ? Number(params['month']) : undefined;
+    const year: number | undefined = params['year'] ? Number(params['year']) : undefined;
+
+    if (month !== undefined && month !== this.selectedMonth()) {
+      this.selectedMonth.set(month);
+    }
+    if (year !== undefined && year !== this.selectedYear()) {
+      this.selectedYear.set(year);
+    }
+  }
+
+  /**
+   * Serializes the current month/year to URL query params. Always written (never omitted as a
+   * "default"), since some month/year is always selected -- there's no meaningful "unset" state.
+   */
+  private updateUrlParams(): void {
+    this.router.navigate([], {
+      queryParams: {month: this.selectedMonth(), year: this.selectedYear()},
+      queryParamsHandling: 'replace',
+      replaceUrl: true
+    });
   }
 
   /**
@@ -226,6 +268,7 @@ export class BudgetsComponent implements OnInit {
    * Responds to changes in the month or year filters.
    */
   onPeriodChange(): void {
+    this.updateUrlParams();
     this.loadBudgetStatus();
   }
 

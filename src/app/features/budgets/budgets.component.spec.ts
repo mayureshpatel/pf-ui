@@ -1,6 +1,7 @@
 import {vi} from 'vitest';
 import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
+import {ActivatedRoute, Router} from '@angular/router';
 import {of} from 'rxjs';
 import {ConfirmationService} from 'primeng/api';
 
@@ -18,6 +19,8 @@ describe('BudgetsComponent', () => {
   let mockCategoryApi: any;
   let mockToast: any;
   let mockConfirmationService: any;
+  let mockRouter: any;
+  let mockActivatedRoute: any;
 
   const category: Category = {
     id: 1,
@@ -48,6 +51,11 @@ describe('BudgetsComponent', () => {
     mockCategoryApi = {getCategories: vi.fn().mockReturnValue(of([]))};
     mockToast = {success: vi.fn(), error: vi.fn()};
     mockConfirmationService = {confirm: vi.fn()};
+    mockRouter = {navigate: vi.fn()};
+    mockActivatedRoute = {
+      snapshot: {queryParams: {}},
+      queryParams: of({})
+    };
 
     await TestBed.configureTestingModule({
       imports: [BudgetsComponent, NoopAnimationsModule],
@@ -55,7 +63,9 @@ describe('BudgetsComponent', () => {
         {provide: BudgetApiService, useValue: mockBudgetApi},
         {provide: CategoryApiService, useValue: mockCategoryApi},
         {provide: ToastService, useValue: mockToast},
-        {provide: ConfirmationService, useValue: mockConfirmationService}
+        {provide: ConfirmationService, useValue: mockConfirmationService},
+        {provide: Router, useValue: mockRouter},
+        {provide: ActivatedRoute, useValue: mockActivatedRoute}
       ]
     }).compileComponents();
 

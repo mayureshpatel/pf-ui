@@ -115,6 +115,7 @@ export class AuthService {
    * Resets the authentication state in response to an unauthorized request (e.g., 401).
    */
   handleUnauthorized(): void {
+    this.toast.warn('Your session has expired. Please log in again.');
     this.storage.clearToken();
     this._isAuthenticated.set(false);
     this._user.set(null);

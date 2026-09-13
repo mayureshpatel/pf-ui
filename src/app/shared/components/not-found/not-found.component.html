@@ -1,0 +1,19 @@
+<div class="flex flex-col items-center justify-center min-h-[60vh] text-center animate-fade-in">
+  <div class="relative mb-8">
+    <div class="absolute -inset-4 bg-primary/10 rounded-full blur-2xl animate-pulse"></div>
+    <i class="pi pi-compass text-8xl text-primary/40 relative"></i>
+  </div>
+  <h2 class="text-3xl font-bold text-surface-900 dark:text-surface-0 mb-3">Page Not Found</h2>
+  <p class="text-muted-color mb-8 max-w-lg leading-relaxed text-lg">
+    The page you're looking for doesn't exist or may have moved. Double-check the link, or head
+    back to your dashboard.
+  </p>
+
+  <p-button
+    label="Back to Dashboard"
+    icon="pi pi-home"
+    routerLink="/dashboard"
+    severity="primary"
+    [raised]="true"
+  />
+</div>
