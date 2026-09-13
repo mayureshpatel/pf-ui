@@ -21,6 +21,7 @@ import {RecurringFormDialogComponent} from './components/recurring-form-dialog/r
 import {
   RecurringSuggestionsDialogComponent
 } from './components/recurring-suggestions-dialog/recurring-suggestions-dialog.component';
+import {PageErrorStateComponent} from '@shared/components/page-error-state/page-error-state.component';
 
 /**
  * Component for managing recurring financial obligations and income.
@@ -41,7 +42,8 @@ import {
     TooltipModule,
     ScreenToolbarComponent,
     RecurringFormDialogComponent,
-    RecurringSuggestionsDialogComponent
+    RecurringSuggestionsDialogComponent,
+    PageErrorStateComponent
   ],
   templateUrl: './recurring.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -65,6 +67,9 @@ export class RecurringComponent implements OnInit {
 
   /** Global loading state for recurring data. */
   readonly loading: WritableSignal<boolean> = signal(false);
+
+  /** Whether the most recent load attempt failed. */
+  readonly loadError: WritableSignal<boolean> = signal(false);
 
   /** Visibility of the creation/edit dialog. */
   readonly showFormDialog: WritableSignal<boolean> = signal(false);
@@ -103,6 +108,7 @@ export class RecurringComponent implements OnInit {
    */
   refreshAll(): void {
     this.loading.set(true);
+    this.loadError.set(false);
     this.recurringApi.getAll()
       .pipe(
         takeUntilDestroyed(this.destroyRef),
@@ -113,6 +119,7 @@ export class RecurringComponent implements OnInit {
         error: (err: any): void => {
           console.error('Failed to load recurring data:', err);
           this.toast.error('Failed to load recurring transactions');
+          this.loadError.set(true);
         }
       });
   }

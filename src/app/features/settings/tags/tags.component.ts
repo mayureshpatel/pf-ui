@@ -13,6 +13,7 @@ import {TagApiService} from '@features/tags/services/tag-api.service';
 import {ToastService} from '@core/services/toast.service';
 import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-toolbar';
 import {TagFormDialogComponent} from './components/tag-form-dialog/tag-form-dialog.component';
+import {PageErrorStateComponent} from '@shared/components/page-error-state/page-error-state.component';
 
 /**
  * Dedicated tag management page (PF-309): lists the user's tags and lets them create, rename,
@@ -29,7 +30,8 @@ import {TagFormDialogComponent} from './components/tag-form-dialog/tag-form-dial
     CardModule,
     TooltipModule,
     ScreenToolbarComponent,
-    TagFormDialogComponent
+    TagFormDialogComponent,
+    PageErrorStateComponent
   ],
   templateUrl: './tags.component.html'
 })
@@ -44,6 +46,9 @@ export class TagsComponent implements OnInit {
 
   /** Global loading state for API operations. */
   readonly loading: WritableSignal<boolean> = signal(false);
+
+  /** Whether the most recent load attempt failed. */
+  readonly loadError: WritableSignal<boolean> = signal(false);
 
   /** Visibility of the create/edit dialog. */
   readonly showDialog: WritableSignal<boolean> = signal(false);
@@ -63,6 +68,7 @@ export class TagsComponent implements OnInit {
    */
   loadTags(): void {
     this.loading.set(true);
+    this.loadError.set(false);
     this.api.getTags()
       .pipe(
         takeUntilDestroyed(this.destroyRef),
@@ -73,6 +79,7 @@ export class TagsComponent implements OnInit {
         error: (err: any): void => {
           console.error('Failed to load tags:', err);
           this.toast.error('Failed to load tags.');
+          this.loadError.set(true);
         }
       });
   }

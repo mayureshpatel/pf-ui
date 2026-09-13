@@ -15,6 +15,7 @@ import {CategoryFormDrawerComponent} from './components/category-form-drawer/cat
 import {ToastService} from '@core/services/toast.service';
 import {ScreenToolbarComponent} from '@shared/components/screen-toolbar/screen-toolbar';
 import {Category, CategoryCreateRequest, CategoryGroup, CategoryUpdateRequest} from '@models/category.model';
+import {PageErrorStateComponent} from '@shared/components/page-error-state/page-error-state.component';
 
 /**
  * Component for managing financial categories.
@@ -34,7 +35,8 @@ import {Category, CategoryCreateRequest, CategoryGroup, CategoryUpdateRequest} f
     CardModule,
     TooltipModule,
     ScreenToolbarComponent,
-    CategoryFormDrawerComponent
+    CategoryFormDrawerComponent,
+    PageErrorStateComponent
   ],
   templateUrl: './categories.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -60,6 +62,9 @@ export class CategoriesComponent implements OnInit {
 
   /** Global loading state for API operations. */
   readonly loading: WritableSignal<boolean> = signal(false);
+
+  /** Whether the most recent load attempt failed. */
+  readonly loadError: WritableSignal<boolean> = signal(false);
 
   /** Visibility of the category creation/edit drawer. */
   readonly showDialog: WritableSignal<boolean> = signal(false);
@@ -87,6 +92,7 @@ export class CategoriesComponent implements OnInit {
    */
   loadData(): void {
     this.loading.set(true);
+    this.loadError.set(false);
 
     forkJoin({
       categories: this.categoryApi.getCategories(),
@@ -103,6 +109,7 @@ export class CategoriesComponent implements OnInit {
         error: (err: any): void => {
           console.error('Failed to load category data:', err);
           this.toast.error('Failed to load categories');
+          this.loadError.set(true);
         }
       });
   }
