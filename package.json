@@ -12,7 +12,9 @@
     "test:coverage": "ng test --coverage",
     "e2e": "playwright test",
     "e2e:ui": "playwright test --ui",
-    "lint": "ng lint"
+    "lint": "ng lint",
+    "generate:api:spec": "cd ../pf-data-service && ./mvnw test -Dtest=OpenApiSpecExportIntegrationTest -q",
+    "generate:api": "npm run generate:api:spec && openapi-typescript ../pf-data-service/target/openapi.json -o src/app/generated/api-types.ts"
   },
   "prettier": {
     "printWidth": 100,
@@ -61,6 +63,7 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.6",
     "jsdom": "^27.1.0",
+    "openapi-typescript": "^7.13.0",
     "playwright": "^1.62.1",
     "prettier": "^3.9.6",
     "typescript": "~5.9.2",

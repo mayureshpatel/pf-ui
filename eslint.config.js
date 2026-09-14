@@ -20,6 +20,10 @@ module.exports = defineConfig([
       "test-results/**",
       "**/__screenshots__/**",
       ".vitest-attachments/**",
+      // PF-316: openapi-typescript's own output style/formatting, not this project's -- committed
+      // for reproducibility (see the generate:api npm script) but regenerated wholesale on every
+      // run, so there's nothing to gain from linting or hand-fixing it.
+      "src/app/generated/**",
     ],
   },
   {
