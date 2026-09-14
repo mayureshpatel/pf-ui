@@ -2,19 +2,24 @@ import {expect, test} from '@playwright/test';
 import {createTestAccount, createTestCategory, createTestTransaction, registerTestUser} from './helpers/api';
 
 /**
- * Covers PF-336: selecting a date range via the shared date-range-filter, and each of the 3
+ * Covers PF-336: selecting a date range via the shared date-range-filter, and each of the 4
  * current sub-reports (Categories, Merchants, Cash Flow -- "vendor-report" in the ticket's own
  * text is stale; the component itself is already named merchant-report, confirmed against the
- * live tree) rendering real data for that range. Uses a brand-new registered user so the report
- * totals are exact -- all 3 tabs share one already-fetched transactions() signal, so one small,
- * deliberately-chosen seed set drives every assertion in this spec.
+ * live tree -- and Net Worth, PF-305) rendering real data for that range. Uses a brand-new
+ * registered user so the report totals are exact -- Categories/Merchants/Cash Flow all share one
+ * already-fetched transactions() signal, so one small, deliberately-chosen seed set drives every
+ * assertion in this spec. Net Worth is independently backend-computed (PF-304's
+ * `/reports/net-worth`, not a client-side aggregation of that same array) but starts from the
+ * same account, so its balance is still exactly derivable from the same seed.
  */
 test.describe('Reports', () => {
   test.use({storageState: {cookies: [], origins: []}});
 
-  test('date range filter and all 3 sub-reports render real seeded data', async ({page}) => {
+  test('date range filter and all 4 sub-reports render real seeded data', async ({page}) => {
     await registerTestUser(page);
 
+    // createTestAccount seeds a $1,000 starting balance -- Net Worth's assertion below depends
+    // on this exact figure, not just the transaction totals the other 3 tabs check.
     const account = await createTestAccount(page, 'E2E Reports Account');
     const parentCategory = await createTestCategory(page, 'E2E Reports Parent');
     const category = await createTestCategory(page, 'E2E Reports Category', parentCategory.id);
@@ -70,5 +75,12 @@ test.describe('Reports', () => {
     await expect(monthRow.getByText('$500.00')).toBeVisible(); // income
     await expect(monthRow.getByText('$150.00')).toBeVisible(); // expenses
     await expect(monthRow.getByText('$350.00')).toBeVisible(); // net savings: 500 - 150
+
+    // Net Worth tab (PF-305): $1,000 starting balance + 500 income - 100 - 50 expenses = $1,350.
+    // The account and every seed transaction were created moments ago (this test run), so "This
+    // Month" produces exactly one backend data point -- its value is also the headline figure.
+    await page.getByRole('tab', {name: 'Net Worth'}).click();
+    await expect(page.getByText('Net Worth Over Time')).toBeVisible();
+    await expect(page.getByText('$1,350.00')).toBeVisible();
   });
 });
