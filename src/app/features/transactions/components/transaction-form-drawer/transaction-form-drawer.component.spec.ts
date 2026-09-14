@@ -18,9 +18,11 @@ describe('TransactionFormDrawerComponent', () => {
     const mockCategoryApi = { getCategories: vi.fn().mockReturnValue(of([])) };
     const mockAccountApi = { getAccounts: vi.fn().mockReturnValue(of([])) };
     const mockMerchantApi = {
-      getMerchants: vi.fn().mockReturnValue(
-        of({ content: [], page: { totalElements: 0, totalPages: 0, number: 0, size: 20 } }),
-      ),
+      getMerchants: vi
+        .fn()
+        .mockReturnValue(
+          of({ content: [], page: { totalElements: 0, totalPages: 0, number: 0, size: 20 } }),
+        ),
     };
     const mockTagApi = { getTags: vi.fn().mockReturnValue(of([])) };
 

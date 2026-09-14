@@ -21,9 +21,17 @@ describe('MerchantsComponent', () => {
     { id: 3, userId: 1, originalName: 'CHEVRON 00123 WA', cleanName: 'Chevron' },
   ];
 
-  const pageOf = (content: Merchant[], totalElements: number = content.length): PageResponse<Merchant> => ({
+  const pageOf = (
+    content: Merchant[],
+    totalElements: number = content.length,
+  ): PageResponse<Merchant> => ({
     content,
-    page: { totalElements, totalPages: Math.max(1, Math.ceil(totalElements / 20)), number: 0, size: 20 },
+    page: {
+      totalElements,
+      totalPages: Math.max(1, Math.ceil(totalElements / 20)),
+      number: 0,
+      size: 20,
+    },
   });
 
   beforeEach(async () => {

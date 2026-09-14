@@ -20,7 +20,10 @@ export class MerchantApiService {
    * @param pageRequest the page number, size, and sort to request.
    * @returns the requested page of merchants.
    */
-  getMerchants(search: string | null, pageRequest: PageRequest): Observable<PageResponse<Merchant>> {
+  getMerchants(
+    search: string | null,
+    pageRequest: PageRequest,
+  ): Observable<PageResponse<Merchant>> {
     let params: HttpParams = new HttpParams()
       .set('page', pageRequest.page.toString())
       .set('size', pageRequest.size.toString());

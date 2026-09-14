@@ -46,7 +46,10 @@ describe('BudgetsComponent', () => {
     mockBudgetApi = {
       getBudgetStatus: vi.fn().mockReturnValue(of([mockBudgetStatus])),
       getAllBudgets: vi.fn().mockReturnValue(
-        of({ content: [mockBudget], page: { totalElements: 1, totalPages: 1, number: 0, size: 20 } }),
+        of({
+          content: [mockBudget],
+          page: { totalElements: 1, totalPages: 1, number: 0, size: 20 },
+        }),
       ),
       deleteBudget: vi.fn().mockReturnValue(of(undefined)),
     };
