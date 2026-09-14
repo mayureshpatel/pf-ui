@@ -137,4 +137,64 @@ describe('TransactionFormDrawerComponent', () => {
     // assert & verify
     expect(saveSpy).toHaveBeenCalledWith(expect.objectContaining({ tagIds: [1, 2] }));
   });
+
+  it('PF-317: should emit merchantId and postDate as undefined (not throw, not a stale non-null assertion) when creating a transaction with no merchant selected', () => {
+    // arrange -- merchant and postDate are both left at their default null; neither has
+    // Validators.required, and the generated (backend-sourced) TransactionCreateRequest type now
+    // correctly marks both fields optional, matching the backend's own DTO validation
+    fixture.detectChanges();
+    component.onShow();
+    component.form.patchValue({
+      accountId: 1,
+      amount: 10,
+      transactionDate: '2026-03-15',
+      category: { id: 5 } as unknown as Category,
+    });
+    const saveSpy = vi.fn();
+    component.save.subscribe(saveSpy);
+
+    // act
+    component.onSubmit();
+
+    // assert & verify
+    expect(saveSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        request: expect.objectContaining({ merchantId: undefined, postDate: undefined }),
+      }),
+    );
+  });
+
+  it('PF-317: should emit merchantId and postDate as undefined when updating a transaction with no merchant selected', () => {
+    // arrange
+    fixture.componentRef.setInput('transaction', {
+      id: 1,
+      account: { id: 1, name: 'Checking' },
+      category: null,
+      amount: 42.5,
+      date: '2026-03-15T00:00:00Z',
+      description: 'Test',
+      type: 'EXPENSE',
+      merchant: null,
+    });
+    fixture.detectChanges();
+    component.onShow();
+    component.form.patchValue({
+      accountId: 1,
+      amount: 10,
+      transactionDate: '2026-03-15',
+      category: { id: 5 } as unknown as Category,
+    });
+    const saveSpy = vi.fn();
+    component.save.subscribe(saveSpy);
+
+    // act
+    component.onSubmit();
+
+    // assert & verify
+    expect(saveSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        request: expect.objectContaining({ merchantId: undefined, postDate: undefined }),
+      }),
+    );
+  });
 });
