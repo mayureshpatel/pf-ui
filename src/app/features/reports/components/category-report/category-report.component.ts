@@ -11,12 +11,14 @@ import { CommonModule, formatCurrency } from '@angular/common';
 import { CardModule } from 'primeng/card';
 import { ChartModule } from 'primeng/chart';
 import { TableModule } from 'primeng/table';
+import { ButtonModule } from 'primeng/button';
 
 import { Transaction } from '@models/transaction.model';
 import { ReportsDataService } from '../../services/reports-data.service';
-import { CategoryReportData } from '../../models/reports.model';
+import { CategoryReportData, DateRange } from '../../models/reports.model';
 import { getCategoryColor } from '@shared/utils/category.utils';
 import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
+import { downloadCsv, toCsv } from '@shared/utils/csv.utils';
 
 /**
  * Sub-report component for analyzing spending by category.
@@ -27,7 +29,7 @@ import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
 @Component({
   selector: 'app-category-report',
   standalone: true,
-  imports: [CommonModule, CardModule, ChartModule, TableModule, FormatCurrencyPipe],
+  imports: [CommonModule, CardModule, ChartModule, TableModule, ButtonModule, FormatCurrencyPipe],
   templateUrl: './category-report.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -36,6 +38,9 @@ export class CategoryReportComponent {
 
   /** The dataset of transactions to analyze. */
   readonly transactions: InputSignal<Transaction[]> = input.required<Transaction[]>();
+
+  /** The currently selected reporting date range, used to name the CSV export (PF-306). */
+  readonly dateRange: InputSignal<DateRange> = input.required<DateRange>();
 
   /** Aggregated report data calculated reactively from transactions. */
   readonly categoryData: Signal<CategoryReportData[]> = computed((): CategoryReportData[] =>
@@ -114,4 +119,30 @@ export class CategoryReportComponent {
       },
     },
   };
+
+  /**
+   * CSV rows for the current category breakdown (PF-306): a header row followed by one row per
+   * category, built from the same `categoryData()` used everywhere else in this component --
+   * already the full, unfiltered breakdown for the selected date range (the chart's own top-10
+   * slice is a local view, not a truncation of this signal), so there's no need to round-trip to
+   * the server for data already in hand.
+   */
+  readonly csvRows: Signal<string[][]> = computed((): string[][] => [
+    ['Category', 'Total', 'Transaction Count', 'Avg / Txn'],
+    ...this.categoryData().map((c: CategoryReportData): string[] => [
+      c.category.name,
+      c.total.toFixed(2),
+      c.count.toString(),
+      c.avgTransaction.toFixed(2),
+    ]),
+  ]);
+
+  /**
+   * Exports `csvRows()` as a downloaded CSV file, named for the current report and date range.
+   */
+  exportCsv(): void {
+    const range: DateRange = this.dateRange();
+    const filename = `category-report_${range.startDate}_to_${range.endDate}.csv`;
+    downloadCsv(filename, toCsv(this.csvRows()));
+  }
 }
