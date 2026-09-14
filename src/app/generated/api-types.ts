@@ -97,7 +97,7 @@ export interface paths {
         };
         /**
          * List merchants
-         * @description Returns all merchants for the authenticated user
+         * @description Returns a page of merchants for the authenticated user, optionally filtered by a search term
          */
         get: operations["getMerchants"];
         /**
@@ -789,7 +789,7 @@ export interface paths {
         };
         /**
          * List all budgets
-         * @description Returns every budget the user has across all periods
+         * @description Returns a page of the user's budgets across all periods, most recent first
          */
         get: operations["getAllBudgets"];
         put?: never;
@@ -1690,7 +1690,10 @@ export interface operations {
     };
     getMerchants: {
         parameters: {
-            query?: never;
+            query: {
+                pageable: components["schemas"]["Pageable"];
+                search?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -1703,7 +1706,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["MerchantDto"][];
+                    "*/*": components["schemas"]["PagedModel"];
                 };
             };
         };
@@ -2879,7 +2882,9 @@ export interface operations {
     };
     getAllBudgets: {
         parameters: {
-            query?: never;
+            query: {
+                pageable: components["schemas"]["Pageable"];
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -2892,7 +2897,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["BudgetDto"][];
+                    "*/*": components["schemas"]["PagedModel"];
                 };
             };
         };

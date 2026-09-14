@@ -12,6 +12,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { debounceTime, distinctUntilChanged, Subject } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { CardModule } from 'primeng/card';
@@ -25,6 +26,8 @@ import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen
 import { MerchantFormDialogComponent } from './components/merchant-form-dialog/merchant-form-dialog.component';
 import { MergeMerchantsDialogComponent } from './components/merge-merchants-dialog/merge-merchants-dialog.component';
 import { Merchant } from '@models/merchant.model';
+
+const PAGE_SIZE = 20;
 
 /**
  * Dedicated page for viewing, searching, and correcting the authenticated user's merchants
@@ -55,13 +58,22 @@ export class MerchantsComponent implements OnInit {
   private readonly toast: ToastService = inject(ToastService);
   private readonly destroyRef: DestroyRef = inject(DestroyRef);
 
-  /** The full, unfiltered list of the user's merchants. */
+  /** The current page of merchants matching the active search term (PF-320: server-paginated
+   *  and server-searched -- the full list is no longer loaded at once, since it grows unboundedly
+   *  with a user's transaction history). */
   readonly merchants: WritableSignal<Merchant[]> = signal([]);
 
-  /** Global loading state for the initial fetch. */
+  /** Total merchants matching the active search term, across all pages. */
+  readonly totalRecords: WritableSignal<number> = signal(0);
+
+  /** Zero-based index of the currently displayed page. */
+  readonly page: WritableSignal<number> = signal(0);
+
+  /** Global loading state for the page fetch. */
   readonly loading: WritableSignal<boolean> = signal(false);
 
-  /** Free-text search, matched against both the display name and the raw bank description. */
+  /** Free-text search, matched server-side against both the display name and the raw bank
+   *  description. Debounced (see constructor) before triggering a request. */
   readonly searchTerm: WritableSignal<string> = signal('');
 
   /** Visibility of the name-correction dialog. */
@@ -76,46 +88,55 @@ export class MerchantsComponent implements OnInit {
   /** Visibility of the merge confirmation dialog. */
   readonly showMergeDialog: WritableSignal<boolean> = signal(false);
 
-  /** Merchants matching the current search term, sorted by display name. */
-  readonly filteredMerchants: Signal<Merchant[]> = computed((): Merchant[] => {
-    const term: string = this.searchTerm().trim().toLowerCase();
-    const all: Merchant[] = this.merchants();
-    const matches: Merchant[] = term
-      ? all.filter(
-          (m: Merchant): boolean =>
-            m.cleanName.toLowerCase().includes(term) || m.originalName.toLowerCase().includes(term),
-        )
-      : all;
-    return [...matches].sort((a: Merchant, b: Merchant): number =>
-      a.cleanName.localeCompare(b.cleanName),
-    );
-  });
-
-  /** Indicates if the user has no merchants at all (distinct from a search finding nothing). */
+  /** Indicates if the user has no merchants at all (distinct from a search finding nothing) --
+   *  only meaningful while no search is active, since totalRecords is otherwise search-scoped. */
   readonly isEmpty: Signal<boolean> = computed(
-    (): boolean => this.merchants().length === 0 && !this.loading(),
+    (): boolean => this.totalRecords() === 0 && !this.searchTerm().trim() && !this.loading(),
   );
 
   /** Indicates if a search is active but matched nothing. */
   readonly noSearchResults: Signal<boolean> = computed(
-    (): boolean => !this.isEmpty() && this.filteredMerchants().length === 0,
+    (): boolean => this.totalRecords() === 0 && !!this.searchTerm().trim() && !this.loading(),
   );
+
+  /** Drives the debounced search request (PF-320). */
+  private readonly searchInput$: Subject<string> = new Subject<string>();
+
+  constructor() {
+    this.searchInput$
+      .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
+      .subscribe((): void => {
+        this.page.set(0);
+        this.loadData();
+      });
+  }
 
   ngOnInit(): void {
     this.loadData();
   }
 
   /**
-   * Fetches the user's merchants.
+   * Handles the search box's input: updates the displayed value immediately (so typing itself
+   * never feels laggy), but debounces the actual backend request.
+   * @param term the raw text currently in the search box.
+   */
+  onSearchInput(term: string): void {
+    this.searchTerm.set(term);
+    this.searchInput$.next(term);
+  }
+
+  /**
+   * Fetches the current page of the user's merchants, narrowed by the active search term.
    */
   loadData(): void {
     this.loading.set(true);
     this.merchantApi
-      .getMerchants()
+      .getMerchants(this.searchTerm().trim() || null, { page: this.page(), size: PAGE_SIZE })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (data: Merchant[]): void => {
-          this.merchants.set(data);
+        next: (res): void => {
+          this.merchants.set(res.content);
+          this.totalRecords.set(res.page.totalElements);
           this.loading.set(false);
         },
         error: (err: any): void => {
@@ -124,6 +145,15 @@ export class MerchantsComponent implements OnInit {
           this.loading.set(false);
         },
       });
+  }
+
+  /**
+   * Handles the table's lazy-load event (page navigation).
+   * @param event the PrimeNG lazy-load event carrying the new page's starting row offset.
+   */
+  onPageChange(event: { first?: number }): void {
+    this.page.set(Math.floor((event.first ?? 0) / PAGE_SIZE));
+    this.loadData();
   }
 
   /**

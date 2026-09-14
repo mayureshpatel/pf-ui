@@ -68,16 +68,21 @@
         <p-checkbox formControlName="updateMerchant" [binary]="true" class="mt-1" />
         <div class="flex-1 flex flex-col gap-2">
           <label class="text-[10px] font-black uppercase tracking-widest text-surface-400 dark:text-surface-500">Reassign Merchant</label>
-          <p-select
+          <p-autoComplete
             formControlName="merchant"
-            [options]="merchantOptions()"
+            [suggestions]="merchantOptions()"
+            (completeMethod)="filterMerchants($event)"
+            [delay]="300"
             optionLabel="label"
             optionValue="value"
-            [disabled]="!form.value.updateMerchant"
-            placeholder="Select a merchant..."
-            [filter]="true"
+            [readonly]="!form.value.updateMerchant"
+            [class.opacity-50]="!form.value.updateMerchant"
+            [class.pointer-events-none]="!form.value.updateMerchant"
+            placeholder="Search for a merchant..."
             appendTo="body"
-            class="w-full border-none rounded-lg overflow-hidden"
+            [dropdown]="false"
+            styleClass="w-full"
+            inputStyleClass="w-full border-none rounded-lg overflow-hidden"
           />
         </div>
       </div>

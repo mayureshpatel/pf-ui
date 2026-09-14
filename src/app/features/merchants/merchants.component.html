@@ -13,7 +13,7 @@
           type="text"
           placeholder="Search merchants..."
           [ngModel]="searchTerm()"
-          (ngModelChange)="searchTerm.set($event)"
+          (ngModelChange)="onSearchInput($event)"
         />
       </p-iconfield>
     </div>
@@ -34,13 +34,18 @@
   @if (!isEmpty()) {
     <p-card class="overflow-hidden">
       <p-table
-        [value]="filteredMerchants()"
+        [value]="merchants()"
         dataKey="id"
         [selection]="selectedForMerge()"
         (selectionChange)="onSelectionChange($event)"
         selectionMode="multiple"
         [loading]="loading()"
-        [paginator]="filteredMerchants().length > 20"
+        [lazy]="true"
+        [lazyLoadOnInit]="false"
+        (onLazyLoad)="onPageChange($event)"
+        [totalRecords]="totalRecords()"
+        [paginator]="totalRecords() > 20"
+        [first]="page() * 20"
         [rows]="20"
         [stripedRows]="true"
         size="small"
