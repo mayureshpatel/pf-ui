@@ -42,6 +42,12 @@
             <span class="font-bold">Cash Flow</span>
           </div>
         </p-tab>
+        <p-tab [value]="3">
+          <div class="flex items-center gap-2">
+            <i class="pi pi-wallet"></i>
+            <span class="font-bold">Net Worth</span>
+          </div>
+        </p-tab>
       </p-tablist>
 
       <p-tabpanels class="bg-transparent px-0 py-6">
@@ -55,6 +61,10 @@
 
         <p-tabpanel [value]="2">
           <app-income-expense-report [transactions]="transactions()"/>
+        </p-tabpanel>
+
+        <p-tabpanel [value]="3">
+          <app-net-worth-report [dateRange]="dateRange()"/>
         </p-tabpanel>
       </p-tabpanels>
     </p-tabs>

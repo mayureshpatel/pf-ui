@@ -10,6 +10,8 @@ import { Transaction } from '@models/transaction.model';
 import { CategoryReportComponent } from './components/category-report/category-report.component';
 import { MerchantReportComponent } from './components/merchant-report/merchant-report.component';
 import { IncomeExpenseReportComponent } from './components/income-expense-report/income-expense-report.component';
+import { NetWorthReportComponent } from './components/net-worth-report/net-worth-report.component';
+import { ReportApiService } from './services/report-api.service';
 
 describe('ReportsComponent', () => {
   let fixture: ComponentFixture<ReportsComponent>;
@@ -18,6 +20,7 @@ describe('ReportsComponent', () => {
   let mockToast: any;
   let mockRouter: any;
   let mockActivatedRoute: any;
+  let mockReportApi: any;
 
   const mockTransactions = [
     {
@@ -54,6 +57,9 @@ describe('ReportsComponent', () => {
       snapshot: { queryParams: {} },
       queryParams: of({}),
     };
+    mockReportApi = {
+      getNetWorth: vi.fn().mockReturnValue(of([])),
+    };
 
     await TestBed.configureTestingModule({
       imports: [ReportsComponent],
@@ -62,6 +68,7 @@ describe('ReportsComponent', () => {
         { provide: ToastService, useValue: mockToast },
         { provide: Router, useValue: mockRouter },
         { provide: ActivatedRoute, useValue: mockActivatedRoute },
+        { provide: ReportApiService, useValue: mockReportApi },
       ],
     }).compileComponents();
 
@@ -123,6 +130,17 @@ describe('ReportsComponent', () => {
     expect(category.transactions()).toEqual(mockTransactions);
     expect(merchant.transactions()).toEqual(mockTransactions);
     expect(incomeExpense.transactions()).toEqual(mockTransactions);
+  });
+
+  it('should pass the current date range down to the net worth sub-report', () => {
+    // act
+    fixture.detectChanges();
+
+    // assert & verify
+    const netWorth = fixture.debugElement.query(By.directive(NetWorthReportComponent))
+      .componentInstance as NetWorthReportComponent;
+
+    expect(netWorth.dateRange()).toEqual(component.dateRange());
   });
 
   it('should switch the active tab when selected', () => {

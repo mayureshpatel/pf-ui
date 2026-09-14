@@ -28,6 +28,7 @@ import { DateRangeFilterComponent } from './components/date-range-filter/date-ra
 import { CategoryReportComponent } from './components/category-report/category-report.component';
 import { MerchantReportComponent } from './components/merchant-report/merchant-report.component';
 import { IncomeExpenseReportComponent } from './components/income-expense-report/income-expense-report.component';
+import { NetWorthReportComponent } from './components/net-worth-report/net-worth-report.component';
 import { DateRange } from './models/reports.model';
 import { fromLocalDateString, toLocalDateString } from '@shared/utils/transaction.utils';
 import { PageErrorStateComponent } from '@shared/components/page-error-state/page-error-state.component';
@@ -50,6 +51,7 @@ import { PageErrorStateComponent } from '@shared/components/page-error-state/pag
     CategoryReportComponent,
     MerchantReportComponent,
     IncomeExpenseReportComponent,
+    NetWorthReportComponent,
     PageErrorStateComponent,
   ],
   templateUrl: './reports.component.html',
@@ -74,7 +76,7 @@ export class ReportsComponent implements OnInit {
   /** Whether the most recent load attempt failed. */
   readonly loadError: WritableSignal<boolean> = signal(false);
 
-  /** Currently selected tab (0: Category, 1: Merchant, 2: Monthly). */
+  /** Currently selected tab (0: Category, 1: Merchant, 2: Monthly, 3: Net Worth). */
   readonly activeTabIndex: WritableSignal<number> = signal(0);
 
   constructor() {
