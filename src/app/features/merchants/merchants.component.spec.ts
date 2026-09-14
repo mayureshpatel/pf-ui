@@ -7,6 +7,7 @@ import { MerchantsComponent } from './merchants.component';
 import { MerchantApiService } from './services/merchant-api.service';
 import { ToastService } from '@core/services/toast.service';
 import { Merchant } from '@models/merchant.model';
+import { PageResponse } from '@models/transaction.model';
 
 describe('MerchantsComponent', () => {
   let component: MerchantsComponent;
@@ -20,9 +21,14 @@ describe('MerchantsComponent', () => {
     { id: 3, userId: 1, originalName: 'CHEVRON 00123 WA', cleanName: 'Chevron' },
   ];
 
+  const pageOf = (content: Merchant[], totalElements: number = content.length): PageResponse<Merchant> => ({
+    content,
+    page: { totalElements, totalPages: Math.max(1, Math.ceil(totalElements / 20)), number: 0, size: 20 },
+  });
+
   beforeEach(async () => {
     mockMerchantApi = {
-      getMerchants: vi.fn().mockReturnValue(of(mockMerchants)),
+      getMerchants: vi.fn().mockReturnValue(of(pageOf(mockMerchants))),
       updateMerchant: vi.fn(),
     };
     mockToast = { success: vi.fn(), error: vi.fn() };
@@ -39,14 +45,15 @@ describe('MerchantsComponent', () => {
     component = fixture.componentInstance;
   });
 
-  it('should create and load merchants on init', () => {
+  it('should create and load the first page of merchants on init', () => {
     // act
     fixture.detectChanges();
 
     // assert & verify
     expect(component).toBeTruthy();
-    expect(mockMerchantApi.getMerchants).toHaveBeenCalled();
+    expect(mockMerchantApi.getMerchants).toHaveBeenCalledWith(null, { page: 0, size: 20 });
     expect(component.merchants()).toEqual(mockMerchants);
+    expect(component.totalRecords()).toBe(3);
   });
 
   it('should show an error toast when loading fails', () => {
@@ -63,7 +70,7 @@ describe('MerchantsComponent', () => {
 
   it('should treat an empty merchant list, once loaded, as isEmpty', () => {
     // arrange
-    mockMerchantApi.getMerchants.mockReturnValue(of([]));
+    mockMerchantApi.getMerchants.mockReturnValue(of(pageOf([], 0)));
 
     // act
     fixture.detectChanges();
@@ -72,45 +79,78 @@ describe('MerchantsComponent', () => {
     expect(component.isEmpty()).toBe(true);
   });
 
-  describe('search filtering', () => {
-    beforeEach(() => fixture.detectChanges());
-
-    it('should match on the display (clean) name', () => {
-      // act
-      component.searchTerm.set('starbu');
-
-      // assert & verify
-      expect(component.filteredMerchants().map((m) => m.id)).toEqual([1]);
+  describe('search (PF-320: server-side, debounced 300ms)', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+      fixture.detectChanges();
+      mockMerchantApi.getMerchants.mockClear();
     });
 
-    it('should match on the original bank description, case-insensitively', () => {
-      // act
-      component.searchTerm.set('wholefds');
-
-      // assert & verify
-      expect(component.filteredMerchants().map((m) => m.id)).toEqual([2]);
+    afterEach(() => {
+      vi.useRealTimers();
     });
 
-    it('should return every merchant, sorted by display name, when the search term is empty', () => {
+    it('should not call the API immediately on each keystroke', () => {
       // act
-      component.searchTerm.set('');
+      component.onSearchInput('starbu');
+      fixture.detectChanges();
 
       // assert & verify
-      expect(component.filteredMerchants().map((m) => m.cleanName)).toEqual([
-        'Chevron',
-        'Starbucks',
-        'Whole Foods',
-      ]);
+      expect(mockMerchantApi.getMerchants).not.toHaveBeenCalled();
+    });
+
+    it('should call the API with the search term once the debounce window elapses', () => {
+      // act
+      component.onSearchInput('starbu');
+      fixture.detectChanges();
+      vi.advanceTimersByTime(300);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(mockMerchantApi.getMerchants).toHaveBeenCalledWith('starbu', { page: 0, size: 20 });
+    });
+
+    it('should reset to page 0 when the search term changes', () => {
+      // arrange
+      component.page.set(2);
+
+      // act
+      component.onSearchInput('starbu');
+      fixture.detectChanges();
+      vi.advanceTimersByTime(300);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.page()).toBe(0);
     });
 
     it('should report noSearchResults when a search matches nothing, distinct from isEmpty', () => {
+      // arrange
+      mockMerchantApi.getMerchants.mockReturnValue(of(pageOf([], 0)));
+
       // act
-      component.searchTerm.set('nonexistent merchant');
+      component.onSearchInput('nonexistent merchant');
+      fixture.detectChanges();
+      vi.advanceTimersByTime(300);
+      fixture.detectChanges();
 
       // assert & verify
-      expect(component.filteredMerchants()).toEqual([]);
+      expect(component.merchants()).toEqual([]);
       expect(component.noSearchResults()).toBe(true);
       expect(component.isEmpty()).toBe(false);
+    });
+  });
+
+  describe('pagination (PF-320)', () => {
+    beforeEach(() => fixture.detectChanges());
+
+    it('should request the corresponding page when the table lazy-loads a new offset', () => {
+      // act
+      component.onPageChange({ first: 40 });
+
+      // assert & verify
+      expect(component.page()).toBe(2);
+      expect(mockMerchantApi.getMerchants).toHaveBeenCalledWith(null, { page: 2, size: 20 });
     });
   });
 
@@ -184,7 +224,7 @@ describe('MerchantsComponent', () => {
       // arrange -- a blank cleanName is a real-world "unset" sentinel (not null), independent of
       // MerchantNameNormalizer's own cleanup logic ever failing to backfill one
       mockMerchantApi.getMerchants.mockReturnValue(
-        of([{ id: 9, userId: 1, originalName: 'RAW BANK TEXT 123', cleanName: '' }]),
+        of(pageOf([{ id: 9, userId: 1, originalName: 'RAW BANK TEXT 123', cleanName: '' }])),
       );
 
       // act
@@ -202,7 +242,7 @@ describe('MerchantsComponent', () => {
     it("falls back all the way to 'Unknown Merchant' when both cleanName and originalName are blank", () => {
       // arrange
       mockMerchantApi.getMerchants.mockReturnValue(
-        of([{ id: 9, userId: 1, originalName: '', cleanName: '' }]),
+        of(pageOf([{ id: 9, userId: 1, originalName: '', cleanName: '' }])),
       );
 
       // act

@@ -199,7 +199,12 @@
           [value]="allBudgets()"
           [stripedRows]="true"
           size="small"
-          [paginator]="true"
+          [lazy]="true"
+          [lazyLoadOnInit]="false"
+          (onLazyLoad)="onAllBudgetsPageChange($event)"
+          [totalRecords]="allBudgetsTotalRecords()"
+          [first]="allBudgetsPage() * 20"
+          [paginator]="allBudgetsTotalRecords() > 20"
           [rows]="20"
           responsiveLayout="stack">
 

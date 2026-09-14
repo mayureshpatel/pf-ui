@@ -45,7 +45,9 @@ describe('BudgetsComponent', () => {
   beforeEach(async () => {
     mockBudgetApi = {
       getBudgetStatus: vi.fn().mockReturnValue(of([mockBudgetStatus])),
-      getAllBudgets: vi.fn().mockReturnValue(of([mockBudget])),
+      getAllBudgets: vi.fn().mockReturnValue(
+        of({ content: [mockBudget], page: { totalElements: 1, totalPages: 1, number: 0, size: 20 } }),
+      ),
       deleteBudget: vi.fn().mockReturnValue(of(undefined)),
     };
     mockCategoryApi = { getCategories: vi.fn().mockReturnValue(of([])) };
@@ -126,6 +128,55 @@ describe('BudgetsComponent', () => {
 
       // assert & verify -- category.icon is 'pi-home', not the 'pi-tag' fallback
       expect(fixture.nativeElement.querySelector('.pi-home')).toBeTruthy();
+    });
+  });
+
+  describe('Manage All pagination (PF-320)', () => {
+    it('should request page 0 and populate allBudgets/allBudgetsTotalRecords on first entry into the view', () => {
+      // act
+      component.viewMode.set('all');
+      component.onToggleView();
+
+      // assert & verify
+      expect(mockBudgetApi.getAllBudgets).toHaveBeenCalledWith({ page: 0, size: 20 });
+      expect(component.allBudgets()).toEqual([mockBudget]);
+      expect(component.allBudgetsTotalRecords()).toBe(1);
+    });
+
+    it('should reset to page 0 on a fresh entry into the view, even if a prior visit had paged further', () => {
+      // arrange -- simulate having paged forward on a previous visit to 'all'
+      component.allBudgetsPage.set(3);
+
+      // act
+      component.viewMode.set('all');
+      component.onToggleView();
+
+      // assert & verify
+      expect(component.allBudgetsPage()).toBe(0);
+      expect(mockBudgetApi.getAllBudgets).toHaveBeenCalledWith({ page: 0, size: 20 });
+    });
+
+    it('should request the corresponding page when the table lazy-loads a new offset', () => {
+      // act
+      component.onAllBudgetsPageChange({ first: 40 });
+
+      // assert & verify
+      expect(component.allBudgetsPage()).toBe(2);
+      expect(mockBudgetApi.getAllBudgets).toHaveBeenCalledWith({ page: 2, size: 20 });
+    });
+
+    it('should preserve the current page when refreshing after a mutation (e.g. delete), not reset it', () => {
+      // arrange
+      component.allBudgetsPage.set(2);
+      mockBudgetApi.getAllBudgets.mockClear();
+
+      // act -- refreshData() while already in 'all' view (e.g. after onBudgetSaved/deleteBudget)
+      component.viewMode.set('all');
+      component.refreshData();
+
+      // assert & verify
+      expect(component.allBudgetsPage()).toBe(2);
+      expect(mockBudgetApi.getAllBudgets).toHaveBeenCalledWith({ page: 2, size: 20 });
     });
   });
 });

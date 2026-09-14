@@ -37,7 +37,7 @@ import { Merchant } from '@models/merchant.model';
 import { Tag } from '@models/tag.model';
 import { DrawerComponent } from '@shared/components/drawer/drawer.component';
 import { toLocalDateString } from '@shared/utils/transaction.utils';
-import { finalize, forkJoin } from 'rxjs';
+import { finalize, forkJoin, Subject, switchMap } from 'rxjs';
 import { CategoryApiService } from '@features/categories/services/category-api.service';
 import { AccountApiService } from '@features/accounts/services/account-api.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -100,9 +100,6 @@ export class TransactionFormDrawerComponent {
 
   /** Available categories for classification. */
   readonly groupedCategories: WritableSignal<SelectItemGroup[]> = signal<SelectItemGroup[]>([]);
-
-  /** Known merchants for autocomplete suggestions. */
-  readonly merchants: WritableSignal<Merchant[]> = signal<Merchant[]>([]);
 
   /** Available tags for assignment. */
   readonly tags: WritableSignal<Tag[]> = signal<Tag[]>([]);
@@ -176,8 +173,20 @@ export class TransactionFormDrawerComponent {
     null,
   );
 
+  /** Drives the merchant autocomplete's search-as-you-type requests (PF-320): the merchant list
+   *  is no longer preloaded in full, since it now grows unboundedly with a user's transaction
+   *  history -- switchMap cancels any still-in-flight search when a newer keystroke arrives. */
+  private readonly merchantSearch$: Subject<string> = new Subject<string>();
+
   constructor() {
     this.loadData();
+
+    this.merchantSearch$
+      .pipe(
+        switchMap((query: string) => this.merchantApi.getMerchants(query, { page: 0, size: 20 })),
+        takeUntilDestroyed(),
+      )
+      .subscribe((page) => this.filteredMerchants.set(page.content));
   }
 
   loadData(): void {
@@ -186,7 +195,6 @@ export class TransactionFormDrawerComponent {
     forkJoin({
       categories: this.categoryApi.getCategories(),
       accounts: this.accountApi.getAccounts(),
-      merchants: this.merchantApi.getMerchants(),
       tags: this.tagApi.getTags(),
     })
       .pipe(
@@ -194,18 +202,13 @@ export class TransactionFormDrawerComponent {
         finalize(() => this.loading.set(false)),
       )
       .subscribe({
-        next: ({ categories, accounts, merchants, tags }: any): void => {
+        next: ({ categories, accounts, tags }: any): void => {
           accounts.sort((a: Account, b: Account): number => a.name.localeCompare(b.name));
-          merchants.sort((a: Merchant, b: Merchant): number =>
-            a.originalName.localeCompare(b.originalName),
-          );
           this.accounts.set(accounts);
-          this.merchants.set(merchants);
           this.groupedCategories.set(this.getGroupedCategories(categories));
           this.tags.set(tags);
 
           this.filteredCategories.set(categories);
-          this.filteredMerchants.set(merchants);
         },
         error: (error: any): void => {
           console.error('Error loading data:', error);
@@ -261,15 +264,10 @@ export class TransactionFormDrawerComponent {
   }
 
   /**
-   * Filters the merchant list based on user input.
+   * Searches merchants server-side based on user input (PF-320).
    */
   filterMerchants(event: any): void {
-    const query: any = event.query.toLowerCase();
-    this.filteredMerchants.set(
-      this.merchants().filter((m: Merchant): boolean =>
-        m.originalName.toLowerCase().includes(query),
-      ),
-    );
+    this.merchantSearch$.next(event.query);
   }
 
   onShow(): void {

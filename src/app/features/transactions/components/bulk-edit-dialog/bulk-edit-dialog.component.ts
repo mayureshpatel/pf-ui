@@ -15,13 +15,15 @@ import {
   WritableSignal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { Subject, switchMap } from 'rxjs';
 import { DialogModule } from 'primeng/dialog';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { CheckboxModule } from 'primeng/checkbox';
 import { SelectModule } from 'primeng/select';
+import { AutoCompleteModule } from 'primeng/autocomplete';
 import { SelectItemGroup } from 'primeng/api';
 import { MessageModule } from 'primeng/message';
 
@@ -61,6 +63,7 @@ export interface BulkEditData {
     InputTextModule,
     CheckboxModule,
     SelectModule,
+    AutoCompleteModule,
     MessageModule,
     RestoreFocusOnHideDirective,
   ],
@@ -137,9 +140,27 @@ export class BulkEditDialogComponent {
     return anyToggle && allActiveAreFilled;
   });
 
+  /** Drives the merchant autocomplete's search-as-you-type requests (PF-320): the merchant list
+   *  is no longer preloaded in full, since it now grows unboundedly with a user's transaction
+   *  history -- switchMap cancels any still-in-flight search when a newer keystroke arrives. */
+  private readonly merchantSearch$: Subject<string> = new Subject<string>();
+
   constructor() {
     this.loadCategories();
-    this.loadMerchants();
+
+    this.merchantSearch$
+      .pipe(
+        switchMap((query: string) => this.merchantApi.getMerchants(query, { page: 0, size: 20 })),
+        takeUntilDestroyed(),
+      )
+      .subscribe((page) => {
+        this.merchantOptions.set(
+          page.content.map((m: Merchant) => ({
+            label: m.cleanName || m.originalName || 'Unknown Merchant',
+            value: m,
+          })),
+        );
+      });
 
     /**
      * Effect to handle dialog reset logic.
@@ -167,19 +188,10 @@ export class BulkEditDialogComponent {
   }
 
   /**
-   * Fetches the full merchant list for reassignment.
+   * Searches merchants server-side for the reassignment picker (PF-320).
    */
-  private loadMerchants(): void {
-    this.merchantApi.getMerchants().subscribe({
-      next: (merchants: Merchant[]): void => {
-        this.merchantOptions.set(
-          merchants.map((m: Merchant) => ({
-            label: m.cleanName || m.originalName || 'Unknown Merchant',
-            value: m,
-          })),
-        );
-      },
-    });
+  filterMerchants(event: { query: string }): void {
+    this.merchantSearch$.next(event.query);
   }
 
   /**

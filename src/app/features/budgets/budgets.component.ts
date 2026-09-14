@@ -28,6 +28,7 @@ import { ConfirmationService } from 'primeng/api';
 import { Budget, BudgetStatus } from '@models/budget.model';
 import { Category } from '@models/category.model';
 import { MonthOption, YearOption } from '@models/dashboard.model';
+import { PageResponse } from '@models/transaction.model';
 import { BudgetApiService } from './services/budget-api.service';
 import { CategoryApiService } from '@features/categories/services/category-api.service';
 import { ToastService } from '@core/services/toast.service';
@@ -36,6 +37,8 @@ import { BudgetFormDialogComponent } from './components/budget-form-dialog/budge
 import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
 import { getCategoryColor } from '@shared/utils/category.utils';
 import { PageErrorStateComponent } from '@shared/components/page-error-state/page-error-state.component';
+
+const ALL_BUDGETS_PAGE_SIZE = 20;
 
 /**
  * Component for managing and tracking monthly budgets.
@@ -79,8 +82,15 @@ export class BudgetsComponent implements OnInit {
   /** The list of budgets status for the selected month/year. */
   readonly budgetStatuses: WritableSignal<BudgetStatus[]> = signal([]);
 
-  /** The list of all budgets ever created (for management). */
+  /** The current page of the "manage all" budgets list (PF-320: server-paginated -- this list
+   *  grows unboundedly with how many periods a user has budgeted). */
   readonly allBudgets: WritableSignal<Budget[]> = signal([]);
+
+  /** Total budgets across all periods, for the "manage all" paginator. */
+  readonly allBudgetsTotalRecords: WritableSignal<number> = signal(0);
+
+  /** Zero-based index of the currently displayed "manage all" page. */
+  readonly allBudgetsPage: WritableSignal<number> = signal(0);
 
   /** Available categories for creating new budgets. */
   readonly categories: WritableSignal<Category[]> = signal([]);
@@ -262,25 +272,37 @@ export class BudgetsComponent implements OnInit {
   }
 
   /**
-   * Loads a flat list of all budgets for management.
+   * Loads the current page of the "manage all" budgets list.
    */
   private loadAllBudgets(): void {
     this.loading.set(true);
     this.loadError.set(false);
     this.budgetApi
-      .getAllBudgets()
+      .getAllBudgets({ page: this.allBudgetsPage(), size: ALL_BUDGETS_PAGE_SIZE })
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize((): void => this.loading.set(false)),
       )
       .subscribe({
-        next: (budgets: Budget[]): void => this.allBudgets.set(budgets),
+        next: (page: PageResponse<Budget>): void => {
+          this.allBudgets.set(page.content);
+          this.allBudgetsTotalRecords.set(page.page.totalElements);
+        },
         error: (err: any): void => {
           console.error('Failed to load all budgets:', err);
           this.toast.error('Failed to load all budgets');
           this.loadError.set(true);
         },
       });
+  }
+
+  /**
+   * Handles the "manage all" table's lazy-load event (page navigation).
+   * @param event the PrimeNG lazy-load event carrying the new page's starting row offset.
+   */
+  onAllBudgetsPageChange(event: { first?: number }): void {
+    this.allBudgetsPage.set(Math.floor((event.first ?? 0) / ALL_BUDGETS_PAGE_SIZE));
+    this.loadAllBudgets();
   }
 
   /**
@@ -292,9 +314,13 @@ export class BudgetsComponent implements OnInit {
   }
 
   /**
-   * Responds to view mode toggle.
+   * Responds to view mode toggle. Resets to the first "manage all" page on every fresh entry into
+   * that view, rather than preserving wherever the user last scrolled to.
    */
   onToggleView(): void {
+    if (this.viewMode() === 'all') {
+      this.allBudgetsPage.set(0);
+    }
     this.refreshData();
   }
 

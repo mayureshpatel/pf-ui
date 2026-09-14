@@ -1,9 +1,10 @@
 import { inject, Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { AuthService } from '@core/auth/auth.service';
 import { Observable } from 'rxjs';
 import { environment } from '@env';
 import { Merchant, MerchantMergeRequest, MerchantUpdateRequest } from '@models/merchant.model';
+import { PageRequest, PageResponse } from '@models/transaction.model';
 
 @Injectable({
   providedIn: 'root',
@@ -14,11 +15,24 @@ export class MerchantApiService {
   private readonly apiUrl: string = `${environment.apiUrl}/merchants`;
 
   /**
-   * Gets all merchants for the current user.
-   * @returns the list of merchants.
+   * Gets a paginated, optionally search-filtered page of the current user's merchants (PF-320).
+   * @param search an optional case-insensitive substring matched against either name column.
+   * @param pageRequest the page number, size, and sort to request.
+   * @returns the requested page of merchants.
    */
-  getMerchants(): Observable<Merchant[]> {
-    return this.http.get<Merchant[]>(this.apiUrl);
+  getMerchants(search: string | null, pageRequest: PageRequest): Observable<PageResponse<Merchant>> {
+    let params: HttpParams = new HttpParams()
+      .set('page', pageRequest.page.toString())
+      .set('size', pageRequest.size.toString());
+
+    if (pageRequest.sort) {
+      params = params.set('sort', pageRequest.sort);
+    }
+    if (search) {
+      params = params.set('search', search);
+    }
+
+    return this.http.get<PageResponse<Merchant>>(this.apiUrl, { params });
   }
 
   /**

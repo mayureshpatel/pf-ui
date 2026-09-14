@@ -1,8 +1,6 @@
 import { vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { By } from '@angular/platform-browser';
 import { of } from 'rxjs';
-import { Select } from 'primeng/select';
 import { BulkEditDialogComponent } from './bulk-edit-dialog.component';
 import { CategoryApiService } from '@features/categories/services/category-api.service';
 import { MerchantApiService } from '@features/merchants/services/merchant-api.service';
@@ -43,7 +41,14 @@ describe('BulkEditDialogComponent', () => {
 
   beforeEach(async () => {
     mockCategoryApi = { getGroupedCategories: vi.fn().mockReturnValue(of(mockGroups)) };
-    mockMerchantApi = { getMerchants: vi.fn().mockReturnValue(of(mockMerchants)) };
+    mockMerchantApi = {
+      getMerchants: vi.fn().mockReturnValue(
+        of({
+          content: mockMerchants,
+          page: { totalElements: mockMerchants.length, totalPages: 1, number: 0, size: 20 },
+        }),
+      ),
+    };
 
     await TestBed.configureTestingModule({
       imports: [BulkEditDialogComponent],
@@ -73,9 +78,15 @@ describe('BulkEditDialogComponent', () => {
     });
   });
 
-  describe('merchant loading (constructor-time, not gated behind dialog visibility)', () => {
-    it('should load and reshape the full merchant list into PrimeNG-default-compatible options', () => {
-      expect(mockMerchantApi.getMerchants).toHaveBeenCalled();
+  describe('merchant search (PF-320: server-side, triggered by the autocomplete, not preloaded)', () => {
+    it('should not call getMerchants until a search is triggered', () => {
+      expect(mockMerchantApi.getMerchants).not.toHaveBeenCalled();
+    });
+
+    it('should search by the typed query and reshape results into PrimeNG-default-compatible options', () => {
+      component.filterMerchants({ query: 'cos' });
+
+      expect(mockMerchantApi.getMerchants).toHaveBeenCalledWith('cos', { page: 0, size: 20 });
       expect(component.merchantOptions()).toEqual([
         { label: 'Costco', value: costco },
         { label: 'RAW MERCHANT', value: noCleanName },
@@ -84,15 +95,15 @@ describe('BulkEditDialogComponent', () => {
 
     it("should fall back through cleanName -> originalName -> 'Unknown Merchant'", () => {
       mockMerchantApi.getMerchants.mockReturnValue(
-        of([{ id: 3, userId: 1, originalName: '', cleanName: '' }]),
+        of({
+          content: [{ id: 3, userId: 1, originalName: '', cleanName: '' }],
+          page: { totalElements: 1, totalPages: 1, number: 0, size: 20 },
+        }),
       );
 
-      fixture = TestBed.createComponent(BulkEditDialogComponent);
-      fixture.componentRef.setInput('visible', true);
-      fixture.componentRef.setInput('transactions', mockTransactions);
-      fixture.detectChanges();
+      component.filterMerchants({ query: '' });
 
-      expect(fixture.componentInstance.merchantOptions()).toEqual([
+      expect(component.merchantOptions()).toEqual([
         {
           label: 'Unknown Merchant',
           value: { id: 3, userId: 1, originalName: '', cleanName: '' },
@@ -341,28 +352,26 @@ describe('BulkEditDialogComponent', () => {
       },
     );
 
-    // Two <p-select>s exist in this template now (category, then merchant) -- By.directive(Select)
-    // alone matches the first one found (category), so this filters by `group`, which only the
-    // category select sets, to reliably target the merchant one specifically.
-    const findMerchantSelect = (): any =>
-      fixture.debugElement
-        .queryAll(By.directive(Select))
-        .find((de: any): boolean => !de.componentInstance.group)!;
+    // PF-320: migrated off p-select (a preloaded, client-filtered dropdown) to p-autoComplete
+    // (a server-search-driven picker) once the backend endpoint stopped returning every merchant
+    // in one call. PrimeNG's AutoComplete has no dedicated `disabled` Signal input the way Select
+    // does, so the toggle is reflected via `readonly` plus a visual class pair instead.
+    const findMerchantAutoComplete = (): HTMLElement =>
+      fixture.nativeElement.querySelector('p-autocomplete');
+    const findMerchantInput = (): HTMLInputElement =>
+      findMerchantAutoComplete().querySelector('input')!;
 
-    it('should correctly disable the merchant p-select until its own toggle is switched on', () => {
-      // Unlike the native <input> above, PrimeNG's Select inherits a real, dedicated `disabled`
-      // Signal input (BaseEditableHolder) that a plain property binding sets independently of
-      // whatever formControlName's own ControlValueAccessor disabled-state management does --
-      // there's no conflict here the way there is on a native form element, so migrating this
-      // field off free text incidentally fixes its own instance of the disabled-binding bug too.
-      expect(findMerchantSelect().componentInstance.disabled()).toBe(true);
+    it('should correctly disable the merchant picker until its own toggle is switched on', () => {
+      expect(findMerchantInput().readOnly).toBe(true);
+      expect(findMerchantAutoComplete().classList).toContain('pointer-events-none');
     });
 
-    it('should enable the merchant p-select once its toggle is switched on', () => {
+    it('should enable the merchant picker once its toggle is switched on', () => {
       component.form.controls.updateMerchant.setValue(true);
       fixture.detectChanges();
 
-      expect(findMerchantSelect().componentInstance.disabled()).toBe(false);
+      expect(findMerchantInput().readOnly).toBe(false);
+      expect(findMerchantAutoComplete().classList).not.toContain('pointer-events-none');
     });
 
     it('should show the combined validation error only once a toggle is on and the form is still invalid', () => {
