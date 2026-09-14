@@ -149,13 +149,13 @@ describe('BulkEditDialogComponent', () => {
     });
 
     it('should be false when the merchant override is toggled on but nothing is selected', () => {
-      component.form.controls.updateVendor.setValue(true);
+      component.form.controls.updateMerchant.setValue(true);
 
       expect(component.isValid()).toBe(false);
     });
 
     it('should be true when the merchant override is toggled on and a merchant is selected', () => {
-      component.form.controls.updateVendor.setValue(true);
+      component.form.controls.updateMerchant.setValue(true);
       component.form.controls.merchant.setValue(costco);
 
       expect(component.isValid()).toBe(true);
@@ -179,7 +179,7 @@ describe('BulkEditDialogComponent', () => {
       // arrange -- category filled, but merchant toggled on and left unselected
       component.form.controls.updateCategory.setValue(true);
       component.form.controls.category.setValue(rent);
-      component.form.controls.updateVendor.setValue(true);
+      component.form.controls.updateMerchant.setValue(true);
 
       // act & assert & verify
       expect(component.isValid()).toBe(false);
@@ -188,7 +188,7 @@ describe('BulkEditDialogComponent', () => {
     it('should be true when every toggled-on field across all three is filled', () => {
       component.form.controls.updateCategory.setValue(true);
       component.form.controls.category.setValue(rent);
-      component.form.controls.updateVendor.setValue(true);
+      component.form.controls.updateMerchant.setValue(true);
       component.form.controls.merchant.setValue(costco);
       component.form.controls.updateDescription.setValue(true);
       component.form.controls.description.setValue('Business trip');
@@ -207,7 +207,7 @@ describe('BulkEditDialogComponent', () => {
       expect(saveSpy).not.toHaveBeenCalled();
     });
 
-    it('should emit only the toggled-on fields, translating updateVendor to updateMerchant', () => {
+    it('should emit only the toggled-on fields', () => {
       // arrange
       const saveSpy = vi.fn();
       component.save.subscribe(saveSpy);
@@ -233,7 +233,7 @@ describe('BulkEditDialogComponent', () => {
       // .getMerchants()), not a free-text input wrapped in an unsafe `as Merchant` cast.
       const saveSpy = vi.fn();
       component.save.subscribe(saveSpy);
-      component.form.controls.updateVendor.setValue(true);
+      component.form.controls.updateMerchant.setValue(true);
       component.form.controls.merchant.setValue(costco);
 
       // act
@@ -267,9 +267,9 @@ describe('BulkEditDialogComponent', () => {
       // merchant-mapping gap, not this separate, pre-existing quirk.
       component.form.controls.updateCategory.setValue(true);
       component.form.controls.category.setValue(rent);
-      component.form.controls.updateVendor.setValue(true);
+      component.form.controls.updateMerchant.setValue(true);
       component.form.controls.merchant.setValue(costco);
-      component.form.controls.updateVendor.setValue(false); // toggled back off, value left behind
+      component.form.controls.updateMerchant.setValue(false); // toggled back off, value left behind
       const saveSpy = vi.fn();
       component.save.subscribe(saveSpy);
 
@@ -296,7 +296,7 @@ describe('BulkEditDialogComponent', () => {
       // arrange
       component.form.controls.updateCategory.setValue(true);
       component.form.controls.category.setValue(rent);
-      component.form.controls.updateVendor.setValue(true);
+      component.form.controls.updateMerchant.setValue(true);
       component.form.controls.merchant.setValue(costco);
 
       // act
@@ -359,7 +359,7 @@ describe('BulkEditDialogComponent', () => {
     });
 
     it('should enable the merchant p-select once its toggle is switched on', () => {
-      component.form.controls.updateVendor.setValue(true);
+      component.form.controls.updateMerchant.setValue(true);
       fixture.detectChanges();
 
       expect(findMerchantSelect().componentInstance.disabled()).toBe(false);

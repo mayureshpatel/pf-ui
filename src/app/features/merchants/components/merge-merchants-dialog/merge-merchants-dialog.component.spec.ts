@@ -152,4 +152,50 @@ describe('MergeMerchantsDialogComponent', () => {
     // assert & verify
     expect(component.survivingMerchantId()).toBeNull();
   });
+
+  describe('rendering: display-name fallback (PF-223)', () => {
+    const blankCleanName: Merchant = {
+      id: 3,
+      userId: 1,
+      originalName: 'RAW TEXT 999',
+      cleanName: '',
+    };
+
+    it('falls back to originalName in the radio-choice label when cleanName is blank', () => {
+      // arrange -- sole entry, so there is exactly one radio-choice label to inspect; the
+      // secondary "original bank description" line renders originalName unconditionally
+      // regardless of this fix, so asserting on the whole fixture's textContent would pass
+      // even without the fallback -- must scope to the primary (font-semibold) span itself
+      fixture.componentRef.setInput('merchants', [blankCleanName]);
+      component.visible.set(true);
+
+      // act
+      fixture.detectChanges();
+
+      // assert & verify
+      const primaryLabel = fixture.nativeElement.querySelector(
+        'span.font-semibold.text-surface-900',
+      );
+      expect(primaryLabel.textContent.trim()).toBe('RAW TEXT 999');
+    });
+
+    it("falls back to originalName in the 'will be deleted' warning when the merged-away merchant's cleanName is blank", () => {
+      // arrange
+      fixture.componentRef.setInput('merchants', [merchantA, blankCleanName]);
+      component.visible.set(true);
+      fixture.detectChanges();
+
+      // act -- keep merchantA, so blankCleanName is the one merged away
+      component.survivingMerchantId.set(merchantA.id);
+      fixture.detectChanges();
+
+      // assert & verify -- scope to the warning box itself (unique via bg-amber-50): the radio
+      // list above it also renders blankCleanName's raw originalName unconditionally in its own
+      // secondary line, which would make a whole-fixture textContent check pass regardless of
+      // whether this box's own fallback actually works
+      const warningBox = fixture.nativeElement.querySelector('.bg-amber-50');
+      expect(warningBox.textContent).toContain('RAW TEXT 999');
+      expect(warningBox.textContent).toContain('will be deleted');
+    });
+  });
 });

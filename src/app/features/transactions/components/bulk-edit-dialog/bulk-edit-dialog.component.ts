@@ -89,7 +89,7 @@ export class BulkEditDialogComponent {
   readonly form = new FormGroup({
     updateCategory: new FormControl<boolean>(false, { nonNullable: true }),
     category: new FormControl<Category | null>(null),
-    updateVendor: new FormControl<boolean>(false, { nonNullable: true }),
+    updateMerchant: new FormControl<boolean>(false, { nonNullable: true }),
     merchant: new FormControl<Merchant | null>(null),
     updateDescription: new FormControl<boolean>(false, { nonNullable: true }),
     description: new FormControl<string>('', { nonNullable: true }),
@@ -124,14 +124,14 @@ export class BulkEditDialogComponent {
   readonly isValid: Signal<boolean | undefined> = computed((): boolean | undefined => {
     const v = this.formValue();
     const hasCategory: boolean = v.updateCategory ? !!v.category : false;
-    const hasVendor: boolean = v.updateVendor ? !!v.merchant : false;
+    const hasMerchant: boolean = v.updateMerchant ? !!v.merchant : false;
     const hasDesc: boolean = v.updateDescription ? !!v.description?.trim() : false;
 
     const anyToggle: boolean | undefined =
-      v.updateCategory || v.updateVendor || v.updateDescription;
+      v.updateCategory || v.updateMerchant || v.updateDescription;
     const allActiveAreFilled: boolean =
       (!v.updateCategory || hasCategory) &&
-      (!v.updateVendor || hasVendor) &&
+      (!v.updateMerchant || hasMerchant) &&
       (!v.updateDescription || hasDesc);
 
     return anyToggle && allActiveAreFilled;
@@ -199,7 +199,7 @@ export class BulkEditDialogComponent {
     this.save.emit({
       updateCategory: v.updateCategory,
       category: v.category || undefined,
-      updateMerchant: v.updateVendor,
+      updateMerchant: v.updateMerchant,
       merchant: v.merchant ?? undefined,
       updateDescription: v.updateDescription,
       description: v.description?.trim(),
@@ -213,7 +213,7 @@ export class BulkEditDialogComponent {
     this.form.reset({
       updateCategory: false,
       category: null,
-      updateVendor: false,
+      updateMerchant: false,
       merchant: null,
       updateDescription: false,
       description: '',

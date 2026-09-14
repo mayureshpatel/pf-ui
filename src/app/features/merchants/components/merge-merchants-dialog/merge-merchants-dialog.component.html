@@ -38,7 +38,7 @@
             class="mt-1"
           />
           <div class="flex flex-col">
-            <span class="font-semibold text-surface-900 dark:text-surface-0">{{ merchant.cleanName }}</span>
+            <span class="font-semibold text-surface-900 dark:text-surface-0">{{ merchant.cleanName || merchant.originalName || 'Unknown Merchant' }}</span>
             <span class="text-xs font-mono text-muted-color">{{ merchant.originalName }}</span>
           </div>
         </label>
@@ -50,7 +50,7 @@
         <div class="flex items-start gap-3">
           <i class="pi pi-exclamation-triangle text-amber-500 mt-1"></i>
           <p class="text-sm text-amber-800 dark:text-amber-200 leading-relaxed">
-            <span class="font-semibold">{{ mergedAway.cleanName }}</span> will be deleted, and its
+            <span class="font-semibold">{{ mergedAway.cleanName || mergedAway.originalName || 'Unknown Merchant' }}</span> will be deleted, and its
             history will show under the merchant you kept instead. This cannot be undone.
           </p>
         </div>

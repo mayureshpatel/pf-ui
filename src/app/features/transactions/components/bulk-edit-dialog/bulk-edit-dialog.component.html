@@ -64,8 +64,8 @@
 
       <!-- Merchant Overwrite -->
       <div class="flex items-start gap-4 card-soft"
-           [class.ring-1]="form.value.updateVendor" [class.ring-primary/30]="form.value.updateVendor">
-        <p-checkbox formControlName="updateVendor" [binary]="true" class="mt-1" />
+           [class.ring-1]="form.value.updateMerchant" [class.ring-primary/30]="form.value.updateMerchant">
+        <p-checkbox formControlName="updateMerchant" [binary]="true" class="mt-1" />
         <div class="flex-1 flex flex-col gap-2">
           <label class="text-[10px] font-black uppercase tracking-widest text-surface-400 dark:text-surface-500">Reassign Merchant</label>
           <p-select
@@ -73,7 +73,7 @@
             [options]="merchantOptions()"
             optionLabel="label"
             optionValue="value"
-            [disabled]="!form.value.updateVendor"
+            [disabled]="!form.value.updateMerchant"
             placeholder="Select a merchant..."
             [filter]="true"
             appendTo="body"
@@ -99,7 +99,7 @@
       </div>
 
       <!-- Combined Validation Error -->
-      @if (!isValid() && (form.value.updateCategory || form.value.updateVendor || form.value.updateDescription)) {
+      @if (!isValid() && (form.value.updateCategory || form.value.updateMerchant || form.value.updateDescription)) {
         <p-message severity="error" variant="simple" class="animate-fade-in">
           Selected fields must be populated before applying.
         </p-message>

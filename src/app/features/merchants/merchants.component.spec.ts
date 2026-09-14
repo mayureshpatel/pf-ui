@@ -178,4 +178,38 @@ describe('MerchantsComponent', () => {
       expect(mockMerchantApi.getMerchants).toHaveBeenCalledTimes(1);
     });
   });
+
+  describe('rendering: display-name fallback (PF-223)', () => {
+    it("falls back through cleanName -> originalName -> 'Unknown Merchant' in the table row, not just blank text", () => {
+      // arrange -- a blank cleanName is a real-world "unset" sentinel (not null), independent of
+      // MerchantNameNormalizer's own cleanup logic ever failing to backfill one
+      mockMerchantApi.getMerchants.mockReturnValue(
+        of([{ id: 9, userId: 1, originalName: 'RAW BANK TEXT 123', cleanName: '' }]),
+      );
+
+      // act
+      fixture.detectChanges();
+
+      // assert & verify -- scoped to the Display Name column's own span: the adjacent Original
+      // Bank Description column renders originalName unconditionally regardless of this fix, so
+      // a whole-fixture textContent check would pass even without the fallback in place
+      const displayNameCell = fixture.nativeElement.querySelector(
+        'span.font-semibold.text-surface-900',
+      );
+      expect(displayNameCell.textContent.trim()).toBe('RAW BANK TEXT 123');
+    });
+
+    it("falls back all the way to 'Unknown Merchant' when both cleanName and originalName are blank", () => {
+      // arrange
+      mockMerchantApi.getMerchants.mockReturnValue(
+        of([{ id: 9, userId: 1, originalName: '', cleanName: '' }]),
+      );
+
+      // act
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(fixture.nativeElement.textContent).toContain('Unknown Merchant');
+    });
+  });
 });
