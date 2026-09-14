@@ -540,6 +540,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/reports/net-worth": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Net worth over time
+         * @description Total net worth as of the end of each month in the requested range, defaulting to the trailing 12 months
+         */
+        get: operations["getNetWorth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/recurring/suggestions": {
         parameters: {
             query?: never;
@@ -1290,6 +1310,11 @@ export interface components {
             category?: components["schemas"]["CategoryDto"];
             /** Format: int32 */
             transactionCount?: number;
+        };
+        NetWorthDataPointDto: {
+            /** Format: date */
+            date?: string;
+            netWorth?: number;
         };
         RecurringTransactionDto: {
             /** Format: int64 */
@@ -2580,6 +2605,29 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["CategoryTransactionsDto"][];
+                };
+            };
+        };
+    };
+    getNetWorth: {
+        parameters: {
+            query?: {
+                startDate?: string;
+                endDate?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Net-worth series returned (possibly empty, if the user owns no accounts) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["NetWorthDataPointDto"][];
                 };
             };
         };
