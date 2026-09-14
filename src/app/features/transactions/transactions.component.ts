@@ -587,17 +587,17 @@ export class TransactionsComponent implements OnInit {
         type: formData.type,
         categoryId: formData.categoryId,
         merchantId: formData.merchantId,
-      } as TransactionUpdateRequest;
+      };
     } else {
       payload = {
-        accountId: (formData as TransactionCreateRequest).accountId,
+        accountId: formData.accountId,
         amount: formData.amount,
         transactionDate: toApiDateTimeString(formData.transactionDate),
         description: formData.description || '',
         type: formData.type,
         categoryId: formData.categoryId,
         merchantId: formData.merchantId,
-      } as TransactionCreateRequest;
+      };
     }
 
     const op: Observable<number> = existing
@@ -666,17 +666,16 @@ export class TransactionsComponent implements OnInit {
     this.bulkSaving.set(true);
 
     const updates: TransactionUpdateRequest[] = this.selectedTransactions().map(
-      (txn: Transaction) =>
-        ({
-          id: txn.id,
-          accountId: txn.account.id,
-          amount: txn.amount,
-          transactionDate: txn.date,
-          description: data.updateDescription ? data.description! : txn.description,
-          type: txn.type,
-          categoryId: data.updateCategory ? data.category!.id : txn.category?.id,
-          merchantId: data.updateMerchant ? data.merchant!.id : txn.merchant?.id,
-        }) as TransactionUpdateRequest,
+      (txn: Transaction): TransactionUpdateRequest => ({
+        id: txn.id,
+        accountId: txn.account.id,
+        amount: txn.amount,
+        transactionDate: txn.date,
+        description: data.updateDescription ? data.description! : txn.description,
+        type: txn.type,
+        categoryId: data.updateCategory ? data.category!.id : txn.category?.id,
+        merchantId: data.updateMerchant ? data.merchant!.id : txn.merchant?.id,
+      }),
     );
 
     this.transactionApi

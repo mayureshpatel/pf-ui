@@ -325,14 +325,12 @@ export class TransactionFormDrawerComponent {
         description: rawValue.description ?? '',
         type: rawValue.type,
         categoryId: rawValue.category!.id,
-        postDate: rawValue.postDate!,
-        // PF-328 (2026-09-13): `merchant` has no Validators.required (unlike `category`, asserted
-        // safely above), so this can genuinely be undefined -- yet TransactionUpdateRequest and
-        // TransactionCreateRequest both declare merchantId as required (`number`, not `number |
-        // undefined`). Left as-is rather than guessed at in either direction; whether the backend
-        // actually requires merchantId end-to-end is a real open question for its own ticket.
-        // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
-        merchantId: rawValue.merchant?.id!,
+        // PF-317: neither postDate nor merchant has Validators.required (unlike category,
+        // asserted safely above) -- the generated TransactionUpdateRequest type now correctly
+        // reflects that the backend agrees (no @NotNull on either field), so these are plain
+        // optional-chains rather than asserted-then-disabled-lint non-null casts.
+        postDate: rawValue.postDate ?? undefined,
+        merchantId: rawValue.merchant?.id,
       };
 
       this.save.emit({ request: updateRequest, tagIds });
@@ -344,14 +342,10 @@ export class TransactionFormDrawerComponent {
         description: rawValue.description ?? '',
         type: rawValue.type,
         categoryId: rawValue.category!.id,
-        postDate: rawValue.postDate!,
-        // PF-328 (2026-09-13): `merchant` has no Validators.required (unlike `category`, asserted
-        // safely above), so this can genuinely be undefined -- yet TransactionUpdateRequest and
-        // TransactionCreateRequest both declare merchantId as required (`number`, not `number |
-        // undefined`). Left as-is rather than guessed at in either direction; whether the backend
-        // actually requires merchantId end-to-end is a real open question for its own ticket.
-        // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
-        merchantId: rawValue.merchant?.id!,
+        // PF-317: see the matching comment in the update-request branch above -- postDate/merchant
+        // are genuinely optional per the generated (backend-sourced) type, not a lying assertion.
+        postDate: rawValue.postDate ?? undefined,
+        merchantId: rawValue.merchant?.id,
       };
 
       this.save.emit({ request: createRequest, tagIds });

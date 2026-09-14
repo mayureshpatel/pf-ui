@@ -2,6 +2,7 @@ import { Merchant } from '@models/merchant.model';
 import { Category } from '@models/category.model';
 import { Account, BankName } from './account.model';
 import { Tag } from '@models/tag.model';
+import { components } from '../generated/api-types';
 
 /**
  * Represents a transaction object.
@@ -184,50 +185,20 @@ export interface SaveTransactionRequest {
 /**
  * Represents a request to create a new transaction.
  *
- * @property accountId - The ID of the account associated with the transaction.
- * @property amount - The amount of the transaction.
- * @property transactionDate - The date of the transaction.
- * @property description - The description of the transaction.
- * @property type - The type of the transaction (income, expense, transfer, etc.).
- * @property categoryId - The ID of the category associated with the transaction.
- * @property postDate - The date of posting the transaction.
- * @property merchantId - The ID of the merchant associated with the transaction.
+ * Sourced from the backend's own OpenAPI schema (PF-317) rather than hand-maintained: `categoryId`,
+ * `postDate`, and `merchantId` are genuinely optional on the backend (no `@NotNull` on any of the
+ * three in `TransactionCreateRequest.java`), which the old hand-written version got wrong by
+ * declaring them required.
  */
-export interface TransactionCreateRequest {
-  accountId: number;
-  amount: number;
-  transactionDate: string;
-  description: string;
-  type: string;
-  categoryId: number;
-  postDate: string;
-  merchantId: number;
-}
+export type TransactionCreateRequest = components['schemas']['TransactionCreateRequest'];
 
 /**
  * Represents a request to update an existing transaction.
  *
- * @property id - The ID of the transaction to update.
- * @property accountId - The ID of the account associated with the transaction.
- * @property amount - The new amount of the transaction.
- * @property transactionDate - The new date of the transaction.
- * @property description - The new description of the transaction.
- * @property type - The new type of the transaction (income, expense, transfer, etc.).
- * @property categoryId - The new ID of the category associated with the transaction.
- * @property postDate - The new date of posting the transaction.
- * @property merchantId - The new ID of the merchant associated with the transaction.
+ * Sourced from the backend's own OpenAPI schema (PF-317) -- see {@link TransactionCreateRequest}'s
+ * doc comment for why `categoryId`/`postDate`/`merchantId` are optional here too.
  */
-export interface TransactionUpdateRequest {
-  id: number;
-  accountId: number;
-  amount: number;
-  transactionDate: string;
-  description: string;
-  type: string;
-  categoryId: number;
-  postDate: string;
-  merchantId: number;
-}
+export type TransactionUpdateRequest = components['schemas']['TransactionUpdateRequest'];
 
 /**
  * Represents the payload emitted by {@link TransactionFormDrawerComponent} on save: the
