@@ -47,3 +47,12 @@ export interface DateRangePreset {
   label: string;
   getValue: () => DateRange;
 }
+
+/**
+ * A single point in a net-worth-over-time series (PF-304's backend-computed report), one per
+ * month-end in the requested range. Field names match `NetWorthDataPointDto` exactly.
+ */
+export interface NetWorthDataPoint {
+  date: string; // ISO date (YYYY-MM-DD), the end-of-month this point represents
+  netWorth: number;
+}
