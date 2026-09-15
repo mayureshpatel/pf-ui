@@ -150,6 +150,9 @@ export class TransactionsComponent implements OnInit {
   /** Indicates if a bulk-edit save operation is currently in flight. */
   readonly bulkSaving: WritableSignal<boolean> = signal(false);
 
+  /** Indicates if a manual mark-as-transfer operation is currently in flight. */
+  readonly markingAsTransfer: WritableSignal<boolean> = signal(false);
+
   /** Indicates if the transaction form drawer is currently open. */
   readonly showDialog: WritableSignal<boolean> = signal(false);
 
@@ -315,6 +318,7 @@ export class TransactionsComponent implements OnInit {
    */
   ngOnInit(): void {
     this.hydrateFromParams(this.route.snapshot.queryParams);
+    this.handleActionParam(this.route.snapshot.queryParams);
     this.loadAccounts();
     this.loadCategories();
     this.loadMerchants();
@@ -323,6 +327,21 @@ export class TransactionsComponent implements OnInit {
     this.route.queryParams
       .pipe(skip(1), takeUntilDestroyed(this.destroyRef))
       .subscribe((params: Params): void => this.hydrateFromParams(params));
+  }
+
+  /**
+   * Handles one-shot `?action=...` navigation triggers (distinct from the persistent filter/sort
+   * state {@link TransactionUrlStateService} owns) -- currently just `review-transfers`, the
+   * Dashboard's own link to here (PF-825's `TRANSFER_REVIEW` action item). Strips the param off
+   * the URL once handled so a refresh or browser-back doesn't repeatedly reopen the dialog.
+   * @param params - The query parameters from the active route.
+   */
+  private handleActionParam(params: Params): void {
+    if (params['action'] !== 'review-transfers') return;
+
+    this.showTransferDialog.set(true);
+    const { action, ...rest } = params;
+    this.router.navigate([], { queryParams: rest, replaceUrl: true });
   }
 
   /**
@@ -689,6 +708,31 @@ export class TransactionsComponent implements OnInit {
           this.loadTransactions();
         },
         error: (err: any): void => this.toast.error(err.error?.detail || 'Bulk update failed'),
+      });
+  }
+
+  /**
+   * Manually marks every currently-selected transaction as a transfer, bypassing
+   * TransferMatcher's automatic suggestions entirely (PF-831). The suggestion dialog's own
+   * matching only ever fires on request against recent, not-yet-transfer-typed transactions --
+   * there was previously no way to correct a pair it doesn't (or can't yet, e.g. the other half
+   * hasn't been imported this session) suggest on its own.
+   */
+  onMarkAsTransfer(): void {
+    const ids: number[] = this.selectedTransactions().map((txn: Transaction): number => txn.id);
+    if (ids.length === 0) return;
+
+    this.markingAsTransfer.set(true);
+    this.transactionApi
+      .markAsTransfer(ids)
+      .pipe(finalize((): void => this.markingAsTransfer.set(false)))
+      .subscribe({
+        next: (): void => {
+          this.toast.success(`${ids.length} transaction${ids.length === 1 ? '' : 's'} marked as transfer`);
+          this.selectedTransactions.set([]);
+          this.loadTransactions();
+        },
+        error: (err: any): void => this.toast.error(err.error?.detail || 'Failed to mark as transfer'),
       });
   }
 
