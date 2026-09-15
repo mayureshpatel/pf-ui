@@ -11,62 +11,51 @@
     </div>
   </app-screen-toolbar>
 
-  <!-- Content State Manager -->
-  @if (loading()) {
-    <div class="flex flex-col justify-center items-center py-32 gap-4">
-      <p-progressSpinner strokeWidth="4"/>
-      <span
-        class="text-muted-color font-bold uppercase tracking-widest animate-pulse">Aggregating Fiscal Intel...</span>
-    </div>
-  } @else if (loadError() && transactions().length === 0) {
-    <app-page-error-state message="Failed to load report data." (retry)="loadTransactions()"/>
-  } @else {
-    <!-- Tabs with Report Components -->
-    <p-tabs [(value)]="activeTabIndex" class="card-soft">
-      <p-tablist class="bg-transparent border-none">
-        <p-tab [value]="0">
-          <div class="flex items-center gap-2">
-            <i class="pi pi-tags"></i>
-            <span class="font-bold">Categories</span>
-          </div>
-        </p-tab>
-        <p-tab [value]="1">
-          <div class="flex items-center gap-2">
-            <i class="pi pi-shop"></i>
-            <span class="font-bold">Merchants</span>
-          </div>
-        </p-tab>
-        <p-tab [value]="2">
-          <div class="flex items-center gap-2">
-            <i class="pi pi-chart-line"></i>
-            <span class="font-bold">Cash Flow</span>
-          </div>
-        </p-tab>
-        <p-tab [value]="3">
-          <div class="flex items-center gap-2">
-            <i class="pi pi-wallet"></i>
-            <span class="font-bold">Net Worth</span>
-          </div>
-        </p-tab>
-      </p-tablist>
+  <!-- Tabs with Report Components -->
+  <p-tabs [(value)]="activeTabIndex" class="card-soft">
+    <p-tablist class="bg-transparent border-none">
+      <p-tab [value]="0">
+        <div class="flex items-center gap-2">
+          <i class="pi pi-tags"></i>
+          <span class="font-bold">Categories</span>
+        </div>
+      </p-tab>
+      <p-tab [value]="1">
+        <div class="flex items-center gap-2">
+          <i class="pi pi-shop"></i>
+          <span class="font-bold">Merchants</span>
+        </div>
+      </p-tab>
+      <p-tab [value]="2">
+        <div class="flex items-center gap-2">
+          <i class="pi pi-chart-line"></i>
+          <span class="font-bold">Cash Flow</span>
+        </div>
+      </p-tab>
+      <p-tab [value]="3">
+        <div class="flex items-center gap-2">
+          <i class="pi pi-wallet"></i>
+          <span class="font-bold">Net Worth</span>
+        </div>
+      </p-tab>
+    </p-tablist>
 
-      <p-tabpanels class="bg-transparent px-0 py-6">
-        <p-tabpanel [value]="0">
-          <app-category-report [transactions]="transactions()" [dateRange]="dateRange()"/>
-        </p-tabpanel>
+    <p-tabpanels class="bg-transparent px-0 py-6">
+      <p-tabpanel [value]="0">
+        <app-category-report [dateRange]="dateRange()"/>
+      </p-tabpanel>
 
-        <p-tabpanel [value]="1">
-          <app-merchant-report [transactions]="transactions()"/>
-        </p-tabpanel>
+      <p-tabpanel [value]="1">
+        <app-merchant-report [dateRange]="dateRange()"/>
+      </p-tabpanel>
 
-        <p-tabpanel [value]="2">
-          <app-income-expense-report [transactions]="transactions()"/>
-        </p-tabpanel>
+      <p-tabpanel [value]="2">
+        <app-income-expense-report [dateRange]="dateRange()"/>
+      </p-tabpanel>
 
-        <p-tabpanel [value]="3">
-          <app-net-worth-report [dateRange]="dateRange()"/>
-        </p-tabpanel>
-      </p-tabpanels>
-    </p-tabs>
-  }
+      <p-tabpanel [value]="3">
+        <app-net-worth-report [dateRange]="dateRange()"/>
+      </p-tabpanel>
+    </p-tabpanels>
+  </p-tabs>
 </div>

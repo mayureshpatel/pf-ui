@@ -1,3 +1,11 @@
+@if (loading()) {
+  <div class="flex flex-col justify-center items-center py-32 gap-4">
+    <p-progressSpinner strokeWidth="4"/>
+    <span class="text-muted-color font-bold uppercase tracking-widest animate-pulse">Aggregating Cash Flow...</span>
+  </div>
+} @else if (loadError()) {
+  <app-page-error-state message="Failed to load cash flow report data." (retry)="loadMonthlyData()"/>
+} @else {
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
   <!-- Stacked Bar Chart: Income vs Expense -->
   <p-card class="h-full card-soft">
@@ -87,3 +95,4 @@
     </p-table>
   </p-card>
 </div>
+}

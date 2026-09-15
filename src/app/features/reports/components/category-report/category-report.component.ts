@@ -2,53 +2,104 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
+  effect,
   inject,
   input,
   InputSignal,
   Signal,
+  signal,
+  WritableSignal,
 } from '@angular/core';
 import { CommonModule, formatCurrency } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs';
 import { CardModule } from 'primeng/card';
 import { ChartModule } from 'primeng/chart';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 
-import { Transaction } from '@models/transaction.model';
-import { ReportsDataService } from '../../services/reports-data.service';
+import { ReportApiService } from '../../services/report-api.service';
 import { CategoryReportData, DateRange } from '../../models/reports.model';
 import { getCategoryColor } from '@shared/utils/category.utils';
 import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
 import { downloadCsv, toCsv } from '@shared/utils/csv.utils';
+import { PageErrorStateComponent } from '@shared/components/page-error-state/page-error-state.component';
 
 /**
  * Sub-report component for analyzing spending by category.
  *
- * Provides a horizontal bar chart of the top 10 categories and a detailed
- * breakdown table showing transaction volume and averages.
+ * Provides a horizontal bar chart of the top 10 categories and a detailed breakdown table showing
+ * transaction volume and averages. Backed by PF-823's dedicated backend endpoint and owns its own
+ * async load, keyed off the parent-selected date range -- matching `NetWorthReportComponent`'s
+ * established pattern, replacing the old client-side aggregation over a page-capped transaction
+ * array that could silently understate totals past 1000 matching rows.
  */
 @Component({
   selector: 'app-category-report',
   standalone: true,
-  imports: [CommonModule, CardModule, ChartModule, TableModule, ButtonModule, FormatCurrencyPipe],
+  imports: [
+    CommonModule,
+    CardModule,
+    ChartModule,
+    TableModule,
+    ButtonModule,
+    ProgressSpinnerModule,
+    FormatCurrencyPipe,
+    PageErrorStateComponent,
+  ],
   templateUrl: './category-report.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CategoryReportComponent {
-  private readonly dataService: ReportsDataService = inject(ReportsDataService);
+  private readonly reportApi: ReportApiService = inject(ReportApiService);
+  private readonly destroyRef: DestroyRef = inject(DestroyRef);
 
-  /** The dataset of transactions to analyze. */
-  readonly transactions: InputSignal<Transaction[]> = input.required<Transaction[]>();
-
-  /** The currently selected reporting date range, used to name the CSV export (PF-306). */
+  /** The currently selected reporting date range (owned and URL-synced by the parent). */
   readonly dateRange: InputSignal<DateRange> = input.required<DateRange>();
 
-  /** Aggregated report data calculated reactively from transactions. */
-  readonly categoryData: Signal<CategoryReportData[]> = computed((): CategoryReportData[] =>
-    this.dataService.aggregateByCategory(this.transactions()),
-  );
+  /** The loaded category breakdown. */
+  readonly categoryData: WritableSignal<CategoryReportData[]> = signal<CategoryReportData[]>([]);
+
+  /** Indicates a load is in flight. */
+  readonly loading: WritableSignal<boolean> = signal(false);
+
+  /** Whether the most recent load attempt failed. */
+  readonly loadError: WritableSignal<boolean> = signal(false);
 
   /** Indicates if there is sufficient data to render visuals. */
   readonly hasData: Signal<boolean> = computed((): boolean => this.categoryData().length > 0);
+
+  constructor() {
+    /** Reactively reloads the breakdown whenever the parent-selected date range changes. */
+    effect((): void => {
+      this.loadCategoryData();
+    });
+  }
+
+  /**
+   * Fetches the category breakdown for the currently selected date range.
+   */
+  loadCategoryData(): void {
+    const range: DateRange = this.dateRange();
+    this.loading.set(true);
+    this.loadError.set(false);
+
+    this.reportApi
+      .getCategoryBreakdown(range.startDate, range.endDate)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize((): void => this.loading.set(false)),
+      )
+      .subscribe({
+        next: (data: CategoryReportData[]): void => this.categoryData.set(data),
+        error: (err: unknown): void => {
+          console.error('Category report load failed:', err);
+          this.loadError.set(true);
+        },
+      });
+  }
 
   /**
    * Derived Chart.js data object.

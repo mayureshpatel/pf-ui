@@ -2,48 +2,102 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
+  effect,
   inject,
   input,
   InputSignal,
   Signal,
+  signal,
+  WritableSignal,
 } from '@angular/core';
 import { CommonModule, formatCurrency } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs';
 import { CardModule } from 'primeng/card';
 import { ChartModule } from 'primeng/chart';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 
-import { Transaction } from '@models/transaction.model';
-import { ReportsDataService } from '../../services/reports-data.service';
-import { MerchantReportData } from '../../models/reports.model';
+import { ReportApiService } from '../../services/report-api.service';
+import { DateRange, MerchantReportData } from '../../models/reports.model';
 import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
+import { PageErrorStateComponent } from '@shared/components/page-error-state/page-error-state.component';
 
 /**
  * Sub-report component for analyzing spending volume by merchant.
  *
- * Provides a horizontal bar chart for volume leaders, a doughnut chart for
- * distribution, and a detailed merchant list with associated categories.
+ * Provides a horizontal bar chart for volume leaders, a doughnut chart for distribution, and a
+ * detailed merchant list with associated categories. Backed by PF-823's dedicated backend endpoint
+ * and owns its own async load, keyed off the parent-selected date range -- matching
+ * `NetWorthReportComponent`'s established pattern, replacing the old client-side aggregation over
+ * a page-capped transaction array that could silently understate totals past 1000 matching rows.
  */
 @Component({
   selector: 'app-merchant-report',
   standalone: true,
-  imports: [CommonModule, CardModule, ChartModule, TableModule, TagModule, FormatCurrencyPipe],
+  imports: [
+    CommonModule,
+    CardModule,
+    ChartModule,
+    TableModule,
+    TagModule,
+    ProgressSpinnerModule,
+    FormatCurrencyPipe,
+    PageErrorStateComponent,
+  ],
   templateUrl: './merchant-report.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MerchantReportComponent {
-  private readonly dataService: ReportsDataService = inject(ReportsDataService);
+  private readonly reportApi: ReportApiService = inject(ReportApiService);
+  private readonly destroyRef: DestroyRef = inject(DestroyRef);
 
-  /** The dataset of transactions to analyze. */
-  readonly transactions: InputSignal<Transaction[]> = input.required<Transaction[]>();
+  /** The currently selected reporting date range (owned and URL-synced by the parent). */
+  readonly dateRange: InputSignal<DateRange> = input.required<DateRange>();
 
-  /** Aggregated report data calculated reactively from transactions. */
-  readonly merchantData: Signal<MerchantReportData[]> = computed((): MerchantReportData[] =>
-    this.dataService.aggregateByMerchant(this.transactions()),
-  );
+  /** The loaded merchant breakdown. */
+  readonly merchantData: WritableSignal<MerchantReportData[]> = signal<MerchantReportData[]>([]);
+
+  /** Indicates a load is in flight. */
+  readonly loading: WritableSignal<boolean> = signal(false);
+
+  /** Whether the most recent load attempt failed. */
+  readonly loadError: WritableSignal<boolean> = signal(false);
 
   /** Indicates if there is sufficient data to render visuals. */
   readonly hasData: Signal<boolean> = computed((): boolean => this.merchantData().length > 0);
+
+  constructor() {
+    /** Reactively reloads the breakdown whenever the parent-selected date range changes. */
+    effect((): void => {
+      this.loadMerchantData();
+    });
+  }
+
+  /**
+   * Fetches the merchant breakdown for the currently selected date range.
+   */
+  loadMerchantData(): void {
+    const range: DateRange = this.dateRange();
+    this.loading.set(true);
+    this.loadError.set(false);
+
+    this.reportApi
+      .getMerchantBreakdown(range.startDate, range.endDate)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize((): void => this.loading.set(false)),
+      )
+      .subscribe({
+        next: (data: MerchantReportData[]): void => this.merchantData.set(data),
+        error: (err: unknown): void => {
+          console.error('Merchant report load failed:', err);
+          this.loadError.set(true);
+        },
+      });
+  }
 
   /**
    * Derived Bar Chart data for volume leaders.
