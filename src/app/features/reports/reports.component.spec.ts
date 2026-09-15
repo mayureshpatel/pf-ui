@@ -2,11 +2,8 @@ import { vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { of } from 'rxjs';
 import { ReportsComponent } from './reports.component';
-import { TransactionApiService } from '@features/transactions/services/transaction-api.service';
-import { ToastService } from '@core/services/toast.service';
-import { Transaction } from '@models/transaction.model';
 import { CategoryReportComponent } from './components/category-report/category-report.component';
 import { MerchantReportComponent } from './components/merchant-report/merchant-report.component';
 import { IncomeExpenseReportComponent } from './components/income-expense-report/income-expense-report.component';
@@ -16,25 +13,9 @@ import { ReportApiService } from './services/report-api.service';
 describe('ReportsComponent', () => {
   let fixture: ComponentFixture<ReportsComponent>;
   let component: ReportsComponent;
-  let mockTransactionApi: any;
-  let mockToast: any;
   let mockRouter: any;
   let mockActivatedRoute: any;
   let mockReportApi: any;
-
-  const mockTransactions = [
-    {
-      id: 1,
-      description: 'Test Txn',
-      date: '2026-01-15',
-      amount: 42.5,
-      type: 'EXPENSE',
-      account: { id: 1, name: 'Checking' },
-      category: { id: 1, name: 'Groceries' },
-      merchant: { id: 1, cleanName: 'Test Merchant' },
-      tags: [],
-    },
-  ] as unknown as Transaction[];
 
   // p-tabs' TabList calls ngAfterViewInit -> bindResizeObserver(), which JSDOM doesn't implement.
   beforeAll(() => {
@@ -46,12 +27,6 @@ describe('ReportsComponent', () => {
   });
 
   beforeEach(async () => {
-    mockTransactionApi = {
-      getTransactions: vi
-        .fn()
-        .mockReturnValue(of({ content: mockTransactions, page: { totalElements: 1 } })),
-    };
-    mockToast = { success: vi.fn(), error: vi.fn(), info: vi.fn() };
     mockRouter = { navigate: vi.fn() };
     mockActivatedRoute = {
       snapshot: { queryParams: {} },
@@ -59,13 +34,14 @@ describe('ReportsComponent', () => {
     };
     mockReportApi = {
       getNetWorth: vi.fn().mockReturnValue(of([])),
+      getCategoryBreakdown: vi.fn().mockReturnValue(of([])),
+      getMerchantBreakdown: vi.fn().mockReturnValue(of([])),
+      getMonthlyBreakdown: vi.fn().mockReturnValue(of([])),
     };
 
     await TestBed.configureTestingModule({
       imports: [ReportsComponent],
       providers: [
-        { provide: TransactionApiService, useValue: mockTransactionApi },
-        { provide: ToastService, useValue: mockToast },
         { provide: Router, useValue: mockRouter },
         { provide: ActivatedRoute, useValue: mockActivatedRoute },
         { provide: ReportApiService, useValue: mockReportApi },
@@ -84,22 +60,32 @@ describe('ReportsComponent', () => {
     expect(component.activeTabIndex()).toBe(0);
   });
 
-  it('should load transactions on init using a "Last 3 Months" default range', () => {
+  it('should default the date range to "Last 3 Months"', () => {
     // act
     fixture.detectChanges();
 
     // assert & verify
-    expect(mockTransactionApi.getTransactions).toHaveBeenCalledWith(
-      expect.objectContaining({ startDate: expect.any(Date), endDate: expect.any(Date) }),
-      expect.objectContaining({ page: 0, size: 1000, sort: 'date,desc' }),
-    );
     expect(component.dateRange().label).toBe('Last 3 Months');
   });
 
-  it('should reload transactions when the date range changes', () => {
+  it('should sync the date range to the URL on load', () => {
     // act
     fixture.detectChanges();
-    mockTransactionApi.getTransactions.mockClear();
+
+    // assert & verify
+    expect(mockRouter.navigate).toHaveBeenCalledWith(
+      [],
+      expect.objectContaining({
+        queryParams: expect.objectContaining({ label: 'Last 3 Months' }),
+        queryParamsHandling: 'replace',
+      }),
+    );
+  });
+
+  it('should re-sync the URL when the date range changes', () => {
+    // act
+    fixture.detectChanges();
+    mockRouter.navigate.mockClear();
     component.dateRange.set({
       startDate: '2026-01-01',
       endDate: '2026-01-31',
@@ -108,14 +94,16 @@ describe('ReportsComponent', () => {
     fixture.detectChanges();
 
     // assert & verify
-    const call = mockTransactionApi.getTransactions.mock.calls[0][0];
-    expect(call.startDate.getFullYear()).toBe(2026);
-    expect(call.startDate.getMonth()).toBe(0); // January
-    expect(call.startDate.getDate()).toBe(1);
-    expect(call.endDate.getDate()).toBe(31);
+    expect(mockRouter.navigate).toHaveBeenCalledWith(
+      [],
+      expect.objectContaining({
+        queryParams: { startDate: '2026-01-01', endDate: '2026-01-31', label: 'Custom Range' },
+        queryParamsHandling: 'replace',
+      }),
+    );
   });
 
-  it('should pass the same loaded transactions down to all three sub-reports', () => {
+  it('should pass the current date range down to every sub-report', () => {
     // act
     fixture.detectChanges();
 
@@ -126,20 +114,12 @@ describe('ReportsComponent', () => {
       .componentInstance as MerchantReportComponent;
     const incomeExpense = fixture.debugElement.query(By.directive(IncomeExpenseReportComponent))
       .componentInstance as IncomeExpenseReportComponent;
-
-    expect(category.transactions()).toEqual(mockTransactions);
-    expect(merchant.transactions()).toEqual(mockTransactions);
-    expect(incomeExpense.transactions()).toEqual(mockTransactions);
-  });
-
-  it('should pass the current date range down to the net worth sub-report', () => {
-    // act
-    fixture.detectChanges();
-
-    // assert & verify
     const netWorth = fixture.debugElement.query(By.directive(NetWorthReportComponent))
       .componentInstance as NetWorthReportComponent;
 
+    expect(category.dateRange()).toEqual(component.dateRange());
+    expect(merchant.dateRange()).toEqual(component.dateRange());
+    expect(incomeExpense.dateRange()).toEqual(component.dateRange());
     expect(netWorth.dateRange()).toEqual(component.dateRange());
   });
 
@@ -151,27 +131,5 @@ describe('ReportsComponent', () => {
 
     // assert & verify
     expect(component.activeTabIndex()).toBe(1);
-  });
-
-  it('should toggle the loading state around the request', () => {
-    // act
-    fixture.detectChanges();
-
-    // assert & verify -- of(...) resolves synchronously
-    expect(component.loading()).toBe(false);
-  });
-
-  it('should show an error toast and stop loading when the request fails', () => {
-    // arrange
-    mockTransactionApi.getTransactions.mockReturnValue(
-      throwError(() => new Error('network error')),
-    );
-
-    // act
-    fixture.detectChanges();
-
-    // assert & verify
-    expect(mockToast.error).toHaveBeenCalledWith('Failed to load report data. Please try again.');
-    expect(component.loading()).toBe(false);
   });
 });

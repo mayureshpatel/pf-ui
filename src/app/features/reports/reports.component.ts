@@ -11,18 +11,9 @@ import {
 import { CommonModule } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Params, Router } from '@angular/router';
-import { finalize, skip } from 'rxjs';
+import { skip } from 'rxjs';
 import { TabsModule } from 'primeng/tabs';
-import { ProgressSpinnerModule } from 'primeng/progressspinner';
 
-import {
-  PageRequest,
-  PageResponse,
-  Transaction,
-  TransactionFilter,
-} from '@models/transaction.model';
-import { TransactionApiService } from '../transactions/services/transaction-api.service';
-import { ToastService } from '@core/services/toast.service';
 import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen-toolbar';
 import { DateRangeFilterComponent } from './components/date-range-filter/date-range-filter.component';
 import { CategoryReportComponent } from './components/category-report/category-report.component';
@@ -30,14 +21,15 @@ import { MerchantReportComponent } from './components/merchant-report/merchant-r
 import { IncomeExpenseReportComponent } from './components/income-expense-report/income-expense-report.component';
 import { NetWorthReportComponent } from './components/net-worth-report/net-worth-report.component';
 import { DateRange } from './models/reports.model';
-import { fromLocalDateString, toLocalDateString } from '@shared/utils/transaction.utils';
-import { PageErrorStateComponent } from '@shared/components/page-error-state/page-error-state.component';
+import { toLocalDateString } from '@shared/utils/transaction.utils';
 
 /**
  * Main reporting hub providing visual analytics and deep-dive spending patterns.
  *
- * Coordinates data fetching based on selected date ranges and distributes
- * transaction datasets to specialized sub-report widgets.
+ * Owns only the selected date range and its URL sync; each tab (PF-823) owns its own server-side
+ * aggregated fetch keyed off that range, rather than this component centrally fetching a raw,
+ * page-capped transaction array for every tab to aggregate client-side -- the old approach could
+ * silently understate totals past 1000 matching transactions in the selected range.
  */
 @Component({
   selector: 'app-reports',
@@ -45,21 +37,17 @@ import { PageErrorStateComponent } from '@shared/components/page-error-state/pag
   imports: [
     CommonModule,
     TabsModule,
-    ProgressSpinnerModule,
     ScreenToolbarComponent,
     DateRangeFilterComponent,
     CategoryReportComponent,
     MerchantReportComponent,
     IncomeExpenseReportComponent,
     NetWorthReportComponent,
-    PageErrorStateComponent,
   ],
   templateUrl: './reports.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ReportsComponent implements OnInit {
-  private readonly transactionApi: TransactionApiService = inject(TransactionApiService);
-  private readonly toast: ToastService = inject(ToastService);
   private readonly destroyRef: DestroyRef = inject(DestroyRef);
   private readonly route: ActivatedRoute = inject(ActivatedRoute);
   private readonly router: Router = inject(Router);
@@ -67,27 +55,13 @@ export class ReportsComponent implements OnInit {
   /** The currently active date range for the reports. */
   readonly dateRange: WritableSignal<DateRange> = signal(this.getDefaultDateRange());
 
-  /** The dataset of transactions for the selected range. */
-  readonly transactions: WritableSignal<Transaction[]> = signal([]);
-
-  /** Global loading state for report generation. */
-  readonly loading: WritableSignal<boolean> = signal(false);
-
-  /** Whether the most recent load attempt failed. */
-  readonly loadError: WritableSignal<boolean> = signal(false);
-
   /** Currently selected tab (0: Category, 1: Merchant, 2: Monthly, 3: Net Worth). */
   readonly activeTabIndex: WritableSignal<number> = signal(0);
 
   constructor() {
-    /**
-     * Core effect that reactively reloads the transaction dataset and syncs the URL
-     * whenever the user changes the global date range filters.
-     */
+    /** Keeps the URL in sync whenever the user changes the global date range filters. */
     effect((): void => {
-      const range: DateRange = this.dateRange();
-      this.updateUrlParams(range);
-      this.loadTransactions();
+      this.updateUrlParams(this.dateRange());
     });
   }
 
@@ -102,44 +76,6 @@ export class ReportsComponent implements OnInit {
     this.route.queryParams
       .pipe(skip(1), takeUntilDestroyed(this.destroyRef))
       .subscribe((params: Params): void => this.hydrateFromParams(params));
-  }
-
-  /**
-   * Fetches the relevant transaction dataset from the API based on current filters.
-   *
-   * Requests a large page size (1000) to ensure the aggregation engine
-   * has a comprehensive dataset for visual analytics.
-   */
-  loadTransactions(): void {
-    const range: DateRange = this.dateRange();
-    this.loading.set(true);
-    this.loadError.set(false);
-
-    const filter: TransactionFilter = {
-      startDate: fromLocalDateString(range.startDate),
-      endDate: fromLocalDateString(range.endDate),
-    };
-
-    const pageRequest: PageRequest = {
-      page: 0,
-      size: 1000,
-      sort: 'date,desc',
-    };
-
-    this.transactionApi
-      .getTransactions(filter, pageRequest)
-      .pipe(
-        takeUntilDestroyed(this.destroyRef),
-        finalize((): void => this.loading.set(false)),
-      )
-      .subscribe({
-        next: (page: PageResponse<Transaction>): void => this.transactions.set(page.content),
-        error: (err: any): void => {
-          console.error('Report data load failed:', err);
-          this.toast.error('Failed to load report data. Please try again.');
-          this.loadError.set(true);
-        },
-      });
   }
 
   /**

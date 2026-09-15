@@ -1,12 +1,15 @@
+import { vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { of, throwError } from 'rxjs';
 import { MerchantReportComponent } from './merchant-report.component';
-import { Transaction, TransactionType } from '@models/transaction.model';
+import { ReportApiService } from '../../services/report-api.service';
 import { Merchant } from '@models/merchant.model';
-import { Category, CategoryType } from '@models/category.model';
+import { DateRange, MerchantReportData } from '../../models/reports.model';
 
 describe('MerchantReportComponent', () => {
   let component: MerchantReportComponent;
   let fixture: ComponentFixture<MerchantReportComponent>;
+  let mockReportApi: any;
 
   const merchant = (id: number, cleanName: string): Merchant => ({
     id,
@@ -14,46 +17,42 @@ describe('MerchantReportComponent', () => {
     originalName: cleanName,
     cleanName,
   });
-  const category = (name: string): Category =>
-    ({
-      id: 1,
-      userId: 1,
-      name,
-      type: CategoryType.EXPENSE,
-      parent: null,
-      icon: 'pi-tag',
-      color: '',
-    }) as Category;
 
-  const expense = (id: number, m: Merchant, amount: number, cat?: Category): Transaction =>
-    ({
-      id,
-      account: {} as Transaction['account'],
-      category: cat ?? null,
-      amount,
-      date: '2026-01-15T00:00:00Z',
-      description: 'test',
-      type: TransactionType.EXPENSE,
-      merchant: m,
-    }) as Transaction;
+  const row = (m: Merchant, total: number, count: number, categories: string[]): MerchantReportData => ({
+    merchant: m,
+    total,
+    count,
+    categories,
+  });
 
   const target = merchant(1, 'Target');
   const amazon = merchant(2, 'Amazon');
 
-  const mockTransactions: Transaction[] = [
-    expense(1, target, 250, category('Shopping')),
-    expense(2, target, 90, category('Groceries')),
-    expense(3, amazon, 60, category('Shopping')),
+  const mockMerchantData: MerchantReportData[] = [
+    row(target, 340, 2, ['Shopping', 'Groceries']),
+    row(amazon, 60, 1, ['Shopping']),
   ];
 
-  const setTransactions = (data: Transaction[]): void => {
-    fixture.componentRef.setInput('transactions', data);
+  const mockDateRange: DateRange = {
+    startDate: '2026-06-01',
+    endDate: '2026-09-01',
+    label: 'Last 3 Months',
+  };
+
+  const setData = (data: MerchantReportData[]): void => {
+    mockReportApi.getMerchantBreakdown.mockReturnValue(of(data));
+    fixture.componentRef.setInput('dateRange', mockDateRange);
     fixture.detectChanges();
   };
 
   beforeEach(async () => {
+    mockReportApi = {
+      getMerchantBreakdown: vi.fn().mockReturnValue(of([])),
+    };
+
     await TestBed.configureTestingModule({
       imports: [MerchantReportComponent],
+      providers: [{ provide: ReportApiService, useValue: mockReportApi }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(MerchantReportComponent);
@@ -61,33 +60,46 @@ describe('MerchantReportComponent', () => {
   });
 
   it('should create', () => {
-    setTransactions(mockTransactions);
+    setData(mockMerchantData);
 
     expect(component).toBeTruthy();
   });
 
-  describe('merchantData (delegates to the real ReportsDataService)', () => {
-    it('should aggregate total/count/categories per merchant, sorted by total descending', () => {
-      // arrange & act
-      setTransactions(mockTransactions);
+  it('should load the merchant breakdown for the given date range on init', () => {
+    setData(mockMerchantData);
 
-      // assert & verify
-      expect(component.merchantData()).toEqual([
-        { merchant: target, total: 340, count: 2, categories: ['Shopping', 'Groceries'] },
-        { merchant: amazon, total: 60, count: 1, categories: ['Shopping'] },
-      ]);
-    });
+    expect(mockReportApi.getMerchantBreakdown).toHaveBeenCalledWith('2026-06-01', '2026-09-01');
+    expect(component.merchantData()).toEqual(mockMerchantData);
+  });
+
+  it('should reload when the date range input changes', () => {
+    setData(mockMerchantData);
+    mockReportApi.getMerchantBreakdown.mockClear();
+
+    fixture.componentRef.setInput('dateRange', { startDate: '2026-09-02', endDate: '2026-09-30', label: 'Custom Range' });
+    fixture.detectChanges();
+
+    expect(mockReportApi.getMerchantBreakdown).toHaveBeenCalledWith('2026-09-02', '2026-09-30');
+  });
+
+  it('should set loadError and stop loading when the request fails', () => {
+    mockReportApi.getMerchantBreakdown.mockReturnValue(throwError(() => new Error('network error')));
+    fixture.componentRef.setInput('dateRange', mockDateRange);
+    fixture.detectChanges();
+
+    expect(component.loadError()).toBe(true);
+    expect(component.loading()).toBe(false);
   });
 
   describe('hasData', () => {
-    it('should be false when there are no transactions', () => {
-      setTransactions([]);
+    it('should be false when there are no merchant entries', () => {
+      setData([]);
 
       expect(component.hasData()).toBe(false);
     });
 
-    it('should be true when at least one merchant aggregates', () => {
-      setTransactions(mockTransactions);
+    it('should be true when at least one merchant entry is present', () => {
+      setData(mockMerchantData);
 
       expect(component.hasData()).toBe(true);
     });
@@ -96,7 +108,7 @@ describe('MerchantReportComponent', () => {
   describe('barChartData', () => {
     it("should label each bar with the merchant's clean name and chart its total", () => {
       // arrange & act
-      setTransactions(mockTransactions);
+      setData(mockMerchantData);
 
       // assert & verify
       expect(component.barChartData().labels).toEqual(['Target', 'Amazon']);
@@ -105,12 +117,12 @@ describe('MerchantReportComponent', () => {
 
     it('should cap displayed merchants to the top 10 by spend', () => {
       // arrange -- 12 distinct merchants, descending totals
-      const many: Transaction[] = Array.from({ length: 12 }, (_, i): Transaction =>
-        expense(i, merchant(i, `Merchant ${i}`), 1000 - i * 10),
+      const many: MerchantReportData[] = Array.from({ length: 12 }, (_, i): MerchantReportData =>
+        row(merchant(i, `Merchant ${i}`), 1000 - i * 10, 1, []),
       );
 
       // act
-      setTransactions(many);
+      setData(many);
 
       // assert & verify
       expect(component.barChartData().labels).toHaveLength(10);
@@ -120,7 +132,7 @@ describe('MerchantReportComponent', () => {
 
     it('should assign each bar a deterministic hue-rotated color', () => {
       // arrange & act
-      setTransactions(mockTransactions);
+      setData(mockMerchantData);
 
       // assert & verify -- hsl(i * 36 % 360, 70%, 60%)
       expect(component.barChartData().datasets[0].backgroundColor).toEqual([
@@ -131,7 +143,7 @@ describe('MerchantReportComponent', () => {
 
     it("should fall back to 'Unknown' when a merchant has no clean name", () => {
       // arrange & act
-      setTransactions([expense(9, merchant(9, ''), 25)]);
+      setData([row(merchant(9, ''), 25, 1, [])]);
 
       // assert & verify
       expect(component.barChartData().labels).toEqual(['Unknown']);
@@ -141,12 +153,12 @@ describe('MerchantReportComponent', () => {
   describe('doughnutChartData', () => {
     it('should cap displayed merchants to the top 5 by spend regardless of bar-chart data', () => {
       // arrange
-      const many: Transaction[] = Array.from({ length: 8 }, (_, i): Transaction =>
-        expense(i, merchant(i, `Merchant ${i}`), 1000 - i * 10),
+      const many: MerchantReportData[] = Array.from({ length: 8 }, (_, i): MerchantReportData =>
+        row(merchant(i, `Merchant ${i}`), 1000 - i * 10, 1, []),
       );
 
       // act
-      setTransactions(many);
+      setData(many);
 
       // assert & verify
       expect(component.doughnutChartData().labels).toHaveLength(5);
@@ -157,7 +169,7 @@ describe('MerchantReportComponent', () => {
   describe('rendering', () => {
     it('should render both charts when data is present', () => {
       // arrange & act
-      setTransactions(mockTransactions);
+      setData(mockMerchantData);
       const charts = fixture.debugElement.queryAll((de: any): boolean => de.name === 'p-chart');
 
       // assert & verify
@@ -170,7 +182,7 @@ describe('MerchantReportComponent', () => {
 
     it('should render empty-state placeholders instead of charts when there is no data', () => {
       // arrange & act
-      setTransactions([]);
+      setData([]);
       const charts = fixture.debugElement.queryAll((de: any): boolean => de.name === 'p-chart');
 
       // assert & verify
@@ -181,7 +193,7 @@ describe('MerchantReportComponent', () => {
 
     it('should render one details-table row per merchant with formatted currency and category chips', () => {
       // arrange & act
-      setTransactions(mockTransactions);
+      setData(mockMerchantData);
       const rows = fixture.nativeElement.querySelectorAll('tbody tr');
 
       // assert & verify
@@ -203,7 +215,7 @@ describe('MerchantReportComponent', () => {
         originalName: 'RAW MERCHANT NAME',
         cleanName: '',
       };
-      setTransactions([expense(4, blankClean, 15)]);
+      setData([row(blankClean, 15, 1, [])]);
 
       // assert & verify
       expect(fixture.nativeElement.textContent).toContain('RAW MERCHANT NAME');

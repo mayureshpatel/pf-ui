@@ -2,47 +2,100 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
+  effect,
   inject,
   input,
   InputSignal,
   Signal,
+  signal,
+  WritableSignal,
 } from '@angular/core';
 import { CommonModule, formatCurrency, formatDate } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs';
 import { CardModule } from 'primeng/card';
 import { ChartModule } from 'primeng/chart';
 import { TableModule } from 'primeng/table';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 
-import { Transaction } from '@models/transaction.model';
-import { ReportsDataService } from '../../services/reports-data.service';
-import { MonthlyReportData } from '../../models/reports.model';
+import { ReportApiService } from '../../services/report-api.service';
+import { DateRange, MonthlyReportData } from '../../models/reports.model';
 import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
+import { PageErrorStateComponent } from '@shared/components/page-error-state/page-error-state.component';
 
 /**
  * Sub-report component for analyzing income vs. expense trends over time.
  *
- * Provides a stacked bar chart for monthly comparisons and a line chart
- * for net savings trends, accompanied by a detailed summary table.
+ * Provides a stacked bar chart for monthly comparisons and a line chart for net savings trends,
+ * accompanied by a detailed summary table. Backed by PF-823's dedicated backend endpoint and owns
+ * its own async load, keyed off the parent-selected date range -- matching
+ * `NetWorthReportComponent`'s established pattern, replacing the old client-side aggregation over
+ * a page-capped transaction array that could silently understate totals past 1000 matching rows.
  */
 @Component({
   selector: 'app-income-expense-report',
   standalone: true,
-  imports: [CommonModule, CardModule, ChartModule, TableModule, FormatCurrencyPipe],
+  imports: [
+    CommonModule,
+    CardModule,
+    ChartModule,
+    TableModule,
+    ProgressSpinnerModule,
+    FormatCurrencyPipe,
+    PageErrorStateComponent,
+  ],
   templateUrl: './income-expense-report.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class IncomeExpenseReportComponent {
-  private readonly dataService: ReportsDataService = inject(ReportsDataService);
+  private readonly reportApi: ReportApiService = inject(ReportApiService);
+  private readonly destroyRef: DestroyRef = inject(DestroyRef);
 
-  /** The dataset of transactions to analyze. */
-  readonly transactions: InputSignal<Transaction[]> = input.required<Transaction[]>();
+  /** The currently selected reporting date range (owned and URL-synced by the parent). */
+  readonly dateRange: InputSignal<DateRange> = input.required<DateRange>();
 
-  /** Aggregated monthly report data calculated reactively. */
-  readonly monthlyData: Signal<MonthlyReportData[]> = computed((): MonthlyReportData[] =>
-    this.dataService.aggregateByMonth(this.transactions()),
-  );
+  /** The loaded monthly income/expense breakdown. */
+  readonly monthlyData: WritableSignal<MonthlyReportData[]> = signal<MonthlyReportData[]>([]);
+
+  /** Indicates a load is in flight. */
+  readonly loading: WritableSignal<boolean> = signal(false);
+
+  /** Whether the most recent load attempt failed. */
+  readonly loadError: WritableSignal<boolean> = signal(false);
 
   /** Indicates if there is sufficient data to render visuals. */
   readonly hasData: Signal<boolean> = computed(() => this.monthlyData().length > 0);
+
+  constructor() {
+    /** Reactively reloads the breakdown whenever the parent-selected date range changes. */
+    effect((): void => {
+      this.loadMonthlyData();
+    });
+  }
+
+  /**
+   * Fetches the monthly income/expense breakdown for the currently selected date range.
+   */
+  loadMonthlyData(): void {
+    const range: DateRange = this.dateRange();
+    this.loading.set(true);
+    this.loadError.set(false);
+
+    this.reportApi
+      .getMonthlyBreakdown(range.startDate, range.endDate)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize((): void => this.loading.set(false)),
+      )
+      .subscribe({
+        next: (data: MonthlyReportData[]): void => this.monthlyData.set(data),
+        error: (err: unknown): void => {
+          console.error('Income/expense report load failed:', err);
+          this.loadError.set(true);
+        },
+      });
+  }
 
   /**
    * Derived Stacked Bar Chart data for Income vs Expense comparison.
