@@ -18,7 +18,12 @@ describe('MerchantReportComponent', () => {
     cleanName,
   });
 
-  const row = (m: Merchant, total: number, count: number, categories: string[]): MerchantReportData => ({
+  const row = (
+    m: Merchant,
+    total: number,
+    count: number,
+    categories: string[],
+  ): MerchantReportData => ({
     merchant: m,
     total,
     count,
@@ -76,14 +81,20 @@ describe('MerchantReportComponent', () => {
     setData(mockMerchantData);
     mockReportApi.getMerchantBreakdown.mockClear();
 
-    fixture.componentRef.setInput('dateRange', { startDate: '2026-09-02', endDate: '2026-09-30', label: 'Custom Range' });
+    fixture.componentRef.setInput('dateRange', {
+      startDate: '2026-09-02',
+      endDate: '2026-09-30',
+      label: 'Custom Range',
+    });
     fixture.detectChanges();
 
     expect(mockReportApi.getMerchantBreakdown).toHaveBeenCalledWith('2026-09-02', '2026-09-30');
   });
 
   it('should set loadError and stop loading when the request fails', () => {
-    mockReportApi.getMerchantBreakdown.mockReturnValue(throwError(() => new Error('network error')));
+    mockReportApi.getMerchantBreakdown.mockReturnValue(
+      throwError(() => new Error('network error')),
+    );
     fixture.componentRef.setInput('dateRange', mockDateRange);
     fixture.detectChanges();
 

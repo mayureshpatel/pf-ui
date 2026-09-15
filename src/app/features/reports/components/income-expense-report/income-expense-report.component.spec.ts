@@ -58,7 +58,11 @@ describe('IncomeExpenseReportComponent', () => {
     setData(mockMonthlyData);
     mockReportApi.getMonthlyBreakdown.mockClear();
 
-    fixture.componentRef.setInput('dateRange', { startDate: '2026-03-01', endDate: '2026-03-31', label: 'Custom Range' });
+    fixture.componentRef.setInput('dateRange', {
+      startDate: '2026-03-01',
+      endDate: '2026-03-31',
+      label: 'Custom Range',
+    });
     fixture.detectChanges();
 
     expect(mockReportApi.getMonthlyBreakdown).toHaveBeenCalledWith('2026-03-01', '2026-03-31');

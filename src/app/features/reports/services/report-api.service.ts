@@ -79,14 +79,12 @@ export class ReportApiService {
       })
       .pipe(
         map((rows: CategoryReportDataResponse[]): CategoryReportData[] =>
-          rows.map(
-            (row: CategoryReportDataResponse): CategoryReportData => ({
-              category: row.category,
-              total: row.total,
-              count: row.count,
-              avgTransaction: row.count > 0 ? row.total / row.count : 0,
-            }),
-          ),
+          rows.map((row: CategoryReportDataResponse): CategoryReportData => ({
+            category: row.category,
+            total: row.total,
+            count: row.count,
+            avgTransaction: row.count > 0 ? row.total / row.count : 0,
+          })),
         ),
       );
   }
@@ -124,14 +122,12 @@ export class ReportApiService {
       })
       .pipe(
         map((rows: MonthlyReportDataResponse[]): MonthlyReportData[] =>
-          rows.map(
-            (row: MonthlyReportDataResponse): MonthlyReportData => ({
-              month: `${row.year}-${String(row.month).padStart(2, '0')}`,
-              income: row.income,
-              expense: row.expense,
-              netSavings: row.income - row.expense,
-            }),
-          ),
+          rows.map((row: MonthlyReportDataResponse): MonthlyReportData => ({
+            month: `${row.year}-${String(row.month).padStart(2, '0')}`,
+            income: row.income,
+            expense: row.expense,
+            netSavings: row.income - row.expense,
+          })),
         ),
       );
   }

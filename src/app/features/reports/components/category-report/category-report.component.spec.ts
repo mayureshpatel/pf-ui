@@ -79,7 +79,9 @@ describe('CategoryReportComponent', () => {
   });
 
   it('should set loadError and stop loading when the request fails', () => {
-    mockReportApi.getCategoryBreakdown.mockReturnValue(throwError(() => new Error('network error')));
+    mockReportApi.getCategoryBreakdown.mockReturnValue(
+      throwError(() => new Error('network error')),
+    );
 
     setDateRange();
 
@@ -88,7 +90,9 @@ describe('CategoryReportComponent', () => {
   });
 
   it('should clear a prior loadError once a retry succeeds', () => {
-    mockReportApi.getCategoryBreakdown.mockReturnValue(throwError(() => new Error('network error')));
+    mockReportApi.getCategoryBreakdown.mockReturnValue(
+      throwError(() => new Error('network error')),
+    );
     setDateRange();
     expect(component.loadError()).toBe(true);
 
