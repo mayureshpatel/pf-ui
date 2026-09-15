@@ -560,6 +560,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/reports/monthly": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Monthly income vs. expense
+         * @description Monthly income/expense totals for the requested range, computed server-side over every matching transaction
+         */
+        get: operations["getMonthlyReportData"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/merchants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Merchant breakdown
+         * @description Spending by merchant for the requested range, computed server-side over every matching transaction
+         */
+        get: operations["getMerchantReportData"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Category breakdown
+         * @description Spending by category for the requested range, computed server-side over every matching transaction
+         */
+        get: operations["getCategoryReportData"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/recurring/suggestions": {
         parameters: {
             query?: never;
@@ -1315,6 +1375,27 @@ export interface components {
             /** Format: date */
             date?: string;
             netWorth?: number;
+        };
+        MonthlyReportDataDto: {
+            /** Format: int32 */
+            year?: number;
+            /** Format: int32 */
+            month?: number;
+            income?: number;
+            expense?: number;
+        };
+        MerchantReportDataDto: {
+            merchant?: components["schemas"]["MerchantDto"];
+            total?: number;
+            /** Format: int64 */
+            count?: number;
+            categories?: string[];
+        };
+        CategoryReportDataDto: {
+            category?: components["schemas"]["CategoryDto"];
+            total?: number;
+            /** Format: int64 */
+            count?: number;
         };
         RecurringTransactionDto: {
             /** Format: int64 */
@@ -2628,6 +2709,75 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["NetWorthDataPointDto"][];
+                };
+            };
+        };
+    };
+    getMonthlyReportData: {
+        parameters: {
+            query: {
+                startDate: string;
+                endDate: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Monthly breakdown returned (possibly empty) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MonthlyReportDataDto"][];
+                };
+            };
+        };
+    };
+    getMerchantReportData: {
+        parameters: {
+            query: {
+                startDate: string;
+                endDate: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Merchant breakdown returned (possibly empty) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MerchantReportDataDto"][];
+                };
+            };
+        };
+    };
+    getCategoryReportData: {
+        parameters: {
+            query: {
+                startDate: string;
+                endDate: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Category breakdown returned (possibly empty) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CategoryReportDataDto"][];
                 };
             };
         };
