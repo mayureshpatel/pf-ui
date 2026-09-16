@@ -1,38 +1,40 @@
+import { vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { of, throwError } from 'rxjs';
 import { IncomeExpenseReportComponent } from './income-expense-report.component';
-import { Transaction, TransactionType } from '@models/transaction.model';
+import { ReportApiService } from '../../services/report-api.service';
+import { DateRange, MonthlyReportData } from '../../models/reports.model';
 
 describe('IncomeExpenseReportComponent', () => {
   let component: IncomeExpenseReportComponent;
   let fixture: ComponentFixture<IncomeExpenseReportComponent>;
+  let mockReportApi: any;
 
-  const txn = (date: string, type: TransactionType, amount: number): Transaction =>
-    ({
-      id: 1,
-      account: {} as Transaction['account'],
-      category: {} as Transaction['category'],
-      amount,
-      date,
-      description: 'test',
-      type,
-      merchant: {} as Transaction['merchant'],
-    }) as Transaction;
-
-  const mockTransactions: Transaction[] = [
-    txn('2026-01-10T00:00:00Z', TransactionType.INCOME, 4000),
-    txn('2026-01-15T00:00:00Z', TransactionType.EXPENSE, 2500),
-    txn('2026-02-05T00:00:00Z', TransactionType.INCOME, 4200),
-    txn('2026-02-20T00:00:00Z', TransactionType.EXPENSE, 4800),
+  const mockMonthlyData: MonthlyReportData[] = [
+    { month: '2026-01', income: 4000, expense: 2500, netSavings: 1500 },
+    { month: '2026-02', income: 4200, expense: 4800, netSavings: -600 },
   ];
 
-  const setTransactions = (data: Transaction[]): void => {
-    fixture.componentRef.setInput('transactions', data);
+  const mockDateRange: DateRange = {
+    startDate: '2026-01-01',
+    endDate: '2026-02-28',
+    label: 'Last 3 Months',
+  };
+
+  const setData = (data: MonthlyReportData[]): void => {
+    mockReportApi.getMonthlyBreakdown.mockReturnValue(of(data));
+    fixture.componentRef.setInput('dateRange', mockDateRange);
     fixture.detectChanges();
   };
 
   beforeEach(async () => {
+    mockReportApi = {
+      getMonthlyBreakdown: vi.fn().mockReturnValue(of([])),
+    };
+
     await TestBed.configureTestingModule({
       imports: [IncomeExpenseReportComponent],
+      providers: [{ provide: ReportApiService, useValue: mockReportApi }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(IncomeExpenseReportComponent);
@@ -40,34 +42,50 @@ describe('IncomeExpenseReportComponent', () => {
   });
 
   it('should create', () => {
-    setTransactions(mockTransactions);
+    setData(mockMonthlyData);
 
     expect(component).toBeTruthy();
   });
 
-  describe('monthlyData (delegates to the real ReportsDataService)', () => {
-    it('should aggregate income/expense/netSavings per month, sorted chronologically', () => {
-      // arrange & act
-      setTransactions(mockTransactions);
+  it('should load the monthly breakdown for the given date range on init', () => {
+    setData(mockMonthlyData);
 
-      // assert & verify -- exhaustive aggregation-logic coverage lives in
-      // reports-data.service.spec.ts; this just confirms the component wires its input through
-      expect(component.monthlyData()).toEqual([
-        { month: '2026-01', income: 4000, expense: 2500, netSavings: 1500 },
-        { month: '2026-02', income: 4200, expense: 4800, netSavings: -600 },
-      ]);
+    expect(mockReportApi.getMonthlyBreakdown).toHaveBeenCalledWith('2026-01-01', '2026-02-28');
+    expect(component.monthlyData()).toEqual(mockMonthlyData);
+  });
+
+  it('should reload when the date range input changes', () => {
+    setData(mockMonthlyData);
+    mockReportApi.getMonthlyBreakdown.mockClear();
+
+    fixture.componentRef.setInput('dateRange', {
+      startDate: '2026-03-01',
+      endDate: '2026-03-31',
+      label: 'Custom Range',
     });
+    fixture.detectChanges();
+
+    expect(mockReportApi.getMonthlyBreakdown).toHaveBeenCalledWith('2026-03-01', '2026-03-31');
+  });
+
+  it('should set loadError and stop loading when the request fails', () => {
+    mockReportApi.getMonthlyBreakdown.mockReturnValue(throwError(() => new Error('network error')));
+    fixture.componentRef.setInput('dateRange', mockDateRange);
+    fixture.detectChanges();
+
+    expect(component.loadError()).toBe(true);
+    expect(component.loading()).toBe(false);
   });
 
   describe('hasData', () => {
-    it('should be false when there are no transactions', () => {
-      setTransactions([]);
+    it('should be false when there are no monthly entries', () => {
+      setData([]);
 
       expect(component.hasData()).toBe(false);
     });
 
-    it('should be true when at least one month aggregates', () => {
-      setTransactions(mockTransactions);
+    it('should be true when at least one month is present', () => {
+      setData(mockMonthlyData);
 
       expect(component.hasData()).toBe(true);
     });
@@ -76,7 +94,7 @@ describe('IncomeExpenseReportComponent', () => {
   describe('stackedBarData', () => {
     it('should label each point with a "MMM YY" month label, chronologically ordered', () => {
       // arrange & act
-      setTransactions(mockTransactions);
+      setData(mockMonthlyData);
 
       // assert & verify
       expect(component.stackedBarData().labels).toEqual(['Jan 26', 'Feb 26']);
@@ -84,7 +102,7 @@ describe('IncomeExpenseReportComponent', () => {
 
     it('should chart raw income and absolute-valued expense as separate datasets', () => {
       // arrange & act
-      setTransactions(mockTransactions);
+      setData(mockMonthlyData);
       const [income, expense] = component.stackedBarData().datasets;
 
       // assert & verify
@@ -96,7 +114,7 @@ describe('IncomeExpenseReportComponent', () => {
   describe('lineChartData', () => {
     it('should chart net savings (income minus expense) per month, including negative months', () => {
       // arrange & act
-      setTransactions(mockTransactions);
+      setData(mockMonthlyData);
 
       // assert & verify
       expect(component.lineChartData().labels).toEqual(['Jan 26', 'Feb 26']);
@@ -121,7 +139,7 @@ describe('IncomeExpenseReportComponent', () => {
   describe('rendering', () => {
     it('should render both charts when data is present', () => {
       // arrange & act
-      setTransactions(mockTransactions);
+      setData(mockMonthlyData);
       const charts = fixture.debugElement.queryAll((de: any): boolean => de.name === 'p-chart');
 
       // assert & verify
@@ -134,7 +152,7 @@ describe('IncomeExpenseReportComponent', () => {
 
     it('should render empty-state placeholders instead of charts when there is no data', () => {
       // arrange & act
-      setTransactions([]);
+      setData([]);
       const charts = fixture.debugElement.queryAll((de: any): boolean => de.name === 'p-chart');
 
       // assert & verify
@@ -145,7 +163,7 @@ describe('IncomeExpenseReportComponent', () => {
 
     it('should render one summary-table row per aggregated month with formatted currency', () => {
       // arrange & act
-      setTransactions(mockTransactions);
+      setData(mockMonthlyData);
       const rows = fixture.nativeElement.querySelectorAll('tbody tr');
 
       // assert & verify

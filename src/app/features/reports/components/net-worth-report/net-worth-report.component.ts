@@ -26,9 +26,9 @@ import { PageErrorStateComponent } from '@shared/components/page-error-state/pag
 /**
  * Sub-report component charting total net worth over time.
  *
- * Unlike the other sub-reports (which aggregate an already-loaded, shared transaction dataset
- * client-side via `ReportsDataService`), this one is backed by PF-304's dedicated backend
- * endpoint and owns its own async load, keyed off the parent-selected date range.
+ * Backed by PF-304's dedicated backend endpoint and owns its own async load, keyed off the
+ * parent-selected date range -- the pattern every other sub-report followed too once PF-823
+ * moved their aggregation server-side.
  */
 @Component({
   selector: 'app-net-worth-report',

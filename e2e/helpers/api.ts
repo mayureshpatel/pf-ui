@@ -199,3 +199,91 @@ export async function createTestTransaction(
   const id = (await response.json()) as number;
   return {id, description};
 }
+
+/**
+ * Creates `count` accounts via the real API (`namePrefix` suffixed with an index), for spreading
+ * a large batch of test transactions across via {@link createTestTransactionsBulk} -- see that
+ * function's own doc comment for why a single shared account can't safely take fully-concurrent
+ * writes.
+ */
+export async function createTestAccountsBulk(
+  page: Page,
+  namePrefix: string,
+  count: number
+): Promise<{id: number; name: string}[]> {
+  const accounts: {id: number; name: string}[] = [];
+  for (let i = 0; i < count; i++) {
+    accounts.push(await createTestAccount(page, `${namePrefix} ${i}`));
+  }
+  return accounts;
+}
+
+/**
+ * Creates `count` transactions via the real API, one per day counting back from `count - 1` days
+ * ago through today, round-robined across `accountIds` and all sharing the same
+ * category/description (so they normalize to one merchant and land in one category bucket,
+ * regardless of which account each lands on). Fired in concurrent batches -- at `count` in the
+ * thousands, a fully sequential loop is impractically slow for a single spec's setup.
+ *
+ * Round-robining across several accounts, rather than writing every transaction to one, is what
+ * makes that concurrency safe: creating a transaction also updates its account's balance under
+ * optimistic locking, so a batch of simultaneous writes to the *same* account row spuriously
+ * 409s -- spreading them across distinct accounts means no two concurrent requests ever contend
+ * for the same row. The very first transaction is still created alone, ahead of the rest: merchant
+ * find-or-create has the same shape of race (a batch of brand-new requests for the same not-yet-
+ * existing merchant name all race to insert it, and all but one lose to
+ * `idx_merchants_user_original_name`) but isn't per-account, so round-robining accounts alone
+ * doesn't fix it -- only serializing the one request that actually creates the merchant does.
+ *
+ * Built for PF-823's row-cap regression coverage (Reports silently dropped everything past the
+ * newest 1000 matching transactions) -- `count` should comfortably exceed that to be meaningful.
+ */
+export async function createTestTransactionsBulk(
+  page: Page,
+  accountIds: number[],
+  categoryId: number,
+  descriptionPrefix: string,
+  count: number,
+  amount: number
+): Promise<void> {
+  const token = await getAuthToken(page);
+  const today = new Date();
+  const batchSize = 20;
+
+  const dateFor = (dayIndex: number): string => {
+    const date = new Date(today);
+    date.setDate(date.getDate() - (count - 1 - dayIndex));
+    return date.toISOString().split('T')[0];
+  };
+
+  const createOne = async (dayIndex: number) => page.request.post(`${API_URL}/transactions`, {
+    headers: {Authorization: `Bearer ${token}`},
+    data: {
+      accountId: accountIds[dayIndex % accountIds.length],
+      categoryId,
+      amount,
+      transactionDate: `${dateFor(dayIndex)}T00:00:00Z`,
+      description: descriptionPrefix,
+      type: 'EXPENSE'
+    }
+  });
+
+  const first = await createOne(0);
+  if (!first.ok()) {
+    throw new Error(`Failed to bulk-create test transaction: ${first.status()} ${await first.text()}`);
+  }
+
+  for (let batchStart = 1; batchStart < count; batchStart += batchSize) {
+    const batch = Array.from(
+      {length: Math.min(batchSize, count - batchStart)},
+      (_, i) => createOne(batchStart + i)
+    );
+
+    const responses = await Promise.all(batch);
+    for (const response of responses) {
+      if (!response.ok()) {
+        throw new Error(`Failed to bulk-create test transaction: ${response.status()} ${await response.text()}`);
+      }
+    }
+  }
+}
