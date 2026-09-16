@@ -46,6 +46,8 @@ describe('TransactionsComponent', () => {
       createTransaction: vi.fn(),
       updateTransaction: vi.fn(),
       bulkUpdateTransactions: vi.fn(),
+      markAsTransfer: vi.fn(),
+      getTransferSuggestions: vi.fn().mockReturnValue(of([])),
     };
     mockAccountApi = {
       getAccounts: vi.fn().mockReturnValue(of([])),
@@ -852,6 +854,102 @@ describe('TransactionsComponent', () => {
       expect(mockToast.error).toHaveBeenCalledWith('Failed to delete transaction.');
       expect(mockTransactionApi.getTransactions).toHaveBeenCalledTimes(1); // no reload attempted
       expect(component.transactions()).toEqual([]);
+    });
+  });
+
+  describe('onMarkAsTransfer (PF-831)', () => {
+    it('should mark every selected transaction as a transfer and reload', () => {
+      // arrange
+      const t1 = { id: 1, description: 'Payment to Card', amount: 500 } as Transaction;
+      const t2 = { id: 2, description: 'Payment Received', amount: 500 } as Transaction;
+      component.selectedTransactions.set([t1, t2]);
+      mockTransactionApi.markAsTransfer.mockReturnValue(of(undefined));
+
+      // act
+      component.onMarkAsTransfer();
+
+      // assert & verify
+      expect(mockTransactionApi.markAsTransfer).toHaveBeenCalledWith([1, 2]);
+      expect(mockToast.success).toHaveBeenCalledWith('2 transactions marked as transfer');
+      expect(component.selectedTransactions()).toEqual([]);
+      expect(mockTransactionApi.getTransactions).toHaveBeenCalledTimes(2); // initial load + post-mark reload
+    });
+
+    it('should do nothing when no transactions are selected', () => {
+      // arrange
+      component.selectedTransactions.set([]);
+
+      // act
+      component.onMarkAsTransfer();
+
+      // assert & verify
+      expect(mockTransactionApi.markAsTransfer).not.toHaveBeenCalled();
+    });
+
+    it('should show an error toast and leave the selection unchanged on failure', () => {
+      // arrange
+      const t1 = { id: 1, description: 'Payment', amount: 500 } as Transaction;
+      component.selectedTransactions.set([t1]);
+      mockTransactionApi.markAsTransfer.mockReturnValue(throwError(() => ({ error: { detail: 'Conflict' } })));
+
+      // act
+      component.onMarkAsTransfer();
+
+      // assert & verify
+      expect(mockToast.error).toHaveBeenCalledWith('Conflict');
+      expect(component.selectedTransactions()).toEqual([t1]);
+    });
+  });
+
+  describe('handleActionParam / review-transfers (PF-831)', () => {
+    // The Dashboard's TRANSFER_REVIEW action item links here with ?action=review-transfers,
+    // previously a dead link -- TransactionUrlStateService's hydrateFromParams only ever read the
+    // filter/sort/pagination params it owns and silently dropped anything else, including this
+    // one. A fresh TestBed is used here (rather than the outer describe's shared one, which
+    // always initializes with empty query params) specifically to exercise ngOnInit() with this
+    // param already present in the initial snapshot, matching how a real navigation works.
+    let localFixture: ComponentFixture<TransactionsComponent>;
+    let localComponent: TransactionsComponent;
+    let localRouter: any;
+
+    beforeEach(async () => {
+      localRouter = { navigate: vi.fn() };
+      const localRoute = {
+        snapshot: { queryParams: { action: 'review-transfers', accountId: '5' } },
+        queryParams: of({ action: 'review-transfers', accountId: '5' }),
+      };
+
+      TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        imports: [TransactionsComponent, NoopAnimationsModule],
+        providers: [
+          { provide: TransactionApiService, useValue: mockTransactionApi },
+          { provide: AccountApiService, useValue: mockAccountApi },
+          { provide: CategoryApiService, useValue: mockCategoryApi },
+          { provide: MerchantApiService, useValue: mockMerchantApi },
+          { provide: TagApiService, useValue: mockTagApi },
+          { provide: ToastService, useValue: mockToast },
+          { provide: ConfirmationService, useValue: mockConfirmationService },
+          { provide: MessageService, useValue: {} },
+          { provide: Router, useValue: localRouter },
+          { provide: ActivatedRoute, useValue: localRoute },
+        ],
+      }).compileComponents();
+
+      localFixture = TestBed.createComponent(TransactionsComponent);
+      localComponent = localFixture.componentInstance;
+      localFixture.detectChanges();
+    });
+
+    it('should open the transfer dialog on init when action=review-transfers is present', () => {
+      expect(localComponent.showTransferDialog()).toBe(true);
+    });
+
+    it('should strip the action param off the URL, preserving the rest, so a refresh does not reopen it', () => {
+      expect(localRouter.navigate).toHaveBeenCalledWith([], {
+        queryParams: { accountId: '5' },
+        replaceUrl: true,
+      });
     });
   });
 });

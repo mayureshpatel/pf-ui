@@ -59,7 +59,24 @@
                   [outlined]="true"
                   (onClick)="showBulkEditDialog.set(true)"
                 />
+                <p-button
+                  [label]="'Mark as Transfer (' + selectedTransactions().length + ')'"
+                  icon="pi pi-arrow-right-arrow-left"
+                  severity="secondary"
+                  [outlined]="true"
+                  [loading]="markingAsTransfer()"
+                  (onClick)="onMarkAsTransfer()"
+                  pTooltip="Mark the selected transactions as an internal transfer, excluding them from income/expense totals"
+                />
               }
+              <p-button
+                label="Review Transfers"
+                icon="pi pi-sync"
+                severity="secondary"
+                [outlined]="true"
+                (onClick)="showTransferDialog.set(true)"
+                pTooltip="Review suggested transfer matches at any time, not just right after an import"
+              />
               <p-button
                 label="Import CSV"
                 icon="pi pi-upload"
