@@ -78,7 +78,7 @@
       <ng-template #body let-row>
         <tr class="hover:bg-surface-100/50 dark:hover:bg-surface-800/30 transition-colors duration-200">
           <td class="py-3">
-            <span class="font-bold text-surface-900 dark:text-surface-0">{{ row.merchant.cleanName || row.merchant.originalName || 'Unknown Merchant' }}</span>
+            <span class="font-bold text-surface-900 dark:text-surface-0">{{ row.displayName }}</span>
           </td>
           <td class="text-right font-mono font-black text-primary">{{ row.total | formatCurrency }}</td>
           <td class="text-center font-mono text-xs text-muted-color">{{ row.count }}</td>

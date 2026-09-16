@@ -1,5 +1,4 @@
 import { Category } from '@models/category.model';
-import { Merchant } from '@models/merchant.model';
 
 /**
  * Represents the type of action available on the dashboard.
@@ -105,13 +104,17 @@ export interface CategoryBreakdown {
 }
 
 /**
- * Represents a merchant breakdown.
+ * Represents a single merchant group's breakdown (PF-841). Merchants deliberately sharing one
+ * clean name are aggregated server-side into one row, so this no longer nests a single `Merchant`
+ * -- `representativeMerchantId` is only a stable key/track-by id, not "the" merchant.
  *
- * @property merchant - The merchant.
- * @property total - The total amount spent on the merchant.
+ * @property representativeMerchantId - A stable id for this group.
+ * @property displayName - The group's clean name, or its member's original name if unset.
+ * @property total - The total amount spent on this group.
  */
 export interface MerchantBreakdown {
-  merchant: Merchant;
+  representativeMerchantId: number;
+  displayName: string;
   total: number;
 }
 

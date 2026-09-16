@@ -25,7 +25,8 @@ describe('DashboardComponent', () => {
     previousSavingsRate: 50,
   };
   const mockMerchants = [1, 2, 3, 4, 5, 6, 7].map((id) => ({
-    merchant: { id, cleanName: `Merchant ${id}`, originalName: `Merchant ${id}` },
+    representativeMerchantId: id,
+    displayName: `Merchant ${id}`,
     total: id * 10,
   }));
 
