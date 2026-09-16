@@ -340,7 +340,8 @@ export class TransactionsComponent implements OnInit {
     if (params['action'] !== 'review-transfers') return;
 
     this.showTransferDialog.set(true);
-    const { action, ...rest } = params;
+    const rest = { ...params };
+    delete rest['action'];
     this.router.navigate([], { queryParams: rest, replaceUrl: true });
   }
 
@@ -728,11 +729,14 @@ export class TransactionsComponent implements OnInit {
       .pipe(finalize((): void => this.markingAsTransfer.set(false)))
       .subscribe({
         next: (): void => {
-          this.toast.success(`${ids.length} transaction${ids.length === 1 ? '' : 's'} marked as transfer`);
+          this.toast.success(
+            `${ids.length} transaction${ids.length === 1 ? '' : 's'} marked as transfer`,
+          );
           this.selectedTransactions.set([]);
           this.loadTransactions();
         },
-        error: (err: any): void => this.toast.error(err.error?.detail || 'Failed to mark as transfer'),
+        error: (err: any): void =>
+          this.toast.error(err.error?.detail || 'Failed to mark as transfer'),
       });
   }
 
