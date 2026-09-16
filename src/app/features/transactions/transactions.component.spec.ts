@@ -890,7 +890,9 @@ describe('TransactionsComponent', () => {
       // arrange
       const t1 = { id: 1, description: 'Payment', amount: 500 } as Transaction;
       component.selectedTransactions.set([t1]);
-      mockTransactionApi.markAsTransfer.mockReturnValue(throwError(() => ({ error: { detail: 'Conflict' } })));
+      mockTransactionApi.markAsTransfer.mockReturnValue(
+        throwError(() => ({ error: { detail: 'Conflict' } })),
+      );
 
       // act
       component.onMarkAsTransfer();
