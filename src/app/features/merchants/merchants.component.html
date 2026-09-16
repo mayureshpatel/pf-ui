@@ -5,21 +5,23 @@
       <h1 class="text-4xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight">Merchants</h1>
     </div>
 
-    <div toolbarFilters>
-      <p-iconfield>
-        <p-inputicon class="pi pi-search"/>
-        <input
-          pInputText
-          type="text"
-          placeholder="Search merchants..."
-          [ngModel]="searchTerm()"
-          (ngModelChange)="onSearchInput($event)"
-        />
-      </p-iconfield>
-    </div>
+    @if (activeTab() === 0) {
+      <div toolbarFilters>
+        <p-iconfield>
+          <p-inputicon class="pi pi-search"/>
+          <input
+            pInputText
+            type="text"
+            placeholder="Search clean names..."
+            [ngModel]="searchTerm()"
+            (ngModelChange)="onSearchInput($event)"
+          />
+        </p-iconfield>
+      </div>
+    }
 
-    <div toolbarActions>
-      @if (selectedForMerge().length === 2) {
+    @if (activeTab() === 0 && selectedForMerge().length === 2) {
+      <div toolbarActions>
         <p-button
           label="Merge Selected"
           icon="pi pi-arrow-right-arrow-left"
@@ -27,87 +29,143 @@
           severity="danger"
           [outlined]="true"
         />
-      }
-    </div>
+      </div>
+    }
   </app-screen-toolbar>
 
-  @if (!isEmpty()) {
-    <p-card class="overflow-hidden">
-      <p-table
-        [value]="merchants()"
-        dataKey="id"
-        [selection]="selectedForMerge()"
-        (selectionChange)="onSelectionChange($event)"
-        selectionMode="multiple"
-        [loading]="loading()"
-        [lazy]="true"
-        [lazyLoadOnInit]="false"
-        (onLazyLoad)="onPageChange($event)"
-        [totalRecords]="totalRecords()"
-        [paginator]="totalRecords() > 20"
-        [first]="page() * 20"
-        [rows]="20"
-        [stripedRows]="true"
-        size="small"
-      >
-        <ng-template #header>
-          <tr>
-            <th id="merchant-select" class="w-12"></th>
-            <th id="merchant-clean-name" class="py-4 font-bold text-surface-700 dark:text-surface-200">Display Name</th>
-            <th id="merchant-original-name" class="py-4 font-bold text-surface-700 dark:text-surface-200">Original Bank Description</th>
-            <th id="merchant-actions" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-center" style="width: 100px">Actions</th>
-          </tr>
-        </ng-template>
+  <p-tabs [(value)]="activeTab" class="card-soft">
+    <p-tablist class="bg-transparent border-none">
+      <p-tab [value]="0">
+        <div class="flex items-center gap-2">
+          <i class="pi pi-shop"></i>
+          <span class="font-bold">Merchants</span>
+        </div>
+      </p-tab>
+      <p-tab [value]="1">
+        <div class="flex items-center gap-2">
+          <i class="pi pi-sparkles"></i>
+          <span class="font-bold">Needs Review</span>
+        </div>
+      </p-tab>
+    </p-tablist>
 
-        <ng-template #body let-merchant>
-          <tr class="hover:bg-surface-100/50 dark:hover:bg-surface-800/50 transition-colors duration-200">
-            <td class="text-center">
-              <p-tableCheckbox [value]="merchant"/>
-            </td>
-            <td class="py-4 px-4">
-              <span class="font-semibold text-surface-900 dark:text-surface-0">{{ merchant.cleanName || merchant.originalName || 'Unknown Merchant' }}</span>
-            </td>
-            <td class="py-4 px-4">
-              <span class="text-sm font-mono text-muted-color">{{ merchant.originalName }}</span>
-            </td>
-            <td class="text-center py-1" style="width: 100px">
-              <p-button
-                icon="pi pi-pencil"
-                [text]="true"
-                [rounded]="true"
-                severity="secondary"
-                size="small"
-                (onClick)="openEditDialog(merchant)"
-              />
-            </td>
-          </tr>
-        </ng-template>
+    <p-tabpanels class="bg-transparent px-0 py-6">
+      <p-tabpanel [value]="0">
+        @if (!isEmpty()) {
+          <p-card class="overflow-hidden">
+            <p-table
+              [value]="groups()"
+              dataKey="cleanName"
+              [expandedRowKeys]="expandedRowKeys()"
+              (onRowExpand)="onGroupExpand($event)"
+              [loading]="loading()"
+              [lazy]="true"
+              [lazyLoadOnInit]="false"
+              (onLazyLoad)="onPageChange($event)"
+              [totalRecords]="totalRecords()"
+              [paginator]="totalRecords() > 20"
+              [first]="page() * 20"
+              [rows]="20"
+              [stripedRows]="true"
+              size="small"
+            >
+              <ng-template #header>
+                <tr>
+                  <th id="merchant-group-toggle" class="w-16"></th>
+                  <th id="merchant-group-name" class="py-4 font-bold text-surface-700 dark:text-surface-200">Clean Name</th>
+                </tr>
+              </ng-template>
 
-        <ng-template #emptymessage>
-          <tr>
-            <td colspan="4" class="text-center py-16 text-muted-color">
-              @if (noSearchResults()) {
-                <i class="pi pi-search text-4xl mb-3 block opacity-20"></i>
-                No merchants found matching "{{ searchTerm() }}".
-              }
-            </td>
-          </tr>
-        </ng-template>
-      </p-table>
-    </p-card>
-  } @else {
-    <div class="flex flex-col items-center justify-center min-h-[60vh] text-center animate-fade-in">
-      <div class="relative mb-8">
-        <div class="absolute -inset-4 bg-primary/10 rounded-full blur-2xl animate-pulse"></div>
-        <i class="pi pi-shop text-8xl text-primary/40 relative"></i>
-      </div>
-      <h2 class="text-3xl font-bold text-surface-900 dark:text-surface-0 mb-3">No merchants yet</h2>
-      <p class="text-muted-color mb-8 max-w-lg leading-relaxed text-lg">
-        Merchants are created automatically as you import or enter transactions.
-        Once you have some, you can search and correct their names here.
-      </p>
-    </div>
-  }
+              <ng-template #body let-group let-expanded="expanded">
+                <tr class="hover:bg-surface-100/50 dark:hover:bg-surface-800/50 transition-colors duration-200">
+                  <td class="text-center">
+                    <p-button
+                      type="button"
+                      [pRowToggler]="group"
+                      [text]="true"
+                      severity="secondary"
+                      [rounded]="true"
+                      [icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'"
+                    />
+                  </td>
+                  <td class="py-4 px-4">
+                    <span class="font-semibold text-surface-900 dark:text-surface-0">{{ group.cleanName }}</span>
+                  </td>
+                </tr>
+              </ng-template>
+
+              <ng-template #expandedrow let-group>
+                <tr>
+                  <td colspan="2" class="p-0">
+                    <div class="bg-surface-50/50 dark:bg-surface-800/50 pb-2">
+                      @if (group.members === null) {
+                        <div class="px-8 py-3 text-sm text-muted-color">Loading...</div>
+                      } @else {
+                        <p-table [value]="group.members" [stripedRows]="false" size="small" class="w-full">
+                          <ng-template #body let-member>
+                            <tr class="hover:bg-surface-100/30 dark:hover:bg-surface-800/30 transition-colors duration-200 border-none!">
+                              <td class="w-16"></td>
+                              <td class="text-center w-12">
+                                <p-checkbox
+                                  [binary]="true"
+                                  [ngModel]="isSelectedForMerge(member)"
+                                  (ngModelChange)="toggleForMerge(member)"
+                                />
+                              </td>
+                              <td class="py-3 px-4">
+                                <span class="text-sm font-mono text-muted-color">{{ member.originalName }}</span>
+                              </td>
+                              <td class="text-center py-1 w-24">
+                                <p-button
+                                  icon="pi pi-pencil"
+                                  [text]="true"
+                                  [rounded]="true"
+                                  severity="secondary"
+                                  size="small"
+                                  (onClick)="openEditDialog(member)"
+                                />
+                              </td>
+                            </tr>
+                          </ng-template>
+                        </p-table>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              </ng-template>
+
+              <ng-template #emptymessage>
+                <tr>
+                  <td colspan="2" class="text-center py-16 text-muted-color">
+                    @if (noSearchResults()) {
+                      <i class="pi pi-search text-4xl mb-3 block opacity-20"></i>
+                      No clean names found matching "{{ searchTerm() }}".
+                    }
+                  </td>
+                </tr>
+              </ng-template>
+            </p-table>
+          </p-card>
+        } @else {
+          <div class="flex flex-col items-center justify-center min-h-[60vh] text-center animate-fade-in">
+            <div class="relative mb-8">
+              <div class="absolute -inset-4 bg-primary/10 rounded-full blur-2xl animate-pulse"></div>
+              <i class="pi pi-shop text-8xl text-primary/40 relative"></i>
+            </div>
+            <h2 class="text-3xl font-bold text-surface-900 dark:text-surface-0 mb-3">No reviewed merchants yet</h2>
+            <p class="text-muted-color mb-8 max-w-lg leading-relaxed text-lg">
+              Merchants are created automatically as you import or enter transactions, but start out
+              without a clean name. Check the "Needs Review" tab to give them one.
+            </p>
+          </div>
+        }
+      </p-tabpanel>
+
+      <p-tabpanel [value]="1">
+        <app-merchant-needs-review (confirmed)="onClusterConfirmed()"/>
+      </p-tabpanel>
+    </p-tabpanels>
+  </p-tabs>
 
   <app-merchant-form-dialog
     [(visible)]="showDialog"

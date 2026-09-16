@@ -460,6 +460,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/merchants/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Bulk update merchant clean names
+         * @description Updates up to 1000 merchants' clean names in a single request
+         */
+        patch: operations["updateMerchantsBulk"];
+        trace?: never;
+    };
     "/api/v1/transactions/suggestions/transfers": {
         parameters: {
             query?: never;
@@ -632,6 +652,66 @@ export interface paths {
          * @description Detects candidate recurring transaction patterns not yet confirmed
          */
         get: operations["getSuggestions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/merchants/needs-review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List merchants needing review
+         * @description Returns the authenticated user's merchants whose clean name is blank or differs from a fresh normalizer suggestion, clustered by that suggestion
+         */
+        get: operations["getMerchantsNeedingReview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/merchants/clean-names": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List distinct clean names
+         * @description Returns a page of the authenticated user's distinct, non-blank clean names, optionally filtered by a search term
+         */
+        get: operations["getDistinctCleanNames"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/merchants/by-clean-name": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List merchants by exact clean name
+         * @description Returns every merchant owned by the authenticated user sharing the given exact clean name
+         */
+        get: operations["getMerchantsByCleanName"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1428,6 +1508,10 @@ export interface components {
             occurrenceCount?: number;
             /** Format: double */
             confidenceScore?: number;
+        };
+        MerchantReviewClusterDto: {
+            suggestedCleanName?: string;
+            merchants?: components["schemas"]["MerchantDto"][];
         };
         YtdSummaryDto: {
             /** Format: int32 */
@@ -2614,6 +2698,30 @@ export interface operations {
             };
         };
     };
+    updateMerchantsBulk: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MerchantUpdateRequest"][];
+            };
+        };
+        responses: {
+            /** @description Number of merchants updated returned */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": number;
+                };
+            };
+        };
+    };
     getTransferSuggestions: {
         parameters: {
             query?: never;
@@ -2802,6 +2910,71 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["RecurringSuggestionDto"][];
+                };
+            };
+        };
+    };
+    getMerchantsNeedingReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Review clusters returned (possibly empty) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MerchantReviewClusterDto"][];
+                };
+            };
+        };
+    };
+    getDistinctCleanNames: {
+        parameters: {
+            query: {
+                pageable: components["schemas"]["Pageable"];
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Clean names returned (possibly empty) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PagedModel"];
+                };
+            };
+        };
+    };
+    getMerchantsByCleanName: {
+        parameters: {
+            query: {
+                cleanName: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Merchants returned (possibly empty) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MerchantDto"][];
                 };
             };
         };

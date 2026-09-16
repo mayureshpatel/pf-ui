@@ -1,0 +1,72 @@
+@if (loading()) {
+  <div class="flex justify-center py-16">
+    <i class="pi pi-spin pi-spinner text-4xl text-primary/40"></i>
+  </div>
+} @else if (loadError()) {
+  <app-page-error-state message="Failed to load merchants needing review." (retry)="loadClusters()"/>
+} @else if (clusters().length === 0) {
+  <div class="flex flex-col items-center justify-center min-h-[40vh] text-center animate-fade-in">
+    <div class="relative mb-8">
+      <div class="absolute -inset-4 bg-primary/10 rounded-full blur-2xl animate-pulse"></div>
+      <i class="pi pi-check-circle text-8xl text-primary/40 relative"></i>
+    </div>
+    <h2 class="text-3xl font-bold text-surface-900 dark:text-surface-0 mb-3">All caught up</h2>
+    <p class="text-muted-color max-w-lg leading-relaxed text-lg">
+      No merchants need review right now. New, unreviewed rows will show up here as you import or
+      enter more transactions.
+    </p>
+  </div>
+} @else {
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    @for (cluster of clusters(); track cluster.merchants[0].id; let clusterIndex = $index) {
+      <p-card class="overflow-hidden">
+        <div class="flex flex-col gap-4">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm bg-primary/10">
+              <i class="pi pi-sparkles text-primary"></i>
+            </div>
+            <div class="flex-1">
+              <label [for]="'cluster-name-' + clusterIndex" class="text-[10px] font-black uppercase tracking-widest text-muted-color">
+                Suggested Clean Name
+              </label>
+              <input
+                pInputText
+                [id]="'cluster-name-' + clusterIndex"
+                class="w-full font-bold"
+                [ngModel]="cluster.suggestedCleanName"
+                (ngModelChange)="updateSuggestedName(clusterIndex, $event)"
+              />
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-1 max-h-48 overflow-y-auto">
+            @for (member of cluster.merchants; track member.id) {
+              <label class="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-surface-100/50 dark:hover:bg-surface-800/50 cursor-pointer">
+                <p-checkbox
+                  [binary]="true"
+                  [ngModel]="!isExcluded(cluster, member.id)"
+                  (ngModelChange)="toggleExcluded(clusterIndex, member.id)"
+                />
+                <span class="text-sm font-mono text-muted-color truncate">{{ member.originalName }}</span>
+              </label>
+            }
+          </div>
+
+          <div class="flex items-center justify-between pt-2 border-t border-surface-100 dark:border-surface-800">
+            <span class="text-xs font-bold text-muted-color uppercase tracking-tighter">
+              {{ includedCount(cluster) }} of {{ cluster.merchants.length }} selected
+            </span>
+            <p-button
+              label="Confirm"
+              icon="pi pi-check"
+              size="small"
+              [disabled]="includedCount(cluster) === 0 || !cluster.suggestedCleanName.trim()"
+              [loading]="confirmingIndex() === clusterIndex"
+              (onClick)="confirmCluster(clusterIndex)"
+            />
+          </div>
+        </div>
+      </p-card>
+    }
+  </div>
+}
