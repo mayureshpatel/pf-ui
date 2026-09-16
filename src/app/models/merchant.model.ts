@@ -51,3 +51,16 @@ export interface MerchantMergeRequest {
   survivingMerchantId: number;
   mergedAwayMerchantId: number;
 }
+
+/**
+ * A cluster of merchants sharing the same fresh normalizer suggestion, surfaced for bulk review
+ * (PF-842). A merchant lands in a cluster when its current clean name is blank, or differs from
+ * what re-running the normalizer against its original name would produce right now.
+ *
+ * @property suggestedCleanName - The normalizer's current suggestion for this cluster's members.
+ * @property merchants - The flagged merchants sharing that suggestion.
+ */
+export interface MerchantReviewCluster {
+  suggestedCleanName: string;
+  merchants: Merchant[];
+}

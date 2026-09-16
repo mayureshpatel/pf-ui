@@ -15,16 +15,31 @@ describe('MerchantsComponent', () => {
   let mockMerchantApi: any;
   let mockToast: any;
 
-  const mockMerchants: Merchant[] = [
-    { id: 1, userId: 1, originalName: 'STARBUCKS #1234', cleanName: 'Starbucks' },
-    { id: 2, userId: 1, originalName: 'WHOLEFDS 5678', cleanName: 'Whole Foods' },
-    { id: 3, userId: 1, originalName: 'CHEVRON 00123 WA', cleanName: 'Chevron' },
-  ];
+  const kroger1: Merchant = {
+    id: 1,
+    userId: 1,
+    originalName: 'KROGER #431 ROSWELL',
+    cleanName: 'Kroger',
+  };
+  const kroger2: Merchant = {
+    id: 2,
+    userId: 1,
+    originalName: 'KROGER #999 ROSWELL',
+    cleanName: 'Kroger',
+  };
+  const wholeFoods: Merchant = {
+    id: 3,
+    userId: 1,
+    originalName: 'WHOLEFDS 5678',
+    cleanName: 'Whole Foods',
+  };
+
+  const cleanNames: string[] = ['Kroger', 'Whole Foods'];
 
   const pageOf = (
-    content: Merchant[],
+    content: string[],
     totalElements: number = content.length,
-  ): PageResponse<Merchant> => ({
+  ): PageResponse<string> => ({
     content,
     page: {
       totalElements,
@@ -34,10 +49,23 @@ describe('MerchantsComponent', () => {
     },
   });
 
+  // p-tabs' TabList calls ngAfterViewInit -> bindResizeObserver(), which JSDOM doesn't implement.
+  beforeAll(() => {
+    (globalThis as any).ResizeObserver = class {
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {}
+    };
+  });
+
   beforeEach(async () => {
     mockMerchantApi = {
-      getMerchants: vi.fn().mockReturnValue(of(pageOf(mockMerchants))),
+      getDistinctCleanNames: vi.fn().mockReturnValue(of(pageOf(cleanNames))),
+      getMerchantsByCleanName: vi.fn().mockReturnValue(of([kroger1, kroger2])),
       updateMerchant: vi.fn(),
+      mergeMerchants: vi.fn(),
+      getMerchantsNeedingReview: vi.fn().mockReturnValue(of([])),
+      updateMerchantsBulk: vi.fn(),
     };
     mockToast = { success: vi.fn(), error: vi.fn() };
 
@@ -53,20 +81,25 @@ describe('MerchantsComponent', () => {
     component = fixture.componentInstance;
   });
 
-  it('should create and load the first page of merchants on init', () => {
+  it('should create and load the first page of distinct clean names on init', () => {
     // act
     fixture.detectChanges();
 
     // assert & verify
     expect(component).toBeTruthy();
-    expect(mockMerchantApi.getMerchants).toHaveBeenCalledWith(null, { page: 0, size: 20 });
-    expect(component.merchants()).toEqual(mockMerchants);
-    expect(component.totalRecords()).toBe(3);
+    expect(mockMerchantApi.getDistinctCleanNames).toHaveBeenCalledWith(null, { page: 0, size: 20 });
+    expect(component.groups()).toEqual([
+      { cleanName: 'Kroger', members: null },
+      { cleanName: 'Whole Foods', members: null },
+    ]);
+    expect(component.totalRecords()).toBe(2);
   });
 
   it('should show an error toast when loading fails', () => {
     // arrange
-    mockMerchantApi.getMerchants.mockReturnValue(throwError(() => new Error('network error')));
+    mockMerchantApi.getDistinctCleanNames.mockReturnValue(
+      throwError(() => new Error('network error')),
+    );
 
     // act
     fixture.detectChanges();
@@ -76,9 +109,9 @@ describe('MerchantsComponent', () => {
     expect(component.loading()).toBe(false);
   });
 
-  it('should treat an empty merchant list, once loaded, as isEmpty', () => {
+  it('should treat an empty group list, once loaded, as isEmpty', () => {
     // arrange
-    mockMerchantApi.getMerchants.mockReturnValue(of(pageOf([], 0)));
+    mockMerchantApi.getDistinctCleanNames.mockReturnValue(of(pageOf([], 0)));
 
     // act
     fixture.detectChanges();
@@ -87,11 +120,11 @@ describe('MerchantsComponent', () => {
     expect(component.isEmpty()).toBe(true);
   });
 
-  describe('search (PF-320: server-side, debounced 300ms)', () => {
+  describe('search (PF-320-style: server-side, debounced 300ms)', () => {
     beforeEach(() => {
       vi.useFakeTimers();
       fixture.detectChanges();
-      mockMerchantApi.getMerchants.mockClear();
+      mockMerchantApi.getDistinctCleanNames.mockClear();
     });
 
     afterEach(() => {
@@ -100,22 +133,25 @@ describe('MerchantsComponent', () => {
 
     it('should not call the API immediately on each keystroke', () => {
       // act
-      component.onSearchInput('starbu');
+      component.onSearchInput('kro');
       fixture.detectChanges();
 
       // assert & verify
-      expect(mockMerchantApi.getMerchants).not.toHaveBeenCalled();
+      expect(mockMerchantApi.getDistinctCleanNames).not.toHaveBeenCalled();
     });
 
     it('should call the API with the search term once the debounce window elapses', () => {
       // act
-      component.onSearchInput('starbu');
+      component.onSearchInput('kro');
       fixture.detectChanges();
       vi.advanceTimersByTime(300);
       fixture.detectChanges();
 
       // assert & verify
-      expect(mockMerchantApi.getMerchants).toHaveBeenCalledWith('starbu', { page: 0, size: 20 });
+      expect(mockMerchantApi.getDistinctCleanNames).toHaveBeenCalledWith('kro', {
+        page: 0,
+        size: 20,
+      });
     });
 
     it('should reset to page 0 when the search term changes', () => {
@@ -123,7 +159,7 @@ describe('MerchantsComponent', () => {
       component.page.set(2);
 
       // act
-      component.onSearchInput('starbu');
+      component.onSearchInput('kro');
       fixture.detectChanges();
       vi.advanceTimersByTime(300);
       fixture.detectChanges();
@@ -134,7 +170,7 @@ describe('MerchantsComponent', () => {
 
     it('should report noSearchResults when a search matches nothing, distinct from isEmpty', () => {
       // arrange
-      mockMerchantApi.getMerchants.mockReturnValue(of(pageOf([], 0)));
+      mockMerchantApi.getDistinctCleanNames.mockReturnValue(of(pageOf([], 0)));
 
       // act
       component.onSearchInput('nonexistent merchant');
@@ -143,13 +179,13 @@ describe('MerchantsComponent', () => {
       fixture.detectChanges();
 
       // assert & verify
-      expect(component.merchants()).toEqual([]);
+      expect(component.groups()).toEqual([]);
       expect(component.noSearchResults()).toBe(true);
       expect(component.isEmpty()).toBe(false);
     });
   });
 
-  describe('pagination (PF-320)', () => {
+  describe('pagination', () => {
     beforeEach(() => fixture.detectChanges());
 
     it('should request the corresponding page when the table lazy-loads a new offset', () => {
@@ -158,7 +194,58 @@ describe('MerchantsComponent', () => {
 
       // assert & verify
       expect(component.page()).toBe(2);
-      expect(mockMerchantApi.getMerchants).toHaveBeenCalledWith(null, { page: 2, size: 20 });
+      expect(mockMerchantApi.getDistinctCleanNames).toHaveBeenCalledWith(null, {
+        page: 2,
+        size: 20,
+      });
+    });
+
+    it('should collapse every expanded group when the page changes', () => {
+      // arrange
+      component.expandedRowKeys.set({ Kroger: true });
+
+      // act
+      component.onPageChange({ first: 20 });
+
+      // assert & verify
+      expect(component.expandedRowKeys()).toEqual({});
+    });
+  });
+
+  describe('group expansion (PF-842: lazy-loaded members)', () => {
+    beforeEach(() => fixture.detectChanges());
+
+    it("should fetch a group's members the first time it's expanded", () => {
+      // act
+      component.onGroupExpand({ data: { cleanName: 'Kroger', members: null } });
+
+      // assert & verify
+      expect(mockMerchantApi.getMerchantsByCleanName).toHaveBeenCalledWith('Kroger');
+      expect(component.groups().find((g) => g.cleanName === 'Kroger')?.members).toEqual([
+        kroger1,
+        kroger2,
+      ]);
+    });
+
+    it('should NOT refetch an already-loaded group on a subsequent expand', () => {
+      // arrange
+      component.onGroupExpand({ data: { cleanName: 'Kroger', members: null } });
+      mockMerchantApi.getMerchantsByCleanName.mockClear();
+
+      // act -- re-expanding with the now-loaded group object
+      const loadedGroup = component.groups().find((g) => g.cleanName === 'Kroger')!;
+      component.onGroupExpand({ data: loadedGroup });
+
+      // assert & verify
+      expect(mockMerchantApi.getMerchantsByCleanName).not.toHaveBeenCalled();
+    });
+
+    it('should leave other groups untouched when one group is expanded', () => {
+      // act
+      component.onGroupExpand({ data: { cleanName: 'Kroger', members: null } });
+
+      // assert & verify
+      expect(component.groups().find((g) => g.cleanName === 'Whole Foods')?.members).toBeNull();
     });
   });
 
@@ -167,42 +254,69 @@ describe('MerchantsComponent', () => {
     fixture.detectChanges();
 
     // act
-    component.openEditDialog(mockMerchants[1]);
+    component.openEditDialog(kroger1);
 
     // assert & verify
-    expect(component.selectedMerchant()).toEqual(mockMerchants[1]);
+    expect(component.selectedMerchant()).toEqual(kroger1);
     expect(component.showDialog()).toBe(true);
   });
 
-  it('should reload merchants when onSave is called', () => {
+  it('should reload the group list when onSave is called', () => {
     // arrange
     fixture.detectChanges();
-    mockMerchantApi.getMerchants.mockClear();
+    mockMerchantApi.getDistinctCleanNames.mockClear();
 
     // act
     component.onSave();
 
     // assert & verify
-    expect(mockMerchantApi.getMerchants).toHaveBeenCalledTimes(1);
+    expect(mockMerchantApi.getDistinctCleanNames).toHaveBeenCalledTimes(1);
   });
 
-  describe('merge selection (PF-222)', () => {
+  it('should reload the group list when a Needs Review cluster is confirmed', () => {
+    // arrange
+    fixture.detectChanges();
+    mockMerchantApi.getDistinctCleanNames.mockClear();
+
+    // act
+    component.onClusterConfirmed();
+
+    // assert & verify
+    expect(mockMerchantApi.getDistinctCleanNames).toHaveBeenCalledTimes(1);
+  });
+
+  describe('merge selection (PF-222), across independently-expanded groups', () => {
     beforeEach(() => fixture.detectChanges());
 
-    it('should track up to 2 selected merchants', () => {
+    it('should select a merchant not yet selected', () => {
       // act
-      component.onSelectionChange([mockMerchants[0], mockMerchants[1]]);
+      component.toggleForMerge(kroger1);
 
       // assert & verify
-      expect(component.selectedForMerge()).toEqual([mockMerchants[0], mockMerchants[1]]);
+      expect(component.selectedForMerge()).toEqual([kroger1]);
+      expect(component.isSelectedForMerge(kroger1)).toBe(true);
+    });
+
+    it('should deselect an already-selected merchant', () => {
+      // arrange
+      component.toggleForMerge(kroger1);
+
+      // act
+      component.toggleForMerge(kroger1);
+
+      // assert & verify
+      expect(component.selectedForMerge()).toEqual([]);
+      expect(component.isSelectedForMerge(kroger1)).toBe(false);
     });
 
     it('should cap at 2, keeping the most recently selected pair, when a 3rd is checked', () => {
-      // act -- table selection arrays reflect the full current selection, oldest first
-      component.onSelectionChange([mockMerchants[0], mockMerchants[1], mockMerchants[2]]);
+      // act -- 3 different merchants, from potentially different (independently expanded) groups
+      component.toggleForMerge(kroger1);
+      component.toggleForMerge(kroger2);
+      component.toggleForMerge(wholeFoods);
 
       // assert & verify
-      expect(component.selectedForMerge()).toEqual([mockMerchants[1], mockMerchants[2]]);
+      expect(component.selectedForMerge()).toEqual([kroger2, wholeFoods]);
     });
 
     it('should open the merge dialog', () => {
@@ -213,51 +327,18 @@ describe('MerchantsComponent', () => {
       expect(component.showMergeDialog()).toBe(true);
     });
 
-    it('should clear the selection and reload merchants once a merge completes', () => {
+    it('should clear the selection and reload the group list once a merge completes', () => {
       // arrange
-      component.onSelectionChange([mockMerchants[0], mockMerchants[1]]);
-      mockMerchantApi.getMerchants.mockClear();
+      component.toggleForMerge(kroger1);
+      component.toggleForMerge(kroger2);
+      mockMerchantApi.getDistinctCleanNames.mockClear();
 
       // act
       component.onMerged();
 
       // assert & verify
       expect(component.selectedForMerge()).toEqual([]);
-      expect(mockMerchantApi.getMerchants).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  describe('rendering: display-name fallback (PF-223)', () => {
-    it("falls back through cleanName -> originalName -> 'Unknown Merchant' in the table row, not just blank text", () => {
-      // arrange -- a blank cleanName is a real-world "unset" sentinel (not null), independent of
-      // MerchantNameNormalizer's own cleanup logic ever failing to backfill one
-      mockMerchantApi.getMerchants.mockReturnValue(
-        of(pageOf([{ id: 9, userId: 1, originalName: 'RAW BANK TEXT 123', cleanName: '' }])),
-      );
-
-      // act
-      fixture.detectChanges();
-
-      // assert & verify -- scoped to the Display Name column's own span: the adjacent Original
-      // Bank Description column renders originalName unconditionally regardless of this fix, so
-      // a whole-fixture textContent check would pass even without the fallback in place
-      const displayNameCell = fixture.nativeElement.querySelector(
-        'span.font-semibold.text-surface-900',
-      );
-      expect(displayNameCell.textContent.trim()).toBe('RAW BANK TEXT 123');
-    });
-
-    it("falls back all the way to 'Unknown Merchant' when both cleanName and originalName are blank", () => {
-      // arrange
-      mockMerchantApi.getMerchants.mockReturnValue(
-        of(pageOf([{ id: 9, userId: 1, originalName: '', cleanName: '' }])),
-      );
-
-      // act
-      fixture.detectChanges();
-
-      // assert & verify
-      expect(fixture.nativeElement.textContent).toContain('Unknown Merchant');
+      expect(mockMerchantApi.getDistinctCleanNames).toHaveBeenCalledTimes(1);
     });
   });
 });
