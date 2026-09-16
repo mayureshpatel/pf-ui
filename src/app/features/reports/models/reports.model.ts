@@ -1,5 +1,4 @@
 import { Category } from '@models/category.model';
-import { Merchant } from '@models/merchant.model';
 
 /**
  * Represents a date range filter.
@@ -21,10 +20,13 @@ export interface CategoryReportData {
 }
 
 /**
- * Aggregated data for merchant-based reporting.
+ * Aggregated data for merchant-based reporting (PF-841). Merchants deliberately sharing one clean
+ * name are aggregated server-side into one row, so this no longer nests a single `Merchant` --
+ * `representativeMerchantId` is only a stable key/track-by id, not "the" merchant.
  */
 export interface MerchantReportData {
-  merchant: Merchant;
+  representativeMerchantId: number;
+  displayName: string;
   total: number;
   count: number;
   categories: string[];

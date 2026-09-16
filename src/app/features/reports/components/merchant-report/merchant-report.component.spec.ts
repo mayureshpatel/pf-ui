@@ -3,7 +3,6 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { MerchantReportComponent } from './merchant-report.component';
 import { ReportApiService } from '../../services/report-api.service';
-import { Merchant } from '@models/merchant.model';
 import { DateRange, MerchantReportData } from '../../models/reports.model';
 
 describe('MerchantReportComponent', () => {
@@ -11,31 +10,23 @@ describe('MerchantReportComponent', () => {
   let fixture: ComponentFixture<MerchantReportComponent>;
   let mockReportApi: any;
 
-  const merchant = (id: number, cleanName: string): Merchant => ({
-    id,
-    userId: 1,
-    originalName: cleanName,
-    cleanName,
-  });
-
   const row = (
-    m: Merchant,
+    representativeMerchantId: number,
+    displayName: string,
     total: number,
     count: number,
     categories: string[],
   ): MerchantReportData => ({
-    merchant: m,
+    representativeMerchantId,
+    displayName,
     total,
     count,
     categories,
   });
 
-  const target = merchant(1, 'Target');
-  const amazon = merchant(2, 'Amazon');
-
   const mockMerchantData: MerchantReportData[] = [
-    row(target, 340, 2, ['Shopping', 'Groceries']),
-    row(amazon, 60, 1, ['Shopping']),
+    row(1, 'Target', 340, 2, ['Shopping', 'Groceries']),
+    row(2, 'Amazon', 60, 1, ['Shopping']),
   ];
 
   const mockDateRange: DateRange = {
@@ -129,7 +120,7 @@ describe('MerchantReportComponent', () => {
     it('should cap displayed merchants to the top 10 by spend', () => {
       // arrange -- 12 distinct merchants, descending totals
       const many: MerchantReportData[] = Array.from({ length: 12 }, (_, i): MerchantReportData =>
-        row(merchant(i, `Merchant ${i}`), 1000 - i * 10, 1, []),
+        row(i, `Merchant ${i}`, 1000 - i * 10, 1, []),
       );
 
       // act
@@ -151,21 +142,13 @@ describe('MerchantReportComponent', () => {
         'hsl(36, 70%, 60%)',
       ]);
     });
-
-    it("should fall back to 'Unknown' when a merchant has no clean name", () => {
-      // arrange & act
-      setData([row(merchant(9, ''), 25, 1, [])]);
-
-      // assert & verify
-      expect(component.barChartData().labels).toEqual(['Unknown']);
-    });
   });
 
   describe('doughnutChartData', () => {
     it('should cap displayed merchants to the top 5 by spend regardless of bar-chart data', () => {
       // arrange
       const many: MerchantReportData[] = Array.from({ length: 8 }, (_, i): MerchantReportData =>
-        row(merchant(i, `Merchant ${i}`), 1000 - i * 10, 1, []),
+        row(i, `Merchant ${i}`, 1000 - i * 10, 1, []),
       );
 
       // act
@@ -216,20 +199,6 @@ describe('MerchantReportComponent', () => {
       expect(text).toContain('$60.00');
       expect(text).toContain('Shopping');
       expect(text).toContain('Groceries');
-    });
-
-    it("should fall back through cleanName -> originalName -> 'Unknown Merchant' in the table", () => {
-      // arrange & act -- cleanName blank, originalName present
-      const blankClean: Merchant = {
-        id: 3,
-        userId: 1,
-        originalName: 'RAW MERCHANT NAME',
-        cleanName: '',
-      };
-      setData([row(blankClean, 15, 1, [])]);
-
-      // assert & verify
-      expect(fixture.nativeElement.textContent).toContain('RAW MERCHANT NAME');
     });
   });
 });

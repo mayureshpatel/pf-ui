@@ -1385,7 +1385,9 @@ export interface components {
             expense?: number;
         };
         MerchantReportDataDto: {
-            merchant?: components["schemas"]["MerchantDto"];
+            /** Format: int64 */
+            representativeMerchantId?: number;
+            displayName?: string;
             total?: number;
             /** Format: int64 */
             count?: number;
@@ -1452,7 +1454,9 @@ export interface components {
             previousSavingsRate?: number;
         };
         MerchantBreakdownDto: {
-            merchant?: components["schemas"]["MerchantDto"];
+            /** Format: int64 */
+            representativeMerchantId?: number;
+            displayName?: string;
             total?: number;
         };
         CategoryBreakdownDto: {

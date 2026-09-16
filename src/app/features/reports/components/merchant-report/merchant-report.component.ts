@@ -106,7 +106,7 @@ export class MerchantReportComponent {
     const data: MerchantReportData[] = this.merchantData().slice(0, 10);
 
     return {
-      labels: data.map((v: MerchantReportData): string => v.merchant.cleanName || 'Unknown'),
+      labels: data.map((v: MerchantReportData): string => v.displayName),
       datasets: [
         {
           label: 'Total Spent',
@@ -128,7 +128,7 @@ export class MerchantReportComponent {
     const data: MerchantReportData[] = this.merchantData().slice(0, 5);
 
     return {
-      labels: data.map((v: MerchantReportData): string => v.merchant.cleanName || 'Unknown'),
+      labels: data.map((v: MerchantReportData): string => v.displayName),
       datasets: [
         {
           data: data.map((v: MerchantReportData): number => v.total),
