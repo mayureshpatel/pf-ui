@@ -1,14 +1,14 @@
 <p-dialog
-  header="Correct Merchant Name"
+  [header]="dialogHeader()"
   [(visible)]="visible"
   appRestoreFocusOnHide
   [modal]="true"
   [draggable]="false"
   [resizable]="false"
-  [style]="{ width: '450px' }"
+  [style]="{ width: '500px' }"
   class="p-fluid">
 
-  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-8 py-4">
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-6 py-4">
     @if (errorMessage()) {
       <p-message severity="error" variant="simple" class="w-full animate-fade-in">
         {{ errorMessage() }}
@@ -16,31 +16,51 @@
     }
 
     <div class="flex flex-col gap-2">
-      <label for="original-name" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
-        Original Bank Description
-      </label>
-      <div id="original-name" class="text-sm font-mono text-muted-color px-1">
-        {{ merchant()?.originalName }}
-      </div>
-    </div>
-
-    <div class="flex flex-col gap-2">
-      <label for="clean-name" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
-        Display Name
+      <label for="merchant-name" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
+        Name
       </label>
       <input
         pInputText
-        id="clean-name"
-        formControlName="cleanName"
-        placeholder="Enter a readable name..."
+        id="merchant-name"
+        formControlName="name"
+        placeholder="e.g. Whole Foods"
         class="w-full"
-       
       />
-      @if (form.controls.cleanName.invalid && form.controls.cleanName.touched) {
+      @if (form.controls.name.invalid && form.controls.name.touched) {
         <small class="text-rose-500 font-medium flex items-center gap-1 animate-fade-in">
-          <i class="pi pi-times-circle text-xs"></i> A display name is required
+          <i class="pi pi-times-circle text-xs"></i> A name is required
         </small>
       }
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+      <div class="flex flex-col gap-2">
+        <label for="merchant-city" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
+          City
+        </label>
+        <input pInputText id="merchant-city" formControlName="city" placeholder="Optional" class="w-full" />
+      </div>
+      <div class="flex flex-col gap-2">
+        <label for="merchant-state" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
+          State
+        </label>
+        <input pInputText id="merchant-state" formControlName="state" placeholder="Optional" class="w-full" />
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+      <div class="flex flex-col gap-2">
+        <label for="merchant-postal-code" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
+          Postal Code
+        </label>
+        <input pInputText id="merchant-postal-code" formControlName="postalCode" placeholder="Optional" class="w-full" />
+      </div>
+      <div class="flex flex-col gap-2">
+        <label for="merchant-country" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
+          Country
+        </label>
+        <input pInputText id="merchant-country" formControlName="country" placeholder="Optional" class="w-full" />
+      </div>
     </div>
   </form>
 

@@ -23,7 +23,7 @@ describe('TransferMatchingDialogComponent', () => {
       date: new Date('2026-01-15'),
       description,
       type: 'TRANSFER',
-      merchant: { originalName: description },
+      merchant: { name: description },
     }) as unknown as Transaction;
 
   const mockSuggestions: TransferSuggestion[] = [

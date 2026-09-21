@@ -321,9 +321,12 @@
                 </div>
                 <div class="flex flex-col truncate max-w-[250px]">
                   <span class="font-bold text-surface-900 dark:text-surface-0 truncate">
-                    {{ txn.merchant?.cleanName || txn.merchant?.originalName || 'Merchant' }}
+                    {{ txn.merchant?.name ?? txn.description }}
                   </span>
-                  <span class="text-xs text-muted-color truncate italic">{{ txn.description }}</span>
+                  <!-- the description is already the primary line above when there's no merchant -- showing it again here would just duplicate the same text. -->
+                  @if (txn.merchant) {
+                    <span class="text-xs text-muted-color truncate italic">{{ txn.description }}</span>
+                  }
                 </div>
               </div>
             </td>

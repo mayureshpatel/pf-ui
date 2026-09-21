@@ -15,7 +15,7 @@ describe('RecurringSuggestionsDialogComponent', () => {
   let mockToast: any;
 
   const mockSuggestion: RecurringSuggestion = {
-    merchant: { cleanName: 'Netflix' },
+    merchant: { name: 'Netflix' },
     amount: 15.99,
     frequency: 'MONTHLY',
     lastDate: '2026-01-01',

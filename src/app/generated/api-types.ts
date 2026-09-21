@@ -101,11 +101,15 @@ export interface paths {
          */
         get: operations["getMerchants"];
         /**
-         * Correct a merchant's name
-         * @description Updates the display name of a merchant owned by the authenticated user
+         * Update a merchant
+         * @description Updates the name and location of a merchant owned by the authenticated user
          */
         put: operations["updateMerchant"];
-        post?: never;
+        /**
+         * Create a merchant
+         * @description Creates a new merchant owned by the authenticated user
+         */
+        post: operations["createMerchant"];
         delete?: never;
         options?: never;
         head?: never;
@@ -296,20 +300,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/merchants/merge": {
+    "/api/v1/merchants/{id}/description-links": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List a merchant's description links
+         * @description Returns every raw transaction description linked to a merchant owned by the authenticated user
+         */
+        get: operations["getDescriptionLinks"];
         put?: never;
         /**
-         * Merge two merchants
-         * @description Reassigns the merged-away merchant's transactions and recurring transactions to the survivor, then deletes it
+         * Link a description to a merchant
+         * @description Creates or overwrites the link from a raw description to a merchant owned by the authenticated user
          */
-        post: operations["mergeMerchants"];
+        post: operations["addDescriptionLink"];
         delete?: never;
         options?: never;
         head?: never;
@@ -458,26 +466,6 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
-        trace?: never;
-    };
-    "/api/v1/merchants/bulk": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /**
-         * Bulk update merchant clean names
-         * @description Updates up to 1000 merchants' clean names in a single request
-         */
-        patch: operations["updateMerchantsBulk"];
         trace?: never;
     };
     "/api/v1/transactions/suggestions/transfers": {
@@ -652,66 +640,6 @@ export interface paths {
          * @description Detects candidate recurring transaction patterns not yet confirmed
          */
         get: operations["getSuggestions"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/merchants/needs-review": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List merchants needing review
-         * @description Returns the authenticated user's merchants whose clean name is blank or differs from a fresh normalizer suggestion, clustered by that suggestion
-         */
-        get: operations["getMerchantsNeedingReview"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/merchants/clean-names": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List distinct clean names
-         * @description Returns a page of the authenticated user's distinct, non-blank clean names, optionally filtered by a search term
-         */
-        get: operations["getDistinctCleanNames"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/merchants/by-clean-name": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List merchants by exact clean name
-         * @description Returns every merchant owned by the authenticated user sharing the given exact clean name
-         */
-        get: operations["getMerchantsByCleanName"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1020,6 +948,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/merchants/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a merchant
+         * @description Deletes a merchant owned by the authenticated user
+         */
+        delete: operations["deleteMerchant"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/merchants/{id}/description-links/{linkId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a description link
+         * @description Removes a single description link owned by the authenticated user; does not affect transactions already assigned that merchant
+         */
+        delete: operations["deleteDescriptionLink"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/category-rules/{id}": {
         parameters: {
             query?: never;
@@ -1163,7 +1131,11 @@ export interface components {
         MerchantUpdateRequest: {
             /** Format: int64 */
             id: number;
-            cleanName: string;
+            name: string;
+            city?: string;
+            state?: string;
+            postalCode?: string;
+            country?: string;
         };
         CategoryRuleUpdateRequest: {
             /** Format: int64 */
@@ -1269,8 +1241,11 @@ export interface components {
             id?: number;
             /** Format: int64 */
             userId?: number;
-            originalName?: string;
-            cleanName?: string;
+            name?: string;
+            city?: string;
+            state?: string;
+            postalCode?: string;
+            country?: string;
         };
         SaveTransactionRequest: {
             transactions: components["schemas"]["TransactionDto"][];
@@ -1330,11 +1305,17 @@ export interface components {
             /** Format: int64 */
             merchantId: number;
         };
-        MerchantMergeRequest: {
+        MerchantCreateRequest: {
             /** Format: int64 */
-            survivingMerchantId: number;
-            /** Format: int64 */
-            mergedAwayMerchantId: number;
+            userId: number;
+            name: string;
+            city?: string;
+            state?: string;
+            postalCode?: string;
+            country?: string;
+        };
+        MerchantDescriptionLinkCreateRequest: {
+            description: string;
         };
         CategoryRuleCreateRequest: {
             /** Format: int64 */
@@ -1509,9 +1490,12 @@ export interface components {
             /** Format: double */
             confidenceScore?: number;
         };
-        MerchantReviewClusterDto: {
-            suggestedCleanName?: string;
-            merchants?: components["schemas"]["MerchantDto"][];
+        MerchantDescriptionLinkDto: {
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            merchantId?: number;
+            description?: string;
         };
         YtdSummaryDto: {
             /** Format: int32 */
@@ -1929,6 +1913,30 @@ export interface operations {
             };
             /** @description Forbidden -- the authenticated user does not own this merchant */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": number;
+                };
+            };
+        };
+    };
+    createMerchant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MerchantCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Merchant created, new id returned */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2406,27 +2414,60 @@ export interface operations {
             };
         };
     };
-    mergeMerchants: {
+    getDescriptionLinks: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Description links returned (possibly empty) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MerchantDescriptionLinkDto"][];
+                };
+            };
+            /** @description Forbidden -- the authenticated user does not own this merchant */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MerchantDescriptionLinkDto"][];
+                };
+            };
+        };
+    };
+    addDescriptionLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["MerchantMergeRequest"];
+                "application/json": components["schemas"]["MerchantDescriptionLinkCreateRequest"];
             };
         };
         responses: {
-            /** @description Merchants merged */
+            /** @description Description link recorded */
             204: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Forbidden -- the authenticated user does not own both merchants */
+            /** @description Forbidden -- the authenticated user does not own this merchant */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2698,30 +2739,6 @@ export interface operations {
             };
         };
     };
-    updateMerchantsBulk: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["MerchantUpdateRequest"][];
-            };
-        };
-        responses: {
-            /** @description Number of merchants updated returned */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": number;
-                };
-            };
-        };
-    };
     getTransferSuggestions: {
         parameters: {
             query?: never;
@@ -2910,71 +2927,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["RecurringSuggestionDto"][];
-                };
-            };
-        };
-    };
-    getMerchantsNeedingReview: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Review clusters returned (possibly empty) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["MerchantReviewClusterDto"][];
-                };
-            };
-        };
-    };
-    getDistinctCleanNames: {
-        parameters: {
-            query: {
-                pageable: components["schemas"]["Pageable"];
-                search?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Clean names returned (possibly empty) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["PagedModel"];
-                };
-            };
-        };
-    };
-    getMerchantsByCleanName: {
-        parameters: {
-            query: {
-                cleanName: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Merchants returned (possibly empty) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["MerchantDto"][];
                 };
             };
         };
@@ -3366,6 +3318,61 @@ export interface operations {
                 content: {
                     "*/*": number;
                 };
+            };
+        };
+    };
+    deleteMerchant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Merchant deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden -- the authenticated user does not own this merchant */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteDescriptionLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+                linkId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Description link deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden -- the authenticated user does not own this merchant */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

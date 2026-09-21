@@ -5,8 +5,8 @@ import { Observable } from 'rxjs';
 import { environment } from '@env';
 import {
   Merchant,
-  MerchantMergeRequest,
-  MerchantReviewCluster,
+  MerchantCreateRequest,
+  MerchantDescriptionLink,
   MerchantUpdateRequest,
 } from '@models/merchant.model';
 import { PageRequest, PageResponse } from '@models/transaction.model';
@@ -21,7 +21,7 @@ export class MerchantApiService {
 
   /**
    * Gets a paginated, optionally search-filtered page of the current user's merchants (PF-320).
-   * @param search an optional case-insensitive substring matched against either name column.
+   * @param search an optional case-insensitive substring matched against name or city.
    * @param pageRequest the page number, size, and sort to request.
    * @returns the requested page of merchants.
    */
@@ -44,8 +44,18 @@ export class MerchantApiService {
   }
 
   /**
-   * Corrects a merchant's display name.
-   * @param request the merchant id and its new clean name.
+   * Creates a new merchant owned by the current user.
+   * @param request the merchant's name and optional location.
+   * @returns the new merchant's generated id.
+   */
+  createMerchant(request: MerchantCreateRequest): Observable<number> {
+    const userId: number | undefined = this.authService.user()?.id;
+    return this.http.post<number>(this.apiUrl, { ...request, userId });
+  }
+
+  /**
+   * Updates a merchant's name and location.
+   * @param request the merchant's new name and location fields, including its id.
    * @returns the number of rows updated.
    */
   updateMerchant(request: MerchantUpdateRequest): Observable<number> {
@@ -53,62 +63,42 @@ export class MerchantApiService {
   }
 
   /**
-   * Merges one merchant into another.
-   * @param request which merchant survives and which gets merged away.
+   * Deletes a merchant owned by the current user. Dependent transactions are left with a blank
+   * merchant rather than erroring; the merchant's description links are removed with it.
+   * @param id the merchant id to delete.
    */
-  mergeMerchants(request: MerchantMergeRequest): Observable<void> {
-    return this.http.post<void>(`${this.apiUrl}/merge`, request);
+  deleteMerchant(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
 
   /**
-   * Gets a paginated, optionally search-filtered page of the current user's distinct, non-blank
-   * clean names (PF-842) -- backs the two-level clean-name picker and the grouped Merchants
-   * view's outer rows.
-   * @param search an optional case-insensitive substring matched against clean name.
-   * @param pageRequest the page number and size to request.
-   * @returns the requested page of distinct clean names.
+   * Gets every description linked to a merchant.
+   * @param merchantId the merchant id.
+   * @returns the merchant's linked descriptions.
    */
-  getDistinctCleanNames(
-    search: string | null,
-    pageRequest: PageRequest,
-  ): Observable<PageResponse<string>> {
-    let params: HttpParams = new HttpParams()
-      .set('page', pageRequest.page.toString())
-      .set('size', pageRequest.size.toString());
-
-    if (search) {
-      params = params.set('search', search);
-    }
-
-    return this.http.get<PageResponse<string>>(`${this.apiUrl}/clean-names`, { params });
+  getDescriptionLinks(merchantId: number): Observable<MerchantDescriptionLink[]> {
+    return this.http.get<MerchantDescriptionLink[]>(
+      `${this.apiUrl}/${merchantId}/description-links`,
+    );
   }
 
   /**
-   * Gets every merchant sharing an exact clean name (PF-842) -- a grouped view's expanded detail
-   * rows for one outer group.
-   * @param cleanName the exact clean name to look up.
-   * @returns the group's member merchants.
+   * Explicitly links a raw description to a merchant -- overwrites any existing link for that
+   * description (last-write-wins).
+   * @param merchantId the merchant id to link the description to.
+   * @param description the raw description to link.
    */
-  getMerchantsByCleanName(cleanName: string): Observable<Merchant[]> {
-    const params: HttpParams = new HttpParams().set('cleanName', cleanName);
-    return this.http.get<Merchant[]>(`${this.apiUrl}/by-clean-name`, { params });
+  addDescriptionLink(merchantId: number, description: string): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/${merchantId}/description-links`, { description });
   }
 
   /**
-   * Gets the current user's merchants needing review, clustered by suggested clean name (PF-842).
-   * @returns the user's review clusters, largest first.
+   * Removes a single description link. Never touches transactions already assigned that
+   * merchant -- only affects future matching.
+   * @param merchantId the merchant id the link belongs to.
+   * @param linkId the link id to delete.
    */
-  getMerchantsNeedingReview(): Observable<MerchantReviewCluster[]> {
-    return this.http.get<MerchantReviewCluster[]>(`${this.apiUrl}/needs-review`);
-  }
-
-  /**
-   * Updates multiple merchants' clean names in a single request (PF-842) -- confirming a whole
-   * review cluster in one action.
-   * @param requests the corrections to apply, each including its merchant id.
-   * @returns the number of merchants updated.
-   */
-  updateMerchantsBulk(requests: MerchantUpdateRequest[]): Observable<number> {
-    return this.http.patch<number>(`${this.apiUrl}/bulk`, requests);
+  deleteDescriptionLink(merchantId: number, linkId: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${merchantId}/description-links/${linkId}`);
   }
 }
