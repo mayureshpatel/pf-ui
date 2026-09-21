@@ -103,28 +103,6 @@ describe('BulkEditDialogComponent', () => {
         { label: "Sam's Club", value: samsClub },
       ]);
     });
-
-    it("should fall back to 'Unknown Merchant' when name is blank", () => {
-      const blank: Merchant = {
-        id: 3,
-        userId: 1,
-        name: '',
-        city: null,
-        state: null,
-        postalCode: null,
-        country: null,
-      };
-      mockMerchantApi.getMerchants.mockReturnValue(
-        of({
-          content: [blank],
-          page: { totalElements: 1, totalPages: 1, number: 0, size: 20 },
-        }),
-      );
-
-      component.filterMerchants({ query: '' });
-
-      expect(component.merchantOptions()).toEqual([{ label: 'Unknown Merchant', value: blank }]);
-    });
   });
 
   describe('transactionCount / isLargeUpdate', () => {

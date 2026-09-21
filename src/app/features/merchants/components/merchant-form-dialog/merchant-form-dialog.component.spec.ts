@@ -1,18 +1,22 @@
 import { vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { signal } from '@angular/core';
 import { of, throwError } from 'rxjs';
 
 import { MerchantFormDialogComponent } from './merchant-form-dialog.component';
 import { MerchantApiService } from '../../services/merchant-api.service';
 import { ToastService } from '@core/services/toast.service';
+import { AuthService } from '@core/auth/auth.service';
 import { Merchant } from '@models/merchant.model';
+import { User } from '@models/auth.model';
 
 describe('MerchantFormDialogComponent', () => {
   let component: MerchantFormDialogComponent;
   let fixture: ComponentFixture<MerchantFormDialogComponent>;
   let mockMerchantApi: any;
   let mockToast: any;
+  let mockAuth: any;
 
   const mockMerchant: Merchant = {
     id: 7,
@@ -23,6 +27,7 @@ describe('MerchantFormDialogComponent', () => {
     postalCode: '30301',
     country: 'USA',
   };
+  const mockUser: User = { id: 1, username: 'jdoe', email: 'jdoe@test.com' };
 
   beforeEach(async () => {
     mockMerchantApi = {
@@ -30,12 +35,14 @@ describe('MerchantFormDialogComponent', () => {
       updateMerchant: vi.fn().mockReturnValue(of(1)),
     };
     mockToast = { success: vi.fn(), error: vi.fn() };
+    mockAuth = { user: signal<User | null>(mockUser) };
 
     await TestBed.configureTestingModule({
       imports: [MerchantFormDialogComponent, NoopAnimationsModule],
       providers: [
         { provide: MerchantApiService, useValue: mockMerchantApi },
         { provide: ToastService, useValue: mockToast },
+        { provide: AuthService, useValue: mockAuth },
       ],
     }).compileComponents();
 
@@ -103,6 +110,32 @@ describe('MerchantFormDialogComponent', () => {
       // assert & verify
       expect(mockToast.success).toHaveBeenCalledWith('Merchant updated');
     });
+
+    it("should emit the target merchant id, not updateMerchant's rows-affected return value", () => {
+      // arrange -- updateMerchant resolves 1 (rows affected), which must not be mistaken for an id
+      component.visible.set(true);
+      fixture.detectChanges();
+      const saveSpy = vi.fn();
+      component.save.subscribe(saveSpy);
+
+      // act
+      component.onSubmit();
+
+      // assert & verify
+      expect(saveSpy).toHaveBeenCalledWith(expect.objectContaining({ id: 7, name: 'Starbucks' }));
+    });
+
+    it('should ignore initialName when editing an existing merchant', () => {
+      // arrange
+      fixture.componentRef.setInput('initialName', 'Some Other Name');
+
+      // act
+      component.visible.set(true);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.form.controls.name.value).toBe('Starbucks');
+    });
   });
 
   describe('create mode (merchant input is null)', () => {
@@ -138,7 +171,7 @@ describe('MerchantFormDialogComponent', () => {
 
       // assert & verify -- blank optional fields become undefined, not sent as ''
       expect(mockMerchantApi.createMerchant).toHaveBeenCalledWith({
-        userId: 0,
+        userId: 1,
         name: "Trader Joe's",
         city: undefined,
         state: undefined,
@@ -175,6 +208,44 @@ describe('MerchantFormDialogComponent', () => {
         expect.objectContaining({ city: 'Atlanta' }),
       );
     });
+
+    it("should emit the id returned by createMerchant, not the target's (there is none)", () => {
+      // arrange
+      component.visible.set(true);
+      fixture.detectChanges();
+      component.form.controls.name.setValue("Trader Joe's");
+      const saveSpy = vi.fn();
+      component.save.subscribe(saveSpy);
+
+      // act
+      component.onSubmit();
+
+      // assert & verify -- createMerchant resolves 42 in this spec's mock
+      expect(saveSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 42, userId: 1, name: "Trader Joe's" }),
+      );
+    });
+
+    it('should pre-fill the name field from initialName when the dialog opens', () => {
+      // arrange
+      fixture.componentRef.setInput('initialName', 'Costco');
+
+      // act
+      component.visible.set(true);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.form.controls.name.value).toBe('Costco');
+    });
+
+    it('should leave the name field blank when initialName is not provided', () => {
+      // act
+      component.visible.set(true);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.form.controls.name.value).toBe('');
+    });
   });
 
   it('should mark the form invalid when name is blank', () => {
@@ -189,7 +260,7 @@ describe('MerchantFormDialogComponent', () => {
     expect(component.form.invalid).toBe(true);
   });
 
-  it('should emit save and close the dialog once the save succeeds', () => {
+  it('should emit the saved merchant and close the dialog once the save succeeds', () => {
     // arrange
     component.visible.set(true);
     fixture.detectChanges();
@@ -200,7 +271,15 @@ describe('MerchantFormDialogComponent', () => {
     component.onSubmit();
 
     // assert & verify
-    expect(saveSpy).toHaveBeenCalled();
+    expect(saveSpy).toHaveBeenCalledWith({
+      id: 7,
+      userId: 1,
+      name: 'Starbucks',
+      city: 'Atlanta',
+      state: 'GA',
+      postalCode: '30301',
+      country: 'USA',
+    });
     expect(component.visible()).toBe(false);
   });
 

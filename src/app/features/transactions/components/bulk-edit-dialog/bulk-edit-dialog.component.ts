@@ -156,7 +156,7 @@ export class BulkEditDialogComponent {
       .subscribe((page) => {
         this.merchantOptions.set(
           page.content.map((m: Merchant) => ({
-            label: m.name || 'Unknown Merchant',
+            label: m.name,
             value: m,
           })),
         );

@@ -133,6 +133,110 @@ describe('TransactionsComponent', () => {
     expect(button.getAttribute('aria-label')).toBe('Clear Filters');
   });
 
+  describe('merchant/description cell (PF-847: closes the loop on the original requirement)', () => {
+    // scoped to the merchant cell specifically via its unique receipt icon, not a whole-fixture
+    // textContent check -- the description renders a second time nearby (the small italic
+    // sub-line), which would make a broader match ambiguous.
+    const merchantCellText = (): string | null | undefined =>
+      fixture.nativeElement
+        .querySelector('.pi-receipt')
+        ?.closest('td')
+        ?.querySelector('.font-bold')
+        ?.textContent?.trim();
+
+    const descriptionSubLine = (): Element | null | undefined =>
+      fixture.nativeElement.querySelector('.pi-receipt')?.closest('td')?.querySelector('.italic');
+
+    it("should show the merchant's name when a merchant is assigned", () => {
+      // arrange
+      component.transactions.set([
+        {
+          id: 1,
+          account: { name: 'Checking' },
+          category: null,
+          amount: -10,
+          date: new Date('2026-01-15'),
+          description: 'COSTCO WHSE #123',
+          type: 'EXPENSE',
+          merchant: { name: 'Costco' },
+        } as unknown as Transaction,
+      ]);
+
+      // act
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(merchantCellText()).toBe('Costco');
+    });
+
+    it('should also show the raw description in the italic sub-line when a merchant is assigned', () => {
+      // arrange -- here the bold line (merchant name) and the sub-line (raw description) genuinely
+      // differ, so both are worth displaying
+      component.transactions.set([
+        {
+          id: 1,
+          account: { name: 'Checking' },
+          category: null,
+          amount: -10,
+          date: new Date('2026-01-15'),
+          description: 'COSTCO WHSE #123',
+          type: 'EXPENSE',
+          merchant: { name: 'Costco' },
+        } as unknown as Transaction,
+      ]);
+
+      // act
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(descriptionSubLine()?.textContent?.trim()).toBe('COSTCO WHSE #123');
+    });
+
+    it("should show the transaction's own description, not a placeholder, when no merchant is assigned", () => {
+      // arrange -- PF-847's own literal fix for the requirement this redesign started from
+      component.transactions.set([
+        {
+          id: 1,
+          account: { name: 'Checking' },
+          category: null,
+          amount: -10,
+          date: new Date('2026-01-15'),
+          description: 'UNASSIGNED RAW TEXT',
+          type: 'EXPENSE',
+          merchant: null,
+        } as unknown as Transaction,
+      ]);
+
+      // act
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(merchantCellText()).toBe('UNASSIGNED RAW TEXT');
+    });
+
+    it('should not show the italic sub-line when no merchant is assigned, to avoid showing the same description twice', () => {
+      // arrange
+      component.transactions.set([
+        {
+          id: 1,
+          account: { name: 'Checking' },
+          category: null,
+          amount: -10,
+          date: new Date('2026-01-15'),
+          description: 'UNASSIGNED RAW TEXT',
+          type: 'EXPENSE',
+          merchant: null,
+        } as unknown as Transaction,
+      ]);
+
+      // act
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(descriptionSubLine()).toBeFalsy();
+    });
+  });
+
   describe('openCreateDialog / openEditDialog (PF-397)', () => {
     it('openCreateDialog should clear any selected transaction and open the dialog', () => {
       // arrange -- simulate a prior edit having left a transaction selected

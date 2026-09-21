@@ -1,6 +1,7 @@
 import { vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { signal } from '@angular/core';
 import { of } from 'rxjs';
 
 import { TransactionFormDrawerComponent } from './transaction-form-drawer.component';
@@ -8,23 +9,36 @@ import { CategoryApiService } from '@features/categories/services/category-api.s
 import { AccountApiService } from '@features/accounts/services/account-api.service';
 import { MerchantApiService } from '@features/merchants/services/merchant-api.service';
 import { TagApiService } from '@features/tags/services/tag-api.service';
+import { ToastService } from '@core/services/toast.service';
+import { AuthService } from '@core/auth/auth.service';
 import { Category } from '@models/category.model';
+import { Merchant } from '@models/merchant.model';
+import { User } from '@models/auth.model';
 
 describe('TransactionFormDrawerComponent', () => {
   let component: TransactionFormDrawerComponent;
   let fixture: ComponentFixture<TransactionFormDrawerComponent>;
+  let mockMerchantApi: any;
 
   beforeEach(async () => {
     const mockCategoryApi = { getCategories: vi.fn().mockReturnValue(of([])) };
     const mockAccountApi = { getAccounts: vi.fn().mockReturnValue(of([])) };
-    const mockMerchantApi = {
+    mockMerchantApi = {
       getMerchants: vi
         .fn()
         .mockReturnValue(
           of({ content: [], page: { totalElements: 0, totalPages: 0, number: 0, size: 20 } }),
         ),
+      createMerchant: vi.fn().mockReturnValue(of(1)),
+      updateMerchant: vi.fn().mockReturnValue(of(1)),
     };
     const mockTagApi = { getTags: vi.fn().mockReturnValue(of([])) };
+    // TransactionFormDrawerComponent itself doesn't inject these, but PF-847's embedded
+    // <app-merchant-form-dialog> (for the inline "+ Create" flow) does -- Angular constructs it
+    // as part of this component's own template tree, so its dependencies must resolve here too.
+    const mockToast = { success: vi.fn(), error: vi.fn() };
+    const mockUser: User = { id: 1, username: 'jdoe', email: 'jdoe@test.com' };
+    const mockAuth = { user: signal<User | null>(mockUser) };
 
     await TestBed.configureTestingModule({
       imports: [TransactionFormDrawerComponent, NoopAnimationsModule],
@@ -33,6 +47,8 @@ describe('TransactionFormDrawerComponent', () => {
         { provide: AccountApiService, useValue: mockAccountApi },
         { provide: MerchantApiService, useValue: mockMerchantApi },
         { provide: TagApiService, useValue: mockTagApi },
+        { provide: ToastService, useValue: mockToast },
+        { provide: AuthService, useValue: mockAuth },
       ],
     }).compileComponents();
 
@@ -202,5 +218,113 @@ describe('TransactionFormDrawerComponent', () => {
         request: expect.objectContaining({ merchantId: undefined, postDate: undefined }),
       }),
     );
+  });
+
+  describe('PF-847: inline "+ Create" merchant suggestion', () => {
+    const costco: Merchant = {
+      id: 1,
+      userId: 1,
+      name: 'Costco',
+      city: null,
+      state: null,
+      postalCode: null,
+      country: null,
+    };
+
+    /** Drives the component's real search pipeline (filterMerchants -> merchantSearch$ ->
+     *  switchMap -> getMerchants) rather than poking private state directly. */
+    function searchMerchants(query: string, results: Merchant[] = []): void {
+      mockMerchantApi.getMerchants.mockReturnValue(
+        of({
+          content: results,
+          page: { totalElements: results.length, totalPages: 1, number: 0, size: 20 },
+        }),
+      );
+      component.filterMerchants({ query });
+    }
+
+    it('should append a "+ Create" suggestion when no result exactly matches the typed query', () => {
+      // arrange
+      fixture.detectChanges();
+
+      // act
+      searchMerchants('Cost Co', [costco]);
+
+      // assert & verify
+      const suggestions = component.filteredMerchants();
+      expect(suggestions).toHaveLength(2);
+      expect(component.isCreateSuggestion(suggestions[1])).toBe(true);
+      expect(suggestions[1].name).toBe('+ Create "Cost Co"');
+    });
+
+    it('should not append a "+ Create" suggestion when a result matches the query case-insensitively', () => {
+      // arrange
+      fixture.detectChanges();
+
+      // act
+      searchMerchants('costco', [costco]);
+
+      // assert & verify
+      expect(component.filteredMerchants()).toEqual([costco]);
+    });
+
+    it('should not append a "+ Create" suggestion for a blank query', () => {
+      // arrange
+      fixture.detectChanges();
+
+      // act
+      searchMerchants('   ', []);
+
+      // assert & verify
+      expect(component.filteredMerchants()).toEqual([]);
+    });
+
+    it('should leave a real merchant selection untouched', () => {
+      // arrange
+      fixture.detectChanges();
+
+      // act
+      component.onMerchantSelect(costco);
+
+      // assert & verify
+      expect(component.showCreateMerchantDialog()).toBe(false);
+    });
+
+    it('should clear the merchant control and open the create dialog, seeded with the typed query, when the "+ Create" option is selected', () => {
+      // arrange
+      fixture.detectChanges();
+      component.form.controls.merchant.setValue(costco);
+      searchMerchants('Trader Joes', []);
+      const suggestions = component.filteredMerchants();
+      const createSuggestion = suggestions[suggestions.length - 1];
+
+      // act
+      component.onMerchantSelect(createSuggestion);
+
+      // assert & verify
+      expect(component.form.controls.merchant.value).toBeNull();
+      expect(component.createMerchantSeedName()).toBe('Trader Joes');
+      expect(component.showCreateMerchantDialog()).toBe(true);
+    });
+
+    it('should patch the merchant control with the merchant just created inline', () => {
+      // arrange
+      fixture.detectChanges();
+      const newMerchant: Merchant = {
+        id: 99,
+        userId: 1,
+        name: 'Trader Joes',
+        city: null,
+        state: null,
+        postalCode: null,
+        country: null,
+      };
+
+      // act
+      component.onMerchantCreated(newMerchant);
+
+      // assert & verify
+      expect(component.form.controls.merchant.value).toEqual(newMerchant);
+    });
   });
 });

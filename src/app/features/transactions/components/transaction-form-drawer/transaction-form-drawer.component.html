@@ -84,6 +84,7 @@
         formControlName="merchant"
         [suggestions]="filteredMerchants()"
         (completeMethod)="filterMerchants($event)"
+        (onSelect)="onMerchantSelect($event.value)"
         [delay]="300"
         placeholder="Search for a merchant..."
         dataKey="id"
@@ -92,18 +93,32 @@
         inputStyleClass="w-full"
       >
         <ng-template #item let-merchant>
-          <div class="flex items-center gap-2" [pTooltip]="tooltipContent" tooltipPosition="top">
-            <span class="text-sm truncate">{{ merchant.name }}</span>
-          </div>
-          <ng-template #tooltipContent>
-            <div class="flex flex-col gap-1">
-              <span class="text-xs">ID: {{ merchant.id }}</span>
-              <span class="text-sm">{{ merchant.name || 'Unknown Merchant' }}</span>
+          @if (isCreateSuggestion(merchant)) {
+            <div class="flex items-center gap-2 text-primary font-semibold">
+              <i class="pi pi-plus-circle"></i>
+              <span class="text-sm truncate">{{ merchant.name }}</span>
             </div>
-          </ng-template>
+          } @else {
+            <div class="flex items-center gap-2" [pTooltip]="tooltipContent" tooltipPosition="top">
+              <span class="text-sm truncate">{{ merchant.name }}</span>
+            </div>
+            <ng-template #tooltipContent>
+              <div class="flex flex-col gap-1">
+                <span class="text-xs">ID: {{ merchant.id }}</span>
+                <span class="text-sm">{{ merchant.name }}</span>
+              </div>
+            </ng-template>
+          }
         </ng-template>
       </p-autoComplete>
     </div>
+
+    <app-merchant-form-dialog
+      [(visible)]="showCreateMerchantDialog"
+      [merchant]="null"
+      [initialName]="createMerchantSeedName()"
+      (save)="onMerchantCreated($event)"
+    />
 
     <!-- Category -->
     <div class="flex flex-col gap-2">

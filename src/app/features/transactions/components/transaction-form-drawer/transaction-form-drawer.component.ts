@@ -37,15 +37,20 @@ import { Merchant } from '@models/merchant.model';
 import { Tag } from '@models/tag.model';
 import { DrawerComponent } from '@shared/components/drawer/drawer.component';
 import { toLocalDateString } from '@shared/utils/transaction.utils';
-import { finalize, forkJoin, Subject, switchMap } from 'rxjs';
+import { finalize, forkJoin, map, Subject, switchMap } from 'rxjs';
 import { CategoryApiService } from '@features/categories/services/category-api.service';
 import { AccountApiService } from '@features/accounts/services/account-api.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MerchantApiService } from '@features/merchants/services/merchant-api.service';
+import { MerchantFormDialogComponent } from '@features/merchants/components/merchant-form-dialog/merchant-form-dialog.component';
 import { TagApiService } from '@features/tags/services/tag-api.service';
 import { ProgressSpinner } from 'primeng/progressspinner';
 import { Tooltip } from 'primeng/tooltip';
 import { SelectItemGroup } from 'primeng/api';
+
+/** Sentinel id marking the synthetic "+ Create '<query>'" autocomplete suggestion -- always
+ *  negative, so it can never collide with a real (positive, @Positive-validated) merchant id. */
+const CREATE_MERCHANT_SENTINEL_ID = -1;
 
 /**
  * Drawer component for creating or editing individual ledger transactions.
@@ -70,6 +75,7 @@ import { SelectItemGroup } from 'primeng/api';
     DrawerComponent,
     ProgressSpinner,
     Tooltip,
+    MerchantFormDialogComponent,
   ],
   templateUrl: './transaction-form-drawer.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -173,6 +179,17 @@ export class TransactionFormDrawerComponent {
     null,
   );
 
+  /** Visibility of the inline "create a new merchant" dialog, opened from the merchant
+   *  autocomplete's synthetic "+ Create" suggestion. */
+  readonly showCreateMerchantDialog: WritableSignal<boolean> = signal(false);
+
+  /** The typed query to pre-fill the inline-create dialog's name field with. */
+  readonly createMerchantSeedName: WritableSignal<string> = signal('');
+
+  /** The most recently issued merchant search query -- read back when the "+ Create" suggestion
+   *  is selected, since the selection event itself only carries the (synthetic) chosen option. */
+  private lastMerchantQuery = '';
+
   /** Drives the merchant autocomplete's search-as-you-type requests (PF-320): the merchant list
    *  is no longer preloaded in full, since it now grows unboundedly with a user's transaction
    *  history -- switchMap cancels any still-in-flight search when a newer keystroke arrives. */
@@ -183,10 +200,83 @@ export class TransactionFormDrawerComponent {
 
     this.merchantSearch$
       .pipe(
-        switchMap((query: string) => this.merchantApi.getMerchants(query, { page: 0, size: 20 })),
+        switchMap((query: string) =>
+          this.merchantApi
+            .getMerchants(query, { page: 0, size: 20 })
+            .pipe(map((page) => ({ query, merchants: page.content }))),
+        ),
         takeUntilDestroyed(),
       )
-      .subscribe((page) => this.filteredMerchants.set(page.content));
+      .subscribe(({ query, merchants }): void => {
+        this.lastMerchantQuery = query;
+        this.filteredMerchants.set(this.withCreateSuggestion(query, merchants));
+      });
+  }
+
+  /**
+   * Appends a synthetic "+ Create '<query>'" suggestion when the typed text has no exact match
+   * among the returned merchants -- lets the user create a new merchant inline instead of being
+   * forced to pick an existing (possibly wrong) one.
+   * @param query the raw typed search text
+   * @param merchants the server's search results for that query
+   * @return the suggestions to display, with the synthetic option appended when applicable
+   */
+  private withCreateSuggestion(query: string, merchants: Merchant[]): Merchant[] {
+    const trimmed = query.trim();
+    if (!trimmed) {
+      return merchants;
+    }
+    const hasExactMatch = merchants.some(
+      (m): boolean => m.name.toLowerCase() === trimmed.toLowerCase(),
+    );
+    if (hasExactMatch) {
+      return merchants;
+    }
+    return [
+      ...merchants,
+      {
+        id: CREATE_MERCHANT_SENTINEL_ID,
+        userId: 0,
+        name: `+ Create "${trimmed}"`,
+        city: null,
+        state: null,
+        postalCode: null,
+        country: null,
+      },
+    ];
+  }
+
+  /**
+   * `true` for the synthetic "+ Create" suggestion, used by the template to style it distinctly
+   * from real merchant options.
+   * @param merchant the autocomplete option being rendered
+   */
+  isCreateSuggestion(merchant: Merchant): boolean {
+    return merchant.id === CREATE_MERCHANT_SENTINEL_ID;
+  }
+
+  /**
+   * Intercepts a selection from the merchant autocomplete. A real merchant is left as-is (already
+   * bound via `formControlName`); the synthetic "+ Create" option is never allowed to land in the
+   * form -- instead it opens the inline create dialog, pre-filled with the typed name.
+   * @param merchant the selected option
+   */
+  onMerchantSelect(merchant: Merchant): void {
+    if (!this.isCreateSuggestion(merchant)) {
+      return;
+    }
+    this.form.controls.merchant.setValue(null);
+    this.createMerchantSeedName.set(this.lastMerchantQuery.trim());
+    this.showCreateMerchantDialog.set(true);
+  }
+
+  /**
+   * Patches the transaction form with the merchant just created inline, as if the user had
+   * picked it from the list themselves.
+   * @param merchant the newly created merchant
+   */
+  onMerchantCreated(merchant: Merchant): void {
+    this.form.controls.merchant.setValue(merchant);
   }
 
   loadData(): void {

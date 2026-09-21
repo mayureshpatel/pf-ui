@@ -157,7 +157,7 @@ export class RecurringFormDialogComponent {
   /** Derived options for the merchant selection dropdown. */
   readonly merchantOptions = computed(() =>
     this.merchants().map((m: Merchant) => ({
-      label: m.name || 'Unknown Merchant',
+      label: m.name,
       value: m.id,
     })),
   );

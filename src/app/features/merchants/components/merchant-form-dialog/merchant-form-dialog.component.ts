@@ -25,6 +25,7 @@ import { MessageModule } from 'primeng/message';
 import { Merchant, MerchantCreateRequest, MerchantUpdateRequest } from '@models/merchant.model';
 import { MerchantApiService } from '../../services/merchant-api.service';
 import { ToastService } from '@core/services/toast.service';
+import { AuthService } from '@core/auth/auth.service';
 import { RestoreFocusOnHideDirective } from '@shared/directives/restore-focus-on-hide.directive';
 
 /**
@@ -50,6 +51,7 @@ import { RestoreFocusOnHideDirective } from '@shared/directives/restore-focus-on
 export class MerchantFormDialogComponent {
   private readonly merchantApi: MerchantApiService = inject(MerchantApiService);
   private readonly toast: ToastService = inject(ToastService);
+  private readonly authService: AuthService = inject(AuthService);
 
   /** Two-way binding for the dialog visibility. */
   readonly visible: ModelSignal<boolean> = model.required<boolean>();
@@ -57,8 +59,12 @@ export class MerchantFormDialogComponent {
   /** The merchant being edited, or `null` for create mode. */
   readonly merchant: InputSignal<Merchant | null> = input.required<Merchant | null>();
 
-  /** Emitted once the create/edit has saved successfully. */
-  readonly save: OutputEmitterRef<void> = output<void>();
+  /** In create mode only (`merchant` is `null`), pre-fills the name field with this value --
+   *  e.g. from an inline "+ Create" affordance elsewhere in the app. Ignored in edit mode. */
+  readonly initialName: InputSignal<string | null> = input<string | null>(null);
+
+  /** Emitted with the saved merchant once the create/edit has saved successfully. */
+  readonly save: OutputEmitterRef<Merchant> = output<Merchant>();
 
   /** Indicates if a save operation is in progress. */
   readonly saving: WritableSignal<boolean> = signal(false);
@@ -96,7 +102,7 @@ export class MerchantFormDialogComponent {
       if (this.visible()) {
         const target: Merchant | null = this.merchant();
         this.form.reset({
-          name: target?.name ?? '',
+          name: target?.name ?? this.initialName() ?? '',
           city: target?.city ?? '',
           state: target?.state ?? '',
           postalCode: target?.postalCode ?? '',
@@ -128,31 +134,47 @@ export class MerchantFormDialogComponent {
     this.errorMessage.set(null);
 
     const raw = this.form.getRawValue();
-    const location = {
-      city: blankToUndefined(raw.city),
-      state: blankToUndefined(raw.state),
-      postalCode: blankToUndefined(raw.postalCode),
-      country: blankToUndefined(raw.country),
-    };
+    const city = blankToUndefined(raw.city);
+    const state = blankToUndefined(raw.state);
+    const postalCode = blankToUndefined(raw.postalCode);
+    const country = blankToUndefined(raw.country);
+    const userId: number = this.authService.user()?.id ?? 0;
 
     const target: Merchant | null = this.merchant();
     const request$ = target
       ? this.merchantApi.updateMerchant({
           id: target.id,
-          userId: target.userId,
+          userId,
           name: raw.name,
-          ...location,
+          city,
+          state,
+          postalCode,
+          country,
         } satisfies MerchantUpdateRequest)
       : this.merchantApi.createMerchant({
-          userId: 0, // overwritten server-side from the authenticated caller; see MerchantApiService.createMerchant
+          userId,
           name: raw.name,
-          ...location,
+          city,
+          state,
+          postalCode,
+          country,
         } satisfies MerchantCreateRequest);
 
     request$.pipe(finalize((): void => this.saving.set(false))).subscribe({
-      next: (): void => {
+      // `result` is the new id in create mode, or the rows-affected count in edit mode -- only
+      // the create-mode value is ever actually needed, since the edit-mode id is already known.
+      next: (result: number): void => {
+        const saved: Merchant = {
+          id: target ? target.id : result,
+          userId,
+          name: raw.name,
+          city: city ?? null,
+          state: state ?? null,
+          postalCode: postalCode ?? null,
+          country: country ?? null,
+        };
         this.toast.success(this.isCreateMode() ? 'Merchant created' : 'Merchant updated');
-        this.save.emit();
+        this.save.emit(saved);
         this.onHide();
       },
       error: (err: any): void => {
