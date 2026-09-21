@@ -1,6 +1,7 @@
 import { vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { ConfirmationService } from 'primeng/api';
 import { of, throwError } from 'rxjs';
 
 import { MerchantsComponent } from './merchants.component';
@@ -14,32 +15,31 @@ describe('MerchantsComponent', () => {
   let fixture: ComponentFixture<MerchantsComponent>;
   let mockMerchantApi: any;
   let mockToast: any;
+  let mockConfirmationService: any;
 
-  const kroger1: Merchant = {
+  const kroger: Merchant = {
     id: 1,
     userId: 1,
-    originalName: 'KROGER #431 ROSWELL',
-    cleanName: 'Kroger',
-  };
-  const kroger2: Merchant = {
-    id: 2,
-    userId: 1,
-    originalName: 'KROGER #999 ROSWELL',
-    cleanName: 'Kroger',
+    name: 'Kroger',
+    city: 'Roswell',
+    state: 'GA',
+    postalCode: null,
+    country: null,
   };
   const wholeFoods: Merchant = {
-    id: 3,
+    id: 2,
     userId: 1,
-    originalName: 'WHOLEFDS 5678',
-    cleanName: 'Whole Foods',
+    name: 'Whole Foods',
+    city: null,
+    state: null,
+    postalCode: null,
+    country: null,
   };
 
-  const cleanNames: string[] = ['Kroger', 'Whole Foods'];
-
   const pageOf = (
-    content: string[],
+    content: Merchant[],
     totalElements: number = content.length,
-  ): PageResponse<string> => ({
+  ): PageResponse<Merchant> => ({
     content,
     page: {
       totalElements,
@@ -49,31 +49,20 @@ describe('MerchantsComponent', () => {
     },
   });
 
-  // p-tabs' TabList calls ngAfterViewInit -> bindResizeObserver(), which JSDOM doesn't implement.
-  beforeAll(() => {
-    (globalThis as any).ResizeObserver = class {
-      observe(): void {}
-      unobserve(): void {}
-      disconnect(): void {}
-    };
-  });
-
   beforeEach(async () => {
     mockMerchantApi = {
-      getDistinctCleanNames: vi.fn().mockReturnValue(of(pageOf(cleanNames))),
-      getMerchantsByCleanName: vi.fn().mockReturnValue(of([kroger1, kroger2])),
-      updateMerchant: vi.fn(),
-      mergeMerchants: vi.fn(),
-      getMerchantsNeedingReview: vi.fn().mockReturnValue(of([])),
-      updateMerchantsBulk: vi.fn(),
+      getMerchants: vi.fn().mockReturnValue(of(pageOf([kroger, wholeFoods]))),
+      deleteMerchant: vi.fn().mockReturnValue(of(undefined)),
     };
     mockToast = { success: vi.fn(), error: vi.fn() };
+    mockConfirmationService = { confirm: vi.fn() };
 
     await TestBed.configureTestingModule({
       imports: [MerchantsComponent, NoopAnimationsModule],
       providers: [
         { provide: MerchantApiService, useValue: mockMerchantApi },
         { provide: ToastService, useValue: mockToast },
+        { provide: ConfirmationService, useValue: mockConfirmationService },
       ],
     }).compileComponents();
 
@@ -81,25 +70,20 @@ describe('MerchantsComponent', () => {
     component = fixture.componentInstance;
   });
 
-  it('should create and load the first page of distinct clean names on init', () => {
+  it('should create and load the first page of merchants on init', () => {
     // act
     fixture.detectChanges();
 
     // assert & verify
     expect(component).toBeTruthy();
-    expect(mockMerchantApi.getDistinctCleanNames).toHaveBeenCalledWith(null, { page: 0, size: 20 });
-    expect(component.groups()).toEqual([
-      { cleanName: 'Kroger', members: null },
-      { cleanName: 'Whole Foods', members: null },
-    ]);
+    expect(mockMerchantApi.getMerchants).toHaveBeenCalledWith(null, { page: 0, size: 20 });
+    expect(component.merchants()).toEqual([kroger, wholeFoods]);
     expect(component.totalRecords()).toBe(2);
   });
 
-  it('should show an error toast when loading fails', () => {
+  it('should show an error toast and error state when loading fails', () => {
     // arrange
-    mockMerchantApi.getDistinctCleanNames.mockReturnValue(
-      throwError(() => new Error('network error')),
-    );
+    mockMerchantApi.getMerchants.mockReturnValue(throwError(() => new Error('network error')));
 
     // act
     fixture.detectChanges();
@@ -107,11 +91,12 @@ describe('MerchantsComponent', () => {
     // assert & verify
     expect(mockToast.error).toHaveBeenCalledWith('Failed to load merchants');
     expect(component.loading()).toBe(false);
+    expect(component.loadError()).toBe(true);
   });
 
-  it('should treat an empty group list, once loaded, as isEmpty', () => {
+  it('should treat an empty merchant list, once loaded, as isEmpty', () => {
     // arrange
-    mockMerchantApi.getDistinctCleanNames.mockReturnValue(of(pageOf([], 0)));
+    mockMerchantApi.getMerchants.mockReturnValue(of(pageOf([], 0)));
 
     // act
     fixture.detectChanges();
@@ -124,7 +109,7 @@ describe('MerchantsComponent', () => {
     beforeEach(() => {
       vi.useFakeTimers();
       fixture.detectChanges();
-      mockMerchantApi.getDistinctCleanNames.mockClear();
+      mockMerchantApi.getMerchants.mockClear();
     });
 
     afterEach(() => {
@@ -137,7 +122,7 @@ describe('MerchantsComponent', () => {
       fixture.detectChanges();
 
       // assert & verify
-      expect(mockMerchantApi.getDistinctCleanNames).not.toHaveBeenCalled();
+      expect(mockMerchantApi.getMerchants).not.toHaveBeenCalled();
     });
 
     it('should call the API with the search term once the debounce window elapses', () => {
@@ -148,10 +133,7 @@ describe('MerchantsComponent', () => {
       fixture.detectChanges();
 
       // assert & verify
-      expect(mockMerchantApi.getDistinctCleanNames).toHaveBeenCalledWith('kro', {
-        page: 0,
-        size: 20,
-      });
+      expect(mockMerchantApi.getMerchants).toHaveBeenCalledWith('kro', { page: 0, size: 20 });
     });
 
     it('should reset to page 0 when the search term changes', () => {
@@ -170,7 +152,7 @@ describe('MerchantsComponent', () => {
 
     it('should report noSearchResults when a search matches nothing, distinct from isEmpty', () => {
       // arrange
-      mockMerchantApi.getDistinctCleanNames.mockReturnValue(of(pageOf([], 0)));
+      mockMerchantApi.getMerchants.mockReturnValue(of(pageOf([], 0)));
 
       // act
       component.onSearchInput('nonexistent merchant');
@@ -179,7 +161,7 @@ describe('MerchantsComponent', () => {
       fixture.detectChanges();
 
       // assert & verify
-      expect(component.groups()).toEqual([]);
+      expect(component.merchants()).toEqual([]);
       expect(component.noSearchResults()).toBe(true);
       expect(component.isEmpty()).toBe(false);
     });
@@ -194,151 +176,101 @@ describe('MerchantsComponent', () => {
 
       // assert & verify
       expect(component.page()).toBe(2);
-      expect(mockMerchantApi.getDistinctCleanNames).toHaveBeenCalledWith(null, {
-        page: 2,
-        size: 20,
+      expect(mockMerchantApi.getMerchants).toHaveBeenCalledWith(null, { page: 2, size: 20 });
+    });
+  });
+
+  describe('create/edit dialog', () => {
+    beforeEach(() => fixture.detectChanges());
+
+    it('should open the dialog in create mode with no target merchant', () => {
+      // act
+      component.openCreateDialog();
+
+      // assert & verify
+      expect(component.selectedMerchant()).toBeNull();
+      expect(component.showDialog()).toBe(true);
+    });
+
+    it('should open the dialog in edit mode with the selected merchant', () => {
+      // act
+      component.openEditDialog(kroger);
+
+      // assert & verify
+      expect(component.selectedMerchant()).toEqual(kroger);
+      expect(component.showDialog()).toBe(true);
+    });
+
+    it('should reload the list when onSave is called', () => {
+      // arrange
+      mockMerchantApi.getMerchants.mockClear();
+
+      // act
+      component.onSave();
+
+      // assert & verify
+      expect(mockMerchantApi.getMerchants).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('linked-descriptions dialog', () => {
+    beforeEach(() => fixture.detectChanges());
+
+    it('should open the links dialog for the selected merchant', () => {
+      // act
+      component.openLinksDialog(kroger);
+
+      // assert & verify
+      expect(component.linksMerchant()).toEqual(kroger);
+      expect(component.showLinksDialog()).toBe(true);
+    });
+  });
+
+  describe('deleteMerchant', () => {
+    beforeEach(() => fixture.detectChanges());
+
+    it('should open confirmation and delete upon accept', () => {
+      // arrange
+      mockConfirmationService.confirm.mockImplementation((config: any) => {
+        config.accept?.();
+        return mockConfirmationService;
       });
+
+      // act
+      component.deleteMerchant(kroger);
+
+      // assert & verify
+      expect(mockConfirmationService.confirm).toHaveBeenCalled();
+      expect(mockMerchantApi.deleteMerchant).toHaveBeenCalledWith(kroger.id);
+      expect(mockToast.success).toHaveBeenCalledWith('Merchant deleted');
     });
 
-    it('should collapse every expanded group when the page changes', () => {
+    it('should not delete without confirmation', () => {
+      // arrange -- confirm() never invokes accept
+      mockConfirmationService.confirm.mockImplementation(() => mockConfirmationService);
+
+      // act
+      component.deleteMerchant(kroger);
+
+      // assert & verify
+      expect(mockMerchantApi.deleteMerchant).not.toHaveBeenCalled();
+    });
+
+    it('should toast an error and not throw when delete fails', () => {
       // arrange
-      component.expandedRowKeys.set({ Kroger: true });
+      mockConfirmationService.confirm.mockImplementation((config: any) => {
+        config.accept?.();
+        return mockConfirmationService;
+      });
+      mockMerchantApi.deleteMerchant.mockReturnValue(
+        throwError(() => ({ error: { detail: 'Cannot delete' } })),
+      );
 
       // act
-      component.onPageChange({ first: 20 });
+      component.deleteMerchant(kroger);
 
       // assert & verify
-      expect(component.expandedRowKeys()).toEqual({});
-    });
-  });
-
-  describe('group expansion (PF-842: lazy-loaded members)', () => {
-    beforeEach(() => fixture.detectChanges());
-
-    it("should fetch a group's members the first time it's expanded", () => {
-      // act
-      component.onGroupExpand({ data: { cleanName: 'Kroger', members: null } });
-
-      // assert & verify
-      expect(mockMerchantApi.getMerchantsByCleanName).toHaveBeenCalledWith('Kroger');
-      expect(component.groups().find((g) => g.cleanName === 'Kroger')?.members).toEqual([
-        kroger1,
-        kroger2,
-      ]);
-    });
-
-    it('should NOT refetch an already-loaded group on a subsequent expand', () => {
-      // arrange
-      component.onGroupExpand({ data: { cleanName: 'Kroger', members: null } });
-      mockMerchantApi.getMerchantsByCleanName.mockClear();
-
-      // act -- re-expanding with the now-loaded group object
-      const loadedGroup = component.groups().find((g) => g.cleanName === 'Kroger')!;
-      component.onGroupExpand({ data: loadedGroup });
-
-      // assert & verify
-      expect(mockMerchantApi.getMerchantsByCleanName).not.toHaveBeenCalled();
-    });
-
-    it('should leave other groups untouched when one group is expanded', () => {
-      // act
-      component.onGroupExpand({ data: { cleanName: 'Kroger', members: null } });
-
-      // assert & verify
-      expect(component.groups().find((g) => g.cleanName === 'Whole Foods')?.members).toBeNull();
-    });
-  });
-
-  it('should open the edit dialog with the selected merchant', () => {
-    // arrange
-    fixture.detectChanges();
-
-    // act
-    component.openEditDialog(kroger1);
-
-    // assert & verify
-    expect(component.selectedMerchant()).toEqual(kroger1);
-    expect(component.showDialog()).toBe(true);
-  });
-
-  it('should reload the group list when onSave is called', () => {
-    // arrange
-    fixture.detectChanges();
-    mockMerchantApi.getDistinctCleanNames.mockClear();
-
-    // act
-    component.onSave();
-
-    // assert & verify
-    expect(mockMerchantApi.getDistinctCleanNames).toHaveBeenCalledTimes(1);
-  });
-
-  it('should reload the group list when a Needs Review cluster is confirmed', () => {
-    // arrange
-    fixture.detectChanges();
-    mockMerchantApi.getDistinctCleanNames.mockClear();
-
-    // act
-    component.onClusterConfirmed();
-
-    // assert & verify
-    expect(mockMerchantApi.getDistinctCleanNames).toHaveBeenCalledTimes(1);
-  });
-
-  describe('merge selection (PF-222), across independently-expanded groups', () => {
-    beforeEach(() => fixture.detectChanges());
-
-    it('should select a merchant not yet selected', () => {
-      // act
-      component.toggleForMerge(kroger1);
-
-      // assert & verify
-      expect(component.selectedForMerge()).toEqual([kroger1]);
-      expect(component.isSelectedForMerge(kroger1)).toBe(true);
-    });
-
-    it('should deselect an already-selected merchant', () => {
-      // arrange
-      component.toggleForMerge(kroger1);
-
-      // act
-      component.toggleForMerge(kroger1);
-
-      // assert & verify
-      expect(component.selectedForMerge()).toEqual([]);
-      expect(component.isSelectedForMerge(kroger1)).toBe(false);
-    });
-
-    it('should cap at 2, keeping the most recently selected pair, when a 3rd is checked', () => {
-      // act -- 3 different merchants, from potentially different (independently expanded) groups
-      component.toggleForMerge(kroger1);
-      component.toggleForMerge(kroger2);
-      component.toggleForMerge(wholeFoods);
-
-      // assert & verify
-      expect(component.selectedForMerge()).toEqual([kroger2, wholeFoods]);
-    });
-
-    it('should open the merge dialog', () => {
-      // act
-      component.openMergeDialog();
-
-      // assert & verify
-      expect(component.showMergeDialog()).toBe(true);
-    });
-
-    it('should clear the selection and reload the group list once a merge completes', () => {
-      // arrange
-      component.toggleForMerge(kroger1);
-      component.toggleForMerge(kroger2);
-      mockMerchantApi.getDistinctCleanNames.mockClear();
-
-      // act
-      component.onMerged();
-
-      // assert & verify
-      expect(component.selectedForMerge()).toEqual([]);
-      expect(mockMerchantApi.getDistinctCleanNames).toHaveBeenCalledTimes(1);
+      expect(mockToast.error).toHaveBeenCalledWith('Cannot delete');
     });
   });
 });

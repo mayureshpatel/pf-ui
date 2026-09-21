@@ -24,7 +24,7 @@ describe('RecurringComponent', () => {
     id: 1,
     userId: 1,
     account: { name: 'Checking' },
-    merchant: { cleanName: 'Netflix' },
+    merchant: { name: 'Netflix' },
     amount: 15.99,
     frequency: 'MONTHLY',
     nextDate: '2026-02-01',

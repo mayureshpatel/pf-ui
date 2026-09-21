@@ -87,19 +87,18 @@
         [delay]="300"
         placeholder="Search for a merchant..."
         dataKey="id"
-        optionLabel="originalName"
+        optionLabel="name"
         panelStyleClass="max-w-2xs"
         inputStyleClass="w-full"
       >
         <ng-template #item let-merchant>
           <div class="flex items-center gap-2" [pTooltip]="tooltipContent" tooltipPosition="top">
-            <span class="text-sm truncate">{{ merchant.originalName }}</span>
+            <span class="text-sm truncate">{{ merchant.name }}</span>
           </div>
           <ng-template #tooltipContent>
             <div class="flex flex-col gap-1">
               <span class="text-xs">ID: {{ merchant.id }}</span>
-              <span class="text-sm">{{ merchant.originalName }}</span>
-              <span class="text-xs text-surface-500 dark:text-surface-400">{{ merchant.cleanName || merchant.originalName || 'Unknown Merchant' }}</span>
+              <span class="text-sm">{{ merchant.name || 'Unknown Merchant' }}</span>
             </div>
           </ng-template>
         </ng-template>

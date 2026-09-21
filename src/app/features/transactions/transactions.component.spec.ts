@@ -118,7 +118,7 @@ describe('TransactionsComponent', () => {
         date: new Date('2026-01-15'),
         description: 'test',
         type: 'EXPENSE',
-        merchant: { originalName: 'Test' },
+        merchant: { name: 'Test' },
       } as unknown as Transaction,
     ]);
 
@@ -590,7 +590,7 @@ describe('TransactionsComponent', () => {
           date: new Date('2026-01-15'),
           description: 'test',
           type: 'EXPENSE',
-          merchant: { originalName: 'Test' },
+          merchant: { name: 'Test' },
         } as unknown as Transaction,
       ]);
     });

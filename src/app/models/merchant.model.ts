@@ -1,66 +1,63 @@
 /**
- * Represents a merchant entity.
- *
- * Maps directly to the Merchant entity in the database, without audit fields.
+ * Represents a merchant: a vendor the user deliberately named, never auto-created from a
+ * transaction description.
  *
  * @property id - The unique identifier for the merchant.
  * @property userId - The user ID associated with the merchant.
- * @property originalName - The original name of the merchant.
- * @property cleanName - The cleaned name of the merchant.
+ * @property name - The merchant's name, as the user typed it.
+ * @property city - The merchant's city, if given.
+ * @property state - The merchant's state/province, if given.
+ * @property postalCode - The merchant's postal code, if given.
+ * @property country - The merchant's country, if given.
  */
 export interface Merchant {
   id: number;
   userId: number;
-  originalName: string;
-  cleanName: string;
-}
-
-/**
- * Represents a request to update a merchant's clean name.
- *
- * @property id - The unique identifier of the merchant to update.
- * @property cleanName - The new clean name for the merchant.
- */
-export interface MerchantUpdateRequest {
-  id: number;
-  cleanName: string;
+  name: string;
+  city: string | null;
+  state: string | null;
+  postalCode: string | null;
+  country: string | null;
 }
 
 /**
  * Represents a request to create a new merchant.
  *
  * @property userId - The user ID associated with the merchant.
- * @property originalName - The original name of the merchant.
- * @property cleanName - The cleaned name of the merchant.
+ * @property name - The merchant's name.
+ * @property city - The merchant's city, optional.
+ * @property state - The merchant's state/province, optional.
+ * @property postalCode - The merchant's postal code, optional.
+ * @property country - The merchant's country, optional.
  */
 export interface MerchantCreateRequest {
   userId: number;
-  originalName: string;
-  cleanName: string;
+  name: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
 }
 
 /**
- * Represents a request to merge one merchant into another. The merged-away merchant's
- * transactions and recurring transactions move to the surviving merchant, and the merged-away
- * record is then deleted.
+ * Represents a request to update an existing merchant's name and location.
  *
- * @property survivingMerchantId - The merchant that remains after the merge.
- * @property mergedAwayMerchantId - The merchant being merged away and deleted.
+ * @property id - The unique identifier of the merchant to update.
  */
-export interface MerchantMergeRequest {
-  survivingMerchantId: number;
-  mergedAwayMerchantId: number;
+export interface MerchantUpdateRequest extends MerchantCreateRequest {
+  id: number;
 }
 
 /**
- * A cluster of merchants sharing the same fresh normalizer suggestion, surfaced for bulk review
- * (PF-842). A merchant lands in a cluster when its current clean name is blank, or differs from
- * what re-running the normalizer against its original name would produce right now.
+ * A single raw transaction description linked to a merchant -- captured automatically whenever
+ * the user assigns that merchant to a transaction, or added directly here.
  *
- * @property suggestedCleanName - The normalizer's current suggestion for this cluster's members.
- * @property merchants - The flagged merchants sharing that suggestion.
+ * @property id - The unique identifier for the link.
+ * @property merchantId - The merchant this description is linked to.
+ * @property description - The raw description text, as linked.
  */
-export interface MerchantReviewCluster {
-  suggestedCleanName: string;
-  merchants: Merchant[];
+export interface MerchantDescriptionLink {
+  id: number;
+  merchantId: number;
+  description: string;
 }

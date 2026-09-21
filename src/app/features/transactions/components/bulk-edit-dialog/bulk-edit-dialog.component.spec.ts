@@ -31,11 +31,22 @@ describe('BulkEditDialogComponent', () => {
   const costco: Merchant = {
     id: 1,
     userId: 1,
-    originalName: 'COSTCO WHSE #123',
-    cleanName: 'Costco',
+    name: 'Costco',
+    city: null,
+    state: null,
+    postalCode: null,
+    country: null,
   };
-  const noCleanName: Merchant = { id: 2, userId: 1, originalName: 'RAW MERCHANT', cleanName: '' };
-  const mockMerchants: Merchant[] = [costco, noCleanName];
+  const samsClub: Merchant = {
+    id: 2,
+    userId: 1,
+    name: "Sam's Club",
+    city: null,
+    state: null,
+    postalCode: null,
+    country: null,
+  };
+  const mockMerchants: Merchant[] = [costco, samsClub];
 
   const mockTransactions: Transaction[] = [{ id: 1 } as Transaction];
 
@@ -89,26 +100,30 @@ describe('BulkEditDialogComponent', () => {
       expect(mockMerchantApi.getMerchants).toHaveBeenCalledWith('cos', { page: 0, size: 20 });
       expect(component.merchantOptions()).toEqual([
         { label: 'Costco', value: costco },
-        { label: 'RAW MERCHANT', value: noCleanName },
+        { label: "Sam's Club", value: samsClub },
       ]);
     });
 
-    it("should fall back through cleanName -> originalName -> 'Unknown Merchant'", () => {
+    it("should fall back to 'Unknown Merchant' when name is blank", () => {
+      const blank: Merchant = {
+        id: 3,
+        userId: 1,
+        name: '',
+        city: null,
+        state: null,
+        postalCode: null,
+        country: null,
+      };
       mockMerchantApi.getMerchants.mockReturnValue(
         of({
-          content: [{ id: 3, userId: 1, originalName: '', cleanName: '' }],
+          content: [blank],
           page: { totalElements: 1, totalPages: 1, number: 0, size: 20 },
         }),
       );
 
       component.filterMerchants({ query: '' });
 
-      expect(component.merchantOptions()).toEqual([
-        {
-          label: 'Unknown Merchant',
-          value: { id: 3, userId: 1, originalName: '', cleanName: '' },
-        },
-      ]);
+      expect(component.merchantOptions()).toEqual([{ label: 'Unknown Merchant', value: blank }]);
     });
   });
 

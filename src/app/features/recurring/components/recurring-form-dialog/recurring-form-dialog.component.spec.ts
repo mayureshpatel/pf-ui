@@ -26,12 +26,23 @@ describe('RecurringFormDialogComponent', () => {
   const netflix = {
     id: 1,
     userId: 1,
-    originalName: 'NETFLIX.COM',
-    cleanName: 'Netflix',
+    name: 'Netflix',
+    city: null,
+    state: null,
+    postalCode: null,
+    country: null,
   } as Merchant;
-  const noCleanName = { id: 2, userId: 1, originalName: 'RAW CO', cleanName: '' } as Merchant;
+  const rawCo = {
+    id: 2,
+    userId: 1,
+    name: 'RAW CO',
+    city: null,
+    state: null,
+    postalCode: null,
+    country: null,
+  } as Merchant;
   const mockAccounts: Account[] = [checking];
-  const mockMerchants: Merchant[] = [netflix, noCleanName];
+  const mockMerchants: Merchant[] = [netflix, rawCo];
   const mockUser: User = { id: 42, username: 'jdoe', email: 'jdoe@test.com' };
 
   beforeEach(async () => {
@@ -95,7 +106,7 @@ describe('RecurringFormDialogComponent', () => {
       ]);
     });
 
-    it("should fall back through cleanName -> originalName -> 'Unknown Merchant'", () => {
+    it('should label merchants by their name', () => {
       expect(component.merchantOptions()).toEqual([
         { label: 'Netflix', value: 1 },
         { label: 'RAW CO', value: 2 },
