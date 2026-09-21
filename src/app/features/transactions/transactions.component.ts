@@ -153,6 +153,9 @@ export class TransactionsComponent implements OnInit {
   /** Indicates if a manual mark-as-transfer operation is currently in flight. */
   readonly markingAsTransfer: WritableSignal<boolean> = signal(false);
 
+  /** Indicates if a manual unmark-as-transfer operation is currently in flight. */
+  readonly unmarkingAsTransfer: WritableSignal<boolean> = signal(false);
+
   /** Indicates if the transaction form drawer is currently open. */
   readonly showDialog: WritableSignal<boolean> = signal(false);
 
@@ -737,6 +740,32 @@ export class TransactionsComponent implements OnInit {
         },
         error: (err: any): void =>
           this.toast.error(err.error?.detail || 'Failed to mark as transfer'),
+      });
+  }
+
+  /**
+   * Reverts every currently-selected transaction from a confirmed transfer back to plain
+   * income/expense (PF-831) -- for correcting a wrongly-confirmed match, or reclassifying data
+   * affected by a heuristic fix (e.g. PF-848's backfill).
+   */
+  onUnmarkAsTransfer(): void {
+    const ids: number[] = this.selectedTransactions().map((txn: Transaction): number => txn.id);
+    if (ids.length === 0) return;
+
+    this.unmarkingAsTransfer.set(true);
+    this.transactionApi
+      .unmarkAsTransfer(ids)
+      .pipe(finalize((): void => this.unmarkingAsTransfer.set(false)))
+      .subscribe({
+        next: (): void => {
+          this.toast.success(
+            `${ids.length} transaction${ids.length === 1 ? '' : 's'} unmarked as transfer`,
+          );
+          this.selectedTransactions.set([]);
+          this.loadTransactions();
+        },
+        error: (err: any): void =>
+          this.toast.error(err.error?.detail || 'Failed to unmark as transfer'),
       });
   }
 

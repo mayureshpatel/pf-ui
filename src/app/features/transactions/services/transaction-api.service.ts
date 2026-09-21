@@ -129,6 +129,14 @@ export class TransactionApiService {
   }
 
   /**
+   * Reverts the given transactions from a confirmed transfer back to plain income/expense.
+   * @param ids the transaction ids to unmark.
+   */
+  unmarkAsTransfer(ids: number[]): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/unmark-as-transfer`, ids, SKIP_TOAST_OPTIONS);
+  }
+
+  /**
    * Gets transaction counts grouped by category.
    * @returns the categories with their transaction counts.
    */
