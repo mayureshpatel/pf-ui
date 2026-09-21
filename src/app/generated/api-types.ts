@@ -228,6 +228,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/transactions/unmark-as-transfer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Unmark transactions as transfers
+         * @description Reverts a batch of previously-confirmed transfers back to plain income/expense
+         */
+        post: operations["unmarkAsTransfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/transactions/mark-as-transfer": {
         parameters: {
             query?: never;
@@ -274,6 +294,26 @@ export interface paths {
          * @description Updates up to 1000 transactions in a single request
          */
         patch: operations["updateTransactionsBulk"];
+        trace?: never;
+    };
+    "/api/v1/transactions/backfill/transfer-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Backfill historical transfer mis-typing
+         * @description Corrects TRANSFER_IN transactions on credit-card accounts that were mis-typed by the old parser heuristic
+         */
+        post: operations["backfillTransferTypes"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/tags/{tagId}/transactions/{transactionId}": {
@@ -2257,6 +2297,28 @@ export interface operations {
             };
         };
     };
+    unmarkAsTransfer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": number[];
+            };
+        };
+        responses: {
+            /** @description Transactions unmarked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     markAsTransfer: {
         parameters: {
             query?: never;
@@ -2349,6 +2411,26 @@ export interface operations {
             };
             /** @description One or more transaction ids not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": number;
+                };
+            };
+        };
+    };
+    backfillTransferTypes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Number of transactions corrected */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

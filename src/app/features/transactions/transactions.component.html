@@ -68,6 +68,15 @@
                   (onClick)="onMarkAsTransfer()"
                   pTooltip="Mark the selected transactions as an internal transfer, excluding them from income/expense totals"
                 />
+                <p-button
+                  [label]="'Unmark as Transfer (' + selectedTransactions().length + ')'"
+                  icon="pi pi-replay"
+                  severity="secondary"
+                  [outlined]="true"
+                  [loading]="unmarkingAsTransfer()"
+                  (onClick)="onUnmarkAsTransfer()"
+                  pTooltip="Revert the selected transactions back to plain income/expense, undoing a mark-as-transfer"
+                />
               }
               <p-button
                 label="Review Transfers"

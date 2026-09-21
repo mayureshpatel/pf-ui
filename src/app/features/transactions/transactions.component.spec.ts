@@ -47,6 +47,7 @@ describe('TransactionsComponent', () => {
       updateTransaction: vi.fn(),
       bulkUpdateTransactions: vi.fn(),
       markAsTransfer: vi.fn(),
+      unmarkAsTransfer: vi.fn(),
       getTransferSuggestions: vi.fn().mockReturnValue(of([])),
     };
     mockAccountApi = {
@@ -1000,6 +1001,52 @@ describe('TransactionsComponent', () => {
 
       // act
       component.onMarkAsTransfer();
+
+      // assert & verify
+      expect(mockToast.error).toHaveBeenCalledWith('Conflict');
+      expect(component.selectedTransactions()).toEqual([t1]);
+    });
+  });
+
+  describe('onUnmarkAsTransfer (PF-831)', () => {
+    it('should unmark every selected transaction as a transfer and reload', () => {
+      // arrange
+      const t1 = { id: 1, description: 'Payment to Card', amount: 500 } as Transaction;
+      const t2 = { id: 2, description: 'Payment Received', amount: 500 } as Transaction;
+      component.selectedTransactions.set([t1, t2]);
+      mockTransactionApi.unmarkAsTransfer.mockReturnValue(of(undefined));
+
+      // act
+      component.onUnmarkAsTransfer();
+
+      // assert & verify
+      expect(mockTransactionApi.unmarkAsTransfer).toHaveBeenCalledWith([1, 2]);
+      expect(mockToast.success).toHaveBeenCalledWith('2 transactions unmarked as transfer');
+      expect(component.selectedTransactions()).toEqual([]);
+      expect(mockTransactionApi.getTransactions).toHaveBeenCalledTimes(2); // initial load + post-unmark reload
+    });
+
+    it('should do nothing when no transactions are selected', () => {
+      // arrange
+      component.selectedTransactions.set([]);
+
+      // act
+      component.onUnmarkAsTransfer();
+
+      // assert & verify
+      expect(mockTransactionApi.unmarkAsTransfer).not.toHaveBeenCalled();
+    });
+
+    it('should show an error toast and leave the selection unchanged on failure', () => {
+      // arrange
+      const t1 = { id: 1, description: 'Payment', amount: 500 } as Transaction;
+      component.selectedTransactions.set([t1]);
+      mockTransactionApi.unmarkAsTransfer.mockReturnValue(
+        throwError(() => ({ error: { detail: 'Conflict' } })),
+      );
+
+      // act
+      component.onUnmarkAsTransfer();
 
       // assert & verify
       expect(mockToast.error).toHaveBeenCalledWith('Conflict');
