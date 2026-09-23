@@ -108,14 +108,12 @@ module.exports = defineConfig([
       // category-rules.component.html's `rule.minAmount != null`, where minAmount is a genuinely
       // optional (not required) numeric field.
       "@angular-eslint/template/eqeqeq": ["error", {allowNullOrUndefined: true}],
-      // PF-328 triage (2026-09-13): 7 pre-existing instances across 4 files, each involving a
-      // different PrimeNG form control (p-select, p-inputNumber, p-checkbox, a card-style radio
-      // label) -- fixing these correctly needs per-control verification, not a mechanical pass,
-      // and at least one flagged instance may be a false positive (a label wrapping its control
-      // directly, which the linter doesn't appear to recognize as already-associated). Downgraded
-      // to a visible warning; a real accessibility pass belongs in its own follow-up ticket,
-      // matching this project's existing precedent (PF-EPIC-033) of dedicated a11y-focused work.
-      "@angular-eslint/template/label-has-associated-control": "warn",
+      // PF-805 (2026-09-22): the 7 instances PF-328's triage found and downgraded this to "warn"
+      // for are fixed -- 6 genuine gaps given inputId/id + matching for (bulk-edit-dialog x3,
+      // csv-import-dialog x2, category-rule-form-dialog's amount-range fieldset/legend), the
+      // merge-merchants-dialog instance's own file no longer exists (removed by the merchant
+      // identity redesign, PF-EPIC-047/048). Restored to "error".
+      "@angular-eslint/template/label-has-associated-control": "error",
     },
   }
 ]);

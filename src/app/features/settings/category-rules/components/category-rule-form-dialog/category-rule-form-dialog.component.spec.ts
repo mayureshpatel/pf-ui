@@ -317,4 +317,26 @@ describe('CategoryRuleFormDialogComponent', () => {
       expect(component.errorMessage()).toBe('Failed to create rule.');
     });
   });
+
+  describe('accessibility (PF-805)', () => {
+    // real browser test (verify.sh runs Chromium, not jsdom). The Amount Range label describes
+    // TWO controls (min/max), not one -- a single `for` can only point at one id, so this is a
+    // <fieldset>/<legend> group rather than a label/control pair, with each p-inputNumber given
+    // its own distinct ariaLabel (there's no per-field visual label, only shared placeholder text,
+    // which isn't a reliable accessible name on its own).
+    it('groups the amount-range inputs under a real <fieldset>/<legend>, not a bare label', () => {
+      const legend: HTMLElement | null = fixture.nativeElement.querySelector('fieldset > legend');
+      expect(legend).not.toBeNull();
+      expect(legend!.textContent!.trim()).toBe('Amount Range (Optional)');
+    });
+
+    it.each([
+      ['min-amount', 'Minimum amount'],
+      ['max-amount', 'Maximum amount'],
+    ])('the %s input has its own distinct accessible name (%s)', (id, expectedLabel) => {
+      const input: HTMLElement | null = fixture.nativeElement.querySelector(`#${id}`);
+      expect(input).not.toBeNull();
+      expect(input!.getAttribute('aria-label')).toBe(expectedLabel);
+    });
+  });
 });

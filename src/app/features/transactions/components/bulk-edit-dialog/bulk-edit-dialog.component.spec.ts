@@ -386,4 +386,36 @@ describe('BulkEditDialogComponent', () => {
       expect(fixture.nativeElement.textContent).toContain('Bulk Management: 1 Selected');
     });
   });
+
+  describe('accessibility (PF-805)', () => {
+    // real browser test (verify.sh runs Chromium, not jsdom) -- HTMLLabelElement.control uses the
+    // same labelable-element resolution algorithm the accessibility tree does, so this is a direct
+    // check of the actual for/id association a screen reader would see, not just that the lint
+    // rule is satisfied
+    it.each([
+      ['bulk-edit-merchant', 'Reassign Merchant'],
+      ['bulk-edit-description', 'Override Memo'],
+    ])('label "%s" resolves to its control via for/id (%s)', (id) => {
+      const label: HTMLLabelElement | null = fixture.nativeElement.querySelector(
+        `label[for="${id}"]`,
+      );
+      expect(label).not.toBeNull();
+      expect(label!.control).not.toBeNull();
+      expect(label!.control!.id).toBe(id);
+    });
+
+    it(
+      'p-select renders as a role="combobox" span (not a native labelable element) -- ' +
+        'aria-labelledby, not for/id, is the correct mechanism, and must win over the ' +
+        'placeholder-derived aria-label PrimeNG sets automatically',
+      () => {
+        const combo: HTMLElement | null = fixture.nativeElement.querySelector('[role="combobox"]');
+        expect(combo).not.toBeNull();
+        expect(combo!.getAttribute('aria-labelledby')).toBe('bulk-edit-category-label');
+        const label = fixture.nativeElement.querySelector('#bulk-edit-category-label');
+        expect(label).not.toBeNull();
+        expect(label!.textContent!.trim()).toBe('Target Category');
+      },
+    );
+  });
 });

@@ -42,9 +42,17 @@
            [class.ring-1]="form.value.updateCategory" [class.ring-primary/30]="form.value.updateCategory">
         <p-checkbox formControlName="updateCategory" [binary]="true" class="mt-1" />
         <div class="flex-1 flex flex-col gap-2">
-          <label class="text-[10px] font-black uppercase tracking-widest text-surface-400 dark:text-surface-500">Target Category</label>
+          <!-- PF-805: p-select renders its combobox as a <span role="combobox">, not a native
+               labelable element, so `for`/`inputId` alone doesn't create a real association (Chrome's
+               own HTMLLabelElement.control confirms this, verified live) -- ariaLabelledBy is what
+               actually works, and must win over the placeholder-derived aria-label PrimeNG sets by
+               default. Kept inputId/for too since @angular-eslint/template/label-has-associated-control
+               only checks that `for` has some value, not that it resolves. -->
+          <label id="bulk-edit-category-label" for="bulk-edit-category" class="text-[10px] font-black uppercase tracking-widest text-surface-400 dark:text-surface-500">Target Category</label>
           <p-select
             formControlName="category"
+            [inputId]="'bulk-edit-category'"
+            [ariaLabelledBy]="'bulk-edit-category-label'"
             [options]="categoryGroups()"
             [group]="true"
             optionLabel="label"
@@ -67,9 +75,10 @@
            [class.ring-1]="form.value.updateMerchant" [class.ring-primary/30]="form.value.updateMerchant">
         <p-checkbox formControlName="updateMerchant" [binary]="true" class="mt-1" />
         <div class="flex-1 flex flex-col gap-2">
-          <label class="text-[10px] font-black uppercase tracking-widest text-surface-400 dark:text-surface-500">Reassign Merchant</label>
+          <label for="bulk-edit-merchant" class="text-[10px] font-black uppercase tracking-widest text-surface-400 dark:text-surface-500">Reassign Merchant</label>
           <p-autoComplete
             formControlName="merchant"
+            [inputId]="'bulk-edit-merchant'"
             [suggestions]="merchantOptions()"
             (completeMethod)="filterMerchants($event)"
             [delay]="300"
@@ -92,8 +101,9 @@
            [class.ring-1]="form.value.updateDescription" [class.ring-primary/30]="form.value.updateDescription">
         <p-checkbox formControlName="updateDescription" [binary]="true" class="mt-1" />
         <div class="flex-1 flex flex-col gap-2">
-          <label class="text-[10px] font-black uppercase tracking-widest text-surface-400 dark:text-surface-500">Override Memo</label>
+          <label for="bulk-edit-description" class="text-[10px] font-black uppercase tracking-widest text-surface-400 dark:text-surface-500">Override Memo</label>
           <input
+            id="bulk-edit-description"
             pInputText
             formControlName="description"
             [disabled]="!form.value.updateDescription"
