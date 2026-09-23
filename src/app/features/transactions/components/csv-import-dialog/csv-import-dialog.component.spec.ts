@@ -217,4 +217,27 @@ describe('CsvImportDialogComponent', () => {
       expect(hideSpy).toHaveBeenCalled();
     });
   });
+
+  describe('accessibility (PF-805)', () => {
+    // real browser test (verify.sh runs Chromium, not jsdom). p-select renders its combobox as a
+    // <span role="combobox">, not a native labelable element, and PrimeNG auto-generates an
+    // aria-label from the placeholder -- ariaLabelledBy must be present and win over that, or a
+    // screen reader announces the placeholder text instead of the real field label.
+    it.each([
+      ['csv-import-default-account-label', 'Default Account'],
+      ['csv-import-bank-format-label', 'Bank Format'],
+    ])(
+      'the "%s" combobox is labelled by its real label (%s), not its placeholder',
+      (labelId, expectedText) => {
+        const combos: HTMLElement[] = Array.from(
+          fixture.nativeElement.querySelectorAll('[role="combobox"]'),
+        );
+        const combo = combos.find((c) => c.getAttribute('aria-labelledby') === labelId);
+        expect(combo).toBeTruthy();
+        const label = fixture.nativeElement.querySelector(`#${labelId}`);
+        expect(label).not.toBeNull();
+        expect(label!.textContent!.trim()).toBe(expectedText);
+      },
+    );
+  });
 });

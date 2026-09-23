@@ -117,10 +117,10 @@
     </div>
 
     <!-- Amount Range (Optional) -->
-    <div class="flex flex-col gap-2">
-      <label class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
+    <fieldset class="flex flex-col gap-2 border-0 p-0 m-0">
+      <legend class="p-0 text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
         Amount Range (Optional)
-      </label>
+      </legend>
       <div class="flex gap-3">
         <p-inputNumber
           formControlName="minAmount"
@@ -131,6 +131,7 @@
           [maxFractionDigits]="2"
           placeholder="No minimum"
           [inputId]="'min-amount'"
+          ariaLabel="Minimum amount"
           class="w-full"
         />
         <p-inputNumber
@@ -142,6 +143,7 @@
           [maxFractionDigits]="2"
           placeholder="No maximum"
           [inputId]="'max-amount'"
+          ariaLabel="Maximum amount"
           class="w-full"
         />
       </div>
@@ -149,6 +151,6 @@
         Leave blank to match on keyword alone, regardless of amount. Set either or both to also
         require the transaction's amount to fall within this range.
       </p>
-    </div>
+    </fieldset>
   </form>
 </app-drawer>

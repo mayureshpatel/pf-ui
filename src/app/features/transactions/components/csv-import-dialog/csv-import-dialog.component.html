@@ -31,10 +31,16 @@
 
           <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
             <div class="md:col-span-5 flex flex-col gap-2">
-              <label class="text-xs font-bold text-surface-700 dark:text-surface-200 uppercase"
+              <!-- PF-805: ariaLabelledBy is the real fix (p-select's combobox isn't a native
+                   labelable element -- verified live); inputId/for kept too since the lint rule
+                   only checks that `for` has a value, not that it resolves. See bulk-edit-dialog
+                   for the full explanation. -->
+              <label id="csv-import-default-account-label" for="csv-import-default-account" class="text-xs font-bold text-surface-700 dark:text-surface-200 uppercase"
               >Default Account</label
               >
               <p-select
+                [inputId]="'csv-import-default-account'"
+                [ariaLabelledBy]="'csv-import-default-account-label'"
                 [options]="accountOptions()"
                 [ngModel]="globalAccountId()"
                 (ngModelChange)="globalAccountId.set($event)"
@@ -45,10 +51,13 @@
               />
             </div>
             <div class="md:col-span-5 flex flex-col gap-2">
-              <label class="text-xs font-bold text-surface-700 dark:text-surface-200 uppercase"
+              <!-- PF-805: same pattern as Default Account above. -->
+              <label id="csv-import-bank-format-label" for="csv-import-bank-format" class="text-xs font-bold text-surface-700 dark:text-surface-200 uppercase"
               >Bank Format</label
               >
               <p-select
+                [inputId]="'csv-import-bank-format'"
+                [ariaLabelledBy]="'csv-import-bank-format-label'"
                 [options]="bankOptions"
                 [ngModel]="globalBankName()"
                 (ngModelChange)="globalBankName.set($event)"
