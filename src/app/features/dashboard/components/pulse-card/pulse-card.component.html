@@ -12,8 +12,8 @@
       </span>
 
       <div
-        [class]="trendStyles() + ' flex items-center gap-1 text-[10px] font-black uppercase px-2.5 py-1 rounded-full ring-1 shadow-xs transition-colors duration-500'">
-        <i [class]="trendIcon() + ' text-[8px]'"></i>
+        [class]="trendStyles() + ' flex items-center gap-1 text-xs font-black uppercase px-2.5 py-1 rounded-full ring-1 shadow-xs transition-colors duration-500'">
+        <i [class]="trendIcon() + ' text-xs'"></i>
         <span>{{ Math.abs(trend()).toFixed(0) }}%</span>
       </div>
     </div>
@@ -21,7 +21,7 @@
     <!-- Comparison Subtext -->
     <div class="flex items-center gap-1.5 mt-1">
       <div class="w-1.5 h-1.5 rounded-full bg-surface-200 dark:bg-surface-700"></div>
-      <span class="text-[11px] font-bold text-muted-color">
+      <span class="text-xs font-bold text-muted-color">
         vs {{ type() === 'percent' ? previousValue().toFixed(1) + '%' : previousValue() | formatCurrency }} last period
       </span>
     </div>

@@ -42,10 +42,10 @@
         <!-- Table Header -->
         <ng-template #header>
           <tr>
-            <th id="indent-spacer" style="width: 4rem"></th>
+            <th id="indent-spacer" class="w-16"></th>
             <th id="category-name" class="py-4 font-bold text-surface-700 dark:text-surface-200">Category</th>
-            <th id="usage" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-center" style="width: 150px">Usage</th>
-            <th id="actions" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-center" style="width: 120px">Actions</th>
+            <th id="usage" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-center w-37.5">Usage</th>
+            <th id="actions" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-center w-30">Actions</th>
           </tr>
         </ng-template>
 
@@ -99,7 +99,7 @@
             </td>
 
             <!-- Actions -->
-            <td class="text-center py-1" style="width: 120px">
+            <td class="text-center py-1 w-30">
               <div class="flex justify-center gap-1">
                 <p-button
                   icon="pi pi-pencil"
@@ -131,7 +131,7 @@
                 <p-table [value]="group.items" [stripedRows]="false" size="small" class="w-full">
                   <ng-template #body let-item>
                     <tr class="hover:bg-surface-100/30 dark:hover:bg-surface-800/30 transition-colors duration-200 border-none!">
-                      <td style="width: 4rem"></td>
+                      <td class="w-16"></td>
 
                       <!-- Name/Description -->
                       <td class="py-3 px-4">
@@ -141,7 +141,7 @@
                           </div>
                           <div class="flex flex-col">
                             <span class="text-surface-800 dark:text-surface-100 font-semibold">{{ item.name }}</span>
-                            <span class="text-[10px] font-bold text-muted-color uppercase opacity-60">
+                            <span class="text-xs font-bold text-muted-color uppercase opacity-60">
                               {{ item.type }}
                             </span>
                           </div>
@@ -149,7 +149,7 @@
                       </td>
 
                       <!-- Transaction Count -->
-                      <td class="text-center py-3" style="width: 150px">
+                      <td class="text-center py-3 w-37.5">
                         <button
                           (click)="viewTransactions(item)"
                           class="flex items-center gap-2 mx-auto px-3 py-1 rounded-lg hover:bg-primary/10 text-primary font-bold transition-all group cursor-pointer">
@@ -158,7 +158,7 @@
                       </td>
 
                       <!-- Actions -->
-                      <td class="text-center py-1" style="width: 120px">
+                      <td class="text-center py-1 w-30">
                         <div class="flex justify-center gap-1">
                           <p-button
                             icon="pi pi-pencil"

@@ -17,11 +17,11 @@
     </ng-template>
 
     @if (hasData()) {
-      <div class="h-[400px] w-full mt-4">
+      <div class="h-100 w-full mt-4">
         <p-chart type="bar" [data]="barChartData()" [options]="barChartOptions" class="h-full w-full" />
       </div>
     } @else {
-      <div class="flex flex-col items-center justify-center h-[400px] text-center animate-fade-in">
+      <div class="flex flex-col items-center justify-center h-100 text-center animate-fade-in">
         <i class="pi pi-chart-bar text-4xl text-surface-200 dark:text-surface-700 mb-2"></i>
         <span class="text-sm font-bold text-surface-400 dark:text-surface-500 uppercase tracking-widest">No merchant activity</span>
       </div>
@@ -38,11 +38,11 @@
     </ng-template>
 
     @if (hasData()) {
-      <div class="h-[400px] w-full mt-4 flex items-center justify-center">
-        <p-chart type="doughnut" [data]="doughnutChartData()" [options]="doughnutChartOptions" class="h-[320px] w-full" />
+      <div class="h-100 w-full mt-4 flex items-center justify-center">
+        <p-chart type="doughnut" [data]="doughnutChartData()" [options]="doughnutChartOptions" class="h-80 w-full" />
       </div>
     } @else {
-      <div class="flex flex-col items-center justify-center h-[400px] text-center animate-fade-in">
+      <div class="flex flex-col items-center justify-center h-100 text-center animate-fade-in">
         <i class="pi pi-chart-pie text-4xl text-surface-200 dark:text-surface-700 mb-2"></i>
         <span class="text-sm font-bold text-surface-400 dark:text-surface-500 uppercase tracking-widest">No distribution data</span>
       </div>
@@ -85,7 +85,7 @@
           <td>
             <div class="flex flex-wrap gap-1">
               @for (category of row.categories; track category) {
-                <span class="px-2 py-0.5 rounded-full bg-surface-100 text-[10px] font-black uppercase text-surface-500 tracking-tighter ring-1 ring-surface-200 dark:ring-surface-700">
+                <span class="px-2 py-0.5 rounded-full bg-surface-100 text-xs font-black uppercase text-surface-500 tracking-tighter ring-1 ring-surface-200 dark:ring-surface-700">
                   {{ category }}
                 </span>
               }

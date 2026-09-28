@@ -46,8 +46,7 @@
             <th id="rec-freq" class="py-4 font-bold text-surface-700 dark:text-surface-200">Frequency</th>
             <th id="rec-next" class="py-4 font-bold text-surface-700 dark:text-surface-200">Next Date</th>
             <th id="rec-status" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-center">Status</th>
-            <th id="rec-actions" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-center"
-                style="width: 120px">Actions
+            <th id="rec-actions" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-center w-30">Actions
             </th>
           </tr>
         </ng-template>
@@ -77,7 +76,7 @@
             <!-- Frequency -->
             <td>
               <span
-                class="px-2 py-0.5 rounded-full bg-primary/5 text-primary text-[10px] font-black uppercase tracking-wider ring-1 ring-primary/10">
+                class="px-2 py-0.5 rounded-full bg-primary/5 text-primary text-xs font-black uppercase tracking-wider ring-1 ring-primary/10">
                 {{ frequencyLabels[rec.frequency] }}
               </span>
             </td>
@@ -86,7 +85,7 @@
             <td>
               <div class="flex flex-col">
                 <span class="text-sm font-bold text-surface-700 dark:text-surface-200">{{ rec.nextDate | date: 'MMM d, yyyy' }}</span>
-                <span class="text-[10px] text-muted-color uppercase font-medium">Projected</span>
+                <span class="text-xs text-muted-color uppercase font-medium">Projected</span>
               </div>
             </td>
 
@@ -96,12 +95,12 @@
                 <div
                   class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-200/50">
                   <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                  <span class="text-[10px] font-black uppercase">Active</span>
+                  <span class="text-xs font-black uppercase">Active</span>
                 </div>
               } @else {
                 <div
                   class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-surface-100 text-surface-500 ring-1 ring-surface-200 dark:ring-surface-700">
-                  <span class="text-[10px] font-black uppercase">Paused</span>
+                  <span class="text-xs font-black uppercase">Paused</span>
                 </div>
               }
             </td>
