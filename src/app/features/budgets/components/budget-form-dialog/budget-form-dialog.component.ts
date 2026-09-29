@@ -14,6 +14,7 @@ import {
   WritableSignal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
@@ -168,7 +169,7 @@ export class BudgetFormDialogComponent {
           this.save.emit();
           this.visible.set(false);
         },
-        error: (err: any): void => {
+        error: (err: HttpErrorResponse): void => {
           console.error('Error saving budget:', err);
           this.errorMessage.set(err.error?.detail || 'Failed to save budget. Please try again.');
         },

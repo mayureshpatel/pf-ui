@@ -6,11 +6,11 @@ import { CategoryApiService } from '@features/categories/services/category-api.s
 import { MerchantApiService } from '@features/merchants/services/merchant-api.service';
 import { TagApiService } from '@features/tags/services/tag-api.service';
 import { ToastService } from '@core/services/toast.service';
-import { ConfirmationService, MessageService } from 'primeng/api';
-import { ActivatedRoute, Router } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { Confirmation, ConfirmationService, MessageService } from 'primeng/api';
+import { ActivatedRoute, Params, Router } from '@angular/router';
+import { Observable, of, throwError } from 'rxjs';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
-import { vi } from 'vitest';
+import { vi, Mock, Mocked } from 'vitest';
 import {
   Transaction,
   TransactionCreateRequest,
@@ -21,18 +21,46 @@ import { BulkEditData } from './components/bulk-edit-dialog/bulk-edit-dialog.com
 import { Category } from '@models/category.model';
 import { Merchant } from '@models/merchant.model';
 
+/** Reproduces just the 2 ActivatedRoute members this component actually reads. */
+interface MockActivatedRoute {
+  snapshot: { queryParams: Params };
+  queryParams: Observable<Params>;
+}
+
 describe('TransactionsComponent', () => {
   let component: TransactionsComponent;
   let fixture: ComponentFixture<TransactionsComponent>;
-  let mockTransactionApi: any;
-  let mockAccountApi: any;
-  let mockCategoryApi: any;
-  let mockMerchantApi: any;
-  let mockTagApi: any;
-  let mockToast: any;
-  let mockConfirmationService: any;
-  let mockRouter: any;
-  let mockActivatedRoute: any;
+  let mockTransactionApi: Mocked<
+    Pick<
+      TransactionApiService,
+      | 'getTransactions'
+      | 'deleteTransaction'
+      | 'createTransaction'
+      | 'updateTransaction'
+      | 'bulkUpdateTransactions'
+      | 'markAsTransfer'
+      | 'unmarkAsTransfer'
+      | 'getTransferSuggestions'
+    >
+  >;
+  let mockAccountApi: Mocked<Pick<AccountApiService, 'getAccounts'>>;
+  let mockCategoryApi: Mocked<
+    Pick<
+      CategoryApiService,
+      | 'getCategories'
+      | 'getCategoriesWithTransactions'
+      | 'getMerchantsWithTransactions'
+      | 'getGroupedCategories'
+    >
+  >;
+  let mockMerchantApi: Mocked<Pick<MerchantApiService, 'getMerchants'>>;
+  let mockTagApi: Mocked<
+    Pick<TagApiService, 'getTags' | 'assignToTransaction' | 'removeFromTransaction'>
+  >;
+  let mockToast: Mocked<Pick<ToastService, 'success' | 'error'>>;
+  let mockConfirmationService: { confirm: Mock<(confirmation: Confirmation) => void> };
+  let mockRouter: Mocked<Pick<Router, 'navigate'>>;
+  let mockActivatedRoute: MockActivatedRoute;
 
   beforeEach(async () => {
     mockTransactionApi = {
@@ -900,11 +928,10 @@ describe('TransactionsComponent', () => {
 
     beforeEach(() => {
       // auto-accept the confirmation dialog, matching AccountsComponent's spec pattern
-      mockConfirmationService.confirm.mockImplementation((config: any) => {
+      mockConfirmationService.confirm.mockImplementation((config: Confirmation) => {
         if (config.accept) {
           config.accept();
         }
-        return mockConfirmationService;
       });
     });
 
@@ -1063,7 +1090,7 @@ describe('TransactionsComponent', () => {
     // param already present in the initial snapshot, matching how a real navigation works.
     let localFixture: ComponentFixture<TransactionsComponent>;
     let localComponent: TransactionsComponent;
-    let localRouter: any;
+    let localRouter: Mocked<Pick<Router, 'navigate'>>;
 
     beforeEach(async () => {
       localRouter = { navigate: vi.fn() };

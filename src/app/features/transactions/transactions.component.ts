@@ -13,18 +13,19 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Params, Router } from '@angular/router';
 import { finalize, forkJoin, Observable, of, skip, switchMap } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
-import { TableModule } from 'primeng/table';
+import { TableModule, type TableLazyLoadEvent } from 'primeng/table';
 import { CardModule } from 'primeng/card';
 import { TooltipModule } from 'primeng/tooltip';
 import { CheckboxModule } from 'primeng/checkbox';
 import { TagModule } from 'primeng/tag';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
-import { ConfirmationService, FilterMetadata } from 'primeng/api';
+import { ConfirmationService, FilterMetadata, SelectItemGroup } from 'primeng/api';
 import { ContextMenuModule } from 'primeng/contextmenu';
 import { DatePicker } from 'primeng/datepicker';
 import { SelectModule } from 'primeng/select';
@@ -194,38 +195,41 @@ export class TransactionsComponent implements OnInit {
   });
 
   /** Grouped categories for filtering, only including sub-categories. */
-  readonly groupedCategories: Signal<any[]> = computed((): any[] => {
-    const categories: Category[] = this.categories();
-    const subCategories: Category[] = categories.filter((c: Category): boolean => !!c.parent);
+  readonly groupedCategories: Signal<SelectItemGroup<string>[]> = computed(
+    (): SelectItemGroup<string>[] => {
+      const categories: Category[] = this.categories();
+      const subCategories: Category[] = categories.filter((c: Category): boolean => !!c.parent);
 
-    const groups = new Map<number, any>();
+      const groups = new Map<number, SelectItemGroup<string>>();
 
-    subCategories.forEach((cat: Category): void => {
-      const parentId: number = cat.parent!.id;
-      if (!groups.has(parentId)) {
-        groups.set(parentId, {
-          label: cat.parent!.name || 'Unknown Category',
-          value: parentId,
-          items: [],
+      subCategories.forEach((cat: Category): void => {
+        const parentId: number = cat.parent!.id;
+        if (!groups.has(parentId)) {
+          groups.set(parentId, {
+            label: cat.parent!.name || 'Unknown Category',
+            value: parentId,
+            items: [],
+          });
+        }
+        groups.get(parentId)!.items.push({
+          label: cat.name,
+          value: cat.name,
         });
-      }
-      groups.get(parentId).items.push({
-        label: cat.name,
-        value: cat.name,
       });
-    });
 
-    const result = Array.from(groups.values()).sort((a: any, b: any): number =>
-      a.label.localeCompare(b.label),
-    );
-    result.unshift({
-      label: 'Special',
-      value: -1,
-      items: [{ label: 'Uncategorized', value: '__UNDEFINED__' }],
-    });
+      const result: SelectItemGroup<string>[] = Array.from(groups.values()).sort(
+        (a: SelectItemGroup<string>, b: SelectItemGroup<string>): number =>
+          a.label.localeCompare(b.label),
+      );
+      result.unshift({
+        label: 'Special',
+        value: -1,
+        items: [{ label: 'Uncategorized', value: '__UNDEFINED__' }],
+      });
 
-    return result;
-  });
+      return result;
+    },
+  );
 
   /** Maps internal transaction state to PrimeNG filter metadata for UI synchronization. */
   readonly tableFilters: Signal<Record<string, FilterMetadata | FilterMetadata[]>> = computed(
@@ -368,7 +372,7 @@ export class TransactionsComponent implements OnInit {
           this.totalRecords.set(res.page.totalElements);
           this.selectedTransactions.set([]);
         },
-        error: (err: any): void => {
+        error: (err: unknown): void => {
           console.error('Failed to load transactions:', err);
           this.toast.error('Failed to refresh ledger.');
           this.loadError.set(true);
@@ -452,7 +456,7 @@ export class TransactionsComponent implements OnInit {
       .subscribe((data: Tag[]): void => this.tags.set(data));
   }
 
-  onLazyLoad(event: any): void {
+  onLazyLoad(event: TableLazyLoadEvent): void {
     const rows: number = event.rows ?? 20;
     const first: number = event.first ?? 0;
     const page: number = Math.floor(first / rows);
@@ -481,7 +485,7 @@ export class TransactionsComponent implements OnInit {
   }
 
   hydrateFilters(
-    filterEvent: Record<string, FilterMetadata | FilterMetadata[]>,
+    filterEvent: Record<string, FilterMetadata | FilterMetadata[] | undefined> | undefined,
   ): TransactionFilter {
     const stateFilter: TransactionFilter = { ...this.state().filter };
 
@@ -643,7 +647,8 @@ export class TransactionsComponent implements OnInit {
         this.showDialog.set(false);
         this.loadTransactions();
       },
-      error: (err: any): void => this.toast.error(err.error?.detail || 'Operation failed'),
+      error: (err: HttpErrorResponse): void =>
+        this.toast.error(err.error?.detail || 'Operation failed'),
     });
   }
 
@@ -711,7 +716,8 @@ export class TransactionsComponent implements OnInit {
           this.selectedTransactions.set([]);
           this.loadTransactions();
         },
-        error: (err: any): void => this.toast.error(err.error?.detail || 'Bulk update failed'),
+        error: (err: HttpErrorResponse): void =>
+          this.toast.error(err.error?.detail || 'Bulk update failed'),
       });
   }
 
@@ -738,7 +744,7 @@ export class TransactionsComponent implements OnInit {
           this.selectedTransactions.set([]);
           this.loadTransactions();
         },
-        error: (err: any): void =>
+        error: (err: HttpErrorResponse): void =>
           this.toast.error(err.error?.detail || 'Failed to mark as transfer'),
       });
   }
@@ -764,7 +770,7 @@ export class TransactionsComponent implements OnInit {
           this.selectedTransactions.set([]);
           this.loadTransactions();
         },
-        error: (err: any): void =>
+        error: (err: HttpErrorResponse): void =>
           this.toast.error(err.error?.detail || 'Failed to unmark as transfer'),
       });
   }
@@ -789,7 +795,7 @@ export class TransactionsComponent implements OnInit {
               this.toast.success('Transaction deleted');
               this.loadTransactions();
             },
-            error: (err: any): void => {
+            error: (err: unknown): void => {
               console.error('Failed to delete transaction:', err);
               this.toast.error('Failed to delete transaction.');
             },

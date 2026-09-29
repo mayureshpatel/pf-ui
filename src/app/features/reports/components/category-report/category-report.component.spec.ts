@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { vi, Mocked } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { CategoryReportComponent } from './category-report.component';
@@ -10,7 +10,7 @@ import { getCategoryColor } from '@shared/utils/category.utils';
 describe('CategoryReportComponent', () => {
   let component: CategoryReportComponent;
   let fixture: ComponentFixture<CategoryReportComponent>;
-  let mockReportApi: any;
+  let mockReportApi: Mocked<Pick<ReportApiService, 'getCategoryBreakdown'>>;
 
   const category = (id: number, name: string, color: string): Category =>
     ({

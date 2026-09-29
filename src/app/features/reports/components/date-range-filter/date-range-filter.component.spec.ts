@@ -1,7 +1,14 @@
 import { vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { DebugElement, WritableSignal } from '@angular/core';
 import { DateRangeFilterComponent } from './date-range-filter.component';
 import { DateRange } from '../../models/reports.model';
+
+/** Exposes the component's protected date-picker buffer and handler for white-box testing. */
+interface DateRangeFilterProtected {
+  selectedRange: WritableSignal<(Date | null)[] | null>;
+  onDateSelect: () => void;
+}
 
 describe('DateRangeFilterComponent', () => {
   let component: DateRangeFilterComponent;
@@ -33,8 +40,10 @@ describe('DateRangeFilterComponent', () => {
   });
 
   const clickPreset = (label: string): void => {
-    const buttons = fixture.debugElement.queryAll((de: any): boolean => de.name === 'p-button');
-    const target = buttons.find((b: any): boolean => b.componentInstance.label === label);
+    const buttons = fixture.debugElement.queryAll(
+      (de: DebugElement): boolean => de.name === 'p-button',
+    );
+    const target = buttons.find((b: DebugElement): boolean => b.componentInstance.label === label);
     target!.nativeElement.querySelector('button').click();
     fixture.detectChanges();
   };
@@ -112,11 +121,15 @@ describe('DateRangeFilterComponent', () => {
         label: 'Last Month',
       });
       fixture.detectChanges();
-      const buttons = fixture.debugElement.queryAll((de: any): boolean => de.name === 'p-button');
-      const active: any = buttons.find(
-        (b: any): boolean => b.componentInstance.label === 'Last Month',
+      const buttons = fixture.debugElement.queryAll(
+        (de: DebugElement): boolean => de.name === 'p-button',
       );
-      const inactive: any = buttons.find((b: any): boolean => b.componentInstance.label === 'YTD');
+      const active: DebugElement = buttons.find(
+        (b: DebugElement): boolean => b.componentInstance.label === 'Last Month',
+      )!;
+      const inactive: DebugElement = buttons.find(
+        (b: DebugElement): boolean => b.componentInstance.label === 'YTD',
+      )!;
 
       // assert & verify
       expect(active.componentInstance.text).toBe(false);
@@ -133,8 +146,11 @@ describe('DateRangeFilterComponent', () => {
     // value-shaping logic (real behavior, not a snapshot of PrimeNG's overlay markup).
     it('should emit a Custom Range once both a start and end date are selected', () => {
       // act
-      (component as any).selectedRange.set([new Date(2026, 5, 1), new Date(2026, 5, 10)]);
-      (component as any).onDateSelect();
+      (component as unknown as DateRangeFilterProtected).selectedRange.set([
+        new Date(2026, 5, 1),
+        new Date(2026, 5, 10),
+      ]);
+      (component as unknown as DateRangeFilterProtected).onDateSelect();
 
       // assert & verify
       expect(component.dateRange()).toEqual({
@@ -146,8 +162,11 @@ describe('DateRangeFilterComponent', () => {
 
     it('should not emit while only the start date has been picked', () => {
       // act
-      (component as any).selectedRange.set([new Date(2026, 5, 1), null]);
-      (component as any).onDateSelect();
+      (component as unknown as DateRangeFilterProtected).selectedRange.set([
+        new Date(2026, 5, 1),
+        null,
+      ]);
+      (component as unknown as DateRangeFilterProtected).onDateSelect();
 
       // assert & verify -- the model is untouched, still the original input
       expect(component.dateRange()).toEqual(initialRange);
@@ -155,8 +174,8 @@ describe('DateRangeFilterComponent', () => {
 
     it('should not emit when the buffer has been cleared', () => {
       // act
-      (component as any).selectedRange.set(null);
-      (component as any).onDateSelect();
+      (component as unknown as DateRangeFilterProtected).selectedRange.set(null);
+      (component as unknown as DateRangeFilterProtected).onDateSelect();
 
       // assert & verify
       expect(component.dateRange()).toEqual(initialRange);
@@ -174,7 +193,7 @@ describe('DateRangeFilterComponent', () => {
       fixture.detectChanges();
 
       // assert & verify
-      const buffer = (component as any).selectedRange();
+      const buffer = (component as unknown as DateRangeFilterProtected).selectedRange();
       expect(buffer).toEqual([new Date(2026, 4, 1), new Date(2026, 4, 20)]);
     });
   });

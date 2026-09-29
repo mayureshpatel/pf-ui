@@ -31,8 +31,12 @@ export class DateRangeFilterComponent {
   /** Two-way binding for the currently selected date range. */
   readonly dateRange: ModelSignal<DateRange> = model.required<DateRange>();
 
-  /** Buffer signal for the PrimeNG date picker range array. */
-  protected readonly selectedRange: WritableSignal<Date[] | null> = signal(null);
+  /**
+   * Buffer signal for the PrimeNG date picker range array. The second element is `null` while
+   * only a start date has been picked -- {@link onDateSelect}'s own truthiness check on both
+   * elements only makes sense against this wider type.
+   */
+  protected readonly selectedRange: WritableSignal<(Date | null)[] | null> = signal(null);
 
   /** List of predefined range presets for rapid filtering. */
   protected readonly presets: DateRangePreset[] = [
@@ -71,7 +75,7 @@ export class DateRangeFilterComponent {
    * Handles direct date selection in the range picker.
    */
   protected onDateSelect(): void {
-    const dates: Date[] | null = this.selectedRange();
+    const dates: (Date | null)[] | null = this.selectedRange();
 
     if (dates?.length === 2 && dates[0] && dates[1]) {
       this.dateRange.set({

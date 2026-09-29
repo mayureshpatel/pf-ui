@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import type { ChartDataset } from 'chart.js';
 import { CashFlowTrendComponent } from './cash-flow-trend.component';
 import { CashFlowTrend } from '@models/dashboard.model';
 
@@ -48,8 +49,10 @@ describe('CashFlowTrendComponent', () => {
       const result = component.chartData();
 
       // assert & verify
-      const incomeDataset = result.datasets.find((d: any) => d.label === 'Income');
-      const expenseDataset = result.datasets.find((d: any) => d.label === 'Expenses');
+      const incomeDataset = result.datasets.find((d: ChartDataset<'bar'>) => d.label === 'Income')!;
+      const expenseDataset = result.datasets.find(
+        (d: ChartDataset<'bar'>) => d.label === 'Expenses',
+      )!;
 
       expect(incomeDataset.data).toEqual([4800, 5000, 5200]);
       expect(expenseDataset.data).toEqual([3000, 3200, 2800]);
@@ -63,8 +66,10 @@ describe('CashFlowTrendComponent', () => {
       const result = component.chartData();
 
       // assert & verify
-      const incomeDataset = result.datasets.find((d: any) => d.label === 'Income');
-      const expenseDataset = result.datasets.find((d: any) => d.label === 'Expenses');
+      const incomeDataset = result.datasets.find((d: ChartDataset<'bar'>) => d.label === 'Income')!;
+      const expenseDataset = result.datasets.find(
+        (d: ChartDataset<'bar'>) => d.label === 'Expenses',
+      )!;
 
       expect(incomeDataset.backgroundColor).toBe('#10b981');
       expect(expenseDataset.backgroundColor).toBe('#f43f5e');

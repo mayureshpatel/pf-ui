@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { vi, Mocked } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { of, throwError } from 'rxjs';
@@ -13,8 +13,18 @@ import { YtdSummaryComponent } from './components/ytd-summary/ytd-summary.compon
 describe('DashboardComponent', () => {
   let fixture: ComponentFixture<DashboardComponent>;
   let component: DashboardComponent;
-  let mockDashboardApi: any;
-  let mockToast: any;
+  let mockDashboardApi: Mocked<
+    Pick<
+      DashboardApiService,
+      | 'getPulse'
+      | 'getCashFlowTrend'
+      | 'getYtdSummary'
+      | 'getActionItems'
+      | 'getCategoryBreakdown'
+      | 'getMerchantBreakdown'
+    >
+  >;
+  let mockToast: Mocked<Pick<ToastService, 'success' | 'error' | 'info'>>;
 
   const mockPulse: DashboardPulse = {
     currentIncome: 1000,
@@ -193,6 +203,7 @@ describe('DashboardComponent', () => {
           year: 2026,
           totalIncome: 12000,
           totalExpense: 8000,
+          netSavings: 4000,
           avgSavingsRate: 33.3,
         }),
       );

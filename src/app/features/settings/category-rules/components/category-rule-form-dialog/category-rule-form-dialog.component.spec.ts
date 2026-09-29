@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { vi, Mocked } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
@@ -14,9 +14,9 @@ import { Category } from '@models/category.model';
 describe('CategoryRuleFormDialogComponent', () => {
   let component: CategoryRuleFormDialogComponent;
   let fixture: ComponentFixture<CategoryRuleFormDialogComponent>;
-  let mockRuleApi: any;
-  let mockCategoryApi: any;
-  let mockToast: any;
+  let mockRuleApi: Mocked<Pick<CategoryRuleApiService, 'createRule'>>;
+  let mockCategoryApi: Mocked<Pick<CategoryApiService, 'getGroupedCategories'>>;
+  let mockToast: Mocked<Pick<ToastService, 'success' | 'error'>>;
 
   const mockCategory: Category = { id: 50, userId: 1, name: 'Shopping' } as unknown as Category;
 

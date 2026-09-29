@@ -17,6 +17,7 @@ import { finalize } from 'rxjs';
 import { CardModule } from 'primeng/card';
 import { ChartModule } from 'primeng/chart';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
+import type { TooltipItem } from 'chart.js';
 
 import { DateRange, NetWorthDataPoint } from '../../models/reports.model';
 import { ReportApiService } from '../../services/report-api.service';
@@ -146,7 +147,7 @@ export class NetWorthReportComponent {
         bodyFont: { size: 13, family: 'monospace' },
         usePointStyle: true,
         callbacks: {
-          label: (context: any): string =>
+          label: (context: TooltipItem<'line'>): string =>
             ` Net Worth: ${formatCurrency(context.parsed.y || 0, 'en-US', '$', '1.2-2')}`,
         },
       },
@@ -161,7 +162,7 @@ export class NetWorthReportComponent {
         ticks: {
           color: '#94a3b8',
           font: { size: 11, family: 'monospace' },
-          callback: (val: any): string =>
+          callback: (val: number): string =>
             `$${val >= 1000 || val <= -1000 ? val / 1000 + 'k' : val}`,
         },
       },

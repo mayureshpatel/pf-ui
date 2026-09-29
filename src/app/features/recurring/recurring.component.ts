@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { finalize } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
@@ -127,7 +128,7 @@ export class RecurringComponent implements OnInit {
       )
       .subscribe({
         next: (data: RecurringTransaction[]): void => this.recurringTransactions.set(data),
-        error: (err: any): void => {
+        error: (err: unknown): void => {
           console.error('Failed to load recurring data:', err);
           this.toast.error('Failed to load recurring transactions');
           this.loadError.set(true);
@@ -144,7 +145,7 @@ export class RecurringComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (data: Account[]): void => this.accounts.set(data),
-        error: (err: any): void => {
+        error: (err: unknown): void => {
           console.error('Failed to load accounts for selection:', err);
           this.toast.error('Failed to load accounts');
         },
@@ -160,7 +161,8 @@ export class RecurringComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (data: Merchant[]): void => this.merchants.set(data),
-        error: (err: any): void => console.error('Failed to load merchants for selection:', err),
+        error: (err: unknown): void =>
+          console.error('Failed to load merchants for selection:', err),
       });
   }
 
@@ -221,7 +223,7 @@ export class RecurringComponent implements OnInit {
               this.toast.success('Recurring transaction deleted');
               this.refreshAll();
             },
-            error: (error: any): void => {
+            error: (error: HttpErrorResponse): void => {
               console.error('Failed to delete recurring entry:', error);
               this.toast.error(error.error?.detail || 'Failed to delete entry');
             },

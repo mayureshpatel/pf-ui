@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { vi, Mocked } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ReconcileDrawerComponent } from './reconcile-dialog.component';
 import { AccountApiService } from '@features/accounts/services/account-api.service';
@@ -10,8 +10,8 @@ import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 describe('ReconcileDrawerComponent', () => {
   let component: ReconcileDrawerComponent;
   let fixture: ComponentFixture<ReconcileDrawerComponent>;
-  let mockAccountApiService: any;
-  let mockToastService: any;
+  let mockAccountApiService: Mocked<Pick<AccountApiService, 'reconcile'>>;
+  let mockToastService: Mocked<Pick<ToastService, 'success' | 'error'>>;
 
   const mockAccount = {
     id: 1,

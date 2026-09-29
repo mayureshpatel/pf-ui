@@ -1,5 +1,6 @@
 import { vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { DebugElement } from '@angular/core';
 import { By } from '@angular/platform-browser';
 import { of } from 'rxjs';
 import { ConfirmationService } from 'primeng/api';
@@ -15,11 +16,12 @@ describe('SettingsComponent', () => {
 
   // p-tabs' TabList calls ngAfterViewInit -> bindResizeObserver(), which JSDOM doesn't implement.
   beforeAll(() => {
-    (globalThis as any).ResizeObserver = class {
-      observe(): void {}
-      unobserve(): void {}
-      disconnect(): void {}
-    };
+    (globalThis as typeof globalThis & { ResizeObserver: typeof ResizeObserver }).ResizeObserver =
+      class {
+        observe(): void {}
+        unobserve(): void {}
+        disconnect(): void {}
+      };
   });
 
   beforeEach(async () => {
@@ -44,10 +46,10 @@ describe('SettingsComponent', () => {
 
   // Neither <p-tabpanel> sets [lazy]="true", so both panels mount immediately and only toggle
   // the native `hidden` attribute -- both child components exist in the tree at all times.
-  const panels = (): any[] =>
-    fixture.debugElement.queryAll((de: any): boolean => de.name === 'p-tabpanel');
-  const tabHeaders = (): any[] =>
-    fixture.debugElement.queryAll((de: any): boolean => de.name === 'p-tab');
+  const panels = (): DebugElement[] =>
+    fixture.debugElement.queryAll((de: DebugElement): boolean => de.name === 'p-tabpanel');
+  const tabHeaders = (): DebugElement[] =>
+    fixture.debugElement.queryAll((de: DebugElement): boolean => de.name === 'p-tab');
 
   it('should create', () => {
     fixture.detectChanges();

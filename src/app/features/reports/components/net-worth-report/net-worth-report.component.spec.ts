@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { vi, Mocked } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { NetWorthReportComponent } from './net-worth-report.component';
@@ -8,7 +8,7 @@ import { NetWorthDataPoint } from '../../models/reports.model';
 describe('NetWorthReportComponent', () => {
   let component: NetWorthReportComponent;
   let fixture: ComponentFixture<NetWorthReportComponent>;
-  let mockReportApi: any;
+  let mockReportApi: Mocked<Pick<ReportApiService, 'getNetWorth'>>;
 
   const mockPoints: NetWorthDataPoint[] = [
     { date: '2025-11-30', netWorth: 10000 },

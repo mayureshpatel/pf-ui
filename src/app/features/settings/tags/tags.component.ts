@@ -90,7 +90,7 @@ export class TagsComponent implements OnInit {
       )
       .subscribe({
         next: (data: Tag[]): void => this.tags.set(data),
-        error: (err: any): void => {
+        error: (err: unknown): void => {
           console.error('Failed to load tags:', err);
           this.toast.error('Failed to load tags.');
           this.loadError.set(true);
@@ -146,7 +146,7 @@ export class TagsComponent implements OnInit {
                 list.filter((t: Tag): boolean => t.id !== tag.id),
               );
             },
-            error: (err: any): void => {
+            error: (err: unknown): void => {
               console.error('Delete failed:', err);
               this.toast.error('Failed to delete tag.');
             },

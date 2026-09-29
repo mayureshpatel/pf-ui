@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { vi, Mocked } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { of, throwError } from 'rxjs';
@@ -11,8 +11,8 @@ import { Category, CategoryType } from '@models/category.model';
 describe('BudgetFormDialogComponent', () => {
   let component: BudgetFormDialogComponent;
   let fixture: ComponentFixture<BudgetFormDialogComponent>;
-  let mockBudgetApi: any;
-  let mockToast: any;
+  let mockBudgetApi: Mocked<Pick<BudgetApiService, 'createBudget'>>;
+  let mockToast: Mocked<Pick<ToastService, 'success' | 'error' | 'info'>>;
 
   const rent = {
     id: 1,
@@ -190,7 +190,7 @@ describe('BudgetFormDialogComponent', () => {
 
     it('should ignore a resubmit while a save is already in flight', () => {
       // arrange -- a call that never resolves, to hold the component in a loading state
-      mockBudgetApi.createBudget.mockReturnValue(of({}));
+      mockBudgetApi.createBudget.mockReturnValue(of(1));
       component.form.controls.categoryId.setValue(1);
       component.form.controls.amount.setValue(200);
       component.loading.set(true);

@@ -16,6 +16,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize } from 'rxjs';
 import { CardModule } from 'primeng/card';
 import { ChartModule } from 'primeng/chart';
+import type { ChartData, TooltipItem } from 'chart.js';
 import { TableModule } from 'primeng/table';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 
@@ -100,7 +101,7 @@ export class IncomeExpenseReportComponent {
   /**
    * Derived Stacked Bar Chart data for Income vs Expense comparison.
    */
-  readonly stackedBarData: Signal<any> = computed(() => {
+  readonly stackedBarData: Signal<ChartData<'bar'>> = computed(() => {
     const data: MonthlyReportData[] = this.monthlyData();
     const labels: string[] = data.map((m: MonthlyReportData): string =>
       this.formatMonthLabel(m.month),
@@ -128,7 +129,7 @@ export class IncomeExpenseReportComponent {
   /**
    * Derived Line Chart data for Net Savings trend analysis.
    */
-  readonly lineChartData: Signal<any> = computed(() => {
+  readonly lineChartData: Signal<ChartData<'line'>> = computed(() => {
     const data: MonthlyReportData[] = this.monthlyData();
     const labels: string[] = data.map((m: MonthlyReportData): string =>
       this.formatMonthLabel(m.month),
@@ -171,7 +172,7 @@ export class IncomeExpenseReportComponent {
         backgroundColor: '#1e293b',
         padding: 12,
         callbacks: {
-          label: (context: any): string =>
+          label: (context: TooltipItem<'bar'>): string =>
             ` ${context.dataset.label}: ${formatCurrency(context.parsed.y || 0, 'en-US', '$', '1.2-2')}`,
         },
       },
@@ -188,7 +189,7 @@ export class IncomeExpenseReportComponent {
         ticks: {
           color: '#94a3b8',
           font: { size: 11, family: 'monospace' },
-          callback: (v: any) => `$${v >= 1000 ? v / 1000 + 'k' : v}`,
+          callback: (v: number): string => `$${v >= 1000 ? v / 1000 + 'k' : v}`,
         },
       },
     },
@@ -205,7 +206,7 @@ export class IncomeExpenseReportComponent {
         backgroundColor: '#1e293b',
         padding: 12,
         callbacks: {
-          label: (context: any): string =>
+          label: (context: TooltipItem<'line'>): string =>
             ` Net Savings: ${formatCurrency(context.parsed.y || 0, 'en-US', '$', '1.2-2')}`,
         },
       },
@@ -220,7 +221,7 @@ export class IncomeExpenseReportComponent {
         ticks: {
           color: '#94a3b8',
           font: { size: 11, family: 'monospace' },
-          callback: (v: any): string => `$${v >= 1000 ? v / 1000 + 'k' : v}`,
+          callback: (v: number): string => `$${v >= 1000 ? v / 1000 + 'k' : v}`,
         },
       },
     },

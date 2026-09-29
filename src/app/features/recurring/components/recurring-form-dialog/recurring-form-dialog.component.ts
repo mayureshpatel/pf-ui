@@ -22,6 +22,7 @@ import {
   WritableSignal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { finalize } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { InputNumberModule } from 'primeng/inputnumber';
@@ -250,7 +251,7 @@ export class RecurringFormDialogComponent {
         .pipe(finalize((): void => this.loading.set(false)))
         .subscribe({
           next: (): void => this.handleSuccess('Recurring entry created'),
-          error: (err: any): void => this.handleError(err, 'Failed to create entry'),
+          error: (err: HttpErrorResponse): void => this.handleError(err, 'Failed to create entry'),
         });
     }
   }
@@ -261,7 +262,7 @@ export class RecurringFormDialogComponent {
     this.visible.set(false);
   }
 
-  private handleError(error: any, fallback: string): void {
+  private handleError(error: HttpErrorResponse, fallback: string): void {
     console.error('Recurring error:', error);
     this.errorMessage.set(error.error?.detail || fallback);
   }

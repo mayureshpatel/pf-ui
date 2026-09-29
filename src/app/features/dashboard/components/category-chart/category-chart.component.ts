@@ -9,6 +9,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { CardModule } from 'primeng/card';
 import { ChartModule } from 'primeng/chart';
+import type { ChartData, TooltipItem } from 'chart.js';
 import { CategoryBreakdown } from '@models/dashboard.model';
 import { getCategoryColor } from '@shared/utils/category.utils';
 
@@ -36,7 +37,7 @@ export class CategoryChartComponent {
   readonly topX: InputSignal<number> = input<number>(5);
 
   /** The reactive chart data configuration. */
-  readonly chartData: Signal<any> = computed(() => {
+  readonly chartData: Signal<ChartData<'bar'>> = computed(() => {
     const topItems: CategoryBreakdown[] = [...this.categories()]
       .sort(
         (a: CategoryBreakdown, b: CategoryBreakdown): number =>
@@ -88,8 +89,8 @@ export class CategoryChartComponent {
         bodyFont: { size: 13, family: 'monospace' },
         usePointStyle: true,
         callbacks: {
-          label: (context: any): string => {
-            const value: any = context.parsed.x || 0;
+          label: (context: TooltipItem<'bar'>): string => {
+            const value: number = context.parsed.x || 0;
             return ` Total Spent: $${value.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
           },
         },

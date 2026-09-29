@@ -15,6 +15,7 @@ import {
   WritableSignal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { DialogModule } from 'primeng/dialog';
@@ -177,7 +178,7 @@ export class MerchantFormDialogComponent {
         this.save.emit(saved);
         this.onHide();
       },
-      error: (err: any): void => {
+      error: (err: HttpErrorResponse): void => {
         console.error('Error saving merchant:', err);
         this.errorMessage.set(err.error?.detail || 'Failed to save merchant. Please try again.');
       },

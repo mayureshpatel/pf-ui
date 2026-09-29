@@ -9,6 +9,7 @@ import {
 import { CommonModule, formatDate } from '@angular/common';
 import { CardModule } from 'primeng/card';
 import { ChartModule } from 'primeng/chart';
+import type { ChartData } from 'chart.js';
 import { CashFlowTrend } from '@models/dashboard.model';
 
 /**
@@ -31,7 +32,7 @@ export class CashFlowTrendComponent {
    * Derived signal that transforms the raw trend data into a format
    * compatible with Chart.js.
    */
-  readonly chartData: Signal<any> = computed(() => {
+  readonly chartData: Signal<ChartData<'bar'>> = computed(() => {
     const trendData: CashFlowTrend[] = this.data();
 
     // Map month/year numbers to short labels (e.g., 'Jan 24')

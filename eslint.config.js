@@ -70,7 +70,7 @@ module.exports = defineConfig([
       // broad to fix as part of standing up the linter itself. Downgraded to a visible warning
       // (still surfaced in `ng lint` output) rather than silenced outright; a real pass to
       // introduce proper types belongs in its own dedicated follow-up ticket.
-      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/no-explicit-any": "error",
       // Disable core/typescript-eslint stylistic rules that would conflict with Prettier's own
       // formatting, then run Prettier itself as a lint rule so formatting drift fails `ng lint`
       // the same as any other violation, matching pf-ui/CLAUDE.md's single-quote/Prettier rule.

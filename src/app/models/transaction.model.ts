@@ -144,8 +144,10 @@ export interface TransferSuggestion {
  * @property description - The description of the transaction.
  * @property amount - The amount of the transaction.
  * @property type - The type of the transaction.
- * @property suggestedCategory - The suggested category for the transaction.
- * @property suggestedMerchant - The suggested merchant for the transaction.
+ * @property suggestedCategory - The suggested category for the transaction, if the backend's
+ *   classifier found a confident match.
+ * @property suggestedMerchant - The suggested merchant for the transaction, if the backend's
+ *   classifier found a confident match.
  */
 export interface TransactionPreview {
   date: string;
@@ -153,8 +155,8 @@ export interface TransactionPreview {
   description: string;
   amount: number;
   type: TransactionType;
-  suggestedCategory: Category;
-  suggestedMerchant: Merchant;
+  suggestedCategory?: Category | null;
+  suggestedMerchant?: Merchant | null;
 }
 
 /**
@@ -162,7 +164,7 @@ export interface TransactionPreview {
  */
 export interface TransactionDto {
   id?: number;
-  account?: any;
+  account?: Account;
   category?: Category | null;
   amount: number;
   date: string;

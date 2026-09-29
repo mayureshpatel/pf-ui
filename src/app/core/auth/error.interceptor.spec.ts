@@ -1,6 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TestBed } from '@angular/core/testing';
-import { HttpContext, HttpErrorResponse, HttpHandlerFn, HttpRequest } from '@angular/common/http';
+import {
+  HttpContext,
+  HttpErrorResponse,
+  HttpEvent,
+  HttpHandlerFn,
+  HttpRequest,
+} from '@angular/common/http';
 import { throwError, of } from 'rxjs';
 import { errorInterceptor, SKIP_GENERIC_ERROR_TOAST } from './error.interceptor';
 import { AuthService } from './auth.service';
@@ -78,7 +84,7 @@ describe('errorInterceptor', () => {
   it('should pass through a successful response unchanged', async () => {
     // Arrange
     const req = new HttpRequest('GET', '/api/v1/accounts', { context: new HttpContext() });
-    const next: HttpHandlerFn = () => of({ type: 4 } as any);
+    const next: HttpHandlerFn = () => of({ type: 4 } as unknown as HttpEvent<unknown>);
 
     // Act & Assert
     await new Promise<void>((resolve) => {

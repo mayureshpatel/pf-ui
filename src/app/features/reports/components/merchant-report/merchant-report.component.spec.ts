@@ -1,5 +1,6 @@
-import { vi } from 'vitest';
+import { vi, Mocked } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { DebugElement } from '@angular/core';
 import { of, throwError } from 'rxjs';
 import { MerchantReportComponent } from './merchant-report.component';
 import { ReportApiService } from '../../services/report-api.service';
@@ -8,7 +9,7 @@ import { DateRange, MerchantReportData } from '../../models/reports.model';
 describe('MerchantReportComponent', () => {
   let component: MerchantReportComponent;
   let fixture: ComponentFixture<MerchantReportComponent>;
-  let mockReportApi: any;
+  let mockReportApi: Mocked<Pick<ReportApiService, 'getMerchantBreakdown'>>;
 
   const row = (
     representativeMerchantId: number,
@@ -164,7 +165,9 @@ describe('MerchantReportComponent', () => {
     it('should render both charts when data is present', () => {
       // arrange & act
       setData(mockMerchantData);
-      const charts = fixture.debugElement.queryAll((de: any): boolean => de.name === 'p-chart');
+      const charts = fixture.debugElement.queryAll(
+        (de: DebugElement): boolean => de.name === 'p-chart',
+      );
 
       // assert & verify
       expect(charts).toHaveLength(2);
@@ -177,7 +180,9 @@ describe('MerchantReportComponent', () => {
     it('should render empty-state placeholders instead of charts when there is no data', () => {
       // arrange & act
       setData([]);
-      const charts = fixture.debugElement.queryAll((de: any): boolean => de.name === 'p-chart');
+      const charts = fixture.debugElement.queryAll(
+        (de: DebugElement): boolean => de.name === 'p-chart',
+      );
 
       // assert & verify
       expect(charts).toHaveLength(0);

@@ -2,7 +2,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CsvImportDialogComponent } from './csv-import-dialog.component';
 import { TransactionImportService } from '@features/transactions/services/transaction-import.service';
 import { ToastService } from '@core/services/toast.service';
-import { BankName } from '@models/account.model';
+import { Account, BankName } from '@models/account.model';
+import { TransactionPreview } from '@models/transaction.model';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileSelectEvent } from 'primeng/fileupload';
 import { of } from 'rxjs';
@@ -34,7 +35,7 @@ describe('CsvImportDialogComponent', () => {
       user: { id: 1 },
       currency: { code: 'USD' },
       version: 1,
-    } as any,
+    } as unknown as Account,
     {
       id: 2,
       name: 'Checking',
@@ -44,7 +45,7 @@ describe('CsvImportDialogComponent', () => {
       user: { id: 1 },
       currency: { code: 'USD' },
       version: 1,
-    } as any,
+    } as unknown as Account,
     {
       id: 3,
       name: 'Savings',
@@ -54,7 +55,7 @@ describe('CsvImportDialogComponent', () => {
       user: { id: 1 },
       currency: { code: 'USD' },
       version: 1,
-    } as any,
+    } as unknown as Account,
     {
       id: 4,
       name: 'Cash',
@@ -64,7 +65,7 @@ describe('CsvImportDialogComponent', () => {
       user: { id: 1 },
       currency: { code: 'USD' },
       version: 1,
-    } as any,
+    } as unknown as Account,
   ];
 
   beforeEach(async () => {
@@ -146,7 +147,7 @@ describe('CsvImportDialogComponent', () => {
         {
           id: '1',
           file: file,
-          accountId: 0 as any,
+          accountId: 0,
           bankName: null,
           previews: [],
           status: 'pending',
@@ -196,7 +197,7 @@ describe('CsvImportDialogComponent', () => {
           file: new File([''], 'test.csv'),
           accountId: 1,
           bankName: BankName.DISCOVER,
-          previews: [{ amount: 100 } as any],
+          previews: [{ amount: 100 } as unknown as TransactionPreview],
           status: 'ready',
         },
       ]);

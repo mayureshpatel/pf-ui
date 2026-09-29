@@ -1,8 +1,8 @@
-import { vi } from 'vitest';
+import { vi, Mock, Mocked } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { of } from 'rxjs';
-import { ConfirmationService } from 'primeng/api';
+import { Confirmation, ConfirmationService } from 'primeng/api';
 
 import { CategoryRulesComponent } from './category-rules.component';
 import { CategoryRuleApiService } from './services/category-rule-api.service';
@@ -11,9 +11,11 @@ import { CategoryRule } from '@models/category-rule.model';
 
 describe('CategoryRulesComponent', () => {
   let fixture: ComponentFixture<CategoryRulesComponent>;
-  let mockApi: any;
-  let mockToast: any;
-  let mockConfirmationService: any;
+  let mockApi: Mocked<
+    Pick<CategoryRuleApiService, 'getRules' | 'previewApply' | 'applyRules' | 'deleteRule'>
+  >;
+  let mockToast: Mocked<Pick<ToastService, 'success' | 'error' | 'info'>>;
+  let mockConfirmationService: { confirm: Mock<(confirmation: Confirmation) => void> };
 
   // a rule left pointing at a category that no longer exists (PF-191): the backend's
   // left join returns a null category for it, so the row mapper produces `category: null`

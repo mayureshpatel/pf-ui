@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { debounceTime, distinctUntilChanged, Subject } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
@@ -156,7 +157,7 @@ export class MerchantsComponent implements OnInit {
           this.totalRecords.set(res.page.totalElements);
           this.loading.set(false);
         },
-        error: (err: any): void => {
+        error: (err: unknown): void => {
           console.error('Failed to load merchants:', err);
           this.toast.error('Failed to load merchants');
           this.loading.set(false);
@@ -230,7 +231,7 @@ export class MerchantsComponent implements OnInit {
               this.toast.success('Merchant deleted');
               this.loadData();
             },
-            error: (err: any): void => {
+            error: (err: HttpErrorResponse): void => {
               console.error('Error deleting merchant:', err);
               this.toast.error(err.error?.detail || 'Failed to delete merchant');
             },

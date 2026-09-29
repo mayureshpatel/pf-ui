@@ -16,6 +16,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize } from 'rxjs';
 import { CardModule } from 'primeng/card';
 import { ChartModule } from 'primeng/chart';
+import type { ChartData, TooltipItem } from 'chart.js';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
@@ -102,7 +103,7 @@ export class MerchantReportComponent {
   /**
    * Derived Bar Chart data for volume leaders.
    */
-  readonly barChartData: Signal<any> = computed(() => {
+  readonly barChartData: Signal<ChartData<'bar'>> = computed(() => {
     const data: MerchantReportData[] = this.merchantData().slice(0, 10);
 
     return {
@@ -124,7 +125,7 @@ export class MerchantReportComponent {
   /**
    * Derived Doughnut Chart data for spending distribution.
    */
-  readonly doughnutChartData: Signal<any> = computed(() => {
+  readonly doughnutChartData: Signal<ChartData<'doughnut'>> = computed(() => {
     const data: MerchantReportData[] = this.merchantData().slice(0, 5);
 
     return {
@@ -153,7 +154,7 @@ export class MerchantReportComponent {
         padding: 12,
         usePointStyle: true,
         callbacks: {
-          label: (context: any): string =>
+          label: (context: TooltipItem<'bar'>): string =>
             ` Total: ${formatCurrency(context.parsed.x || 0, 'en-US', '$', '1.2-2')}`,
         },
       },
@@ -191,8 +192,8 @@ export class MerchantReportComponent {
         backgroundColor: '#1e293b',
         padding: 12,
         callbacks: {
-          label: (context: any): string => {
-            const val: any = context.parsed || 0;
+          label: (context: TooltipItem<'doughnut'>): string => {
+            const val: number = context.parsed || 0;
             const total: number = context.dataset.data.reduce(
               (a: number, b: number): number => a + b,
               0,

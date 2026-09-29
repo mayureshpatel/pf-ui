@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { vi, Mocked } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { of, throwError } from 'rxjs';
@@ -11,8 +11,10 @@ import { Merchant, MerchantDescriptionLink } from '@models/merchant.model';
 describe('MerchantDescriptionLinksDialogComponent', () => {
   let component: MerchantDescriptionLinksDialogComponent;
   let fixture: ComponentFixture<MerchantDescriptionLinksDialogComponent>;
-  let mockMerchantApi: any;
-  let mockToast: any;
+  let mockMerchantApi: Mocked<
+    Pick<MerchantApiService, 'getDescriptionLinks' | 'addDescriptionLink' | 'deleteDescriptionLink'>
+  >;
+  let mockToast: Mocked<Pick<ToastService, 'success' | 'error'>>;
 
   const mockMerchant: Merchant = {
     id: 7,

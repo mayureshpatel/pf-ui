@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { vi, Mocked } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { BulkEditDialogComponent } from './bulk-edit-dialog.component';
@@ -11,8 +11,8 @@ import { Transaction } from '@models/transaction.model';
 describe('BulkEditDialogComponent', () => {
   let component: BulkEditDialogComponent;
   let fixture: ComponentFixture<BulkEditDialogComponent>;
-  let mockCategoryApi: any;
-  let mockMerchantApi: any;
+  let mockCategoryApi: Mocked<Pick<CategoryApiService, 'getGroupedCategories'>>;
+  let mockMerchantApi: Mocked<Pick<MerchantApiService, 'getMerchants'>>;
 
   const category = (id: number, name: string): Category =>
     ({

@@ -242,7 +242,7 @@ export class DashboardComponent implements OnInit {
           this.topMerchants.set(res.merchants.slice(0, 5));
           this.topCategories.set(res.categories);
         },
-        error: (err: any): void => {
+        error: (err: unknown): void => {
           console.error('Dashboard data load failed:', err);
           this.toast.error('Failed to update dashboard data.');
           this.loadError.set(true);

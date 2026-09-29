@@ -1,9 +1,9 @@
-import { vi } from 'vitest';
+import { vi, Mock, Mocked } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { AccountsComponent } from './accounts.component';
 import { AccountApiService } from './services/account-api.service';
 import { ToastService } from '@core/services/toast.service';
-import { ConfirmationService } from 'primeng/api';
+import { Confirmation, ConfirmationService } from 'primeng/api';
 import {
   Account,
   AccountCreateRequest,
@@ -17,9 +17,11 @@ import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 describe('AccountsComponent', () => {
   let component: AccountsComponent;
   let fixture: ComponentFixture<AccountsComponent>;
-  let mockAccountApi: any;
-  let mockToast: any;
-  let mockConfirmationService: any;
+  let mockAccountApi: Mocked<
+    Pick<AccountApiService, 'getAccounts' | 'getAccountTypes' | 'create' | 'update' | 'delete'>
+  >;
+  let mockToast: Mocked<Pick<ToastService, 'success' | 'error'>>;
+  let mockConfirmationService: { confirm: Mock<(confirmation: Confirmation) => void> };
 
   const mockAccountTypes: AccountType[] = [
     {
@@ -237,11 +239,10 @@ describe('AccountsComponent', () => {
 
     it('should open confirmation and delete upon accept', () => {
       // Setup mock confirmation to instantly trigger 'accept'
-      mockConfirmationService.confirm.mockImplementation((config: any) => {
+      mockConfirmationService.confirm.mockImplementation((config: Confirmation) => {
         if (config.accept) {
           config.accept();
         }
-        return mockConfirmationService;
       });
 
       mockAccountApi.delete.mockReturnValue(of(undefined));
@@ -257,11 +258,10 @@ describe('AccountsComponent', () => {
     });
 
     it('should handle delete error', () => {
-      mockConfirmationService.confirm.mockImplementation((config: any) => {
+      mockConfirmationService.confirm.mockImplementation((config: Confirmation) => {
         if (config.accept) {
           config.accept();
         }
-        return mockConfirmationService;
       });
 
       mockAccountApi.delete.mockReturnValue(
@@ -274,11 +274,10 @@ describe('AccountsComponent', () => {
     });
 
     it('should handle delete error with fallback message', () => {
-      mockConfirmationService.confirm.mockImplementation((config: any) => {
+      mockConfirmationService.confirm.mockImplementation((config: Confirmation) => {
         if (config.accept) {
           config.accept();
         }
-        return mockConfirmationService;
       });
 
       mockAccountApi.delete.mockReturnValue(throwError(() => ({})));

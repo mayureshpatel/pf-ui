@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { vi, Mocked } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { of } from 'rxjs';
@@ -11,8 +11,8 @@ import { RecurringSuggestion } from '@models/recurring.model';
 describe('RecurringSuggestionsDialogComponent', () => {
   let component: RecurringSuggestionsDialogComponent;
   let fixture: ComponentFixture<RecurringSuggestionsDialogComponent>;
-  let mockRecurringApi: any;
-  let mockToast: any;
+  let mockRecurringApi: Mocked<Pick<RecurringApiService, 'getSuggestions'>>;
+  let mockToast: Mocked<Pick<ToastService, 'error'>>;
 
   const mockSuggestion: RecurringSuggestion = {
     merchant: { name: 'Netflix' },

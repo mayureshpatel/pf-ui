@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { vi, Mocked } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { signal } from '@angular/core';
@@ -18,7 +18,9 @@ import { User } from '@models/auth.model';
 describe('TransactionFormDrawerComponent', () => {
   let component: TransactionFormDrawerComponent;
   let fixture: ComponentFixture<TransactionFormDrawerComponent>;
-  let mockMerchantApi: any;
+  let mockMerchantApi: Mocked<
+    Pick<MerchantApiService, 'getMerchants' | 'createMerchant' | 'updateMerchant'>
+  >;
 
   beforeEach(async () => {
     const mockCategoryApi = { getCategories: vi.fn().mockReturnValue(of([])) };
@@ -240,7 +242,7 @@ describe('TransactionFormDrawerComponent', () => {
           page: { totalElements: results.length, totalPages: 1, number: 0, size: 20 },
         }),
       );
-      component.filterMerchants({ query });
+      component.filterMerchants({ originalEvent: new Event('input'), query });
     }
 
     it('should append a "+ Create" suggestion when no result exactly matches the typed query', () => {
