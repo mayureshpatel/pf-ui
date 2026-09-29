@@ -39,8 +39,7 @@
           <th id="suggested-amount" class="py-4 font-bold text-surface-700 dark:text-surface-200">Typical Amount</th>
           <th id="suggested-frequency" class="py-4 font-bold text-surface-700 dark:text-surface-200">Frequency</th>
           <th id="confidence" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-center">Confidence</th>
-          <th id="suggested-action" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-center"
-              style="width: 100px">Action
+          <th id="suggested-action" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-center w-25">Action
           </th>
         </tr>
       </ng-template>
@@ -58,7 +57,7 @@
           <td class="font-mono font-black text-primary">{{ suggestion.amount | currency }}</td>
           <td>
             <span
-              class="px-2 py-0.5 rounded-full bg-surface-100 text-[10px] font-black uppercase text-surface-600 dark:text-surface-300 ring-1 ring-surface-200 dark:ring-surface-700">
+              class="px-2 py-0.5 rounded-full bg-surface-100 text-xs font-black uppercase text-surface-600 dark:text-surface-300 ring-1 ring-surface-200 dark:ring-surface-700">
               {{ frequencyLabels[suggestion.frequency] }}
             </span>
           </td>

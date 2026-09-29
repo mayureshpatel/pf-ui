@@ -41,8 +41,8 @@
     <!-- Change Ledger -->
     <div class="flex flex-col gap-3">
       <div class="flex items-center justify-between px-1">
-        <span class="text-[10px] font-black uppercase tracking-[0.2em] text-surface-400 dark:text-surface-500">Projected Change Ledger</span>
-        <span class="text-[10px] font-mono font-bold text-muted-color">{{ totalCount() }} entries</span>
+        <span class="text-xs font-black uppercase tracking-widest text-surface-400 dark:text-surface-500">Projected Change Ledger</span>
+        <span class="text-xs font-mono font-bold text-muted-color">{{ totalCount() }} entries</span>
       </div>
 
       <p-table
@@ -64,7 +64,7 @@
         <ng-template #body let-txn>
           <tr class="hover:bg-surface-100/50 dark:hover:bg-surface-800/30 transition-colors duration-200">
             <td class="py-3">
-              <span class="font-mono text-[11px] truncate block max-w-[300px] text-surface-600 dark:text-surface-400"
+              <span class="font-mono text-xs truncate block max-w-75 text-surface-600 dark:text-surface-400"
                     [title]="txn.description">
                 {{ txn.description }}
               </span>
@@ -72,17 +72,17 @@
             <td>
               @if (txn.oldValue) {
                 <span
-                  class="text-[11px] font-bold text-surface-400 dark:text-surface-500 line-through decoration-rose-500/50 decoration-2 italic">
+                  class="text-xs font-bold text-surface-400 dark:text-surface-500 line-through decoration-rose-500/50 decoration-2 italic">
                   {{ txn.oldValue }}
                 </span>
               } @else {
                 <span
-                  class="text-[10px] font-black uppercase text-surface-300 dark:text-surface-700 tracking-widest italic">Unset</span>
+                  class="text-xs font-black uppercase text-surface-300 dark:text-surface-700 tracking-widest italic">Unset</span>
               }
             </td>
             <td>
               <span
-                class="text-[11px] font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-2 py-0.5 rounded ring-1 ring-emerald-200/50">
+                class="text-xs font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-2 py-0.5 rounded ring-1 ring-emerald-200/50">
                 {{ txn.newValue }}
               </span>
             </td>
