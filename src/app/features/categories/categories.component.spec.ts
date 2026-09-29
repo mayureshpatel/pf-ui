@@ -1,11 +1,11 @@
-import { vi } from 'vitest';
+import { vi, Mock, Mocked } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CategoriesComponent } from './categories.component';
 import { CategoryApiService } from './services/category-api.service';
 import { TransactionApiService } from '@features/transactions/services/transaction-api.service';
 import { BudgetApiService } from '@features/budgets/services/budget-api.service';
 import { ToastService } from '@core/services/toast.service';
-import { ConfirmationService } from 'primeng/api';
+import { Confirmation, ConfirmationService } from 'primeng/api';
 import { Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
@@ -14,12 +14,17 @@ import { Category, CategoryType } from '@models/category.model';
 describe('CategoriesComponent', () => {
   let component: CategoriesComponent;
   let fixture: ComponentFixture<CategoriesComponent>;
-  let mockCategoryApi: any;
-  let mockTransactionApi: any;
-  let mockBudgetApi: any;
-  let mockToast: any;
-  let mockConfirmationService: any;
-  let mockRouter: any;
+  let mockCategoryApi: Mocked<
+    Pick<
+      CategoryApiService,
+      'getCategories' | 'createCategory' | 'updateCategory' | 'deleteCategory'
+    >
+  >;
+  let mockTransactionApi: Mocked<Pick<TransactionApiService, 'getCountsByCategory'>>;
+  let mockBudgetApi: Mocked<Pick<BudgetApiService, 'getBudgets'>>;
+  let mockToast: Mocked<Pick<ToastService, 'success' | 'error'>>;
+  let mockConfirmationService: { confirm: Mock<(confirmation: Confirmation) => void> };
+  let mockRouter: Mocked<Pick<Router, 'navigate'>>;
 
   const mockCategories: Category[] = [
     {
@@ -176,7 +181,7 @@ describe('CategoriesComponent', () => {
 
   it('should delete category on confirmation', () => {
     // arrange
-    mockConfirmationService.confirm.mockImplementation((config: any) => {
+    mockConfirmationService.confirm.mockImplementation((config: Confirmation) => {
       if (config.accept) config.accept();
     });
     mockCategoryApi.deleteCategory.mockReturnValue(of(undefined));

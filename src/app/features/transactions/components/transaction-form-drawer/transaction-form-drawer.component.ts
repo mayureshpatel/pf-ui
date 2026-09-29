@@ -15,7 +15,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { AutoCompleteModule } from 'primeng/autocomplete';
+import { AutoCompleteModule, type AutoCompleteCompleteEvent } from 'primeng/autocomplete';
 import { ButtonModule } from 'primeng/button';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
@@ -292,7 +292,7 @@ export class TransactionFormDrawerComponent {
         finalize(() => this.loading.set(false)),
       )
       .subscribe({
-        next: ({ categories, accounts, tags }: any): void => {
+        next: ({ categories, accounts, tags }): void => {
           accounts.sort((a: Account, b: Account): number => a.name.localeCompare(b.name));
           this.accounts.set(accounts);
           this.groupedCategories.set(this.getGroupedCategories(categories));
@@ -300,7 +300,7 @@ export class TransactionFormDrawerComponent {
 
           this.filteredCategories.set(categories);
         },
-        error: (error: any): void => {
+        error: (error: unknown): void => {
           console.error('Error loading data:', error);
         },
       });
@@ -356,7 +356,7 @@ export class TransactionFormDrawerComponent {
   /**
    * Searches merchants server-side based on user input (PF-320).
    */
-  filterMerchants(event: any): void {
+  filterMerchants(event: AutoCompleteCompleteEvent): void {
     this.merchantSearch$.next(event.query);
   }
 

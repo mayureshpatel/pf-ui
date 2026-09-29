@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { vi, Mocked } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { By } from '@angular/platform-browser';
@@ -10,7 +10,7 @@ import { AuthResponse } from '@models/auth.model';
 describe('LoginComponent', () => {
   let component: LoginComponent;
   let fixture: ComponentFixture<LoginComponent>;
-  let mockAuthService: any;
+  let mockAuthService: Mocked<Pick<AuthService, 'login'>>;
 
   beforeEach(async () => {
     mockAuthService = {

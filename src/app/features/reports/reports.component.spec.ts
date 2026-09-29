@@ -1,8 +1,8 @@
-import { vi } from 'vitest';
+import { vi, Mocked } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { ActivatedRoute, Router } from '@angular/router';
-import { of } from 'rxjs';
+import { ActivatedRoute, Params, Router } from '@angular/router';
+import { Observable, of } from 'rxjs';
 import { ReportsComponent } from './reports.component';
 import { CategoryReportComponent } from './components/category-report/category-report.component';
 import { MerchantReportComponent } from './components/merchant-report/merchant-report.component';
@@ -10,20 +10,32 @@ import { IncomeExpenseReportComponent } from './components/income-expense-report
 import { NetWorthReportComponent } from './components/net-worth-report/net-worth-report.component';
 import { ReportApiService } from './services/report-api.service';
 
+/** Reproduces just the 2 ActivatedRoute members this component actually reads. */
+interface MockActivatedRoute {
+  snapshot: { queryParams: Params };
+  queryParams: Observable<Params>;
+}
+
 describe('ReportsComponent', () => {
   let fixture: ComponentFixture<ReportsComponent>;
   let component: ReportsComponent;
-  let mockRouter: any;
-  let mockActivatedRoute: any;
-  let mockReportApi: any;
+  let mockRouter: Mocked<Pick<Router, 'navigate'>>;
+  let mockActivatedRoute: MockActivatedRoute;
+  let mockReportApi: Mocked<
+    Pick<
+      ReportApiService,
+      'getNetWorth' | 'getCategoryBreakdown' | 'getMerchantBreakdown' | 'getMonthlyBreakdown'
+    >
+  >;
 
   // p-tabs' TabList calls ngAfterViewInit -> bindResizeObserver(), which JSDOM doesn't implement.
   beforeAll(() => {
-    (globalThis as any).ResizeObserver = class {
-      observe(): void {}
-      unobserve(): void {}
-      disconnect(): void {}
-    };
+    (globalThis as typeof globalThis & { ResizeObserver: typeof ResizeObserver }).ResizeObserver =
+      class {
+        observe(): void {}
+        unobserve(): void {}
+        disconnect(): void {}
+      };
   });
 
   beforeEach(async () => {

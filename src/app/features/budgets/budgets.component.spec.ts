@@ -1,9 +1,9 @@
-import { vi } from 'vitest';
+import { vi, Mock, Mocked } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
-import { ActivatedRoute, Router } from '@angular/router';
-import { of } from 'rxjs';
-import { ConfirmationService } from 'primeng/api';
+import { ActivatedRoute, Params, Router } from '@angular/router';
+import { Observable, of } from 'rxjs';
+import { Confirmation, ConfirmationService } from 'primeng/api';
 
 import { BudgetsComponent } from './budgets.component';
 import { BudgetApiService } from './services/budget-api.service';
@@ -12,15 +12,23 @@ import { ToastService } from '@core/services/toast.service';
 import { Budget } from '@models/budget.model';
 import { Category, CategoryType } from '@models/category.model';
 
+/** Reproduces just the 2 ActivatedRoute members this component actually reads. */
+interface MockActivatedRoute {
+  snapshot: { queryParams: Params };
+  queryParams: Observable<Params>;
+}
+
 describe('BudgetsComponent', () => {
   let component: BudgetsComponent;
   let fixture: ComponentFixture<BudgetsComponent>;
-  let mockBudgetApi: any;
-  let mockCategoryApi: any;
-  let mockToast: any;
-  let mockConfirmationService: any;
-  let mockRouter: any;
-  let mockActivatedRoute: any;
+  let mockBudgetApi: Mocked<
+    Pick<BudgetApiService, 'getBudgetStatus' | 'getAllBudgets' | 'deleteBudget'>
+  >;
+  let mockCategoryApi: Mocked<Pick<CategoryApiService, 'getCategories'>>;
+  let mockToast: Mocked<Pick<ToastService, 'success' | 'error'>>;
+  let mockConfirmationService: { confirm: Mock<(confirmation: Confirmation) => void> };
+  let mockRouter: Mocked<Pick<Router, 'navigate'>>;
+  let mockActivatedRoute: MockActivatedRoute;
 
   const category: Category = {
     id: 1,
@@ -96,7 +104,7 @@ describe('BudgetsComponent', () => {
   describe('category display (PF-216)', () => {
     it('should show the category name in the Monthly Status view', () => {
       // arrange & act -- default viewMode is 'monthly', budgetStatuses already populated
-      component.budgetStatuses.set([mockBudgetStatus as any]);
+      component.budgetStatuses.set([mockBudgetStatus]);
       fixture.detectChanges();
 
       // assert & verify
@@ -115,7 +123,7 @@ describe('BudgetsComponent', () => {
 
     it("should color the Monthly Status icon with the category's own color", () => {
       // arrange & act
-      component.budgetStatuses.set([mockBudgetStatus as any]);
+      component.budgetStatuses.set([mockBudgetStatus]);
       fixture.detectChanges();
 
       // assert & verify -- selected by its stable shape classes, not the icon glyph itself
@@ -126,7 +134,7 @@ describe('BudgetsComponent', () => {
 
     it("should show the category's own icon glyph in the Monthly Status view", () => {
       // arrange & act
-      component.budgetStatuses.set([mockBudgetStatus as any]);
+      component.budgetStatuses.set([mockBudgetStatus]);
       fixture.detectChanges();
 
       // assert & verify -- category.icon is 'pi-home', not the 'pi-tag' fallback

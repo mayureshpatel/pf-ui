@@ -13,6 +13,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { DialogModule } from 'primeng/dialog';
@@ -89,7 +90,7 @@ export class MerchantDescriptionLinksDialogComponent {
           this.links.set(links);
           this.loading.set(false);
         },
-        error: (err: any): void => {
+        error: (err: unknown): void => {
           console.error('Failed to load linked descriptions:', err);
           this.toast.error('Failed to load linked descriptions');
           this.loading.set(false);
@@ -128,7 +129,7 @@ export class MerchantDescriptionLinksDialogComponent {
           this.newDescription.set('');
           this.loadLinks();
         },
-        error: (err: any): void => {
+        error: (err: HttpErrorResponse): void => {
           console.error('Error linking description:', err);
           this.toast.error(err.error?.detail || 'Failed to link description');
         },
@@ -148,7 +149,7 @@ export class MerchantDescriptionLinksDialogComponent {
           this.links.set(this.links().filter((l): boolean => l.id !== link.id));
           this.toast.success('Link removed');
         },
-        error: (err: any): void => {
+        error: (err: HttpErrorResponse): void => {
           console.error('Error removing link:', err);
           this.toast.error(err.error?.detail || 'Failed to remove link');
         },

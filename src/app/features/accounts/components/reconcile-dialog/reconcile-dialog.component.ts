@@ -15,6 +15,7 @@ import {
   WritableSignal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ButtonModule } from 'primeng/button';
@@ -146,7 +147,7 @@ export class ReconcileDrawerComponent {
         this.visible.set(false);
         this.saving.set(false);
       },
-      error: (error: any): void => {
+      error: (error: HttpErrorResponse): void => {
         console.error('Error reconciling account:', error);
         this.errorMessage.set(error.error?.detail || 'Failed to reconcile account');
         this.saving.set(false);

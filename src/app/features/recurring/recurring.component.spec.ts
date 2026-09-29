@@ -1,8 +1,8 @@
-import { vi } from 'vitest';
+import { vi, Mock, Mocked } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { of } from 'rxjs';
-import { ConfirmationService } from 'primeng/api';
+import { Confirmation, ConfirmationService } from 'primeng/api';
 
 import { RecurringComponent } from './recurring.component';
 import { RecurringApiService } from './services/recurring-api.service';
@@ -14,11 +14,11 @@ import { RecurringTransaction } from '@models/recurring.model';
 describe('RecurringComponent', () => {
   let component: RecurringComponent;
   let fixture: ComponentFixture<RecurringComponent>;
-  let mockRecurringApi: any;
-  let mockAccountApi: any;
-  let mockCategoryApi: any;
-  let mockToast: any;
-  let mockConfirmationService: any;
+  let mockRecurringApi: Mocked<Pick<RecurringApiService, 'getAll' | 'delete'>>;
+  let mockAccountApi: Mocked<Pick<AccountApiService, 'getAccounts'>>;
+  let mockCategoryApi: Mocked<Pick<CategoryApiService, 'getMerchantsWithTransactions'>>;
+  let mockToast: Mocked<Pick<ToastService, 'success' | 'error'>>;
+  let mockConfirmationService: { confirm: Mock<(confirmation: Confirmation) => void> };
 
   const mockRecurring: RecurringTransaction = {
     id: 1,

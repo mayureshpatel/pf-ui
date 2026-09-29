@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { finalize } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
@@ -102,7 +103,7 @@ export class CategoryRulesComponent implements OnInit {
       )
       .subscribe({
         next: (data: CategoryRule[]): void => this.rules.set(data),
-        error: (err: any): void => {
+        error: (err: unknown): void => {
           console.error('Failed to load rules:', err);
           this.toast.error('Failed to load category rules.');
           this.loadError.set(true);
@@ -146,7 +147,7 @@ export class CategoryRulesComponent implements OnInit {
           this.previewItems.set(items);
           this.showApplyDialog.set(true);
         },
-        error: (err: any): void => {
+        error: (err: HttpErrorResponse): void => {
           console.error('Preview failed:', err);
           this.toast.error(err.error?.detail || 'Failed to generate rule preview.');
         },
@@ -170,7 +171,7 @@ export class CategoryRulesComponent implements OnInit {
           this.toast.success('Rules successfully applied to transactions.');
           this.loadRules();
         },
-        error: (err: any): void => {
+        error: (err: HttpErrorResponse): void => {
           console.error('Rule application failed:', err);
           this.toast.error(err.error?.detail || 'Failed to apply rules.');
         },
@@ -200,7 +201,7 @@ export class CategoryRulesComponent implements OnInit {
                 list.filter((r: CategoryRule): boolean => r.id !== rule.id),
               );
             },
-            error: (err: any): void => {
+            error: (err: unknown): void => {
               console.error('Delete failed:', err);
               this.toast.error('Failed to delete rule.');
             },

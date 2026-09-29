@@ -41,8 +41,8 @@ describe('TransactionImportService', () => {
         amount: 100,
         description: 'Test transaction',
         type: TransactionType.EXPENSE,
-        suggestedCategory: null as any,
-        suggestedMerchant: null as any,
+        suggestedCategory: null,
+        suggestedMerchant: null,
       },
     ];
 

@@ -1,8 +1,8 @@
-import { vi } from 'vitest';
+import { vi, Mock, Mocked } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { of } from 'rxjs';
-import { ConfirmationService } from 'primeng/api';
+import { Confirmation, ConfirmationService } from 'primeng/api';
 
 import { TagsComponent } from './tags.component';
 import { TagApiService } from '@features/tags/services/tag-api.service';
@@ -12,9 +12,9 @@ import { Tag } from '@models/tag.model';
 describe('TagsComponent', () => {
   let component: TagsComponent;
   let fixture: ComponentFixture<TagsComponent>;
-  let mockApi: any;
-  let mockToast: any;
-  let mockConfirmationService: any;
+  let mockApi: Mocked<Pick<TagApiService, 'getTags' | 'deleteTag'>>;
+  let mockToast: Mocked<Pick<ToastService, 'success' | 'error'>>;
+  let mockConfirmationService: { confirm: Mock<(confirmation: Confirmation) => void> };
 
   const travelTag: Tag = { id: 1, userId: 1, name: 'Travel', color: '#ff6b6b' };
   const reimbursableTag: Tag = { id: 2, userId: 1, name: 'Reimbursable', color: null };
@@ -135,7 +135,7 @@ describe('TagsComponent', () => {
   it('should remove the tag from the list once the confirmed delete succeeds', () => {
     // arrange
     fixture.detectChanges();
-    mockConfirmationService.confirm.mockImplementation((opts: any) => opts.accept());
+    mockConfirmationService.confirm.mockImplementation((opts: Confirmation) => opts.accept?.());
 
     // act
     component.deleteTag(travelTag);

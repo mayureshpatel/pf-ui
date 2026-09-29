@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { vi, Mock, Mocked } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { of, throwError } from 'rxjs';
@@ -8,13 +8,14 @@ import { TagApiService } from '@features/tags/services/tag-api.service';
 import { AuthService } from '@core/auth/auth.service';
 import { ToastService } from '@core/services/toast.service';
 import { Tag } from '@models/tag.model';
+import { User } from '@models/auth.model';
 
 describe('TagFormDialogComponent', () => {
   let component: TagFormDialogComponent;
   let fixture: ComponentFixture<TagFormDialogComponent>;
-  let mockTagApi: any;
-  let mockAuthService: any;
-  let mockToast: any;
+  let mockTagApi: Mocked<Pick<TagApiService, 'createTag' | 'updateTag'>>;
+  let mockAuthService: { user: Mock<() => User | null> };
+  let mockToast: Mocked<Pick<ToastService, 'success' | 'error'>>;
 
   const existingTag: Tag = { id: 5, userId: 1, name: 'Travel', color: '#ff6b6b' };
 
@@ -23,7 +24,9 @@ describe('TagFormDialogComponent', () => {
       createTag: vi.fn().mockReturnValue(of(9)),
       updateTag: vi.fn().mockReturnValue(of(1)),
     };
-    mockAuthService = { user: vi.fn().mockReturnValue({ id: 1, username: 'test' }) };
+    mockAuthService = {
+      user: vi.fn().mockReturnValue({ id: 1, username: 'test', email: 'test@test.com' }),
+    };
     mockToast = { success: vi.fn(), error: vi.fn() };
 
     await TestBed.configureTestingModule({

@@ -92,7 +92,7 @@ export class RecurringSuggestionsDialogComponent {
         this.suggestions.set(data);
         this.loading.set(false);
       },
-      error: (err: any): void => {
+      error: (err: unknown): void => {
         console.error('Failed to detect recurring patterns:', err);
         this.toast.error('Could not load recurring suggestions.');
         this.loading.set(false);

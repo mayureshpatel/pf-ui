@@ -16,6 +16,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize } from 'rxjs';
 import { CardModule } from 'primeng/card';
 import { ChartModule } from 'primeng/chart';
+import type { TooltipItem } from 'chart.js';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
@@ -144,8 +145,8 @@ export class CategoryReportComponent {
         bodyFont: { size: 13, family: 'monospace' },
         usePointStyle: true,
         callbacks: {
-          label: (context: any): string => {
-            const val: any = context.parsed.x || 0;
+          label: (context: TooltipItem<'bar'>): string => {
+            const val: number = context.parsed.x || 0;
             return ` Total Spent: ${formatCurrency(val, 'en-US', '$', '1.2-2')}`;
           },
         },
@@ -158,7 +159,7 @@ export class CategoryReportComponent {
         ticks: {
           color: '#94a3b8',
           font: { size: 11, family: 'monospace' },
-          callback: (val: any): string => `$${val >= 1000 ? val / 1000 + 'k' : val}`,
+          callback: (val: number): string => `$${val >= 1000 ? val / 1000 + 'k' : val}`,
         },
       },
       y: {

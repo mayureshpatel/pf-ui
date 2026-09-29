@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { DebugElement } from '@angular/core';
 import { CategoryChartComponent } from './category-chart.component';
 import { CategoryBreakdown } from '@models/dashboard.model';
 import { Category, CategoryType } from '@models/category.model';
@@ -142,8 +143,10 @@ describe('CategoryChartComponent', () => {
         setCategories(mockBreakdown);
 
         // assert & verify -- 'Rent' (index 0) has color '#3B82F6' set
-        expect(component.chartData().datasets[0].backgroundColor[0]).toBe('#3B82F6');
-        expect(component.chartData().datasets[0].hoverBackgroundColor[0]).toBe('#3B82F6');
+        expect((component.chartData().datasets[0].backgroundColor as string[])[0]).toBe('#3B82F6');
+        expect((component.chartData().datasets[0].hoverBackgroundColor as string[])[0]).toBe(
+          '#3B82F6',
+        );
       });
 
       it('should fall back to a name-derived color when the category has no color set', () => {
@@ -152,8 +155,10 @@ describe('CategoryChartComponent', () => {
 
         // assert & verify -- 'Dining Out' (index 2) has no color set
         const expected = getCategoryColor('Dining Out');
-        expect(component.chartData().datasets[0].backgroundColor[2]).toBe(expected);
-        expect(component.chartData().datasets[0].hoverBackgroundColor[2]).toBe(expected);
+        expect((component.chartData().datasets[0].backgroundColor as string[])[2]).toBe(expected);
+        expect((component.chartData().datasets[0].hoverBackgroundColor as string[])[2]).toBe(
+          expected,
+        );
       });
     });
   });
@@ -163,7 +168,9 @@ describe('CategoryChartComponent', () => {
       // arrange & act -- the template binds [options]="chartOptions" with no (), so if
       // chartOptions were still a WritableSignal, p-chart would receive the function itself
       setCategories(mockBreakdown);
-      const pChart = fixture.debugElement.query((de: any): boolean => de.name === 'p-chart');
+      const pChart = fixture.debugElement.query(
+        (de: DebugElement): boolean => de.name === 'p-chart',
+      );
 
       // assert & verify
       expect(typeof pChart.componentInstance.options).toBe('object');

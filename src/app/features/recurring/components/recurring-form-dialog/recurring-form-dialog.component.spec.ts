@@ -1,7 +1,7 @@
-import { vi } from 'vitest';
+import { vi, Mocked } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
-import { signal } from '@angular/core';
+import { signal, WritableSignal } from '@angular/core';
 import { RecurringFormDialogComponent } from './recurring-form-dialog.component';
 import { RecurringApiService } from '../../services/recurring-api.service';
 import { ToastService } from '@core/services/toast.service';
@@ -14,9 +14,9 @@ import { User } from '@models/auth.model';
 describe('RecurringFormDialogComponent', () => {
   let component: RecurringFormDialogComponent;
   let fixture: ComponentFixture<RecurringFormDialogComponent>;
-  let mockRecurringApi: any;
-  let mockToast: any;
-  let mockAuth: any;
+  let mockRecurringApi: Mocked<Pick<RecurringApiService, 'create' | 'update'>>;
+  let mockToast: Mocked<Pick<ToastService, 'success' | 'error' | 'info'>>;
+  let mockAuth: { user: WritableSignal<User | null> };
 
   const checking = {
     id: 1,

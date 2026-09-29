@@ -1,5 +1,5 @@
 import { computed, inject, Injectable, Signal, signal, WritableSignal } from '@angular/core';
-import { HttpClient, HttpContext } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { catchError, Observable, tap, throwError } from 'rxjs';
 import { environment } from '@env';
@@ -10,6 +10,12 @@ import { getUserFromToken } from './utils/jwt.utils';
 import { SKIP_GENERIC_ERROR_TOAST } from './error.interceptor';
 
 const SKIP_TOAST_OPTIONS = { context: new HttpContext().set(SKIP_GENERIC_ERROR_TOAST, true) };
+
+/** One field-level entry in a 400 response's `validationErrors` array (see GlobalExceptionHandler). */
+interface ValidationErrorItem {
+  field: string;
+  message: string;
+}
 
 /**
  * Service responsible for managing authentication state and user operations.
@@ -68,7 +74,7 @@ export class AuthService {
           this.toast.success('Welcome back!');
           this.router.navigate(['/dashboard']);
         }),
-        catchError((error: any): Observable<never> => {
+        catchError((error: HttpErrorResponse): Observable<never> => {
           const message: string =
             error.status === 401
               ? 'Invalid username or password'
@@ -96,12 +102,14 @@ export class AuthService {
           this.toast.success('Welcome! Your account has been created successfully.');
           this.router.navigate(['/dashboard']);
         }),
-        catchError((error: any): Observable<never> => {
+        catchError((error: HttpErrorResponse): Observable<never> => {
           let message = 'Registration failed. Please try again.';
           if (error.status === 409) {
             message = error.error?.detail || 'Username or email already exists';
           } else if (error.status === 400 && error.error?.validationErrors) {
-            message = error.error.validationErrors.map((e: any): string => e.message).join('. ');
+            message = error.error.validationErrors
+              .map((e: ValidationErrorItem): string => e.message)
+              .join('. ');
           }
           return throwError(() => new Error(message));
         }),

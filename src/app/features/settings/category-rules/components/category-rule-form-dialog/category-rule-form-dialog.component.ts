@@ -10,6 +10,7 @@ import {
   WritableSignal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   AbstractControl,
   FormControl,
@@ -145,7 +146,7 @@ export class CategoryRuleFormDialogComponent {
   private loadCategories(): void {
     this.categoryApi.getGroupedCategories().subscribe({
       next: (groups: CategoryGroup[]): void => this.categoryGroups.set(groups),
-      error: (err: any): void => {
+      error: (err: unknown): void => {
         console.error('Failed to load categories:', err);
         this.toast.error('Failed to load categories.');
       },
@@ -189,7 +190,7 @@ export class CategoryRuleFormDialogComponent {
           this.save.emit();
           this.visible.set(false);
         },
-        error: (err: any): void => {
+        error: (err: HttpErrorResponse): void => {
           console.error('Create rule failed:', err);
           this.errorMessage.set(err.error?.detail || 'Failed to create rule.');
         },

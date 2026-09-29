@@ -231,7 +231,7 @@ export class BudgetsComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (categories: Category[]): void => this.categories.set(categories),
-        error: (err: any): void => {
+        error: (err: unknown): void => {
           console.error('Failed to load categories:', err);
           this.toast.error('Failed to load categories');
         },
@@ -263,7 +263,7 @@ export class BudgetsComponent implements OnInit {
       )
       .subscribe({
         next: (status: BudgetStatus[]): void => this.budgetStatuses.set(status),
-        error: (err: any): void => {
+        error: (err: unknown): void => {
           console.error('Failed to load budget status:', err);
           this.toast.error('Failed to load budget status');
           this.loadError.set(true);
@@ -288,7 +288,7 @@ export class BudgetsComponent implements OnInit {
           this.allBudgets.set(page.content);
           this.allBudgetsTotalRecords.set(page.page.totalElements);
         },
-        error: (err: any): void => {
+        error: (err: unknown): void => {
           console.error('Failed to load all budgets:', err);
           this.toast.error('Failed to load all budgets');
           this.loadError.set(true);
@@ -360,7 +360,7 @@ export class BudgetsComponent implements OnInit {
               this.toast.success('Budget deleted successfully');
               this.refreshData();
             },
-            error: (err: any): void => {
+            error: (err: unknown): void => {
               console.error('Failed to delete budget:', err);
               this.toast.error('Failed to delete budget');
             },

@@ -1,7 +1,7 @@
-import { vi } from 'vitest';
+import { vi, Mocked } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
-import { signal } from '@angular/core';
+import { signal, Signal } from '@angular/core';
 import { of, throwError } from 'rxjs';
 
 import { MerchantFormDialogComponent } from './merchant-form-dialog.component';
@@ -14,9 +14,9 @@ import { User } from '@models/auth.model';
 describe('MerchantFormDialogComponent', () => {
   let component: MerchantFormDialogComponent;
   let fixture: ComponentFixture<MerchantFormDialogComponent>;
-  let mockMerchantApi: any;
-  let mockToast: any;
-  let mockAuth: any;
+  let mockMerchantApi: Mocked<Pick<MerchantApiService, 'createMerchant' | 'updateMerchant'>>;
+  let mockToast: Mocked<Pick<ToastService, 'success' | 'error'>>;
+  let mockAuth: { user: Signal<User | null> };
 
   const mockMerchant: Merchant = {
     id: 7,

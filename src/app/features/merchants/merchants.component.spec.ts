@@ -1,7 +1,7 @@
-import { vi } from 'vitest';
+import { vi, Mock, Mocked } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
-import { ConfirmationService } from 'primeng/api';
+import { Confirmation, ConfirmationService } from 'primeng/api';
 import { of, throwError } from 'rxjs';
 
 import { MerchantsComponent } from './merchants.component';
@@ -13,9 +13,9 @@ import { PageResponse } from '@models/transaction.model';
 describe('MerchantsComponent', () => {
   let component: MerchantsComponent;
   let fixture: ComponentFixture<MerchantsComponent>;
-  let mockMerchantApi: any;
-  let mockToast: any;
-  let mockConfirmationService: any;
+  let mockMerchantApi: Mocked<Pick<MerchantApiService, 'getMerchants' | 'deleteMerchant'>>;
+  let mockToast: Mocked<Pick<ToastService, 'success' | 'error'>>;
+  let mockConfirmationService: { confirm: Mock<(confirmation: Confirmation) => void> };
 
   const kroger: Merchant = {
     id: 1,
@@ -231,9 +231,8 @@ describe('MerchantsComponent', () => {
 
     it('should open confirmation and delete upon accept', () => {
       // arrange
-      mockConfirmationService.confirm.mockImplementation((config: any) => {
+      mockConfirmationService.confirm.mockImplementation((config: Confirmation) => {
         config.accept?.();
-        return mockConfirmationService;
       });
 
       // act
@@ -247,7 +246,7 @@ describe('MerchantsComponent', () => {
 
     it('should not delete without confirmation', () => {
       // arrange -- confirm() never invokes accept
-      mockConfirmationService.confirm.mockImplementation(() => mockConfirmationService);
+      mockConfirmationService.confirm.mockImplementation(() => {});
 
       // act
       component.deleteMerchant(kroger);
@@ -258,9 +257,8 @@ describe('MerchantsComponent', () => {
 
     it('should toast an error and not throw when delete fails', () => {
       // arrange
-      mockConfirmationService.confirm.mockImplementation((config: any) => {
+      mockConfirmationService.confirm.mockImplementation((config: Confirmation) => {
         config.accept?.();
-        return mockConfirmationService;
       });
       mockMerchantApi.deleteMerchant.mockReturnValue(
         throwError(() => ({ error: { detail: 'Cannot delete' } })),

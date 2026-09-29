@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { vi, Mocked } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { of } from 'rxjs';
@@ -11,8 +11,10 @@ import { Transaction, TransferSuggestion } from '@models/transaction.model';
 describe('TransferMatchingDialogComponent', () => {
   let component: TransferMatchingDialogComponent;
   let fixture: ComponentFixture<TransferMatchingDialogComponent>;
-  let mockTransactionApi: any;
-  let mockToast: any;
+  let mockTransactionApi: Mocked<
+    Pick<TransactionApiService, 'getTransferSuggestions' | 'markAsTransfer'>
+  >;
+  let mockToast: Mocked<Pick<ToastService, 'success' | 'error'>>;
 
   const txn = (id: number, description: string): Transaction =>
     ({

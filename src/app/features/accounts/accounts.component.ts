@@ -10,6 +10,7 @@ import {
   WritableSignal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { HttpErrorResponse } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
@@ -96,7 +97,7 @@ export class AccountsComponent implements OnInit {
           this.accounts.set(accounts);
           this.accountTypes.set(accountTypes);
         },
-        error: (error: any): void => {
+        error: (error: unknown): void => {
           console.error('Error loading accounts:', error);
           this.toast.error('Failed to load accounts');
           this.loadError.set(true);
@@ -154,7 +155,7 @@ export class AccountsComponent implements OnInit {
           this.showDialog.set(false);
           this.loadAccounts();
         },
-        error: (error: any): void => {
+        error: (error: HttpErrorResponse): void => {
           console.error('Error creating account:', error);
           this.toast.error(error.error?.detail || 'Failed to create account');
         },
@@ -175,7 +176,7 @@ export class AccountsComponent implements OnInit {
           this.showDialog.set(false);
           this.loadAccounts();
         },
-        error: (error: any): void => {
+        error: (error: HttpErrorResponse): void => {
           console.error('Error updating account:', error);
           this.toast.error(error.error?.detail || 'Failed to update account');
         },
@@ -205,7 +206,7 @@ export class AccountsComponent implements OnInit {
               );
               this.toast.success('Account deleted successfully');
             },
-            error: (error: any): void => {
+            error: (error: HttpErrorResponse): void => {
               console.error('Error deleting account:', error);
               const message = error.error?.detail || 'Failed to delete account';
               this.toast.error(message);

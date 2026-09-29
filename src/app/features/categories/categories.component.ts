@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { finalize, forkJoin, Observable } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
@@ -121,7 +122,7 @@ export class CategoriesComponent implements OnInit {
         next: ({ categories, transactionCounts }): void => {
           this.categories.set(this.enrichCategories(categories, transactionCounts));
         },
-        error: (err: any): void => {
+        error: (err: unknown): void => {
           console.error('Failed to load category data:', err);
           this.toast.error('Failed to load categories');
           this.loadError.set(true);
@@ -217,7 +218,7 @@ export class CategoriesComponent implements OnInit {
           this.showDialog.set(false);
           this.loadData();
         },
-        error: (err: any): void => {
+        error: (err: HttpErrorResponse): void => {
           console.error('Category operation failed:', err);
           this.toast.error(
             err.error?.detail || `Failed to ${existing ? 'update' : 'create'} category`,
@@ -247,7 +248,7 @@ export class CategoriesComponent implements OnInit {
               this.toast.success('Category deleted successfully');
               this.loadData();
             },
-            error: (err: any): void => {
+            error: (err: HttpErrorResponse): void => {
               console.error('Delete failed:', err);
               this.toast.error(err.error?.detail || 'Failed to delete category');
             },
