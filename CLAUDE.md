@@ -6,10 +6,16 @@
 	- **Theme:** "Soft & Friendly" (rounded corners, earthy/calm primary colors).
 	- **Customization:** The color source of truth is `FinancePreset` in `src/app/custom-presets.ts`
 	  (PrimeNG's JS-based theming), not `src/styles.css` — `styles.css` only defines the
-	  `@custom-variant dark` selector (`.my-app-dark`) and Tailwind's own utility layer. Known gap
-	  (PF-EPIC-031): `FinancePreset`'s `colorScheme.dark.surface` is currently an exact copy of
-	  `.light.surface`, and nothing in the app toggles `.my-app-dark` at all, so dark mode has no
-	  effect today regardless of theme.
+	  `@custom-variant dark` selector (`.my-app-dark`) and Tailwind's own utility layer. Dark mode is
+	  real and reachable (PF-EPIC-031, 2026-09-12): a Settings → Appearance toggle
+	  (`ThemeService.setDarkMode()`) adds/removes `.my-app-dark` on `document.documentElement` and
+	  persists the choice to `localStorage` (`pf_dark_mode`); `index.html`'s inline bootstrap script
+	  re-applies it before Angular loads, avoiding a flash of the wrong theme. `FinancePreset`'s
+	  `colorScheme.dark.surface` being an exact copy of `.light.surface` is **deliberate, not a
+	  gap** — inverting it breaks PrimeNG's own semantic layer (confirmed live, then reverted); see
+	  `docs/technical/03-frontend-angular/design-system.md`'s Dark Mode section for the real
+	  fix (`dark:` variants on bare `surface-N` classes) and why the naive "invert the scale" fix is
+	  actively wrong.
 - **State Management:** Strictly use **Signals**. Avoid RxJS where Signals are more appropriate.
 
 ## Components & Naming
