@@ -64,4 +64,39 @@ test.describe('Budgets', () => {
     const remainingCard = page.locator('p-card').filter({hasText: 'Remaining'}).first();
     await expect(remainingCard.getByText('$180.00')).toBeVisible();
   });
+
+  /**
+   * PF-819: originally found via a live network trace showing GET /api/v1/budgets/status fired
+   * twice, identically, back-to-back for one real click on the Monthly Status/Manage All toggle.
+   * Uses the shared dev user's own cached session (not a fresh registration) -- this is purely
+   * about counting network requests, no specific data needed.
+   */
+  test('toggling the Monthly Status / Manage All view fires exactly one request per real click (PF-819)', async ({page}) => {
+    const statusRequests: string[] = [];
+    const allBudgetsRequests: string[] = [];
+    page.on('request', (req) => {
+      const url = req.url();
+      if (url.includes('/api/v1/budgets/status')) statusRequests.push(url);
+      if (url.includes('/api/v1/budgets') && !url.includes('/status')) allBudgetsRequests.push(url);
+    });
+
+    await page.goto('/budgets');
+    await expect(page.getByText('Monthly Status')).toBeVisible();
+    statusRequests.length = 0; // clear whatever the initial page load itself triggered
+
+    // act -- one real click, toggling from the default Monthly Status to Manage All
+    await page.getByText('Manage All', {exact: true}).click();
+    await page.waitForLoadState('networkidle');
+
+    // assert & verify
+    expect(allBudgetsRequests).toHaveLength(1);
+
+    // act -- one real click back to Monthly Status
+    allBudgetsRequests.length = 0;
+    await page.getByText('Monthly Status', {exact: true}).click();
+    await page.waitForLoadState('networkidle');
+
+    // assert & verify
+    expect(statusRequests).toHaveLength(1);
+  });
 });

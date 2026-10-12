@@ -165,6 +165,13 @@ export class BudgetsComponent implements OnInit {
    * Initializes component data. Hydrates the month/year selection from URL query params first
    * (if present) so the initial load reflects a shared/refreshed link, then keeps it in sync with
    * later external navigation (e.g. browser back/forward).
+   *
+   * PF-819: `updateUrlParams()` below (and `onPeriodChange()`'s own call to it) triggers a router
+   * navigation that this component's own `queryParams` subscription also observes. Without the
+   * `hydrateFromParams` change-check in that subscription, every self-triggered navigation caused
+   * a second, redundant refresh on top of the explicit one right here -- not a p-selectButton
+   * quirk (confirmed live: toggling Monthly Status/Manage All fires exactly one request each way;
+   * changing the month/year dropdown was the one that genuinely double-fired).
    */
   ngOnInit(): void {
     this.hydrateFromParams(this.route.snapshot.queryParams);
@@ -176,25 +183,35 @@ export class BudgetsComponent implements OnInit {
     this.route.queryParams
       .pipe(skip(1), takeUntilDestroyed(this.destroyRef))
       .subscribe((params: Params): void => {
-        this.hydrateFromParams(params);
-        this.refreshData();
+        // Only a genuine external change (browser back/forward, a shared link with different
+        // values) warrants another refresh -- our own updateUrlParams() round-trips back through
+        // here with the values we already have, which hydrateFromParams reports as no change.
+        if (this.hydrateFromParams(params)) {
+          this.refreshData();
+        }
       });
   }
 
   /**
    * Translates URL query params into the month/year signals, only writing when the parsed value
    * actually differs from the current one.
+   *
+   * @return whether either signal was actually written (i.e. a genuine change occurred).
    */
-  private hydrateFromParams(params: Params): void {
+  private hydrateFromParams(params: Params): boolean {
     const month: number | undefined = params['month'] ? Number(params['month']) : undefined;
     const year: number | undefined = params['year'] ? Number(params['year']) : undefined;
+    let changed = false;
 
     if (month !== undefined && month !== this.selectedMonth()) {
       this.selectedMonth.set(month);
+      changed = true;
     }
     if (year !== undefined && year !== this.selectedYear()) {
       this.selectedYear.set(year);
+      changed = true;
     }
+    return changed;
   }
 
   /**
