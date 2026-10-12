@@ -44,5 +44,22 @@ describe('TransactionApiService', () => {
       expect(req.request.params.get('endDate')).toBe('2026-03-15');
       req.flush({ content: [], totalElements: 0 } as unknown as PageResponse<Transaction>);
     });
+
+    it("should send the merchant filter as vendorName, matching the backend's actual query param (PF-810)", () => {
+      // Arrange -- the backend's TransactionCrudController.getTransactions binds a `vendorName`
+      // query param (confirmed live against the real running server during PF-810); this filter
+      // was previously sent as `merchantCleanName`, which the backend silently ignored, so this
+      // search has never actually filtered anything.
+      const filter: TransactionFilter = { merchant: 'Whole Foods' };
+
+      // Act
+      service.getTransactions(filter, { page: 0, size: 20 }).subscribe();
+
+      // Assert
+      const req = httpMock.expectOne((r) => r.url === apiUrl);
+      expect(req.request.params.get('vendorName')).toBe('Whole Foods');
+      expect(req.request.params.get('merchantCleanName')).toBeNull();
+      req.flush({ content: [], totalElements: 0 } as unknown as PageResponse<Transaction>);
+    });
   });
 });
