@@ -1447,6 +1447,23 @@ export interface components {
             size?: number;
             sort?: string[];
         };
+        TransactionFilter: {
+            /** Format: int64 */
+            accountId?: number;
+            /** @enum {string} */
+            type?: "INCOME" | "EXPENSE" | "TRANSFER" | "TRANSFER_IN" | "TRANSFER_OUT" | "ADJUSTMENT";
+            description?: string;
+            categoryName?: string;
+            vendorName?: string;
+            minAmount?: number;
+            maxAmount?: number;
+            /** Format: date */
+            startDate?: string;
+            /** Format: date */
+            endDate?: string;
+            /** Format: int64 */
+            tagId?: number;
+        };
         PageMetadata: {
             /** Format: int64 */
             size?: number;
@@ -1658,16 +1675,7 @@ export interface operations {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
-                accountId?: number;
-                type?: "INCOME" | "EXPENSE" | "TRANSFER" | "TRANSFER_IN" | "TRANSFER_OUT" | "ADJUSTMENT";
-                description?: string;
-                categoryName?: string;
-                vendorName?: string;
-                minAmount?: number;
-                maxAmount?: number;
-                startDate?: string;
-                endDate?: string;
-                tagId?: number;
+                filter: components["schemas"]["TransactionFilter"];
             };
             header?: never;
             path?: never;

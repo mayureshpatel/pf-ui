@@ -52,7 +52,10 @@ export class TransactionApiService {
         filter.categoryName === '__UNDEFINED__' ? '' : filter.categoryName;
       params = params.set('categoryName', categoryVal);
     }
-    if (filter.merchant) params = params.set('merchantCleanName', filter.merchant);
+    // PF-810: the backend's query param is `vendorName`, not `merchantCleanName` -- confirmed
+    // live against the real running backend that the old name was silently ignored, meaning this
+    // filter never actually worked.
+    if (filter.merchant) params = params.set('vendorName', filter.merchant);
     if (filter.minAmount) params = params.set('minAmount', filter.minAmount.toString());
     if (filter.maxAmount) params = params.set('maxAmount', filter.maxAmount.toString());
     if (filter.startDate) params = params.set('startDate', toLocalDateString(filter.startDate));
