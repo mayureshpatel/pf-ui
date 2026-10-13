@@ -1435,10 +1435,10 @@ export interface components {
             label: string;
             icon?: string;
             color?: string;
+            asset: boolean;
             /** Format: int32 */
             sortOrder: number;
-            asset?: boolean;
-            active?: boolean;
+            active: boolean;
         };
         Pageable: {
             /** Format: int32 */
