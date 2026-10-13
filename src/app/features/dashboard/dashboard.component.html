@@ -1,15 +1,15 @@
-<div class="w-full flex flex-col gap-4">
-  <!-- Page Header -->
-  <app-screen-toolbar [showDivider]="false" class="mb-6">
+<div class="flex w-full flex-col gap-6">
+  <!-- Header -->
+  <app-screen-toolbar [showDivider]="false">
     <div toolbarTitle>
-      <h1 class="text-4xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight">Dashboard</h1>
-      <p class="text-muted-color mt-1 text-lg italic">Operational Command Center</p>
+      <h1 class="text-3xl font-bold tracking-tight text-surface-900 dark:text-surface-0">
+        Dashboard
+      </h1>
+      <p data-testid="period-subtitle" class="mt-1 text-muted-color">{{ periodSubtitle() }}</p>
     </div>
 
     <div toolbarFilters>
-      <!-- Period Filters Container -->
-      <div
-        class="flex flex-wrap gap-4 items-center card-soft">
+      <div class="flex flex-wrap items-center gap-4">
         <p-selectButton
           [(ngModel)]="selectedPreset"
           [options]="presetOptions"
@@ -19,21 +19,20 @@
         />
 
         @if (selectedPreset() === 'CUSTOM') {
-          <div class="flex items-center gap-2 pr-2 animate-in fade-in slide-in-from-left-2 duration-500">
-            <div class="w-px h-6 bg-surface-200 dark:bg-surface-700 mx-1"></div>
+          <div class="flex items-center gap-2">
             <p-select
               [(ngModel)]="selectedMonth"
               [options]="monthOptions"
               optionLabel="label"
               optionValue="value"
-              class="w-36 border-none bg-transparent"
+              class="w-36"
             />
             <p-select
               [(ngModel)]="selectedYear"
               [options]="yearOptions"
               optionLabel="label"
               optionValue="value"
-              class="w-24 border-none bg-transparent"
+              class="w-24"
             />
           </div>
         }
@@ -42,46 +41,60 @@
   </app-screen-toolbar>
 
   @if (loading()) {
-    <div class="flex flex-col justify-center items-center py-32 gap-4">
-      <p-progressSpinner strokeWidth="4"/>
-      <span
-        class="text-muted-color font-bold uppercase tracking-widest animate-pulse">Synchronizing Intelligence...</span>
+    <div
+      data-testid="dashboard-skeleton"
+      class="flex flex-col gap-6"
+      aria-busy="true"
+      aria-label="Loading dashboard"
+    >
+      <div class="grid grid-cols-1 gap-6 md:grid-cols-4">
+        <p-skeleton height="9rem" borderRadius="1rem" />
+        <p-skeleton height="9rem" borderRadius="1rem" />
+        <p-skeleton height="9rem" borderRadius="1rem" styleClass="md:col-span-2" />
+      </div>
+      <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <p-skeleton height="22rem" borderRadius="1rem" styleClass="lg:col-span-2" />
+        <p-skeleton height="22rem" borderRadius="1rem" />
+      </div>
+      <div class="grid grid-cols-1 gap-6 lg:grid-cols-5">
+        <p-skeleton height="22rem" borderRadius="1rem" styleClass="lg:col-span-3" />
+        <p-skeleton height="22rem" borderRadius="1rem" styleClass="lg:col-span-2" />
+      </div>
     </div>
   } @else if (loadError() && !pulse()) {
-    <app-page-error-state message="Failed to load dashboard data." (retry)="loadAllData()"/>
+    <app-page-error-state message="Failed to load dashboard data." (retry)="loadAllData()" />
   } @else {
-    <!-- Row 1: High Level Pulse (Key Metrics) -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <!-- Row 1: income, expenses, kept -->
+    <div class="grid grid-cols-1 gap-6 md:grid-cols-4">
       <app-pulse-card
-        title="Total Income"
+        title="Income"
         [value]="pulse()?.currentIncome || 0"
         [previousValue]="pulse()?.previousIncome || 0"
         color="text-emerald-600 dark:text-emerald-400"
       />
       <app-pulse-card
-        title="Total Expenses"
+        title="Expenses"
         [value]="pulse()?.currentExpense || 0"
         [previousValue]="pulse()?.previousExpense || 0"
         [inverseTrend]="true"
         color="text-rose-600 dark:text-rose-400"
       />
-      <app-pulse-card
-        title="Savings Rate"
-        [value]="pulse()?.currentSavingsRate || 0"
-        [previousValue]="pulse()?.previousSavingsRate || 0"
-        type="percent"
-        [color]="getSavingsRateColor(pulse()?.currentSavingsRate)"
-      />
+      <div class="md:col-span-2">
+        <app-kept-card
+          [income]="pulse()?.currentIncome || 0"
+          [expense]="pulse()?.currentExpense || 0"
+          [previousIncome]="pulse()?.previousIncome || 0"
+          [previousExpense]="pulse()?.previousExpense || 0"
+          [savingsRate]="pulse()?.currentSavingsRate || 0"
+        />
+      </div>
     </div>
 
-    <!-- Row 2: Performance Core (Charts & Summaries) -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-      <!-- Main Trend Chart -->
+    <!-- Row 2: trend and year to date -->
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
       <div class="lg:col-span-2">
-        <app-cash-flow-trend [data]="trends()"/>
+        <app-cash-flow-trend [data]="trends()" />
       </div>
-
-      <!-- Annual Recap Widget -->
       <div class="lg:col-span-1">
         <app-ytd-summary
           [year]="ytd()?.year || selectedYear()"
@@ -92,57 +105,48 @@
       </div>
     </div>
 
-    <!-- Row 3: Insights & Logistics -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <!-- Spend Breakdown (Analytics) -->
-      <div class="lg:col-span-1">
-        <app-category-chart
-          title="Top Categories"
-          [categories]="topCategories()"
-        />
+    <!-- Row 3: needs review, categories, merchants -->
+    <app-review-banner [items]="actions()" />
+
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-5">
+      <div class="lg:col-span-3">
+        <app-category-chart title="Top categories" [categories]="topCategories()" />
       </div>
 
-      <!-- Merchant Velocity (Engagement) -->
-      <div class="lg:col-span-1">
-        <p-card class="h-full card-soft">
+      <div class="lg:col-span-2">
+        <p-card class="h-full">
           <ng-template pTemplate="title">
-            <div class="flex items-center gap-2 mb-2">
-              <i class="pi pi-shop text-primary"></i>
-              <span
-                class="text-xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight">Top Merchants</span>
-            </div>
+            <span class="text-lg font-semibold text-surface-900 dark:text-surface-0"
+              >Top merchants</span
+            >
           </ng-template>
 
-          <div class="flex flex-col gap-4 mt-4">
+          <ul class="m-0 flex list-none flex-col p-0">
             @for (item of topMerchants(); track item.representativeMerchantId) {
-              <div
-                class="group flex justify-between items-center p-4 rounded-2xl border border-surface-100 dark:border-surface-800 hover:border-primary/30 transition-all duration-300">
+              <li
+                data-testid="merchant-row"
+                class="flex items-baseline justify-between gap-3 border-b border-surface-100 py-3 last:border-b-0 dark:border-surface-800"
+              >
                 <div class="flex flex-col">
-                  <span
-                    class="font-bold text-surface-900 dark:text-surface-0 tracking-tight">{{ item.displayName }}</span>
-                  <span class="text-xs font-black uppercase tracking-widest text-muted-color">Volume Leader</span>
+                  <span class="font-medium text-surface-900 dark:text-surface-0">{{
+                    item.displayName
+                  }}</span>
+                  <span class="text-sm text-muted-color">
+                    {{ item.transactionCount }}
+                    {{ item.transactionCount === 1 ? 'transaction' : 'transactions' }}
+                  </span>
                 </div>
-                <div class="flex flex-col items-end">
-                  <span class="font-mono font-black text-lg text-primary">{{ item.total | formatCurrency }}</span>
-                  <div class="flex items-center gap-1 text-xs font-bold text-muted-color uppercase">
-                    <i class="pi pi-clock text-xs"></i>
-                    <span>This Period</span>
-                  </div>
-                </div>
-              </div>
+                <span class="font-semibold tabular-nums text-surface-900 dark:text-surface-0">
+                  {{ item.total | formatCurrency }}
+                </span>
+              </li>
             } @empty {
-              <div class="flex flex-col items-center justify-center py-16 text-center animate-fade-in">
-                <i class="pi pi-receipt text-4xl text-surface-200 dark:text-surface-700 mb-2"></i>
-                <span class="text-sm font-bold text-surface-400 dark:text-surface-500 uppercase tracking-widest">No Merchant Activity</span>
-              </div>
+              <li data-testid="merchants-empty" class="py-10 text-center text-muted-color">
+                No spending recorded for this period.
+              </li>
             }
-          </div>
+          </ul>
         </p-card>
-      </div>
-
-      <!-- Actionable Intelligence (Logistics) -->
-      <div class="lg:col-span-1">
-        <app-action-center [items]="actions()"/>
       </div>
     </div>
   }

@@ -33,7 +33,7 @@ describe('YtdSummaryComponent', () => {
 
     // assert & verify
     const text: string = fixture.nativeElement.textContent;
-    expect(text).toContain('2026 Summary');
+    expect(text).toContain('2026 so far');
     expect(text).toContain('$12,000.00');
     expect(text).toContain('$8,000.00');
   });

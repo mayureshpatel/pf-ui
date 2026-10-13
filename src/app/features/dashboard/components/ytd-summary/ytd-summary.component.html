@@ -1,58 +1,52 @@
-<p-card class="h-full card-soft">
+<p-card class="h-full">
   <div class="flex flex-col gap-6">
-    <!-- Header -->
-    <div class="flex items-center justify-between">
-      <div class="flex flex-col">
-        <span class="text-xl font-black text-surface-900 dark:text-surface-0 tracking-tight">{{ year() }} Summary</span>
-        <span class="text-xs font-black uppercase tracking-widest text-surface-400 dark:text-surface-500">Year to Date</span>
-      </div>
-      <div class="bg-surface-100 dark:bg-surface-800 p-2 rounded-lg">
-        <i class="pi pi-calendar-clock text-surface-500 dark:text-surface-400"></i>
-      </div>
-    </div>
+    <span class="text-lg font-semibold text-surface-900 dark:text-surface-0"
+      >{{ year() }} so far</span
+    >
 
-    <!-- Main Metrics Grid -->
     <div class="grid grid-cols-1 gap-4">
-      <!-- Total Income -->
       <div
-        class="flex justify-between items-center p-3 rounded-xl border border-surface-100 dark:border-surface-800">
-        <span class="text-xs font-bold text-surface-500 dark:text-surface-400 uppercase">Income</span>
-        <span class="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+        class="flex justify-between items-center p-3 rounded-xl border border-surface-100 dark:border-surface-800"
+      >
+        <span class="text-sm text-muted-color">Income</span>
+        <span class="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
           {{ totalIncome() | formatCurrency }}
         </span>
       </div>
 
-      <!-- Total Expenses -->
       <div
-        class="flex justify-between items-center p-3 rounded-xl border border-surface-100 dark:border-surface-800">
-        <span class="text-xs font-bold text-surface-500 dark:text-surface-400 uppercase">Expenses</span>
-        <span class="font-mono font-bold text-rose-600 dark:text-rose-400">
+        class="flex justify-between items-center p-3 rounded-xl border border-surface-100 dark:border-surface-800"
+      >
+        <span class="text-sm text-muted-color">Expenses</span>
+        <span class="font-semibold tabular-nums text-rose-600 dark:text-rose-400">
           {{ totalExpense() | formatCurrency }}
         </span>
       </div>
 
-      <!-- Net Savings -->
-      <div class="flex justify-between items-center p-4 rounded-xl bg-primary/5 border border-primary/10">
-        <span class="text-xs font-black text-primary uppercase tracking-widest">Net Savings</span>
-        <span class="text-xl font-black font-mono text-primary">
+      <div
+        class="flex justify-between items-center p-4 rounded-xl bg-primary/5 border border-primary/10"
+      >
+        <span class="text-sm font-medium text-primary">Net savings</span>
+        <span class="text-xl font-bold tabular-nums text-primary">
           {{ netSavings() | formatCurrency }}
         </span>
       </div>
     </div>
 
-    <!-- Savings Rate Progress -->
-    <div class="flex flex-col gap-3 pt-2">
-      <div class="flex justify-between items-end">
-        <span class="text-xs font-black uppercase tracking-widest text-surface-400 dark:text-surface-500">Avg. Savings Rate</span>
-        <span [class]="savingsRateStyles() + ' px-2 py-0.5 rounded text-xs font-black font-mono'">
+    <div class="flex flex-col gap-3">
+      <div class="flex justify-between items-center">
+        <span class="text-sm text-muted-color">Average savings rate</span>
+        <span
+          [class]="savingsRateStyles() + ' px-2 py-0.5 rounded text-sm font-medium tabular-nums'"
+        >
           {{ avgSavingsRate().toFixed(1) }}%
         </span>
       </div>
-      <div class="h-2.5 w-full rounded-full overflow-hidden card-soft">
+      <div class="h-2 w-full rounded-full overflow-hidden bg-surface-200 dark:bg-surface-700">
         <div
-          class="bg-primary h-full rounded-full duration-1000 ease-out card-soft"
-          [style.width.%]="Math.min(Math.max(avgSavingsRate(), 0), 100)">
-        </div>
+          class="bg-primary h-full rounded-full"
+          [style.width.%]="Math.min(Math.max(avgSavingsRate(), 0), 100)"
+        ></div>
       </div>
     </div>
   </div>

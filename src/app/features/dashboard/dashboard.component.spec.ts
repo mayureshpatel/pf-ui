@@ -6,9 +6,11 @@ import { DashboardComponent } from './dashboard.component';
 import { DashboardApiService } from './services/dashboard-api.service';
 import { CategoryApiService } from '@features/categories/services/category-api.service';
 import { ToastService } from '@core/services/toast.service';
-import { DashboardPulse } from '@models/dashboard.model';
+import { ActionType, DashboardPulse } from '@models/dashboard.model';
 import { PulseCardComponent } from './components/pulse-card/pulse-card.component';
 import { YtdSummaryComponent } from './components/ytd-summary/ytd-summary.component';
+import { KeptCardComponent } from './components/kept-card/kept-card.component';
+import { ReviewBannerComponent } from './components/review-banner/review-banner.component';
 
 describe('DashboardComponent', () => {
   let fixture: ComponentFixture<DashboardComponent>;
@@ -38,6 +40,7 @@ describe('DashboardComponent', () => {
     representativeMerchantId: id,
     displayName: `Merchant ${id}`,
     total: id * 10,
+    transactionCount: id,
   }));
 
   function setUp(now: Date): void {
@@ -177,12 +180,13 @@ describe('DashboardComponent', () => {
       expect(mockDashboardApi.getPulse).toHaveBeenLastCalledWith(3, 2025);
     });
 
-    it('should pass loaded pulse data down to the pulse cards', () => {
+    it('should pass income and expenses to two pulse cards and everything else to the kept card', () => {
       // act
       fixture.detectChanges();
 
       // assert & verify
       const cards = fixture.debugElement.queryAll(By.directive(PulseCardComponent));
+      expect(cards.length).toBe(2);
       const income = cards[0].componentInstance as PulseCardComponent;
       expect(income.value()).toBe(1000);
       expect(income.previousValue()).toBe(900);
@@ -191,9 +195,13 @@ describe('DashboardComponent', () => {
       expect(expense.value()).toBe(500);
       expect(expense.previousValue()).toBe(450);
 
-      const savings = cards[2].componentInstance as PulseCardComponent;
-      expect(savings.value()).toBe(50);
-      expect(savings.type()).toBe('percent');
+      const kept = fixture.debugElement.query(By.directive(KeptCardComponent))
+        .componentInstance as KeptCardComponent;
+      expect(kept.income()).toBe(1000);
+      expect(kept.expense()).toBe(500);
+      expect(kept.previousIncome()).toBe(900);
+      expect(kept.previousExpense()).toBe(450);
+      expect(kept.savingsRate()).toBe(50);
     });
 
     it('should pass loaded ytd data down to the ytd summary widget', () => {
@@ -257,23 +265,155 @@ describe('DashboardComponent', () => {
     });
   });
 
-  describe('getSavingsRateColor', () => {
-    beforeEach(() => setUp(new Date(2026, 5, 15)));
+  describe('periodSubtitle', () => {
+    it('should compare a custom month with the previous calendar month', () => {
+      // arrange
+      setUp(new Date(2026, 9, 13));
+      fixture.detectChanges();
 
-    it('should return a neutral color for an undefined or zero rate', () => {
+      // act
+      component.selectedPreset.set('CUSTOM');
+      component.selectedMonth.set(3);
+      component.selectedYear.set(2026);
+
       // assert & verify
-      expect(component.getSavingsRateColor(undefined)).toBe('text-surface-500');
-      expect(component.getSavingsRateColor(0)).toBe('text-surface-500');
+      expect(component.periodSubtitle()).toBe('March 2026 compared with February 2026');
     });
 
-    it('should return a positive color for a positive rate', () => {
+    it('should wrap a custom January back to the prior December', () => {
+      // arrange
+      setUp(new Date(2026, 9, 13));
+      fixture.detectChanges();
+
+      // act
+      component.selectedPreset.set('CUSTOM');
+      component.selectedMonth.set(1);
+      component.selectedYear.set(2026);
+
       // assert & verify
-      expect(component.getSavingsRateColor(15)).toBe('text-emerald-600');
+      expect(component.periodSubtitle()).toBe('January 2026 compared with December 2025');
     });
 
-    it('should return a negative color for a negative rate', () => {
+    it('should say what a preset range is compared with', () => {
+      // arrange
+      setUp(new Date(2026, 9, 13));
+
+      // act
+      fixture.detectChanges();
+
+      // assert & verify -- default preset is LAST_MONTH
+      expect(component.periodSubtitle()).toContain(' compared with ');
+      expect(
+        fixture.nativeElement.querySelector('[data-testid="period-subtitle"]').textContent,
+      ).toContain(' compared with ');
+    });
+  });
+
+  describe('review banner', () => {
+    it('should not render when there is nothing to review', () => {
+      // arrange
+      setUp(new Date(2026, 9, 13));
+
+      // act
+      fixture.detectChanges();
+
       // assert & verify
-      expect(component.getSavingsRateColor(-15)).toBe('text-rose-600');
+      expect(fixture.nativeElement.querySelector('app-review-banner section')).toBeNull();
+    });
+
+    it('should pass action items to the banner and render an entry for each', () => {
+      // arrange
+      setUp(new Date(2026, 9, 13));
+      mockDashboardApi.getActionItems.mockReturnValue(
+        of([{ type: ActionType.UNCATEGORIZED, count: 7, message: 'x', route: '/transactions' }]),
+      );
+
+      // act
+      fixture.detectChanges();
+
+      // assert & verify
+      const banner = fixture.debugElement.query(By.directive(ReviewBannerComponent))
+        .componentInstance as ReviewBannerComponent;
+      expect(banner.items().length).toBe(1);
+      expect(
+        fixture.nativeElement.querySelector('app-review-banner button').textContent.trim(),
+      ).toBe('7 uncategorized expenses');
+    });
+  });
+
+  describe('top merchants', () => {
+    it('should show the transaction count with correct singular and plural wording', () => {
+      // arrange
+      setUp(new Date(2026, 9, 13));
+      mockDashboardApi.getMerchantBreakdown.mockReturnValue(
+        of([
+          {
+            representativeMerchantId: 1,
+            displayName: 'Solo Cafe',
+            total: 4.5,
+            transactionCount: 1,
+          },
+          { representativeMerchantId: 2, displayName: 'Busy Mart', total: 90, transactionCount: 6 },
+        ]),
+      );
+
+      // act
+      fixture.detectChanges();
+
+      // assert & verify
+      const rows: HTMLElement[] = Array.from(
+        fixture.nativeElement.querySelectorAll('[data-testid="merchant-row"]'),
+      );
+      expect(rows[0].textContent).toContain('Solo Cafe');
+      expect(rows[0].textContent).toContain('1 transaction');
+      expect(rows[0].textContent).not.toContain('1 transactions');
+      expect(rows[1].textContent).toContain('6 transactions');
+    });
+  });
+
+  describe('empty period', () => {
+    it('should show empty states and no banner when the period has no data', () => {
+      // arrange
+      setUp(new Date(2026, 9, 13));
+      mockDashboardApi.getPulse.mockReturnValue(
+        of({
+          currentIncome: 0,
+          previousIncome: 0,
+          currentExpense: 0,
+          previousExpense: 0,
+          currentSavingsRate: 0,
+          previousSavingsRate: 0,
+        }),
+      );
+      mockDashboardApi.getMerchantBreakdown.mockReturnValue(of([]));
+
+      // act
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(
+        fixture.nativeElement.querySelector('[data-testid="merchants-empty"]').textContent,
+      ).toContain('No spending recorded for this period.');
+      expect(fixture.nativeElement.querySelector('app-review-banner section')).toBeNull();
+      expect(fixture.nativeElement.textContent).not.toContain('NaN');
+    });
+  });
+
+  describe('loading state', () => {
+    it('should show skeleton placeholders, not a spinner, while loading', () => {
+      // arrange
+      setUp(new Date(2026, 9, 13));
+      fixture.detectChanges();
+
+      // act
+      component.loading.set(true);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(
+        fixture.nativeElement.querySelector('[data-testid="dashboard-skeleton"]'),
+      ).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('p-progressspinner')).toBeNull();
     });
   });
 });
