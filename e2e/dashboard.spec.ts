@@ -10,7 +10,7 @@ import {createTestAccount, createTestCategory, createTestTransaction, registerTe
 test.describe('Dashboard', () => {
   test.use({storageState: {cookies: [], origins: []}});
 
-  test('summary cards, cash-flow chart, category chart, and action center reflect real data', async ({page}) => {
+  test('kept card, cash-flow chart, category chart, and review banner reflect real data', async ({page}) => {
     await registerTestUser(page);
 
     const account = await createTestAccount(page, 'E2E Dashboard Account');
@@ -25,7 +25,7 @@ test.describe('Dashboard', () => {
     await createTestTransaction(page, account.id, category.id, 'E2E Dashboard Expense', {
       amount: 500, type: 'EXPENSE', transactionDate: lastMonthDate
     });
-    // Uncategorized on purpose, to trigger the action center's UNCATEGORIZED item -- that check
+    // Uncategorized on purpose, to trigger the review banner's UNCATEGORIZED item -- that check
     // is global (not period-scoped), so its own date doesn't need to fall in "last month" too.
     const uncategorized = await createTestTransaction(page, account.id, undefined, 'E2E Dashboard Uncategorized', {
       amount: 50, type: 'EXPENSE', transactionDate: lastMonthDate
@@ -33,29 +33,30 @@ test.describe('Dashboard', () => {
 
     await page.goto('/dashboard');
 
-    // Pulse cards -- scoped to the app-pulse-card element itself (not a DOM-climbing '..', which
-    // is ambiguous here: app-ytd-summary separately renders the same 72.5% savings rate for the
-    // same clean-slate data, and a '..' hop lands too high to exclude it).
-    const incomeCard = page.locator('app-pulse-card').filter({hasText: 'Total Income'});
+    // Pulse cards -- scoped to the app-pulse-card / app-kept-card element itself (not a
+    // DOM-climbing '..', which is ambiguous: app-ytd-summary separately renders the same 72.5%
+    // savings rate for the same clean-slate data).
+    const incomeCard = page.locator('app-pulse-card').filter({hasText: 'Income'});
     await expect(incomeCard.getByText('$2,000.00')).toBeVisible();
-    const expenseCard = page.locator('app-pulse-card').filter({hasText: 'Total Expenses'});
+    const expenseCard = page.locator('app-pulse-card').filter({hasText: 'Expenses'});
     await expect(expenseCard.getByText('$550.00')).toBeVisible();
-    const savingsCard = page.locator('app-pulse-card').filter({hasText: 'Savings Rate'});
-    await expect(savingsCard.getByText('72.5%')).toBeVisible();
+    const keptCard = page.locator('app-kept-card');
+    await expect(keptCard.getByText('$1,450.00')).toBeVisible();
+    await expect(keptCard.getByText('72.5% of income')).toBeVisible();
 
     // Charts render (canvas-backed p-chart; content isn't practically assertable, presence is)
-    await expect(page.getByText('Top Categories')).toBeVisible();
+    await expect(page.getByText('Top categories')).toBeVisible();
     await expect(page.locator('canvas').first()).toBeVisible();
     const categoryChartCanvasCount = await page.locator('canvas').count();
     expect(categoryChartCanvasCount).toBeGreaterThanOrEqual(2); // cash-flow-trend + category-chart
 
-    // Action center: the uncategorized expense above must surface here, and clicking through
+    // Review banner: the uncategorized expense above must surface here, and clicking through
     // must both land on and actually filter the Transactions page down to it. Bug regression:
     // the backend used to build this route as "?category=null", but TransactionsComponent only
     // ever reads "categoryName" off the URL -- the unrecognized param was silently dropped, and
     // the component's own URL-sync effect then replaced the URL with an empty query string on
     // load, so the button appeared to work but never actually filtered anything.
-    const actionButton = page.getByRole('button', {name: /Uncategorized expenses found/});
+    const actionButton = page.getByRole('button', {name: /uncategorized expense/i});
     await expect(actionButton).toBeVisible();
     await actionButton.click();
     await expect(page).toHaveURL(/\/transactions\?categoryName=null/);
