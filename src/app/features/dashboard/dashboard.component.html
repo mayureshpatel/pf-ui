@@ -44,9 +44,10 @@
     <div
       data-testid="dashboard-skeleton"
       class="flex flex-col gap-6"
+      role="status"
       aria-busy="true"
-      aria-label="Loading dashboard"
     >
+      <span class="sr-only">Loading dashboard</span>
       <div class="grid grid-cols-1 gap-6 md:grid-cols-4">
         <p-skeleton height="9rem" borderRadius="1rem" />
         <p-skeleton height="9rem" borderRadius="1rem" />

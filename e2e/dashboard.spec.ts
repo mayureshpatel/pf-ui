@@ -17,8 +17,10 @@ test.describe('Dashboard', () => {
     const parentCategory = await createTestCategory(page, 'E2E Dashboard Parent');
     const category = await createTestCategory(page, 'E2E Dashboard Category', parentCategory.id);
 
-    // Dashboard defaults to LAST_MONTH -- dated within August 2026 relative to today (2026-09-05).
-    const lastMonthDate = '2026-08-15T00:00:00Z';
+    // Dashboard defaults to LAST_MONTH -- date the transactions mid-way through last month,
+    // computed from today so this stays correct whenever the test runs.
+    const today = new Date();
+    const lastMonthDate = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 1, 15)).toISOString();
     await createTestTransaction(page, account.id, category.id, 'E2E Dashboard Income', {
       amount: 2000, type: 'INCOME', transactionDate: lastMonthDate
     });
@@ -41,7 +43,7 @@ test.describe('Dashboard', () => {
     const expenseCard = page.locator('app-pulse-card').filter({hasText: 'Expenses'});
     await expect(expenseCard.getByText('$550.00')).toBeVisible();
     const keptCard = page.locator('app-kept-card');
-    await expect(keptCard.getByText('$1,450.00')).toBeVisible();
+    await expect(keptCard.getByTestId('kept-amount')).toHaveText('$1,450.00');
     await expect(keptCard.getByText('72.5% of income')).toBeVisible();
 
     // Charts render (canvas-backed p-chart; content isn't practically assertable, presence is)

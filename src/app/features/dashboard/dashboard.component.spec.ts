@@ -426,6 +426,9 @@ describe('DashboardComponent', () => {
         fixture.nativeElement.querySelector('[data-testid="dashboard-skeleton"]'),
       ).not.toBeNull();
       expect(fixture.nativeElement.querySelector('p-progressspinner')).toBeNull();
+      const skeleton = fixture.nativeElement.querySelector('[data-testid="dashboard-skeleton"]');
+      expect(skeleton.getAttribute('role')).toBe('status');
+      expect(skeleton.textContent).toContain('Loading dashboard');
     });
   });
 });

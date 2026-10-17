@@ -12,7 +12,12 @@
       </span>
       <span
         data-testid="kept-rate"
-        class="rounded-full bg-primary/10 px-2.5 py-0.5 text-sm font-medium text-primary"
+        class="rounded-full px-2.5 py-0.5 text-sm font-medium"
+        [class]="
+          savingsRate() < 0 && income() > 0
+            ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+            : 'bg-primary/10 text-primary'
+        "
       >
         {{ rateLabel() }}
       </span>

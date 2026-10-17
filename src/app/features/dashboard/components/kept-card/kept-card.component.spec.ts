@@ -76,6 +76,23 @@ describe('KeptCardComponent', () => {
   });
 
   describe('savings rate pill and bar', () => {
+    it('should not show a negative savings rate in the healthy colour', () => {
+      // act
+      setInputs({
+        income: 1000,
+        expense: 1500,
+        previousIncome: 1000,
+        previousExpense: 900,
+        savingsRate: -50,
+      });
+
+      // assert & verify
+      const pill = query('[data-testid="kept-rate"]');
+      expect(pill.textContent?.trim()).toBe('-50.0% of income');
+      expect(pill.className).toContain('text-rose-600');
+      expect(pill.className).not.toContain('text-primary');
+    });
+
     it('should show the rate as a share of income and size the bar to it', () => {
       // act
       setInputs({
