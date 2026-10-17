@@ -263,7 +263,10 @@ export class DashboardComponent implements OnInit {
           this.trends.set(res.trends);
           this.ytd.set(res.ytd);
           this.actions.set(res.actions);
-          this.topMerchants.set(res.merchants.slice(0, 5));
+          // the endpoint returns merchants unordered, so rank before taking the top 5
+          this.topMerchants.set(
+            [...res.merchants].sort((a, b): number => b.total - a.total).slice(0, 5),
+          );
           this.topCategories.set(res.categories);
         },
         error: (err: unknown): void => {

@@ -236,6 +236,16 @@ describe('DashboardComponent', () => {
       expect(component.topMerchants().length).toBe(5); // capped from the 7 mocked -- see next test
     });
 
+    it('should keep the 5 highest-spending merchants, largest first, whatever order the API returns', () => {
+      // arrange -- mockMerchants totals are 10..70 in ascending order, so a naive slice would
+      // keep the 5 smallest
+      // act
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.topMerchants().map((m) => m.total)).toEqual([70, 60, 50, 40, 30]);
+    });
+
     it('should cap topMerchants to the top 5', () => {
       // act
       fixture.detectChanges();
@@ -364,10 +374,12 @@ describe('DashboardComponent', () => {
       const rows: HTMLElement[] = Array.from(
         fixture.nativeElement.querySelectorAll('[data-testid="merchant-row"]'),
       );
-      expect(rows[0].textContent).toContain('Solo Cafe');
-      expect(rows[0].textContent).toContain('1 transaction');
-      expect(rows[0].textContent).not.toContain('1 transactions');
-      expect(rows[1].textContent).toContain('6 transactions');
+      // ranked by total, so Busy Mart ($90) comes before Solo Cafe ($4.50)
+      expect(rows[0].textContent).toContain('Busy Mart');
+      expect(rows[0].textContent).toContain('6 transactions');
+      expect(rows[1].textContent).toContain('Solo Cafe');
+      expect(rows[1].textContent).toContain('1 transaction');
+      expect(rows[1].textContent).not.toContain('1 transactions');
     });
   });
 
