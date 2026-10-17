@@ -1,0 +1,49 @@
+<p-card class="h-full">
+  <div class="flex flex-col gap-3">
+    <span class="text-sm font-medium text-muted-color">Kept this period</span>
+
+    <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+      <span
+        data-testid="kept-amount"
+        class="text-4xl font-bold tracking-tight tabular-nums"
+        [class]="isNegative() ? 'text-rose-600 dark:text-rose-400' : 'text-primary'"
+      >
+        {{ kept() | formatCurrency }}
+      </span>
+      <span
+        data-testid="kept-rate"
+        class="rounded-full px-2.5 py-0.5 text-sm font-medium"
+        [class]="
+          savingsRate() < 0 && income() > 0
+            ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+            : 'bg-primary/10 text-primary'
+        "
+      >
+        {{ rateLabel() }}
+      </span>
+    </div>
+
+    <span data-testid="kept-change" class="flex items-center gap-1.5 text-sm text-muted-color">
+      @if (change() > 0) {
+        <i class="pi pi-arrow-up text-xs text-emerald-600 dark:text-emerald-400"></i>
+        {{ changeAmount() | formatCurrency }} more than last period
+      } @else if (change() < 0) {
+        <i class="pi pi-arrow-down text-xs text-rose-600 dark:text-rose-400"></i>
+        {{ changeAmount() | formatCurrency }} less than last period
+      } @else {
+        Same as last period
+      }
+    </span>
+
+    <div
+      role="progressbar"
+      aria-label="Savings rate"
+      aria-valuemin="0"
+      aria-valuemax="100"
+      [attr.aria-valuenow]="barWidth()"
+      class="h-2 w-full overflow-hidden rounded-full bg-surface-200 dark:bg-surface-700"
+    >
+      <div class="h-full rounded-full bg-primary" [style.width.%]="barWidth()"></div>
+    </div>
+  </div>
+</p-card>

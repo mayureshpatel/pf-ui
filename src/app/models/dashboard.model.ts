@@ -104,18 +104,18 @@ export interface CategoryBreakdown {
 }
 
 /**
- * Represents a single merchant group's breakdown (PF-841). Merchants deliberately sharing one
- * clean name are aggregated server-side into one row, so this no longer nests a single `Merchant`
- * -- `representativeMerchantId` is only a stable key/track-by id, not "the" merchant.
+ * Represents a single merchant's spending breakdown for a period.
  *
- * @property representativeMerchantId - A stable id for this group.
- * @property displayName - The group's clean name, or its member's original name if unset.
- * @property total - The total amount spent on this group.
+ * @property representativeMerchantId - The merchant's id, a stable key/track-by id.
+ * @property displayName - The merchant's name.
+ * @property total - The total amount spent at this merchant.
+ * @property transactionCount - The number of expense transactions summed into `total`.
  */
 export interface MerchantBreakdown {
   representativeMerchantId: number;
   displayName: string;
   total: number;
+  transactionCount: number;
 }
 
 /**

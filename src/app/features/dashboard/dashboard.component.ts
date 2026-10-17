@@ -16,7 +16,7 @@ import { FormsModule } from '@angular/forms';
 import { finalize, forkJoin } from 'rxjs';
 import { CardModule } from 'primeng/card';
 import { Select } from 'primeng/select';
-import { ProgressSpinnerModule } from 'primeng/progressspinner';
+import { SkeletonModule } from 'primeng/skeleton';
 import { SelectButtonModule } from 'primeng/selectbutton';
 
 import {
@@ -35,7 +35,14 @@ import { ToastService } from '@core/services/toast.service';
 import { PulseCardComponent } from './components/pulse-card/pulse-card.component';
 import { CashFlowTrendComponent } from './components/cash-flow-trend/cash-flow-trend.component';
 import { YtdSummaryComponent } from './components/ytd-summary/ytd-summary.component';
-import { ActionCenterComponent } from './components/action-center/action-center.component';
+import { KeptCardComponent } from './components/kept-card/kept-card.component';
+import { ReviewBannerComponent } from './components/review-banner/review-banner.component';
+import {
+  describePeriod,
+  monthRange,
+  previousMonthRange,
+  previousRange,
+} from './utils/period-label';
 import { CategoryChartComponent } from './components/category-chart/category-chart.component';
 import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen-toolbar';
 import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
@@ -44,7 +51,7 @@ import { PageErrorStateComponent } from '@shared/components/page-error-state/pag
 type RangePreset = 'THIS_MONTH' | 'LAST_MONTH' | 'THIS_YEAR' | 'LAST_YEAR' | 'CUSTOM';
 
 /**
- * Main dashboard component serving as the operational command center.
+ * Main dashboard component: how the user is doing this period, plus what needs review.
  *
  * Orchestrates data from multiple domains (accounts, budgets, transactions)
  * and provides reactive filtering by time period.
@@ -58,12 +65,13 @@ type RangePreset = 'THIS_MONTH' | 'LAST_MONTH' | 'THIS_YEAR' | 'LAST_YEAR' | 'CU
     CardModule,
     Select,
     SelectButtonModule,
-    ProgressSpinnerModule,
+    SkeletonModule,
     ScreenToolbarComponent,
     PulseCardComponent,
     CashFlowTrendComponent,
     YtdSummaryComponent,
-    ActionCenterComponent,
+    KeptCardComponent,
+    ReviewBannerComponent,
     CategoryChartComponent,
     FormatCurrencyPipe,
     PageErrorStateComponent,
@@ -154,6 +162,22 @@ export class DashboardComponent implements OnInit {
     };
   });
 
+  /**
+   * Plain-language description of the selected period and what it is compared with. Mirrors the
+   * backend: a custom month is compared with the previous calendar month, a preset range with
+   * the immediately preceding window of the same number of days.
+   */
+  readonly periodSubtitle: Signal<string> = computed((): string => {
+    const range = this.periodRange();
+    if (range) {
+      return describePeriod(range, previousRange(range));
+    }
+
+    const month: number = this.selectedMonth();
+    const year: number = this.selectedYear();
+    return describePeriod(monthRange(month, year), previousMonthRange(month, year));
+  });
+
   readonly presetOptions = [
     { label: 'This Month', value: 'THIS_MONTH' },
     { label: 'Last Month', value: 'LAST_MONTH' },
@@ -239,7 +263,10 @@ export class DashboardComponent implements OnInit {
           this.trends.set(res.trends);
           this.ytd.set(res.ytd);
           this.actions.set(res.actions);
-          this.topMerchants.set(res.merchants.slice(0, 5));
+          // the endpoint returns merchants unordered, so rank before taking the top 5
+          this.topMerchants.set(
+            [...res.merchants].sort((a, b): number => b.total - a.total).slice(0, 5),
+          );
           this.topCategories.set(res.categories);
         },
         error: (err: unknown): void => {
@@ -273,14 +300,5 @@ export class DashboardComponent implements OnInit {
       years.push({ label: year.toString(), value: year });
     }
     this.yearOptions = years;
-  }
-
-  /**
-   * Returns Tailwind classes for styling the savings rate.
-   * @param rate - The savings percentage.
-   */
-  getSavingsRateColor(rate: number | undefined): string {
-    if (!rate) return 'text-surface-500';
-    return rate > 0 ? 'text-emerald-600' : 'text-rose-600';
   }
 }

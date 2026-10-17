@@ -1583,6 +1583,8 @@ export interface components {
             representativeMerchantId?: number;
             displayName?: string;
             total?: number;
+            /** Format: int64 */
+            transactionCount?: number;
         };
         CategoryBreakdownDto: {
             category?: components["schemas"]["CategoryDto"];

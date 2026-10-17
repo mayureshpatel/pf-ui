@@ -15,14 +15,15 @@ import { expect, test } from '@playwright/test';
  * re-verify the real count via `GET /transactions?type=EXPENSE&categoryName=null` rather than
  * assuming this number stays fixed if the seed data changes again.
  */
-test.describe('Dashboard - Action Center count', () => {
+test.describe('Dashboard - review banner count', () => {
   test('the UNCATEGORIZED action item displays the real transaction count, not a dollar sum', async ({
     page,
   }) => {
     await page.goto('/dashboard');
 
-    const actionCenter = page.locator('p-card', { hasText: 'Action Center' });
-    await expect(actionCenter.getByText('Uncategorized expenses found')).toBeVisible();
-    await expect(actionCenter.getByText('2594 unresolved items')).toBeVisible();
+    const banner = page.getByRole('region', { name: 'Needs your review' });
+    await expect(
+      banner.getByRole('button', { name: '2,594 uncategorized expenses' }),
+    ).toBeVisible();
   });
 });

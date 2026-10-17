@@ -1,0 +1,21 @@
+@if (items().length > 0) {
+  <section
+    aria-label="Needs your review"
+    class="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/50 dark:bg-amber-950/30"
+  >
+    <h2 class="text-sm font-semibold text-amber-900 dark:text-amber-200">Needs your review</h2>
+    <ul class="m-0 flex list-none flex-wrap gap-2 p-0">
+      @for (entry of entries(); track entry.item.type) {
+        <li>
+          <button
+            type="button"
+            class="cursor-pointer rounded-full border border-amber-300 bg-surface-0 px-3 py-1 text-sm font-medium text-amber-900 hover:border-amber-500 dark:border-amber-800 dark:bg-surface-900 dark:text-amber-100"
+            (click)="open(entry.item)"
+          >
+            {{ entry.label }}
+          </button>
+        </li>
+      }
+    </ul>
+  </section>
+}
