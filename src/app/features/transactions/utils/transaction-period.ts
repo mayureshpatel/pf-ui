@@ -69,5 +69,8 @@ export function detectPreset(range: PeriodRange, today: Date): PeriodPreset {
  * @param filter - The filter to inspect.
  */
 export function hasAnyFilter(filter: TransactionFilter): boolean {
-  return Object.values(filter).some((value: unknown): boolean => value !== undefined);
+  // null is what a cleared number input reports, and it is not an applied filter either
+  return Object.values(filter).some(
+    (value: unknown): boolean => value !== undefined && value !== null,
+  );
 }

@@ -306,14 +306,6 @@ export class TransactionsComponent implements OnInit {
    */
   ngOnInit(): void {
     this.hydrateFromParams(this.route.snapshot.queryParams);
-    // a bare /transactions shows This month; a deep link that carries any filter shows everything
-    // that matches it (the dashboard's uncategorized link would otherwise hide older rows)
-    if (!hasAnyFilter(this.state().filter)) {
-      this.state.update((s: TransactionState) => ({
-        ...s,
-        filter: { ...s.filter, ...presetRange('THIS_MONTH', new Date()) },
-      }));
-    }
     this.handleActionParam(this.route.snapshot.queryParams);
     this.loadAccounts();
     this.loadCategories();
@@ -391,7 +383,16 @@ export class TransactionsComponent implements OnInit {
    * @param params - The query parameters from the active route.
    */
   private hydrateFromParams(params: Params): void {
-    const newState: TransactionState = this.urlState.hydrateFromParams(params);
+    const hydrated: TransactionState = this.urlState.hydrateFromParams(params);
+    // a bare /transactions shows This month; a URL that carries any filter, or says period=all,
+    // shows what it asks for (the dashboard's uncategorized link would otherwise hide older rows)
+    const useDefaultPeriod: boolean = params['period'] !== 'all' && !hasAnyFilter(hydrated.filter);
+    const newState: TransactionState = useDefaultPeriod
+      ? {
+          ...hydrated,
+          filter: { ...hydrated.filter, ...presetRange('THIS_MONTH', new Date()) },
+        }
+      : hydrated;
     const currentState: TransactionState = this.state();
 
     if (JSON.stringify(newState) !== JSON.stringify(currentState)) {
@@ -467,6 +468,8 @@ export class TransactionsComponent implements OnInit {
 
   /** Switches between All and Needs a category. */
   onTabChange(tab: ReviewTab): void {
+    // clicking All while already on All must not silently drop other filters such as a category
+    if (tab === 'ALL' && this.activeTab() === 'ALL') return;
     const filter: TransactionFilter = { ...this.state().filter };
     filter.categoryName = tab === 'NEEDS_CATEGORY' ? UNCATEGORIZED : undefined;
     this.onFilterChange(filter);
@@ -502,8 +505,33 @@ export class TransactionsComponent implements OnInit {
     if (rows.length === 1) {
       this.openEditDialog(rows[0]);
     } else {
-      this.panelMode.set('bulk');
+      this.confirmDiscardIfDirty((): void => this.panelMode.set('bulk'));
     }
+  }
+
+  /** Closes the panel from its own Close button or Escape, asking first if edits are unsaved. */
+  onPanelClose(): void {
+    this.confirmDiscardIfDirty((): void => this.closePanel());
+  }
+
+  /**
+   * Runs an action that would replace the single-transaction form, after asking the user to
+   * confirm if that form has unsaved changes. Anything else runs straight away.
+   */
+  private confirmDiscardIfDirty(proceed: () => void): void {
+    const editing: boolean = this.panelMode() === 'single' || this.panelMode() === 'create';
+    if (!editing || !this.editForm()?.form.dirty) {
+      proceed();
+      return;
+    }
+    this.confirmationService.confirm({
+      header: 'Discard changes?',
+      message: 'You have unsaved changes to this transaction. Discard them?',
+      acceptLabel: 'Discard',
+      rejectLabel: 'Keep editing',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: proceed,
+    });
   }
 
   /** Opens the panel on the row whose "Choose category" pill was clicked. */
@@ -548,8 +576,10 @@ export class TransactionsComponent implements OnInit {
    * Opens the create transaction dialog.
    */
   openCreateDialog(): void {
-    this.selectedTransaction.set(null);
-    this.panelMode.set('create');
+    this.confirmDiscardIfDirty((): void => {
+      this.selectedTransaction.set(null);
+      this.panelMode.set('create');
+    });
   }
 
   /**
@@ -557,8 +587,12 @@ export class TransactionsComponent implements OnInit {
    * @param txn the transaction to edit
    */
   openEditDialog(txn: Transaction): void {
-    this.selectedTransaction.set(txn);
-    this.panelMode.set('single');
+    // clicking the row that is already open must not ask, or reset, anything
+    if (this.panelMode() === 'single' && this.selectedTransaction()?.id === txn.id) return;
+    this.confirmDiscardIfDirty((): void => {
+      this.selectedTransaction.set(txn);
+      this.panelMode.set('single');
+    });
   }
 
   /**

@@ -109,4 +109,25 @@ describe('TransactionSidePanelComponent', () => {
       trigger.remove();
     });
   });
+
+  describe('nested widgets', () => {
+    it('should not close when Escape was already handled by a widget inside the panel', () => {
+      // arrange -- PrimeNG's autocomplete and date picker preventDefault their own Escape
+      const body = q<HTMLElement>('[data-testid="body"]');
+      body.addEventListener('keydown', (e: Event): void => e.preventDefault());
+
+      // act
+      body.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }),
+      );
+
+      // assert & verify
+      expect(host.closed).not.toHaveBeenCalled();
+    });
+
+    it('should give the Save button enough contrast for white text', () => {
+      // assert & verify -- primary-500 is only about 2.5:1 with white; 700 is about 5.5:1
+      expect(button(/Save changes/)?.className).toContain('bg-primary-700');
+    });
+  });
 });

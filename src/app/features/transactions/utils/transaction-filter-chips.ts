@@ -57,8 +57,11 @@ export function buildFilterChips(
   if (filter.type) {
     chips.push({ key: 'type', label: TYPE_LABELS[filter.type] ?? filter.type });
   }
-  if (filter.minAmount !== undefined || filter.maxAmount !== undefined) {
-    chips.push({ key: 'amount', label: amountLabel(filter.minAmount, filter.maxAmount) });
+  // a cleared number input reports null rather than undefined; neither is a filter
+  const min: number | undefined = filter.minAmount ?? undefined;
+  const max: number | undefined = filter.maxAmount ?? undefined;
+  if (min !== undefined || max !== undefined) {
+    chips.push({ key: 'amount', label: amountLabel(min, max) });
   }
   if (filter.tagId) {
     const tag = lookups.tags.find((t) => t.id === filter.tagId);

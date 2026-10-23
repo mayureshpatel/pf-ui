@@ -73,4 +73,11 @@ describe('transaction-period', () => {
       expect(hasAnyFilter({ description: undefined })).toBe(false);
     });
   });
+
+  describe('null filter values', () => {
+    it('should not count a null (an emptied input) as an applied filter', () => {
+      // assert & verify
+      expect(hasAnyFilter({ minAmount: null as unknown as undefined })).toBe(false);
+    });
+  });
 });

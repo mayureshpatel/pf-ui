@@ -1,4 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { TransactionEditFormComponent } from './components/transaction-edit-form/transaction-edit-form.component';
 import { TransactionsComponent } from './transactions.component';
 import { TransactionApiService } from './services/transaction-api.service';
 import { AccountApiService } from '@features/accounts/services/account-api.service';
@@ -11,7 +13,7 @@ import { ActionType } from '@models/dashboard.model';
 import { toLocalDateString } from '@shared/utils/transaction.utils';
 import { Confirmation, ConfirmationService, MessageService } from 'primeng/api';
 import { ActivatedRoute, Params, Router } from '@angular/router';
-import { Observable, of, throwError } from 'rxjs';
+import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { vi, Mock, Mocked } from 'vitest';
 import {
@@ -1142,6 +1144,118 @@ describe('TransactionsComponent', () => {
         expect(mockToast.error).toHaveBeenCalledWith('boom');
         expect(component.selectedIds()).toEqual([1, 2]);
         expect(mockToast.success).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('default period and the URL', () => {
+      it('should keep All time across a refresh when the URL says period=all', () => {
+        // act
+        openAt({ page: '2', period: 'all' });
+
+        // assert & verify
+        expect(component.state().filter.startDate).toBeUndefined();
+        expect(component.state().page).toBe(2);
+      });
+
+      it('should apply This month to a URL with only paging, such as an older bookmark', () => {
+        // act
+        openAt({ page: '2' });
+
+        // assert & verify
+        expect(component.state().filter.startDate).toBeDefined();
+      });
+
+      it('should apply This month again when the sidebar link navigates to a bare /transactions', () => {
+        // arrange
+        const queryParams = new BehaviorSubject<Params>({});
+        mockActivatedRoute.queryParams = queryParams;
+        openAt({});
+        component.onFilterChange({});
+        expect(component.state().filter.startDate).toBeUndefined();
+
+        // act
+        queryParams.next({});
+
+        // assert & verify
+        expect(component.state().filter.startDate).toBeDefined();
+      });
+    });
+
+    describe('unsaved edits', () => {
+      const dirtyEditForm = (): void => {
+        fixture.detectChanges();
+        const form = fixture.debugElement.query(By.directive(TransactionEditFormComponent))
+          .componentInstance as TransactionEditFormComponent;
+        form.form.markAsDirty();
+      };
+
+      it('should ask before switching rows while the form has unsaved changes', () => {
+        // arrange
+        openAt({}, [row(1), row(2)]);
+        component.openEditDialog(row(1));
+        dirtyEditForm();
+
+        // act
+        component.openEditDialog(row(2));
+
+        // assert & verify -- nothing changes until the user agrees to discard
+        expect(mockConfirmationService.confirm).toHaveBeenCalledTimes(1);
+        expect(component.selectedTransaction()?.id).toBe(1);
+
+        // act
+        mockConfirmationService.confirm.mock.calls[0][0].accept!();
+
+        // assert & verify
+        expect(component.selectedTransaction()?.id).toBe(2);
+      });
+
+      it('should switch rows without asking when the form is untouched', () => {
+        // arrange
+        openAt({}, [row(1), row(2)]);
+        component.openEditDialog(row(1));
+        fixture.detectChanges();
+
+        // act
+        component.openEditDialog(row(2));
+
+        // assert & verify
+        expect(mockConfirmationService.confirm).not.toHaveBeenCalled();
+        expect(component.selectedTransaction()?.id).toBe(2);
+      });
+
+      it('should ask before Edit more replaces a dirty single form with the bulk form', () => {
+        // arrange
+        openAt({}, [row(1), row(2)]);
+        component.openEditDialog(row(1));
+        dirtyEditForm();
+        component.onSelectionChange([1, 2]);
+
+        // act
+        component.onEditMore();
+
+        // assert & verify
+        expect(mockConfirmationService.confirm).toHaveBeenCalledTimes(1);
+        expect(component.panelMode()).toBe('single');
+
+        // act
+        mockConfirmationService.confirm.mock.calls[0][0].accept!();
+
+        // assert & verify
+        expect(component.panelMode()).toBe('bulk');
+      });
+    });
+
+    describe('tabs', () => {
+      it('should leave other filters alone when All is clicked while already on All', () => {
+        // arrange
+        openAt({});
+        component.onFilterChange({ categoryName: 'Groceries' });
+
+        // act
+        component.onTabChange('ALL');
+
+        // assert & verify
+        expect(component.state().filter.categoryName).toBe('Groceries');
       });
     });
 

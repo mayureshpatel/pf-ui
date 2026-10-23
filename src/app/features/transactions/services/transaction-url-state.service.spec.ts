@@ -145,7 +145,8 @@ describe('TransactionUrlStateService', () => {
       const params: Params = service.buildQueryParams(state);
 
       // Assert & verify
-      expect(Object.keys(params)).toEqual(['merchant']);
+      // period=all is the explicit All time marker, written whenever no dates are set
+      expect(Object.keys(params).sort()).toEqual(['merchant', 'period']);
     });
   });
 
@@ -184,6 +185,35 @@ describe('TransactionUrlStateService', () => {
         endDate: undefined,
         tagId: undefined,
       });
+    });
+  });
+
+  describe('explicit All time marker', () => {
+    it('should write period=all when no dates are set, so All time survives a refresh', () => {
+      // act
+      const params: Params = service.buildQueryParams({
+        filter: {},
+        page: 2,
+        size: 20,
+        sort: 'date,desc',
+      });
+
+      // assert & verify
+      expect(params['period']).toBe('all');
+      expect(params['page']).toBe(2);
+    });
+
+    it('should not write period when dates are set', () => {
+      // act
+      const params: Params = service.buildQueryParams({
+        filter: { startDate: new Date(2026, 9, 1) },
+        page: 0,
+        size: 20,
+        sort: 'date,desc',
+      });
+
+      // assert & verify
+      expect(params['period']).toBeUndefined();
     });
   });
 });

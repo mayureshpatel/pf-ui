@@ -1,6 +1,8 @@
 import { Mock, vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { TransactionFilter } from '@models/transaction.model';
+import { Popover } from 'primeng/popover';
+import { presetRange } from '../../utils/transaction-period';
 import { TransactionFilterBarComponent } from './transaction-filter-bar.component';
 
 describe('TransactionFilterBarComponent', () => {
@@ -160,5 +162,37 @@ describe('TransactionFilterBarComponent', () => {
 
     // assert & verify
     expect(q('[data-testid="result-line"]').textContent?.trim()).toBe('3,211 transactions match');
+  });
+
+  it('should show the custom date pickers after choosing Custom range from This month', () => {
+    // arrange
+    const range = presetRange('THIS_MONTH', new Date());
+    render({ startDate: range.startDate, endDate: range.endDate });
+    expect(fixture.nativeElement.querySelectorAll('p-datepicker').length).toBe(0);
+
+    // act
+    fixture.componentInstance.onPresetChange('CUSTOM');
+    fixture.detectChanges();
+
+    // assert & verify
+    expect(fixture.nativeElement.querySelectorAll('p-datepicker').length).toBe(2);
+  });
+
+  it('should drop cleared (null) amounts instead of sending them as filters', () => {
+    // arrange
+    render({});
+    const popover = { hide: vi.fn() } as unknown as Popover;
+
+    // act
+    fixture.componentInstance.onApplyPopover(popover, {
+      accountId: 3,
+      minAmount: null as unknown as undefined,
+    });
+
+    // assert & verify
+    const sent = emitted.mock.calls.at(-1)![0];
+    expect(sent.accountId).toBe(3);
+    expect(sent.minAmount).toBeUndefined();
+    expect(sent.minAmount).not.toBeNull();
   });
 });

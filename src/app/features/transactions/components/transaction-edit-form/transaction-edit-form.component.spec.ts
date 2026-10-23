@@ -379,4 +379,32 @@ describe('TransactionEditFormComponent', () => {
       expect(component.valid()).toBe(false);
     });
   });
+
+  describe('background refreshes while editing', () => {
+    const existing = {
+      id: 1,
+      account: { id: 1, name: 'Checking' },
+      category: { id: 5, name: 'Groceries' },
+      amount: 42.5,
+      date: '2026-03-15T00:00:00Z',
+      description: 'FIRST',
+      type: 'EXPENSE',
+      merchant: null,
+      tags: [],
+    };
+
+    it('should keep what the user typed when the same transaction is refreshed in the background', () => {
+      // arrange
+      fixture.componentRef.setInput('transaction', existing);
+      fixture.detectChanges();
+      component.form.patchValue({ description: 'TYPED' });
+
+      // act -- a reload hands the form a new object for the same row
+      fixture.componentRef.setInput('transaction', { ...existing });
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.form.getRawValue().description).toBe('TYPED');
+    });
+  });
 });

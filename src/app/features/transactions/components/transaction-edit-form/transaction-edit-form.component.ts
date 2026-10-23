@@ -191,6 +191,11 @@ export class TransactionEditFormComponent {
    *  history -- switchMap cancels any still-in-flight search when a newer keystroke arrives. */
   private readonly merchantSearch$: Subject<string> = new Subject<string>();
 
+  /** Which transaction is shown (null for a new one). */
+  private readonly transactionId: Signal<number | null> = computed(
+    (): number | null => this.transaction()?.id ?? null,
+  );
+
   /** Whether the form is currently valid (reactive, for the panel's Save button). */
   readonly valid: Signal<boolean> = toSignal(
     this.form.statusChanges.pipe(
@@ -204,8 +209,9 @@ export class TransactionEditFormComponent {
     this.loadData();
 
     // reset the form whenever a different transaction (or none, for create) is shown
+    // (by id, so a background refresh of the same row never wipes what the user is typing)
     effect((): void => {
-      this.transaction();
+      this.transactionId();
       untracked((): void => this.onShow());
     });
 

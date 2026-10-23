@@ -9,6 +9,8 @@ import {
   output,
   OutputEmitterRef,
   Signal,
+  signal,
+  WritableSignal,
 } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -86,11 +88,10 @@ export class TransactionFilterBarComponent {
   ];
 
   /** Whether the user chose Custom range from the buttons (the pickers then stay visible). */
-  private customChosen = false;
+  private readonly customChosen: WritableSignal<boolean> = signal(false);
 
   readonly preset: Signal<PeriodPreset> = computed((): PeriodPreset => {
-    const detected: PeriodPreset = detectPreset(this.filter(), new Date());
-    return this.customChosen && detected === 'ALL_TIME' ? 'CUSTOM' : detected;
+    return this.customChosen() ? 'CUSTOM' : detectPreset(this.filter(), new Date());
   });
 
   readonly chips: Signal<FilterChip[]> = computed((): FilterChip[] =>
@@ -109,7 +110,7 @@ export class TransactionFilterBarComponent {
   /** Applies a period preset (or reveals the custom pickers). */
   onPresetChange(preset: PeriodPreset | null): void {
     if (!preset) return;
-    this.customChosen = preset === 'CUSTOM';
+    this.customChosen.set(preset === 'CUSTOM');
     if (preset === 'CUSTOM') {
       this.filterChange.emit({ ...this.filter() });
       return;
@@ -149,7 +150,11 @@ export class TransactionFilterBarComponent {
 
   /** Applies the popover's values as one change. */
   onApplyPopover(popover: Popover, draft: PopoverDraft): void {
-    this.filterChange.emit({ ...this.filter(), ...draft });
+    // a cleared number input reports null; send undefined so it is simply not a filter
+    const cleaned: PopoverDraft = Object.fromEntries(
+      Object.entries(draft).map(([key, value]) => [key, value ?? undefined]),
+    );
+    this.filterChange.emit({ ...this.filter(), ...cleaned });
     popover.hide();
   }
 

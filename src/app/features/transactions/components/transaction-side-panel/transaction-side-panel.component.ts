@@ -33,6 +33,16 @@ export class TransactionSidePanelComponent {
   readonly closePanel: OutputEmitterRef<void> = output<void>();
   readonly delete: OutputEmitterRef<void> = output<void>();
 
+  /**
+   * Closes the panel on Escape unless a widget inside it (the merchant suggestions, the date
+   * picker) already used the key to dismiss its own overlay.
+   */
+  onEscape(event: Event): void {
+    if (!event.defaultPrevented) {
+      this.closePanel.emit();
+    }
+  }
+
   private readonly host: ElementRef<HTMLElement> = inject(ElementRef<HTMLElement>);
 
   /** Whatever had focus when the panel opened (usually the row that was clicked). */

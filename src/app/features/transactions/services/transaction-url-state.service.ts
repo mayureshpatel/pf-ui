@@ -64,6 +64,8 @@ export class TransactionUrlStateService {
     if (filter.startDate) queryParams['startDate'] = toLocalDateString(filter.startDate);
     if (filter.endDate) queryParams['endDate'] = toLocalDateString(filter.endDate);
     if (filter.tagId) queryParams['tagId'] = filter.tagId;
+    // an explicit marker, so All time survives a refresh instead of falling back to This month
+    if (!filter.startDate && !filter.endDate) queryParams['period'] = 'all';
 
     if (page > 0) queryParams['page'] = page;
     if (size !== 20) queryParams['size'] = size;

@@ -76,4 +76,13 @@ describe('transaction-filter-chips', () => {
     });
     expect(removeFilterChip(filter, 'accountId').accountId).toBeUndefined();
   });
+
+  it('should ignore a null amount, as a cleared number input produces', () => {
+    // assert & verify
+    expect(buildFilterChips({ minAmount: null as unknown as undefined }, LOOKUPS)).toEqual([]);
+    expect(
+      buildFilterChips({ minAmount: 20, maxAmount: null as unknown as undefined }, LOOKUPS)[0]
+        .label,
+    ).toBe('Over $20');
+  });
 });
