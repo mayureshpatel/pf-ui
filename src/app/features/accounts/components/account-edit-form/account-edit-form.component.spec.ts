@@ -202,6 +202,24 @@ describe('AccountEditFormComponent', () => {
   });
 
   describe('as a panel body', () => {
+    it("should show the account's current type selected even when the account's type object differs from the option list entry", () => {
+      // arrange -- the /accounts payload's type has different sortOrder/isActive than /account-types
+      const accountWithLooseType = {
+        ...mockAccount,
+        type: { ...mockAccountTypes[0], sortOrder: null as unknown as number, isActive: false },
+      } as Account;
+
+      // act
+      fixture.componentRef.setInput('account', accountWithLooseType);
+      fixture.detectChanges();
+
+      // assert & verify
+      const label: HTMLElement = fixture.nativeElement.querySelector(
+        '#type-label ~ p-select .p-select-label',
+      );
+      expect(label.textContent?.trim()).toBe('Checking');
+    });
+
     it('should keep what the user typed when the same account is refreshed in the background', () => {
       // arrange
       fixture.componentRef.setInput('account', mockAccount);
