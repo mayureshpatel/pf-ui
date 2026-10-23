@@ -60,6 +60,7 @@ import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen
 import { CsvImportDialogComponent } from './components/csv-import-dialog/csv-import-dialog.component';
 import { TransferMatchingDialogComponent } from './components/transfer-matching-dialog/transfer-matching-dialog.component';
 import { BulkEditData } from './components/transaction-bulk-form/transaction-bulk-form.component';
+import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
 import { toApiDateTimeString } from '@shared/utils/transaction.utils';
 import { PageErrorStateComponent } from '@shared/components/page-error-state/page-error-state.component';
 
@@ -77,6 +78,7 @@ import { PageErrorStateComponent } from '@shared/components/page-error-state/pag
     FormsModule,
     ButtonModule,
     PaginatorModule,
+    FormatCurrencyPipe,
     TransactionFilterBarComponent,
     TransactionReviewTabsComponent,
     TransactionListComponent,
@@ -252,6 +254,19 @@ export class TransactionsComponent implements OnInit {
     return category === UNCATEGORIZED || category === '__UNDEFINED__' ? 'NEEDS_CATEGORY' : 'ALL';
   });
 
+  /** The net of the selection (income minus expense; transfers and adjustments excluded). */
+  readonly selectionNet: Signal<number> = computed((): number => {
+    const net: number = this.selectedTransactions().reduce(
+      (sum: number, t: Transaction): number => {
+        if (t.type === TransactionType.INCOME) return sum + t.amount;
+        if (t.type === TransactionType.EXPENSE) return sum - t.amount;
+        return sum;
+      },
+      0,
+    );
+    return Math.round(net * 100) / 100;
+  });
+
   /** How many pages the current result spans (at least one). */
   readonly pageCount: Signal<number> = computed((): number =>
     Math.max(1, Math.ceil(this.totalRecords() / this.state().size)),
@@ -283,7 +298,9 @@ export class TransactionsComponent implements OnInit {
   /** Whether the visible panel form can be saved. */
   readonly panelValid: Signal<boolean> = computed((): boolean => {
     if (this.panelMode() === 'bulk') return this.bulkForm()?.valid() ?? false;
-    return this.editForm()?.valid() ?? false;
+    // an incomplete single form keeps Save enabled: clicking it shows what needs fixing, which a
+    // disabled button never can
+    return true;
   });
 
   constructor() {

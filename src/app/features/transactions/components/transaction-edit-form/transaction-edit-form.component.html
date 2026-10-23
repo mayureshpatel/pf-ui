@@ -145,6 +145,11 @@
           </div>
         </ng-template>
       </p-select>
+      @if (form.controls.category.touched && form.controls.category.invalid) {
+        <small data-testid="category-error" class="text-rose-700 dark:text-rose-400">
+          Choose a category.
+        </small>
+      }
     </div>
 
     <!-- Tags -->

@@ -1272,6 +1272,126 @@ describe('TransactionsComponent', () => {
       });
     });
 
+    describe('floating bulk bar spacing', () => {
+      it('should leave room under the list while rows are selected so the bar never hides the last row', () => {
+        // arrange
+        openAt({}, [row(1), row(2)]);
+        const listColumn = (): HTMLElement =>
+          fixture.nativeElement.querySelector('app-transaction-list').parentElement;
+        expect(listColumn().className).not.toContain('pb-24');
+
+        // act
+        component.onSelectionChange([1]);
+        fixture.detectChanges();
+
+        // assert & verify
+        expect(listColumn().className).toContain('pb-24');
+      });
+    });
+
+    describe('bulk mode panel', () => {
+      const openBulk = (rows: Transaction[]): void => {
+        openAt({}, rows);
+        component.onSelectionChange(rows.map((r) => r.id));
+        component.onEditMore();
+        fixture.detectChanges();
+      };
+      const panelButton = (name: RegExp): HTMLButtonElement | undefined =>
+        Array.from<HTMLButtonElement>(fixture.nativeElement.querySelectorAll('aside button')).find(
+          (b) => name.test((b.textContent ?? '').trim()),
+        );
+
+      it('should hide the floating bar while a panel is open, so it never covers the panel footer', () => {
+        // act
+        openBulk([row(1), row(2)]);
+
+        // assert & verify
+        expect(component.panelMode()).toBe('bulk');
+        expect(
+          fixture.nativeElement.querySelector('app-transaction-bulk-bar [role="region"]'),
+        ).toBeNull();
+      });
+
+      it('should offer Mark as transfer and Clear selection inside the bulk panel', () => {
+        // arrange
+        openBulk([row(1), row(2)]);
+        mockTransactionApi.markAsTransfer.mockReturnValue(of(undefined));
+
+        // act
+        panelButton(/^Mark as transfer/)?.click();
+
+        // assert & verify
+        expect(mockTransactionApi.markAsTransfer).toHaveBeenCalledWith([1, 2]);
+
+        // act
+        openBulk([row(1), row(2)]);
+        panelButton(/^Clear selection/)?.click();
+        fixture.detectChanges();
+
+        // assert & verify
+        expect(component.selectedIds()).toEqual([]);
+        expect(component.panelMode()).toBe('closed');
+      });
+
+      it('should offer Unmark as transfer when every selected row is a transfer', () => {
+        // act
+        openBulk([row(1, { type: 'TRANSFER' as never }), row(2, { type: 'TRANSFER' as never })]);
+
+        // assert & verify
+        expect(panelButton(/^Unmark as transfer/)).toBeTruthy();
+        expect(panelButton(/^Mark as transfer/)).toBeUndefined();
+      });
+
+      it('should show the net total of the selection, ignoring transfers', () => {
+        // act
+        openBulk([
+          row(1, { type: 'INCOME' as never, amount: 100 }),
+          row(2, { type: 'EXPENSE' as never, amount: 30 }),
+          row(3, { type: 'TRANSFER' as never, amount: 500 }),
+        ]);
+
+        // assert & verify
+        expect(
+          fixture.nativeElement.querySelector('[data-testid="selection-net"]').textContent,
+        ).toContain('+$70.00');
+      });
+    });
+
+    describe('paging while loading', () => {
+      it('should disable the paginator while a new page is loading', () => {
+        // arrange
+        openAt({}, [row(1)]);
+        const wrapper = (): HTMLElement =>
+          fixture.nativeElement.querySelector('p-paginator').parentElement;
+
+        // act
+        component.loading.set(true);
+        fixture.detectChanges();
+
+        // assert & verify
+        expect(wrapper().className).toContain('pointer-events-none');
+
+        // act
+        component.loading.set(false);
+        fixture.detectChanges();
+
+        // assert & verify
+        expect(wrapper().className).not.toContain('pointer-events-none');
+      });
+    });
+
+    describe('save button', () => {
+      it('should keep Save enabled for an incomplete single form so the user can see what to fix', () => {
+        // arrange -- an uncategorized transaction: the form requires a category
+        openAt({}, [row(1, { category: null as never })]);
+        component.openEditDialog(row(1, { category: null as never }));
+        fixture.detectChanges();
+
+        // assert & verify
+        expect(component.panelValid()).toBe(true);
+      });
+    });
+
     describe('tabs', () => {
       it('should leave other filters alone when All is clicked while already on All', () => {
         // arrange

@@ -46,7 +46,7 @@
         panelMode() === 'closed' ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-[minmax(0,1fr)_26rem]'
       "
     >
-      <div class="flex min-w-0 flex-col gap-3">
+      <div class="flex min-w-0 flex-col gap-3" [class.pb-24]="selectedIds().length > 0">
         @if (isEmpty()) {
           <div
             class="rounded-2xl border border-surface-200 p-10 text-center dark:border-surface-800"
@@ -88,19 +88,21 @@
             (openTransaction)="openEditDialog($event)"
             (pickCategory)="onPickCategory($event)"
           />
-          <p-paginator
-            [rows]="state().size"
-            [first]="state().page * state().size"
-            [totalRecords]="totalRecords()"
-            [rowsPerPageOptions]="[10, 20, 50, 100]"
-            [showCurrentPageReport]="true"
-            currentPageReportTemplate="Showing {first} to {last} of {totalRecords}"
-            (onPageChange)="onPageChange($event)"
-          />
+          <div [class.pointer-events-none]="loading()" [class.opacity-60]="loading()">
+            <p-paginator
+              [rows]="state().size"
+              [first]="state().page * state().size"
+              [totalRecords]="totalRecords()"
+              [rowsPerPageOptions]="[10, 20, 50, 100]"
+              [showCurrentPageReport]="true"
+              currentPageReportTemplate="Showing {first} to {last} of {totalRecords}"
+              (onPageChange)="onPageChange($event)"
+            />
+          </div>
         }
 
         <app-transaction-bulk-bar
-          [selectionCount]="selectedIds().length"
+          [selectionCount]="panelMode() === 'closed' ? selectedIds().length : 0"
           [allTransfers]="allSelectedAreTransfers()"
           [busy]="bulkSaving() || markingAsTransfer() || unmarkingAsTransfer()"
           (setCategory)="onEditMore()"
@@ -129,12 +131,46 @@
           (delete)="deleteTransaction(selectedTransaction()!)"
         >
           @if (panelMode() === 'bulk') {
+            <p data-testid="selection-net" class="mb-3 text-sm text-muted-color">
+              Net of the selection:
+              <span class="font-semibold tabular-nums">
+                {{ selectionNet() > 0 ? '+' : selectionNet() < 0 ? '-' : ''
+                }}{{ (selectionNet() < 0 ? -selectionNet() : selectionNet()) | formatCurrency }}
+              </span>
+            </p>
             <app-transaction-bulk-form
               #bulkForm
               [transactions]="selectedTransactions()"
               [saving]="bulkSaving()"
               (apply)="onBulkSave($event)"
             />
+            <div
+              class="mt-4 flex flex-wrap gap-2 border-t border-surface-200 pt-3 dark:border-surface-800"
+            >
+              @if (allSelectedAreTransfers()) {
+                <p-button
+                  label="Unmark as transfer"
+                  severity="secondary"
+                  [outlined]="true"
+                  [loading]="unmarkingAsTransfer()"
+                  (onClick)="onUnmarkAsTransfer()"
+                />
+              } @else {
+                <p-button
+                  label="Mark as transfer"
+                  severity="secondary"
+                  [outlined]="true"
+                  [loading]="markingAsTransfer()"
+                  (onClick)="onMarkAsTransfer()"
+                />
+              }
+              <p-button
+                label="Clear selection"
+                severity="secondary"
+                [text]="true"
+                (onClick)="onSelectionChange([])"
+              />
+            </div>
           } @else {
             <app-transaction-edit-form
               #editForm

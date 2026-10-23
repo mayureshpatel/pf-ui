@@ -17,6 +17,8 @@ import { DayGroup, groupByDay } from '../../utils/transaction-day-groups';
 interface SortColumn {
   field: string;
   label: string;
+  /** Hidden below the `sm` breakpoint so Merchant, Category and Amount fit a phone. */
+  hideOnPhone?: boolean;
 }
 
 /**
@@ -58,9 +60,9 @@ export class TransactionListComponent {
   readonly TransactionType = TransactionType;
 
   readonly columns: SortColumn[] = [
-    { field: 'description', label: 'Description' },
+    { field: 'description', label: 'Description', hideOnPhone: true },
     { field: 'category.name', label: 'Category' },
-    { field: 'account.name', label: 'Account' },
+    { field: 'account.name', label: 'Account', hideOnPhone: true },
     { field: 'amount', label: 'Amount' },
   ];
 

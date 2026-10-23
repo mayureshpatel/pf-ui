@@ -407,4 +407,45 @@ describe('TransactionEditFormComponent', () => {
       expect(component.form.getRawValue().description).toBe('TYPED');
     });
   });
+
+  describe('validation messages', () => {
+    const existing = {
+      id: 1,
+      account: { id: 1, name: 'Checking' },
+      category: null,
+      amount: 42.5,
+      date: '2026-03-15T00:00:00Z',
+      description: 'FIRST',
+      type: 'EXPENSE',
+      merchant: null,
+      tags: [],
+    };
+
+    it('should say what is missing, in words, after saving an incomplete form', () => {
+      // arrange
+      fixture.componentRef.setInput('transaction', existing);
+      fixture.detectChanges();
+      const saved = vi.fn();
+      component.save.subscribe(saved);
+
+      // act
+      component.submit();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(saved).not.toHaveBeenCalled();
+      expect(
+        fixture.nativeElement.querySelector('[data-testid="category-error"]').textContent,
+      ).toContain('Choose a category');
+    });
+
+    it('should not show the message before the user has tried to save', () => {
+      // act
+      fixture.componentRef.setInput('transaction', existing);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(fixture.nativeElement.querySelector('[data-testid="category-error"]')).toBeNull();
+    });
+  });
 });
