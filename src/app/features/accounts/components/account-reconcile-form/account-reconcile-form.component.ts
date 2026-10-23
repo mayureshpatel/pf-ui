@@ -6,108 +6,89 @@ import {
   inject,
   input,
   InputSignal,
-  model,
-  ModelSignal,
   output,
   OutputEmitterRef,
   Signal,
   signal,
+  untracked,
   WritableSignal,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ButtonModule } from 'primeng/button';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { MessageModule } from 'primeng/message';
 import { Account, AccountReconcileRequest } from '@models/account.model';
 import { AccountApiService } from '@features/accounts/services/account-api.service';
 import { ToastService } from '@core/services/toast.service';
-import { DrawerComponent } from '@shared/components/drawer/drawer.component';
 import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
+import { toCents } from '../../utils/account-totals';
 
 /**
- * Component for reconciling an account balance.
+ * The panel's reconcile step: the user types the balance on their statement and the app posts the
+ * adjustment that makes its own balance match.
  */
 @Component({
-  selector: 'app-reconcile-drawer',
+  selector: 'app-account-reconcile-form',
   standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    ButtonModule,
-    InputNumberModule,
-    MessageModule,
-    DrawerComponent,
-    FormatCurrencyPipe,
-  ],
-  templateUrl: './reconcile-dialog.component.html',
+  imports: [ReactiveFormsModule, InputNumberModule, MessageModule, FormatCurrencyPipe],
+  templateUrl: './account-reconcile-form.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ReconcileDrawerComponent {
+export class AccountReconcileFormComponent {
   private readonly accountService: AccountApiService = inject(AccountApiService);
   private readonly toast: ToastService = inject(ToastService);
 
-  /**
-   * Two-way binding for the drawer visibility.
-   */
-  visible: ModelSignal<boolean> = model<boolean>(false);
-
-  /**
-   * The account being reconciled.
-   */
+  /** The account being reconciled. */
   account: InputSignal<Account> = input.required<Account>();
 
-  /**
-   * Emitted when the reconciliation process completes successfully.
-   */
-  reconciled: OutputEmitterRef<void> = output<void>();
+  /** Emitted after a successful reconcile, with the adjustment that was posted. */
+  reconciled: OutputEmitterRef<{ adjustment: number }> = output<{ adjustment: number }>();
 
-  /**
-   * Indicates if the reconciliation request is currently in progress.
-   */
+  /** Emitted when the host should reload the accounts (for example after a version conflict). */
+  reloadRequested: OutputEmitterRef<void> = output<void>();
+
+  /** Indicates if the reconciliation request is currently in progress. */
   saving: WritableSignal<boolean> = signal(false);
 
-  /**
-   * Holds any error message returned from the API.
-   */
+  /** Holds any error message returned from the API. */
   errorMessage: WritableSignal<string | null> = signal<string | null>(null);
 
-  /**
-   * Reactive form for capturing the target balance.
-   */
+  /** Reactive form for capturing the target balance. */
   form = new FormGroup({
     targetBalance: new FormControl<number | null>(null, {
       validators: [Validators.required],
     }),
   });
 
-  /**
-   * Signal that tracks the current form value for reactive calculations.
-   */
+  /** Signal that tracks the current form value for reactive calculations. */
   private readonly formValue = toSignal(this.form.valueChanges, {
     initialValue: this.form.getRawValue(),
   });
 
-  /**
-   * Reactively calculates the difference between the target balance and the current system balance.
-   */
-  difference: Signal<number> = computed(() => {
+  /** What would be posted: the typed statement balance minus the app's balance, in cents. */
+  difference: Signal<number> = computed((): number => {
     const target: number | null | undefined = this.formValue().targetBalance;
     if (target === null || target === undefined) return 0;
-    return target - this.account().currentBalance;
+    return toCents(target - this.account().currentBalance);
   });
 
+  /** A balance was typed and it already matches. */
+  balanced: Signal<boolean> = computed((): boolean => {
+    const target: number | null | undefined = this.formValue().targetBalance;
+    return target !== null && target !== undefined && this.difference() === 0;
+  });
+
+  /** Which account is shown; the form resets only when this changes, not on a background refresh. */
+  private readonly accountId: Signal<number> = computed((): number => this.account().id);
+
   constructor() {
-    /**
-     * Effect to handle cleanup and state resetting when the drawer is closed.
-     */
     effect((): void => {
-      if (!this.visible()) {
+      this.accountId();
+      untracked((): void => {
         this.form.reset();
         this.errorMessage.set(null);
-      }
+      });
     });
   }
 
@@ -121,16 +102,17 @@ export class ReconcileDrawerComponent {
     }
   }
 
-  /**
-   * Submits the reconciliation request to the API.
-   */
+  /** Posts the reconciliation unless the form is incomplete, already balanced, or saving. */
   submit(): void {
-    if (this.form.invalid || this.saving()) {
+    if (this.saving()) return;
+    if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
     }
+    if (this.balanced()) return;
 
     const target: number = this.form.value.targetBalance!;
+    const adjustment: number = this.difference();
     this.saving.set(true);
     this.errorMessage.set(null);
 
@@ -143,24 +125,16 @@ export class ReconcileDrawerComponent {
     this.accountService.reconcile(request).subscribe({
       next: (): void => {
         this.toast.success('Account reconciled successfully');
-        this.reconciled.emit();
-        this.visible.set(false);
+        this.form.markAsPristine();
+        this.reconciled.emit({ adjustment });
         this.saving.set(false);
       },
       error: (error: HttpErrorResponse): void => {
         console.error('Error reconciling account:', error);
         this.errorMessage.set(error.error?.detail || 'Failed to reconcile account');
+        this.reloadRequested.emit();
         this.saving.set(false);
       },
     });
   }
-
-  /**
-   * Closes the drawer.
-   */
-  onCancel(): void {
-    this.visible.set(false);
-  }
-
-  protected readonly Math = Math;
 }

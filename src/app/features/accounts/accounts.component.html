@@ -141,12 +141,4 @@
     </div>
   }
 
-  <!-- Reconcile Drawer -->
-  @if (selectedAccount()) {
-    <app-reconcile-drawer
-      [(visible)]="showReconcileDrawer"
-      [account]="selectedAccount()!"
-      (reconciled)="loadAccounts()"
-    />
-  }
 </div>
