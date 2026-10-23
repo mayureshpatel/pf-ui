@@ -390,6 +390,18 @@ describe('AccountsComponent', () => {
   });
 
   describe('states', () => {
+    it('should show a busy skeleton, not the empty state, while the first load is in flight', () => {
+      // arrange
+      component.loading.set(true);
+
+      // act
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(fixture.nativeElement.querySelector('[aria-busy="true"] p-skeleton')).toBeTruthy();
+      expect(fixture.nativeElement.textContent).not.toContain('No accounts yet');
+    });
+
     it('should show the empty state with an Add account button when there are no accounts', () => {
       // assert & verify
       expect(fixture.nativeElement.textContent).toContain('No accounts yet');
