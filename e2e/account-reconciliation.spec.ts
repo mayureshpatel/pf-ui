@@ -7,16 +7,18 @@ import {createTestAccount} from './helpers/api';
  * creates a balance-adjustment transaction if the stated balance differs -- verified below.
  */
 test.describe('Account Reconciliation', () => {
-  test('reconcile, edit, and delete buttons expose an accessible name (PF-186)', async ({page}) => {
+  test('each row has a named actions menu offering the four shortcuts (PF-186)', async ({page}) => {
     await page.goto('/accounts');
     const account = await createTestAccount(page, 'E2E Accessible Name');
 
     await page.reload();
-    const row = page.getByRole('row', {name: new RegExp(account.name)});
+    await page.getByRole('button', {name: `Actions for ${account.name}`}).click();
 
-    await expect(row.getByRole('button', {name: 'Reconcile Account'})).toBeVisible();
-    await expect(row.getByRole('button', {name: 'Edit Account'})).toBeVisible();
-    await expect(row.getByRole('button', {name: 'Delete Account'})).toBeVisible();
+    const menu = page.getByRole('menu');
+    await expect(menu.getByRole('menuitem', {name: 'View transactions'})).toBeVisible();
+    await expect(menu.getByRole('menuitem', {name: 'Reconcile'})).toBeVisible();
+    await expect(menu.getByRole('menuitem', {name: 'Edit'})).toBeVisible();
+    await expect(menu.getByRole('menuitem', {name: 'Delete'})).toBeVisible();
   });
 
   test('reconciling to a different balance updates the account via an adjustment transaction', async ({page}) => {
@@ -24,14 +26,12 @@ test.describe('Account Reconciliation', () => {
     const account = await createTestAccount(page, 'E2E Reconcile');
 
     await page.reload();
-    const row = page.getByRole('row', {name: new RegExp(account.name)});
-    // These buttons do have an accessible name now (PF-186's fix, verified by the first test
-    // above) -- kept on the pre-existing icon-class locator here since it's unrelated to what
-    // this test actually verifies.
-    await row.locator('button:has(.pi-sync)').click();
+    const row = page.getByTestId('open-account').filter({hasText: account.name});
+    // The row menu's Reconcile opens the panel straight on the reconcile step.
+    await page.getByRole('button', {name: `Actions for ${account.name}`}).click();
+    await page.getByRole('menuitem', {name: 'Reconcile'}).click();
 
-    // app-drawer renders PrimeNG's p-drawer (a side panel), which uses role="complementary",
-    // not role="dialog" -- and its title isn't wired up as that landmark's accessible name.
+    // The docked side panel is an <aside> (role="complementary") labelled with its title.
     const drawer = page.getByRole('complementary');
     await expect(drawer.getByRole('heading', {name: `Reconcile ${account.name}`})).toBeVisible();
     await expect(drawer.getByText('$1,000.00')).toBeVisible();
@@ -43,11 +43,12 @@ test.describe('Account Reconciliation', () => {
     // Wait for the reactively-computed adjustment preview to settle before clicking --
     // otherwise the click can race the re-render it triggers on every keystroke.
     await expect(drawer.getByText('+$200.00')).toBeVisible();
-    await drawer.getByRole('button', {name: 'Reconcile'}).click();
+    await drawer.getByRole('button', {name: 'Reconcile', exact: true}).click();
 
     await expect(page.getByText('Account reconciled successfully')).toBeVisible();
-    await expect(drawer).toBeHidden();
-    await expect(row.getByText('$1,200.00')).toBeVisible();
+    // The panel returns to the account's summary with the new balance.
+    await expect(drawer.getByTestId('balance')).toContainText('$1,200.00');
+    await expect(row).toContainText('$1,200.00');
   });
 
   test('reconciling to the same balance creates no adjustment', async ({page}) => {
@@ -55,21 +56,18 @@ test.describe('Account Reconciliation', () => {
     const account = await createTestAccount(page, 'E2E Reconcile Balanced');
 
     await page.reload();
-    const row = page.getByRole('row', {name: new RegExp(account.name)});
-    // These buttons do have an accessible name now (PF-186's fix, verified by the first test
-    // above) -- kept on the pre-existing icon-class locator here since it's unrelated to what
-    // this test actually verifies.
-    await row.locator('button:has(.pi-sync)').click();
+    // The row menu's Reconcile opens the panel straight on the reconcile step.
+    await page.getByRole('button', {name: `Actions for ${account.name}`}).click();
+    await page.getByRole('menuitem', {name: 'Reconcile'}).click();
 
-    // app-drawer renders PrimeNG's p-drawer (a side panel), which uses role="complementary",
-    // not role="dialog" -- and its title isn't wired up as that landmark's accessible name.
+    // The docked side panel is an <aside> (role="complementary") labelled with its title.
     const drawer = page.getByRole('complementary');
     await expect(drawer.getByRole('heading', {name: `Reconcile ${account.name}`})).toBeVisible();
     // id="targetBalance" lands on the <p-inputnumber> host element, not the inner native
     // <input> -- target the real input by its role instead.
     await drawer.getByRole('spinbutton').pressSequentially('1000', {delay: 30});
 
-    await expect(drawer.getByText('Balanced!')).toBeVisible();
-    await expect(drawer.getByText('Adjustment Transaction')).not.toBeVisible();
+    await expect(drawer.getByText('Balanced. Nothing to adjust.')).toBeVisible();
+    await expect(drawer.getByText(/This posts a balance adjustment/)).not.toBeVisible();
   });
 });
