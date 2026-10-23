@@ -1,0 +1,137 @@
+<div class="flex flex-col gap-4">
+  <p class="text-sm text-muted-color">
+    Change a field to overwrite it on all {{ transactionCount() }} selected transactions. Fields you
+    leave switched off keep their current values.
+  </p>
+
+  @if (isLargeUpdate()) {
+    <div
+      class="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/20"
+    >
+      <i class="pi pi-exclamation-triangle text-amber-600 dark:text-amber-400"></i>
+      <span class="text-sm text-amber-900 dark:text-amber-100">
+        Large batch detected. This operation will be queued for background synchronization.
+      </span>
+    </div>
+  }
+
+  <form [formGroup]="form" class="flex flex-col gap-4">
+    <!-- Category -->
+    <div
+      class="flex items-start gap-3 rounded-xl border border-surface-200 p-3 dark:border-surface-800"
+      [class.ring-1]="form.value.updateCategory"
+      [class.ring-primary/30]="form.value.updateCategory"
+    >
+      <p-checkbox
+        formControlName="updateCategory"
+        [binary]="true"
+        class="mt-1"
+        ariaLabel="Change category"
+      />
+      <div class="flex flex-1 flex-col gap-1">
+        <!-- PF-805: p-select renders its combobox as a <span role="combobox">, not a native
+             labelable element, so `for`/`inputId` alone doesn't create a real association --
+             ariaLabelledBy is what actually works. Kept inputId/for too since
+             @angular-eslint/template/label-has-associated-control only checks that `for` has some
+             value, not that it resolves. -->
+        <label
+          id="bulk-edit-category-label"
+          for="bulk-edit-category"
+          class="text-sm font-medium"
+          >Category</label
+        >
+        <span data-testid="category-summary" class="text-xs text-muted-color">{{
+          categorySummary()
+        }}</span>
+        <p-select
+          formControlName="category"
+          [inputId]="'bulk-edit-category'"
+          [ariaLabelledBy]="'bulk-edit-category-label'"
+          [options]="categoryGroups()"
+          [group]="true"
+          optionLabel="label"
+          optionValue="value"
+          [disabled]="!form.value.updateCategory"
+          placeholder="Search categories..."
+          [filter]="true"
+          appendTo="body"
+          class="w-full"
+        />
+      </div>
+    </div>
+
+    <!-- Merchant -->
+    <div
+      class="flex items-start gap-3 rounded-xl border border-surface-200 p-3 dark:border-surface-800"
+      [class.ring-1]="form.value.updateMerchant"
+      [class.ring-primary/30]="form.value.updateMerchant"
+    >
+      <p-checkbox
+        formControlName="updateMerchant"
+        [binary]="true"
+        class="mt-1"
+        ariaLabel="Change merchant"
+      />
+      <div class="flex flex-1 flex-col gap-1">
+        <label for="bulk-edit-merchant" class="text-sm font-medium">Merchant</label>
+        <span data-testid="merchant-summary" class="text-xs text-muted-color">{{
+          merchantSummary()
+        }}</span>
+        <p-autoComplete
+          formControlName="merchant"
+          [inputId]="'bulk-edit-merchant'"
+          [suggestions]="merchantOptions()"
+          (completeMethod)="filterMerchants($event)"
+          [delay]="300"
+          optionLabel="label"
+          optionValue="value"
+          [readonly]="!form.value.updateMerchant"
+          [class.opacity-50]="!form.value.updateMerchant"
+          [class.pointer-events-none]="!form.value.updateMerchant"
+          placeholder="Search for a merchant..."
+          appendTo="body"
+          [dropdown]="false"
+          styleClass="w-full"
+          inputStyleClass="w-full"
+        />
+      </div>
+    </div>
+
+    <!-- Description -->
+    <div
+      class="flex items-start gap-3 rounded-xl border border-surface-200 p-3 dark:border-surface-800"
+      [class.ring-1]="form.value.updateDescription"
+      [class.ring-primary/30]="form.value.updateDescription"
+    >
+      <p-checkbox
+        formControlName="updateDescription"
+        [binary]="true"
+        class="mt-1"
+        ariaLabel="Change description"
+      />
+      <div class="flex flex-1 flex-col gap-1">
+        <label for="bulk-edit-description" class="text-sm font-medium">Description</label>
+        <span data-testid="description-summary" class="text-xs text-muted-color">{{
+          descriptionSummary()
+        }}</span>
+        <input
+          id="bulk-edit-description"
+          pInputText
+          formControlName="description"
+          [disabled]="!form.value.updateDescription"
+          placeholder="Add one description for all of them..."
+          class="w-full"
+        />
+      </div>
+    </div>
+
+    @if (
+      !isValid() &&
+      (form.value.updateCategory || form.value.updateMerchant || form.value.updateDescription)
+    ) {
+      <p-message severity="error" variant="simple">
+        Fill in every field you switched on before applying.
+      </p-message>
+    }
+  </form>
+</div>

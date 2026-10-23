@@ -60,10 +60,7 @@ import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen
 import { FormatTransactionTypeAmountPipe } from '@shared/pipes/format-transaction-type-amount.pipe';
 import { CsvImportDialogComponent } from './components/csv-import-dialog/csv-import-dialog.component';
 import { TransferMatchingDialogComponent } from './components/transfer-matching-dialog/transfer-matching-dialog.component';
-import {
-  BulkEditData,
-  BulkEditDialogComponent,
-} from './components/bulk-edit-dialog/bulk-edit-dialog.component';
+import { BulkEditData } from './components/transaction-bulk-form/transaction-bulk-form.component';
 import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
 import { toApiDateTimeString } from '@shared/utils/transaction.utils';
 import { PageErrorStateComponent } from '@shared/components/page-error-state/page-error-state.component';
@@ -94,7 +91,6 @@ import { PageErrorStateComponent } from '@shared/components/page-error-state/pag
     ScreenToolbarComponent,
     CsvImportDialogComponent,
     TransferMatchingDialogComponent,
-    BulkEditDialogComponent,
     FormatTransactionTypeAmountPipe,
     PageErrorStateComponent,
   ],

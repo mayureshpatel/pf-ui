@@ -464,10 +464,4 @@
     (complete)="showTransferDialog.set(false)"
   />
 
-  <app-bulk-edit-dialog
-    [(visible)]="showBulkEditDialog"
-    [transactions]="selectedTransactions()"
-    [saving]="bulkSaving()"
-    (save)="onBulkSave($event)"
-  />
 </div>

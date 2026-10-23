@@ -17,7 +17,7 @@ import {
   TransactionFormSaveEvent,
   TransactionUpdateRequest,
 } from '@models/transaction.model';
-import { BulkEditData } from './components/bulk-edit-dialog/bulk-edit-dialog.component';
+import { BulkEditData } from './components/transaction-bulk-form/transaction-bulk-form.component';
 import { Category } from '@models/category.model';
 import { Merchant } from '@models/merchant.model';
 
