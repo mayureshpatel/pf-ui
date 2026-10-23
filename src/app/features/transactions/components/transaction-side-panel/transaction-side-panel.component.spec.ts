@@ -1,9 +1,10 @@
 import { vi } from 'vitest';
-import { Component, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { TransactionSidePanelComponent } from './transaction-side-panel.component';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TransactionSidePanelComponent],
   template: `
     <app-transaction-side-panel

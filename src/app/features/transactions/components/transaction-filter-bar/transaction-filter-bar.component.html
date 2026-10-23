@@ -49,9 +49,11 @@
     />
     <p-popover #filtersPopover (onShow)="onPopoverShow()">
       <div class="flex w-72 flex-col gap-3">
-        <label class="flex flex-col gap-1 text-sm">
-          Account
+        <div class="flex flex-col gap-1 text-sm">
+          <label id="fb-account-label" for="fb-account">Account</label>
           <p-select
+            inputId="fb-account"
+            ariaLabelledBy="fb-account-label"
             [options]="accounts()"
             optionLabel="name"
             optionValue="id"
@@ -60,10 +62,12 @@
             [showClear]="true"
             appendTo="body"
           />
-        </label>
-        <label class="flex flex-col gap-1 text-sm">
-          Category
+        </div>
+        <div class="flex flex-col gap-1 text-sm">
+          <label id="fb-category-label" for="fb-category">Category</label>
           <p-select
+            inputId="fb-category"
+            ariaLabelledBy="fb-category-label"
             [options]="groupedCategories()"
             [group]="true"
             [(ngModel)]="draft.categoryName"
@@ -72,10 +76,12 @@
             [filter]="true"
             appendTo="body"
           />
-        </label>
-        <label class="flex flex-col gap-1 text-sm">
-          Type
+        </div>
+        <div class="flex flex-col gap-1 text-sm">
+          <label id="fb-type-label" for="fb-type">Type</label>
           <p-select
+            inputId="fb-type"
+            ariaLabelledBy="fb-type-label"
             [options]="typeOptions"
             optionLabel="label"
             optionValue="value"
@@ -84,20 +90,34 @@
             [showClear]="true"
             appendTo="body"
           />
-        </label>
-        <div class="grid grid-cols-2 gap-2">
-          <label class="flex flex-col gap-1 text-sm">
-            Minimum amount
-            <p-inputNumber [(ngModel)]="draft.minAmount" mode="currency" currency="USD" locale="en-US" />
-          </label>
-          <label class="flex flex-col gap-1 text-sm">
-            Maximum amount
-            <p-inputNumber [(ngModel)]="draft.maxAmount" mode="currency" currency="USD" locale="en-US" />
-          </label>
         </div>
-        <label class="flex flex-col gap-1 text-sm">
-          Merchant
+        <div class="grid grid-cols-2 gap-2">
+          <div class="flex flex-col gap-1 text-sm">
+            <label id="fb-min-label" for="fb-min">Minimum amount</label>
+            <p-inputNumber
+              inputId="fb-min"
+              [(ngModel)]="draft.minAmount"
+              mode="currency"
+              currency="USD"
+              locale="en-US"
+            />
+          </div>
+          <div class="flex flex-col gap-1 text-sm">
+            <label id="fb-max-label" for="fb-max">Maximum amount</label>
+            <p-inputNumber
+              inputId="fb-max"
+              [(ngModel)]="draft.maxAmount"
+              mode="currency"
+              currency="USD"
+              locale="en-US"
+            />
+          </div>
+        </div>
+        <div class="flex flex-col gap-1 text-sm">
+          <label id="fb-merchant-label" for="fb-merchant">Merchant</label>
           <p-select
+            inputId="fb-merchant"
+            ariaLabelledBy="fb-merchant-label"
             [options]="merchantNames()"
             [(ngModel)]="draft.merchant"
             placeholder="Any merchant"
@@ -105,10 +125,12 @@
             [filter]="true"
             appendTo="body"
           />
-        </label>
-        <label class="flex flex-col gap-1 text-sm">
-          Tag
+        </div>
+        <div class="flex flex-col gap-1 text-sm">
+          <label id="fb-tag-label" for="fb-tag">Tag</label>
           <p-select
+            inputId="fb-tag"
+            ariaLabelledBy="fb-tag-label"
             [options]="tags()"
             optionLabel="name"
             optionValue="id"
@@ -117,7 +139,7 @@
             [showClear]="true"
             appendTo="body"
           />
-        </label>
+        </div>
         <p-button label="Apply filters" (onClick)="onApplyPopover(filtersPopover, draft)" />
       </div>
     </p-popover>

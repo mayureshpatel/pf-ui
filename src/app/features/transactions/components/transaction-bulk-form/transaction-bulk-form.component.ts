@@ -69,7 +69,6 @@ export class TransactionBulkFormComponent {
   private readonly categoryApi: CategoryApiService = inject(CategoryApiService);
   private readonly merchantApi: MerchantApiService = inject(MerchantApiService);
 
-
   /** The list of transactions currently targeted for mass-edit. */
   readonly transactions: InputSignal<Transaction[]> = input.required<Transaction[]>();
 
@@ -189,7 +188,9 @@ export class TransactionBulkFormComponent {
   /** What the category field will do, with what the selection currently has. */
   readonly categorySummary: Signal<string> = computed((): string =>
     this.summarize(
-      this.transactions().map((t: Transaction): string => (t.category ? String(t.category.id) : '')),
+      this.transactions().map((t: Transaction): string =>
+        t.category ? String(t.category.id) : '',
+      ),
       (t: Transaction): string => t.category?.name ?? 'Uncategorized',
     ),
   );
@@ -197,7 +198,9 @@ export class TransactionBulkFormComponent {
   /** What the merchant field will do, with what the selection currently has. */
   readonly merchantSummary: Signal<string> = computed((): string =>
     this.summarize(
-      this.transactions().map((t: Transaction): string => (t.merchant ? String(t.merchant.id) : '')),
+      this.transactions().map((t: Transaction): string =>
+        t.merchant ? String(t.merchant.id) : '',
+      ),
       (t: Transaction): string => t.merchant?.name ?? 'No merchant',
     ),
   );
@@ -232,7 +235,6 @@ export class TransactionBulkFormComponent {
   filterMerchants(event: { query: string }): void {
     this.merchantSearch$.next(event.query);
   }
-
 
   /**
    * Finalizes the mass-edit configuration and emits the payload.

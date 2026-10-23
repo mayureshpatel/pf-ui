@@ -1,457 +1,151 @@
-<div class="w-full flex flex-col gap-4">
-  <!-- Page Header -->
-  <app-screen-toolbar class="mb-6">
+<div class="flex w-full flex-col gap-4">
+  <app-screen-toolbar [showDivider]="false">
     <div toolbarTitle>
-      <h1 class="text-4xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight">Ledger</h1>
+      <h1 class="text-3xl font-bold tracking-tight text-surface-900 dark:text-surface-0">
+        Transactions
+      </h1>
+    </div>
+    <div toolbarFilters>
+      <div class="flex items-center gap-2">
+        <p-button
+          label="Import CSV"
+          icon="pi pi-upload"
+          severity="secondary"
+          [outlined]="true"
+          (onClick)="showImportDialog.set(true)"
+        />
+        <p-button label="Add transaction" icon="pi pi-plus" (onClick)="openCreateDialog()" />
+      </div>
     </div>
   </app-screen-toolbar>
 
-  <!-- Main Ledger Table -->
-  @if (!isEmpty()) {
-    <p-card class="overflow-hidden">
-      <p-table
-        #transactionTable
-        [value]="transactions()"
-        dataKey="id"
-        [(selection)]="selectedTransactions"
-        [loading]="loading()"
-        [paginator]="true"
-        [rows]="state().size"
-        [first]="state().page * state().size"
-        [totalRecords]="totalRecords()"
-        [lazy]="true"
-        (onLazyLoad)="onLazyLoad($event)"
-        [filters]="tableFilters()"
-        [showCurrentPageReport]="true"
-        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} entries"
-        [rowsPerPageOptions]="[10, 20, 50, 100]"
-        [sortField]="state().sort.split(',')[0]"
-        [sortOrder]="state().sort.split(',')[1] === 'asc' ? 1 : -1"
-        [stripedRows]="true"
-        selectionMode="multiple"
-        size="small"
-        responsiveLayout="stack"
-        [breakpoint]="'960px'"
-      >
+  @if (loadError() && transactions().length === 0) {
+    <app-page-error-state message="Failed to load transactions." (retry)="loadTransactions()" />
+  } @else {
+    <app-transaction-filter-bar
+      [filter]="state().filter"
+      [accounts]="accounts()"
+      [tags]="tags()"
+      [groupedCategories]="groupedCategories()"
+      [merchantNames]="uniqueMerchantNames()"
+      [resultCount]="loading() && transactions().length === 0 ? null : totalRecords()"
+      (filterChange)="onFilterChange($event)"
+    />
 
-        <ng-template pTemplate="caption">
-          <div class="flex justify-between items-center">
-            <!-- Table filters -->
-            <div class="flex items-center gap-4">
-              <p-button
-                label="Clear"
-                icon="pi pi-filter-slash"
-                [text]="true"
-                severity="secondary"
-                (onClick)="clearFilters()"
-                pTooltip="Clear Filters"
-                ariaLabel="Clear Filters"
-              />
-            </div>
+    <app-transaction-review-tabs
+      [activeTab]="activeTab()"
+      [uncategorizedCount]="reviewCounts().uncategorized"
+      [transferCount]="reviewCounts().transfers"
+      (tabChange)="onTabChange($event)"
+      (reviewTransfers)="showTransferDialog.set(true)"
+    />
 
-            <!-- Table actions -->
-            <div class="flex items-center gap-4">
-              @if (selectedTransactions().length > 0) {
-                <p-button
-                  [label]="'Bulk Edit (' + selectedTransactions().length + ')'"
-                  icon="pi pi-pencil"
-                  severity="secondary"
-                  [outlined]="true"
-                  (onClick)="showBulkEditDialog.set(true)"
-                />
-                <p-button
-                  [label]="'Mark as Transfer (' + selectedTransactions().length + ')'"
-                  icon="pi pi-arrow-right-arrow-left"
-                  severity="secondary"
-                  [outlined]="true"
-                  [loading]="markingAsTransfer()"
-                  (onClick)="onMarkAsTransfer()"
-                  pTooltip="Mark the selected transactions as an internal transfer, excluding them from income/expense totals"
-                />
-                <p-button
-                  [label]="'Unmark as Transfer (' + selectedTransactions().length + ')'"
-                  icon="pi pi-replay"
-                  severity="secondary"
-                  [outlined]="true"
-                  [loading]="unmarkingAsTransfer()"
-                  (onClick)="onUnmarkAsTransfer()"
-                  pTooltip="Revert the selected transactions back to plain income/expense, undoing a mark-as-transfer"
-                />
-              }
+    <div
+      class="grid gap-4"
+      [class]="
+        panelMode() === 'closed' ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-[minmax(0,1fr)_26rem]'
+      "
+    >
+      <div class="flex min-w-0 flex-col gap-3">
+        @if (isEmpty()) {
+          <div
+            class="rounded-2xl border border-surface-200 p-10 text-center dark:border-surface-800"
+          >
+            @if (hasAnyActiveFilter()) {
+              <p class="mb-3 font-medium">No transactions match these filters</p>
               <p-button
-                label="Review Transfers"
-                icon="pi pi-sync"
+                data-testid="empty-clear-filters"
+                label="Clear filters"
                 severity="secondary"
                 [outlined]="true"
-                (onClick)="showTransferDialog.set(true)"
-                pTooltip="Review suggested transfer matches at any time, not just right after an import"
+                (onClick)="onFilterChange({})"
               />
-              <p-button
-                label="Import CSV"
-                icon="pi pi-upload"
-                severity="secondary"
-                [outlined]="true"
-                (onClick)="showImportDialog.set(true)"
-              />
-              <p-button
-                label="Add Transaction"
-                icon="pi pi-plus"
-                (onClick)="openCreateDialog()"
-                severity="primary"
-                [raised]="true"
-              />
-            </div>
+            } @else {
+              <p class="font-medium">No transactions yet</p>
+              <p class="mb-3 text-muted-color">Add one by hand or import a CSV from your bank.</p>
+              <div class="flex justify-center gap-2">
+                <p-button label="Add transaction" (onClick)="openCreateDialog()" />
+                <p-button
+                  label="Import CSV"
+                  severity="secondary"
+                  [outlined]="true"
+                  (onClick)="showImportDialog.set(true)"
+                />
+              </div>
+            }
           </div>
-        </ng-template>
+        } @else {
+          <app-transaction-list
+            [transactions]="transactions()"
+            [sort]="state().sort"
+            [page]="state().page"
+            [pageCount]="pageCount()"
+            [selectedIds]="selectedIds()"
+            [loading]="loading()"
+            (sortChange)="onSortChange($event)"
+            (selectionChange)="onSelectionChange($event)"
+            (openTransaction)="openEditDialog($event)"
+            (pickCategory)="onPickCategory($event)"
+          />
+          <p-paginator
+            [rows]="state().size"
+            [first]="state().page * state().size"
+            [totalRecords]="totalRecords()"
+            [rowsPerPageOptions]="[10, 20, 50, 100]"
+            [showCurrentPageReport]="true"
+            currentPageReportTemplate="Showing {first} to {last} of {totalRecords}"
+            (onPageChange)="onPageChange($event)"
+          />
+        }
 
-        <ng-template pTemplate="header">
-          <tr>
-            <th id="txn-select" class="w-12">
-              <p-tableHeaderCheckbox/>
-            </th>
-
-            <!-- Date -->
-            <th id="txn-date" pSortableColumn="date" class="py-4 font-semibold text-surface-700 dark:text-surface-200">
-              <div class="flex items-center gap-2">
-                Date
-                <p-sortIcon field="date"/>
-                <p-columnFilter type="date" field="date" display="menu">
-                  <ng-template pTemplate="filter" let-filterConstraint="filterConstraint">
-                    <p-datePicker
-                      [(ngModel)]="filterConstraint.value"
-                      [showIcon]="true"
-                      dateFormat="mm/dd/yy"
-                      placeholder="mm/dd/yyyy"
-                    />
-                  </ng-template>
-                </p-columnFilter>
-              </div>
-            </th>
-
-            <!-- Merchant / Description -->
-            <th id="txn-merchant" pSortableColumn="description" class="py-4 font-semibold text-surface-700 dark:text-surface-200">
-              <div class="flex items-center gap-2">
-                Merchant / Description
-                <p-sortIcon field="description"/>
-                <p-columnFilter field="merchantAndDesc" display="menu" [showMatchModes]="false" [showOperator]="false"
-                                [showAddButton]="false">
-                  <ng-template pTemplate="filter" let-filterConstraint="filterConstraint">
-                    <div class="flex flex-col gap-4 w-64">
-                      <div class="flex flex-col gap-2">
-                        <label for="merchant-filter"
-                               class="text-xs font-bold uppercase text-surface-500 dark:text-surface-400">Merchant</label>
-                        <p-select
-                          id="merchant-filter"
-                          [ngModel]="filterConstraint.value?.merchant"
-                          (ngModelChange)="updateMerchantFilter(filterConstraint, $event)"
-                          [options]="uniqueMerchantNames()"
-                          placeholder="Select Merchant"
-                          [showClear]="true"
-                          [filter]="true"
-                        />
-                      </div>
-                      <div class="flex flex-col gap-2">
-                        <label for="transaction-description-filter"
-                               class="text-xs font-bold uppercase text-surface-500 dark:text-surface-400">Description</label>
-                        <input
-                          id="transaction-description-filter"
-                          pInputText
-                          [ngModel]="filterConstraint.value?.description"
-                          (ngModelChange)="updateDescriptionFilter(filterConstraint, $event)"
-                          placeholder="Search description..."
-                          class="w-full"
-                        />
-                      </div>
-                    </div>
-                  </ng-template>
-                </p-columnFilter>
-              </div>
-            </th>
-
-            <!-- Category -->
-            <th id="txn-category" pSortableColumn="category.name" class="py-4 font-semibold text-surface-700 dark:text-surface-200">
-              <div class="flex items-center gap-2">
-                Category
-                <p-sortIcon field="category.name"/>
-                <p-columnFilter field="categoryName" display="menu" [showMatchModes]="false" [showOperator]="false"
-                                [showAddButton]="false">
-                  <ng-template pTemplate="filter" let-filterConstraint="filterConstraint">
-                    <p-select
-                      [(ngModel)]="filterConstraint.value"
-                      [options]="groupedCategories()"
-                      optionLabel="label"
-                      optionValue="value"
-                      [group]="true"
-                      placeholder="Select Category"
-                      [showClear]="true"
-                      [filter]="true"
-                      class="w-64"
-                    >
-                      <ng-template pTemplate="group" let-group>
-                        <div class="flex items-center gap-2 font-bold text-primary">
-                          <span>{{ group.label }}</span>
-                        </div>
-                      </ng-template>
-                    </p-select>
-                  </ng-template>
-                </p-columnFilter>
-              </div>
-            </th>
-
-            <!-- Account -->
-            <th id="txn-account" pSortableColumn="account.name" class="py-4 font-semibold text-surface-700 dark:text-surface-200">
-              <div class="flex items-center gap-2">
-                Account
-                <p-sortIcon field="account.name"/>
-                <p-columnFilter field="accountId" display="menu" [showMatchModes]="false" [showOperator]="false"
-                                [showAddButton]="false">
-                  <ng-template pTemplate="filter" let-filterConstraint="filterConstraint">
-                    <p-select
-                      [(ngModel)]="filterConstraint.value"
-                      [options]="accounts()"
-                      optionLabel="name"
-                      optionValue="id"
-                      placeholder="Select Account"
-                      [showClear]="true"
-                      [filter]="true"
-                      class="w-64"
-                    />
-                  </ng-template>
-                </p-columnFilter>
-              </div>
-            </th>
-
-            <!-- Amount -->
-            <th id="txn-amount" pSortableColumn="amount" class="py-4 font-semibold text-surface-700 dark:text-surface-200 text-right">
-              <div class="flex items-center justify-end gap-2">
-                Amount
-                <p-sortIcon field="amount"/>
-                <p-columnFilter field="amount" display="menu" [showMatchModes]="false" [showOperator]="false"
-                                [showAddButton]="false">
-                  <ng-template pTemplate="filter" let-filterConstraint="filterConstraint">
-                    <div class="flex flex-col gap-4 w-64">
-                      <div class="flex flex-col gap-2">
-                        <label for="type-filter" class="text-xs font-bold uppercase text-surface-500 dark:text-surface-400">Type</label>
-                        <p-select
-                          id="type-filter"
-                          [ngModel]="filterConstraint.value?.type"
-                          (ngModelChange)="updateTypeFilter(filterConstraint, $event)"
-                          [options]="transactionTypeOptions"
-                          placeholder="Select Type"
-                          [showClear]="true"
-                          class="w-full"
-                        />
-                      </div>
-                      <div class="flex flex-col gap-2">
-                        <label for="min-amount-filter" class="text-xs font-bold uppercase text-surface-500 dark:text-surface-400">
-                          Min Amount
-                        </label>
-                        <p-inputNumber
-                          id="min-amount-filter"
-                          [ngModel]="filterConstraint.value?.min"
-                          (ngModelChange)="updateMinAmountFilter(filterConstraint, $event)"
-                          mode="currency"
-                          currency="USD"
-                          locale="en-US"
-                          placeholder="Min amount"
-                          class="w-full"
-                        />
-                      </div>
-                      <div class="flex flex-col gap-2">
-                        <label for="max-amount-filter" class="text-xs font-bold uppercase text-surface-500 dark:text-surface-400">
-                          Max Amount
-                        </label>
-                        <p-inputNumber
-                          id="max-amount-filter"
-                          [ngModel]="filterConstraint.value?.max"
-                          (ngModelChange)="updateMaxAmountFilter(filterConstraint, $event)"
-                          mode="currency"
-                          currency="USD"
-                          locale="en-US"
-                          placeholder="Max amount"
-                          class="w-full"
-                        />
-                      </div>
-                    </div>
-                  </ng-template>
-                </p-columnFilter>
-              </div>
-            </th>
-
-            <!-- Tags -->
-            <th id="txn-tags" class="py-4 font-semibold text-surface-700 dark:text-surface-200">
-              <div class="flex items-center gap-2">
-                Tags
-                <p-columnFilter field="tagId" display="menu" [showMatchModes]="false" [showOperator]="false"
-                                [showAddButton]="false">
-                  <ng-template pTemplate="filter" let-filterConstraint="filterConstraint">
-                    <p-select
-                      [(ngModel)]="filterConstraint.value"
-                      [options]="tags()"
-                      optionLabel="name"
-                      optionValue="id"
-                      placeholder="Select Tag"
-                      [showClear]="true"
-                      [filter]="true"
-                      class="w-64"
-                    />
-                  </ng-template>
-                </p-columnFilter>
-              </div>
-            </th>
-
-            <th id="txn-actions" class="py-4 font-semibold text-surface-700 dark:text-surface-200 text-center w-24">
-              Actions
-            </th>
-          </tr>
-        </ng-template>
-
-        <ng-template pTemplate="body" let-txn>
-          <tr class="hover:bg-surface-100/50 dark:hover:bg-surface-800/30 transition-colors duration-200 group">
-            <td class="text-center">
-              <p-tableCheckbox [value]="txn"/>
-            </td>
-
-            <!-- Date -->
-            <td class="py-4">
-              <div class="flex flex-col">
-                <span
-                  class="text-sm font-bold text-surface-900 dark:text-surface-0">{{ txn.date | date:'MMM d, yyyy' }}</span>
-                <span class="text-xs font-black uppercase text-muted-color tracking-tighter">{{ txn.type }}</span>
-              </div>
-            </td>
-
-            <!-- Merchant / Desc -->
-            <td>
-              <div class="flex items-center gap-3">
-                <div
-                  class="w-10 h-10 flex items-center justify-center shrink-0">
-                  <i class="pi pi-receipt text-surface-400 dark:text-surface-500 group-hover:text-primary transition-colors"></i>
-                </div>
-                <div class="flex flex-col truncate max-w-62.5">
-                  <span class="font-bold text-surface-900 dark:text-surface-0 truncate">
-                    {{ txn.merchant?.name ?? txn.description }}
-                  </span>
-                  <!-- the description is already the primary line above when there's no merchant -- showing it again here would just duplicate the same text. -->
-                  @if (txn.merchant) {
-                    <span class="text-xs text-muted-color truncate italic">{{ txn.description }}</span>
-                  }
-                </div>
-              </div>
-            </td>
-
-            <!-- Category -->
-            <td>
-              <div class="flex items-center gap-2">
-                <div [class]="'w-2 h-2 rounded-full ' + (txn.category?.color || 'bg-surface-300 dark:bg-surface-600')"></div>
-                <span class="text-sm font-medium text-surface-700 dark:text-surface-200">
-                  {{ txn.category?.name || 'Uncategorized' }}
-                </span>
-              </div>
-            </td>
-
-            <!-- Account -->
-            <td>
-              <span
-                class="px-2 py-1 rounded bg-surface-100 dark:bg-surface-800 text-xs font-black uppercase text-surface-500 dark:text-surface-400 tracking-tighter ring-1 ring-surface-200 dark:ring-surface-700">
-                {{ txn.account.name }}
-              </span>
-            </td>
-
-            <!-- Amount -->
-            <td class="text-right">
-              <span class="font-mono font-black text-lg"
-                    [class.text-emerald-600]="txn.type === 'INCOME'"
-                    [class.text-rose-600]="txn.type === 'EXPENSE'"
-                    [class.text-surface-500]="txn.type === 'TRANSFER'"
-                    [class.dark:text-surface-400]="txn.type === 'TRANSFER'">
-                {{ txn.amount | formatTransactionTypeAmount:txn.type }}
-              </span>
-            </td>
-
-            <!-- Tags -->
-            <td>
-              <div class="flex items-center gap-1 flex-wrap">
-                @for (tag of txn.tags; track tag.id) {
-                  <span
-                    class="px-2 py-0.5 rounded-full text-xs font-bold text-white"
-                    [style.background-color]="tag.color || '#94a3b8'">
-                    {{ tag.name }}
-                  </span>
-                } @empty {
-                  <span class="text-xs text-muted-color italic">&mdash;</span>
-                }
-              </div>
-            </td>
-
-            <!-- Inline Actions -->
-            <td class="text-center">
-              <div class="flex justify-center gap-1">
-                <p-button
-                  icon="pi pi-pencil"
-                  [text]="true"
-                  [rounded]="true"
-                  severity="secondary"
-                  (onClick)="openEditDialog(txn)"
-                />
-                <p-button
-                  icon="pi pi-trash"
-                  [text]="true"
-                  [rounded]="true"
-                  severity="danger"
-                  (onClick)="deleteTransaction(txn)"
-                />
-              </div>
-            </td>
-          </tr>
-        </ng-template>
-
-        <ng-template pTemplate="emptymessage">
-          <tr>
-            <td colspan="8" class="text-center py-16 text-muted-color italic">
-              No transactions match your current filtering criteria.
-            </td>
-          </tr>
-        </ng-template>
-      </p-table>
-    </p-card>
-  } @else if (loadError()) {
-    <app-page-error-state message="Failed to load transactions." (retry)="loadTransactions()"/>
-  } @else if (!loading()) {
-    <!-- Ledger Hero State -->
-    <div class="flex flex-col items-center justify-center min-h-[60vh] text-center animate-fade-in">
-      <div class="relative mb-8">
-        <div class="absolute -inset-4 bg-primary/10 rounded-full blur-2xl animate-pulse"></div>
-        <i class="pi pi-list text-8xl text-primary/40 relative"></i>
-      </div>
-      <h2 class="text-3xl font-bold text-surface-900 dark:text-surface-0 mb-3">Your ledger is empty</h2>
-      <p class="text-muted-color mb-8 max-w-lg leading-relaxed text-lg">
-        Start building your financial trail by importing your bank's CSV history
-        or adding a new transaction manually.
-      </p>
-      <div class="flex gap-4">
-        <p-button
-          label="Import CSV Ledger"
-          icon="pi pi-upload"
-          severity="info"
-          [outlined]="true"
-          size="large"
-          (onClick)="showImportDialog.set(true)"
-        />
-        <p-button
-          label="Add Transaction"
-          icon="pi pi-plus"
-          (onClick)="openCreateDialog()"
-          severity="primary"
-          size="large"
-          [raised]="true"
+        <app-transaction-bulk-bar
+          [selectionCount]="selectedIds().length"
+          [allTransfers]="allSelectedAreTransfers()"
+          [busy]="bulkSaving() || markingAsTransfer() || unmarkingAsTransfer()"
+          (setCategory)="onEditMore()"
+          (markTransfer)="onMarkAsTransfer()"
+          (unmarkTransfer)="onUnmarkAsTransfer()"
+          (editMore)="onEditMore()"
+          (clear)="onSelectionChange([])"
         />
       </div>
+
+      @if (panelMode() !== 'closed') {
+        <app-transaction-side-panel
+          [title]="panelTitle()"
+          [saving]="savingTransaction() || bulkSaving()"
+          [valid]="panelValid()"
+          [saveLabel]="
+            panelMode() === 'create'
+              ? 'Post transaction'
+              : panelMode() === 'bulk'
+                ? 'Apply to ' + selectedIds().length
+                : 'Save changes'
+          "
+          [showDelete]="panelMode() === 'single'"
+          (save)="onPanelSave()"
+          (closePanel)="closePanel()"
+          (delete)="deleteTransaction(selectedTransaction()!)"
+        >
+          @if (panelMode() === 'bulk') {
+            <app-transaction-bulk-form
+              #bulkForm
+              [transactions]="selectedTransactions()"
+              [saving]="bulkSaving()"
+              (apply)="onBulkSave($event)"
+            />
+          } @else {
+            <app-transaction-edit-form
+              #editForm
+              [transaction]="selectedTransaction()"
+              [saving]="savingTransaction()"
+              (save)="onSave($event)"
+            />
+          }
+        </app-transaction-side-panel>
+      }
     </div>
   }
-
-  <!-- Operation Dialogs & Drawers -->
-  <!-- interim (PF-865 Task 8-10): the drawer moved to transaction-edit-form; the host is rebuilt in Task 10 -->
 
   <app-csv-import-dialog
     [(visible)]="showImportDialog"
@@ -463,5 +157,4 @@
     [(visible)]="showTransferDialog"
     (complete)="showTransferDialog.set(false)"
   />
-
 </div>

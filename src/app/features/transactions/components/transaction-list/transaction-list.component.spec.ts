@@ -23,7 +23,13 @@ describe('TransactionListComponent', () => {
 
   function render(
     transactions: Transaction[],
-    overrides: Partial<{ sort: string; selectedIds: number[]; loading: boolean; page: number; pageCount: number }> = {},
+    overrides: Partial<{
+      sort: string;
+      selectedIds: number[];
+      loading: boolean;
+      page: number;
+      pageCount: number;
+    }> = {},
   ): void {
     fixture.componentRef.setInput('transactions', transactions);
     fixture.componentRef.setInput('sort', overrides.sort ?? 'date,desc');
@@ -38,7 +44,9 @@ describe('TransactionListComponent', () => {
     Array.from(fixture.nativeElement.querySelectorAll(selector));
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({ imports: [TransactionListComponent] }).compileComponents();
+    await TestBed.configureTestingModule({
+      imports: [TransactionListComponent],
+    }).compileComponents();
     fixture = TestBed.createComponent(TransactionListComponent);
     component = fixture.componentInstance;
   });
@@ -51,7 +59,9 @@ describe('TransactionListComponent', () => {
     ]);
 
     // assert & verify
-    const headings = all('[data-testid="day-heading"]').map((h) => h.textContent?.replace(/\s+/g, ' ').trim());
+    const headings = all('[data-testid="day-heading"]').map((h) =>
+      h.textContent?.replace(/\s+/g, ' ').trim(),
+    );
     expect(headings.length).toBe(2);
     expect(headings[0]).toContain('-$20.00');
     expect(headings[1]).toContain('+$3,200.00');

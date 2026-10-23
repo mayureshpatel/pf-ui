@@ -4,13 +4,7 @@ import { TransactionFilter, TransactionType } from '@models/transaction.model';
 export const UNCATEGORIZED = 'null';
 
 /** Filters that appear as removable chips (the period and the search box have their own controls). */
-export type FilterChipKey =
-  | 'accountId'
-  | 'categoryName'
-  | 'merchant'
-  | 'type'
-  | 'amount'
-  | 'tagId';
+export type FilterChipKey = 'accountId' | 'categoryName' | 'merchant' | 'type' | 'amount' | 'tagId';
 
 /** One applied filter, ready to render as a removable chip. */
 export interface FilterChip {
@@ -52,7 +46,10 @@ export function buildFilterChips(
   if (filter.categoryName) {
     const uncategorized: boolean =
       filter.categoryName === UNCATEGORIZED || filter.categoryName === '__UNDEFINED__';
-    chips.push({ key: 'categoryName', label: uncategorized ? 'Uncategorized' : filter.categoryName });
+    chips.push({
+      key: 'categoryName',
+      label: uncategorized ? 'Uncategorized' : filter.categoryName,
+    });
   }
   if (filter.merchant) {
     chips.push({ key: 'merchant', label: `Merchant: ${filter.merchant}` });

@@ -1,12 +1,34 @@
-<div class="overflow-x-auto rounded-2xl border border-surface-200 bg-surface-0 dark:border-surface-800 dark:bg-surface-900">
+<div
+  class="overflow-x-auto rounded-2xl border border-surface-200 bg-surface-0 dark:border-surface-800 dark:bg-surface-900"
+>
   @if (!grouped()) {
-    <p data-testid="flat-note" class="flex items-center justify-between gap-3 border-b border-surface-200 px-4 py-2 text-sm text-muted-color dark:border-surface-800">
-      Sorted by {{ sortField() === 'description' ? 'description' : sortField() === 'category.name' ? 'category' : sortField() === 'account.name' ? 'account' : sortField() }}, so days are not grouped.
-      <button type="button" class="cursor-pointer underline" (click)="onShowByDate()">Show newest first</button>
+    <p
+      data-testid="flat-note"
+      class="flex items-center justify-between gap-3 border-b border-surface-200 px-4 py-2 text-sm text-muted-color dark:border-surface-800"
+    >
+      Sorted by
+      {{
+        sortField() === 'description'
+          ? 'description'
+          : sortField() === 'category.name'
+            ? 'category'
+            : sortField() === 'account.name'
+              ? 'account'
+              : sortField()
+      }}, so days are not grouped.
+      <button type="button" class="cursor-pointer underline" (click)="onShowByDate()">
+        Show newest first
+      </button>
     </p>
   } @else {
-    <div class="flex justify-end border-b border-surface-200 px-4 py-2 text-sm dark:border-surface-800">
-      <button type="button" class="cursor-pointer text-muted-color underline" (click)="onToggleDateOrder()">
+    <div
+      class="flex justify-end border-b border-surface-200 px-4 py-2 text-sm dark:border-surface-800"
+    >
+      <button
+        type="button"
+        class="cursor-pointer text-muted-color underline"
+        (click)="onToggleDateOrder()"
+      >
         {{ sortDirection() === 'desc' ? 'Newest first' : 'Oldest first' }}
       </button>
     </div>
@@ -36,12 +58,21 @@
             class="px-3 py-2 font-medium"
             [class.text-right]="column.field === 'amount'"
             [attr.aria-sort]="
-              sortField() === column.field ? (sortDirection() === 'asc' ? 'ascending' : 'descending') : null
+              sortField() === column.field
+                ? sortDirection() === 'asc'
+                  ? 'ascending'
+                  : 'descending'
+                : null
             "
           >
-            <button type="button" class="cursor-pointer" (click)="onSort(column.field)">{{ column.label }}</button>
+            <button type="button" class="cursor-pointer" (click)="onSort(column.field)">
+              {{ column.label }}
+            </button>
             @if (sortField() === column.field) {
-              <i class="pi text-xs" [class]="sortDirection() === 'asc' ? 'pi-arrow-up' : 'pi-arrow-down'"></i>
+              <i
+                class="pi text-xs"
+                [class]="sortDirection() === 'asc' ? 'pi-arrow-up' : 'pi-arrow-down'"
+              ></i>
             }
           </th>
         }
@@ -52,8 +83,13 @@
     <tbody>
       @if (loading() && transactions().length === 0) {
         @for (row of skeletonRows; track row) {
-          <tr data-testid="skeleton-row" class="border-t border-surface-100 dark:border-surface-800">
-            <td colspan="8" class="px-3 py-3"><div class="h-4 animate-pulse rounded bg-surface-200 dark:bg-surface-700"></div></td>
+          <tr
+            data-testid="skeleton-row"
+            class="border-t border-surface-100 dark:border-surface-800"
+          >
+            <td colspan="8" class="px-3 py-3">
+              <div class="h-4 animate-pulse rounded bg-surface-200 dark:bg-surface-700"></div>
+            </td>
           </tr>
         }
       }
@@ -69,8 +105,13 @@
                     <span class="font-normal text-muted-color">(partial)</span>
                   }
                 </span>
-                <span class="tabular-nums" [class.text-emerald-700]="group.net > 0" [class.dark:text-emerald-400]="group.net > 0">
-                  {{ group.net > 0 ? '+' : group.net < 0 ? '-' : '' }}{{ (group.net < 0 ? -group.net : group.net) | formatCurrency }}
+                <span
+                  class="tabular-nums"
+                  [class.text-emerald-700]="group.net > 0"
+                  [class.dark:text-emerald-400]="group.net > 0"
+                >
+                  {{ group.net > 0 ? '+' : group.net < 0 ? '-' : ''
+                  }}{{ (group.net < 0 ? -group.net : group.net) | formatCurrency }}
                 </span>
               </span>
             </th>
@@ -93,7 +134,9 @@
               />
             </td>
             @if (!grouped()) {
-              <td class="px-3 py-2 tabular-nums text-muted-color">{{ txn.date.substring(0, 10) }}</td>
+              <td class="px-3 py-2 tabular-nums text-muted-color">
+                {{ txn.date.substring(0, 10) }}
+              </td>
             }
             <td class="px-3 py-2">
               <button
@@ -105,10 +148,16 @@
                 {{ txn.merchant?.name ?? txn.description }}
               </button>
             </td>
-            <td class="max-w-64 truncate px-3 py-2 text-muted-color">{{ txn.merchant ? txn.description : '' }}</td>
+            <td class="max-w-64 truncate px-3 py-2 text-muted-color">
+              {{ txn.merchant ? txn.description : '' }}
+            </td>
             <td class="px-3 py-2">
               @if (isTransfer(txn)) {
-                <span data-testid="transfer-pill" class="rounded-full bg-surface-100 px-2 py-0.5 text-xs text-surface-700 dark:bg-surface-800 dark:text-surface-200">Transfer</span>
+                <span
+                  data-testid="transfer-pill"
+                  class="rounded-full bg-surface-100 px-2 py-0.5 text-xs text-surface-700 dark:bg-surface-800 dark:text-surface-200"
+                  >Transfer</span
+                >
               } @else if (!txn.category) {
                 <button
                   type="button"
@@ -120,7 +169,10 @@
                 </button>
               } @else {
                 <span class="inline-flex items-center gap-1.5">
-                  <i class="inline-block h-2 w-2 rounded-full" [class]="txn.category.color || 'bg-surface-300'"></i>
+                  <i
+                    class="inline-block h-2 w-2 rounded-full"
+                    [class]="txn.category.color || 'bg-surface-300'"
+                  ></i>
                   {{ txn.category.name }}
                 </span>
               }
@@ -136,7 +188,10 @@
             </td>
             <td class="px-3 py-2">
               @for (tag of txn.tags; track tag.id) {
-                <span class="mr-1 rounded-full border border-surface-200 bg-surface-50 px-2 text-xs dark:border-surface-700 dark:bg-surface-800">{{ tag.name }}</span>
+                <span
+                  class="mr-1 rounded-full border border-surface-200 bg-surface-50 px-2 text-xs dark:border-surface-700 dark:bg-surface-800"
+                  >{{ tag.name }}</span
+                >
               }
             </td>
           </tr>

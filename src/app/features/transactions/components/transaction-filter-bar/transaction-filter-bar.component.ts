@@ -113,7 +113,12 @@ export class TransactionFilterBarComponent {
       return;
     }
     const range = presetRange(preset, new Date());
-    this.filterChange.emit({ ...this.filter(), ...range, startDate: range.startDate, endDate: range.endDate });
+    this.filterChange.emit({
+      ...this.filter(),
+      ...range,
+      startDate: range.startDate,
+      endDate: range.endDate,
+    });
   }
 
   /** Applies one end of a custom date range. */

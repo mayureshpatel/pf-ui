@@ -62,8 +62,8 @@ export class TransactionListComponent {
   ];
 
   readonly sortField: Signal<string> = computed((): string => this.sort().split(',')[0]);
-  readonly sortDirection: Signal<'asc' | 'desc'> = computed(
-    (): 'asc' | 'desc' => (this.sort().split(',')[1] === 'asc' ? 'asc' : 'desc'),
+  readonly sortDirection: Signal<'asc' | 'desc'> = computed((): 'asc' | 'desc' =>
+    this.sort().split(',')[1] === 'asc' ? 'asc' : 'desc',
   );
   readonly grouped: Signal<boolean> = computed((): boolean => this.sortField() === 'date');
 

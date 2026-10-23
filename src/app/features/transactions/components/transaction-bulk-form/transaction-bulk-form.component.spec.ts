@@ -332,7 +332,9 @@ describe('TransactionBulkFormComponent', () => {
 
     it('should show the combined validation error only once a toggle is on and the form is still invalid', () => {
       // before any toggle
-      expect(fixture.nativeElement.textContent).not.toContain('Fill in every field you switched on');
+      expect(fixture.nativeElement.textContent).not.toContain(
+        'Fill in every field you switched on',
+      );
 
       // toggled on, still blank
       component.form.controls.updateDescription.setValue(true);
@@ -342,7 +344,9 @@ describe('TransactionBulkFormComponent', () => {
       // filled in
       component.form.controls.description.setValue('Business trip');
       fixture.detectChanges();
-      expect(fixture.nativeElement.textContent).not.toContain('Fill in every field you switched on');
+      expect(fixture.nativeElement.textContent).not.toContain(
+        'Fill in every field you switched on',
+      );
     });
 
     it('should say how many transactions the fields will change', () => {
@@ -382,63 +386,66 @@ describe('TransactionBulkFormComponent', () => {
     );
   });
 
-  describe("keep as is, valid and submit", () => {
-  it('should describe a field that is the same across the selection', () => {
-    // act
-    fixture.componentRef.setInput('transactions', [
-      { id: 1, category: { id: 5, name: 'Groceries' } },
-      { id: 2, category: { id: 5, name: 'Groceries' } },
-    ]);
-    fixture.detectChanges();
+  describe('keep as is, valid and submit', () => {
+    it('should describe a field that is the same across the selection', () => {
+      // act
+      fixture.componentRef.setInput('transactions', [
+        { id: 1, category: { id: 5, name: 'Groceries' } },
+        { id: 2, category: { id: 5, name: 'Groceries' } },
+      ]);
+      fixture.detectChanges();
 
-    // assert & verify
-    expect(component.categorySummary()).toBe('Keep as is (Groceries)');
-  });
+      // assert & verify
+      expect(component.categorySummary()).toBe('Keep as is (Groceries)');
+    });
 
-  it('should say how many different values a field has across the selection', () => {
-    // act
-    fixture.componentRef.setInput('transactions', [
-      { id: 1, category: { id: 5, name: 'Groceries' } },
-      { id: 2, category: null },
-      { id: 3, category: { id: 6, name: 'Dining' } },
-    ]);
-    fixture.detectChanges();
+    it('should say how many different values a field has across the selection', () => {
+      // act
+      fixture.componentRef.setInput('transactions', [
+        { id: 1, category: { id: 5, name: 'Groceries' } },
+        { id: 2, category: null },
+        { id: 3, category: { id: 6, name: 'Dining' } },
+      ]);
+      fixture.detectChanges();
 
-    // assert & verify
-    expect(component.categorySummary()).toBe('Keep as is, 3 different');
-  });
+      // assert & verify
+      expect(component.categorySummary()).toBe('Keep as is, 3 different');
+    });
 
-  it('should not be valid, and emit nothing, until at least one field is changed', () => {
-    // arrange
-    fixture.componentRef.setInput('transactions', [{ id: 1 }, { id: 2 }]);
-    fixture.detectChanges();
-    const applied = vi.fn();
-    component.apply.subscribe(applied);
+    it('should not be valid, and emit nothing, until at least one field is changed', () => {
+      // arrange
+      fixture.componentRef.setInput('transactions', [{ id: 1 }, { id: 2 }]);
+      fixture.detectChanges();
+      const applied = vi.fn();
+      component.apply.subscribe(applied);
 
-    // act
-    component.submit();
+      // act
+      component.submit();
 
-    // assert & verify
-    expect(component.valid()).toBe(false);
-    expect(applied).not.toHaveBeenCalled();
-  });
+      // assert & verify
+      expect(component.valid()).toBe(false);
+      expect(applied).not.toHaveBeenCalled();
+    });
 
-  it('should send only the fields the user changed', () => {
-    // arrange
-    fixture.componentRef.setInput('transactions', [{ id: 1 }, { id: 2 }]);
-    fixture.detectChanges();
-    const applied = vi.fn();
-    component.apply.subscribe(applied);
+    it('should send only the fields the user changed', () => {
+      // arrange
+      fixture.componentRef.setInput('transactions', [{ id: 1 }, { id: 2 }]);
+      fixture.detectChanges();
+      const applied = vi.fn();
+      component.apply.subscribe(applied);
 
-    // act
-    component.setCategory({ id: 9, name: 'Fuel' } as never);
-    component.submit();
+      // act
+      component.setCategory({ id: 9, name: 'Fuel' } as never);
+      component.submit();
 
-    // assert & verify
-    expect(applied).toHaveBeenCalledWith(
-      expect.objectContaining({ updateCategory: true, updateMerchant: false, updateDescription: false }),
-    );
-  });
-
+      // assert & verify
+      expect(applied).toHaveBeenCalledWith(
+        expect.objectContaining({
+          updateCategory: true,
+          updateMerchant: false,
+          updateDescription: false,
+        }),
+      );
+    });
   });
 });

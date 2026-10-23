@@ -4,14 +4,41 @@
     [attr.aria-label]="'Bulk actions for ' + selectionCount() + ' selected transactions'"
     class="sticky bottom-4 z-10 flex flex-wrap items-center gap-3 rounded-2xl bg-surface-900 px-4 py-3 text-surface-0 shadow-lg dark:bg-surface-100 dark:text-surface-900"
   >
-    <span aria-live="polite" class="font-semibold tabular-nums">{{ selectionCount() }} selected</span>
-    <button type="button" class="cursor-pointer text-sm underline disabled:opacity-50" [disabled]="busy()" (click)="setCategory.emit()">Set category</button>
+    <span aria-live="polite" class="font-semibold tabular-nums"
+      >{{ selectionCount() }} selected</span
+    >
+    <button
+      type="button"
+      class="cursor-pointer text-sm underline disabled:opacity-50"
+      [disabled]="busy()"
+      (click)="setCategory.emit()"
+    >
+      Set category
+    </button>
     @if (allTransfers()) {
-      <button type="button" class="cursor-pointer text-sm underline disabled:opacity-50" [disabled]="busy()" (click)="unmarkTransfer.emit()">Unmark as transfer</button>
+      <button
+        type="button"
+        class="cursor-pointer text-sm underline disabled:opacity-50"
+        [disabled]="busy()"
+        (click)="unmarkTransfer.emit()"
+      >
+        Unmark as transfer
+      </button>
     } @else {
-      <button type="button" class="cursor-pointer text-sm underline disabled:opacity-50" [disabled]="busy()" (click)="markTransfer.emit()">Mark as transfer</button>
+      <button
+        type="button"
+        class="cursor-pointer text-sm underline disabled:opacity-50"
+        [disabled]="busy()"
+        (click)="markTransfer.emit()"
+      >
+        Mark as transfer
+      </button>
     }
-    <button type="button" class="cursor-pointer text-sm underline" (click)="editMore.emit()">Edit more</button>
-    <button type="button" class="ml-auto cursor-pointer text-sm underline" (click)="clear.emit()">Clear</button>
+    <button type="button" class="cursor-pointer text-sm underline" (click)="editMore.emit()">
+      Edit more
+    </button>
+    <button type="button" class="ml-auto cursor-pointer text-sm underline" (click)="clear.emit()">
+      Clear
+    </button>
   </div>
 }

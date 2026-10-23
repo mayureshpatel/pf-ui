@@ -18,7 +18,9 @@ describe('TransactionBulkBarComponent', () => {
     );
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({ imports: [TransactionBulkBarComponent] }).compileComponents();
+    await TestBed.configureTestingModule({
+      imports: [TransactionBulkBarComponent],
+    }).compileComponents();
     fixture = TestBed.createComponent(TransactionBulkBarComponent);
   });
 
@@ -34,12 +36,16 @@ describe('TransactionBulkBarComponent', () => {
     // act
     render(1);
     // assert & verify
-    expect(fixture.nativeElement.querySelector('[role="region"]').textContent).toContain('1 selected');
+    expect(fixture.nativeElement.querySelector('[role="region"]').textContent).toContain(
+      '1 selected',
+    );
 
     // act
     render(23);
     // assert & verify
-    expect(fixture.nativeElement.querySelector('[role="region"]').textContent).toContain('23 selected');
+    expect(fixture.nativeElement.querySelector('[role="region"]').textContent).toContain(
+      '23 selected',
+    );
   });
 
   it('should emit each action', () => {

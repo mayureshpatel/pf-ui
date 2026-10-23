@@ -68,7 +68,11 @@ describe('TransactionFilterBarComponent', () => {
 
     // assert & verify -- the period and search survive, only the chip's filter is cleared
     expect(emitted).toHaveBeenCalledWith(
-      expect.objectContaining({ accountId: undefined, categoryName: 'Groceries', description: 'shell' }),
+      expect.objectContaining({
+        accountId: undefined,
+        categoryName: 'Groceries',
+        description: 'shell',
+      }),
     );
   });
 
