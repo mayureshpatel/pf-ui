@@ -64,6 +64,8 @@ export class AccountsComponent implements OnInit {
   accountTypes: WritableSignal<AccountType[]> = signal([]);
   loading: WritableSignal<boolean> = signal(false);
   loadError: WritableSignal<boolean> = signal(false);
+  /** A create or update request is in flight. */
+  saving: WritableSignal<boolean> = signal(false);
 
   /** What the docked panel is showing. */
   panelMode: WritableSignal<PanelMode> = signal('closed');
@@ -118,6 +120,7 @@ export class AccountsComponent implements OnInit {
         next: ({ accounts, accountTypes }): void => {
           this.accounts.set(accounts);
           this.accountTypes.set(accountTypes);
+          this.closePanelIfAccountGone(accounts);
         },
         error: (error: unknown): void => {
           console.error('Error loading accounts:', error);
@@ -138,6 +141,7 @@ export class AccountsComponent implements OnInit {
 
   /** Opens the Edit step, for the given account or the one already shown. */
   startEdit(account?: Account): void {
+    if (this.panelMode() === 'edit' && (!account || account.id === this.selectedId())) return;
     this.confirmDiscardIfDirty((): void => {
       if (account) this.selectedId.set(account.id);
       this.panelMode.set('edit');
@@ -146,6 +150,7 @@ export class AccountsComponent implements OnInit {
 
   /** Opens the Reconcile step, for the given account or the one already shown. */
   startReconcile(account?: Account): void {
+    if (this.panelMode() === 'reconcile' && (!account || account.id === this.selectedId())) return;
     this.confirmDiscardIfDirty((): void => {
       if (account) this.selectedId.set(account.id);
       this.panelMode.set('reconcile');
@@ -154,6 +159,7 @@ export class AccountsComponent implements OnInit {
 
   /** Opens the panel to add an account. */
   startCreate(): void {
+    if (this.panelMode() === 'create') return;
     this.confirmDiscardIfDirty((): void => {
       this.selectedId.set(null);
       this.panelMode.set('create');
@@ -176,8 +182,10 @@ export class AccountsComponent implements OnInit {
 
   /** Opens the Transactions page filtered to one account, across all time. */
   viewTransactions(account: Account): void {
-    void this.router.navigate(['/transactions'], {
-      queryParams: { accountId: account.id, period: 'all' },
+    this.confirmDiscardIfDirty((): void => {
+      void this.router.navigate(['/transactions'], {
+        queryParams: { accountId: account.id, period: 'all' },
+      });
     });
   }
 
@@ -208,9 +216,14 @@ export class AccountsComponent implements OnInit {
   }
 
   private createAccount(data: AccountCreateRequest): void {
+    if (this.saving()) return;
+    this.saving.set(true);
     this.accountApi
       .create(data)
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize((): void => this.saving.set(false)),
+      )
       .subscribe({
         next: (newId: number): void => {
           this.toast.success('Account created successfully');
@@ -227,9 +240,14 @@ export class AccountsComponent implements OnInit {
   }
 
   private editAccount(data: AccountUpdateRequest): void {
+    if (this.saving()) return;
+    this.saving.set(true);
     this.accountApi
       .update(data)
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize((): void => this.saving.set(false)),
+      )
       .subscribe({
         next: (): void => {
           this.toast.success('Account updated successfully');
@@ -274,6 +292,15 @@ export class AccountsComponent implements OnInit {
           });
       },
     });
+  }
+
+  /** A reload that no longer contains the shown account (deleted elsewhere) closes the panel. */
+  private closePanelIfAccountGone(accounts: Account[]): void {
+    const id: number | null = this.selectedId();
+    if (id === null || this.panelMode() === 'create') return;
+    if (accounts.some((a: Account): boolean => a.id === id)) return;
+    this.closePanel();
+    this.toast.error('That account no longer exists.');
   }
 
   /** Runs an action that would replace a form, after asking when that form has unsaved changes. */

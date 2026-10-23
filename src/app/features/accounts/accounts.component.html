@@ -51,7 +51,7 @@
       @if (panelMode() !== 'closed') {
         <app-side-panel
           [title]="panelTitle()"
-          [saving]="false"
+          [saving]="saving()"
           [showFooter]="panelMode() !== 'summary'"
           [saveLabel]="
             panelMode() === 'reconcile'
@@ -107,7 +107,7 @@
                 #editForm
                 [account]="panelMode() === 'edit' ? selectedAccount() : null"
                 [accountTypes]="accountTypes()"
-                [saving]="false"
+                [saving]="saving()"
                 (save)="onSave($event)"
               />
             }

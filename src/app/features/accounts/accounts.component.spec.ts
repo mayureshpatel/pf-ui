@@ -8,7 +8,7 @@ import { AccountEditFormComponent } from './components/account-edit-form/account
 import { ToastService } from '@core/services/toast.service';
 import { Confirmation, ConfirmationService } from 'primeng/api';
 import { Account, AccountType, BankName } from '@models/account.model';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 
 describe('AccountsComponent', () => {
@@ -426,6 +426,129 @@ describe('AccountsComponent', () => {
       // assert & verify
       expect(fixture.nativeElement.querySelector('app-account-net-worth-card')).toBeTruthy();
       expect(fixture.nativeElement.querySelector('app-account-list')).toBeTruthy();
+    });
+  });
+
+  describe('review fixes', () => {
+    const dirtyEditForm = (): void => {
+      fixture.detectChanges();
+      const form = fixture.debugElement.query(By.directive(AccountEditFormComponent))
+        .componentInstance as AccountEditFormComponent;
+      form.form.markAsDirty();
+    };
+    const createReq = {
+      name: 'ZZ',
+      type: 'CHECKING',
+      startingBalance: 0,
+      currencyCode: 'USD',
+      bankName: null,
+    };
+
+    it('should send only one create request while the first is still in flight', () => {
+      // arrange
+      loadWith([acct(1, 'Checking', 100, true)]);
+      component.startCreate();
+      mockAccountApi.create.mockReturnValue(new Subject<number>());
+
+      // act
+      component.onSave(createReq);
+      component.onSave(createReq);
+
+      // assert & verify
+      expect(mockAccountApi.create).toHaveBeenCalledTimes(1);
+      expect(component.saving()).toBe(true);
+    });
+
+    it('should send only one update while the first is in flight, and allow a retry after it fails', () => {
+      // arrange
+      loadWith([acct(1, 'Checking', 100, true)]);
+      component.startEdit(component.accounts()[0]);
+      const pending = new Subject<number>();
+      mockAccountApi.update.mockReturnValue(pending);
+      const req = {
+        id: 1,
+        name: 'x',
+        type: 'CHECKING',
+        currencyCode: 'USD',
+        bankName: null,
+        version: 1,
+      };
+
+      // act
+      component.onSave(req);
+      component.onSave(req);
+      pending.error({ error: { detail: 'conflict' } });
+
+      // assert & verify
+      expect(mockAccountApi.update).toHaveBeenCalledTimes(1);
+      expect(component.saving()).toBe(false);
+    });
+
+    it('should ask before View transactions leaves a dirty edit, and navigate only on Discard', () => {
+      // arrange
+      loadWith([acct(1, 'A', 1, true), acct(2, 'B', 2, true)]);
+      component.startEdit(component.accounts()[0]);
+      dirtyEditForm();
+
+      // act
+      component.viewTransactions(component.accounts()[1]);
+
+      // assert & verify
+      expect(mockRouter.navigate).not.toHaveBeenCalled();
+      mockConfirmationService.confirm.mock.calls[0][0].accept!();
+      expect(mockRouter.navigate).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not ask or reset when Edit, Reconcile or Add is chosen for what is already open', () => {
+      // arrange
+      loadWith([acct(1, 'A', 1, true)]);
+      component.startEdit(component.accounts()[0]);
+      dirtyEditForm();
+
+      // act
+      component.startEdit(component.accounts()[0]);
+      component.startEdit();
+
+      // assert & verify
+      expect(mockConfirmationService.confirm).not.toHaveBeenCalled();
+      expect(component.panelMode()).toBe('edit');
+
+      // act
+      component.startCreate();
+      mockConfirmationService.confirm.mock.calls[0][0].accept!();
+      fixture.detectChanges();
+      mockConfirmationService.confirm.mockClear();
+      component.startCreate();
+
+      // assert & verify
+      expect(mockConfirmationService.confirm).not.toHaveBeenCalled();
+      expect(component.panelMode()).toBe('create');
+    });
+
+    it('should close the panel and say so when the shown account is gone after a reload', () => {
+      // arrange
+      loadWith([acct(1, 'A', 1, true), acct(2, 'B', 2, true)]);
+      component.startReconcile(component.accounts()[1]);
+
+      // act
+      loadWith([acct(1, 'A', 1, true)]);
+
+      // assert & verify
+      expect(component.panelMode()).toBe('closed');
+      expect(component.selectedId()).toBeNull();
+      expect(mockToast.error).toHaveBeenCalledWith('That account no longer exists.');
+    });
+
+    it('should keep the add panel open across a reload', () => {
+      // arrange
+      loadWith([acct(1, 'A', 1, true)]);
+      component.startCreate();
+
+      // act
+      loadWith([acct(1, 'A', 1, true)]);
+
+      // assert & verify
+      expect(component.panelMode()).toBe('create');
     });
   });
 });
