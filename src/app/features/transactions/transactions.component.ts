@@ -58,7 +58,6 @@ import { TagApiService } from '@features/tags/services/tag-api.service';
 import { ToastService } from '@core/services/toast.service';
 import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen-toolbar';
 import { FormatTransactionTypeAmountPipe } from '@shared/pipes/format-transaction-type-amount.pipe';
-import { TransactionFormDrawerComponent } from './components/transaction-form-drawer/transaction-form-drawer.component';
 import { CsvImportDialogComponent } from './components/csv-import-dialog/csv-import-dialog.component';
 import { TransferMatchingDialogComponent } from './components/transfer-matching-dialog/transfer-matching-dialog.component';
 import {
@@ -93,7 +92,6 @@ import { PageErrorStateComponent } from '@shared/components/page-error-state/pag
     DatePicker,
     SelectModule,
     ScreenToolbarComponent,
-    TransactionFormDrawerComponent,
     CsvImportDialogComponent,
     TransferMatchingDialogComponent,
     BulkEditDialogComponent,

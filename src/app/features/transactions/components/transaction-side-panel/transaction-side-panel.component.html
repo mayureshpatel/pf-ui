@@ -1,0 +1,26 @@
+<aside
+  [attr.aria-label]="title()"
+  class="fixed inset-0 z-40 flex flex-col overflow-y-auto bg-surface-0 p-4 dark:bg-surface-900 lg:static lg:z-auto lg:rounded-2xl lg:border lg:border-surface-200 lg:dark:border-surface-800"
+  (keydown.escape)="closePanel.emit()"
+>
+  <div class="mb-3 flex items-center justify-between gap-2">
+    <h2 class="text-lg font-semibold">{{ title() }}</h2>
+    <button type="button" class="cursor-pointer text-sm underline" (click)="closePanel.emit()">Close</button>
+  </div>
+
+  <div class="flex-1"><ng-content /></div>
+
+  <div class="mt-4 flex items-center justify-end gap-2 border-t border-surface-200 pt-3 dark:border-surface-800">
+    @if (showDelete()) {
+      <button type="button" class="cursor-pointer rounded-lg border border-rose-300 px-3 py-1.5 text-sm text-rose-700 dark:text-rose-400" (click)="delete.emit()">Delete</button>
+    }
+    <button
+      type="button"
+      class="cursor-pointer rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+      [disabled]="saving() || !valid()"
+      (click)="save.emit()"
+    >
+      {{ saving() ? 'Saving...' : saveLabel() }}
+    </button>
+  </div>
+</aside>

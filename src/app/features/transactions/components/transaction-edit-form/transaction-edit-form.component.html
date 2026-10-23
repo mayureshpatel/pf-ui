@@ -1,17 +1,8 @@
-<app-drawer
-  [(visible)]="visible"
-  [title]="drawerTitle()"
-  [icon]="isEditMode() ? 'pi-receipt' : 'pi-plus'"
-  [saving]="saving()"
-  [saveLabel]="isEditMode() ? 'Update Record' : 'Post Transaction'"
-  (saveEmitterRef)="onSubmit()"
-  (showEmitterRef)="onShow()">
-
   @if (loading()) {
     <p-progress-spinner></p-progress-spinner>
   }
 
-  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-8 py-4">
+  <form id="transaction-edit-form" [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-8 py-4">
     <!-- Transaction Type -->
     <div class="flex flex-col gap-3">
       <label for="type-options" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
@@ -212,4 +203,3 @@
       ></textarea>
     </div>
   </form>
-</app-drawer>

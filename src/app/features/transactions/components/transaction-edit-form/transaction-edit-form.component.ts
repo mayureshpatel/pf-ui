@@ -5,14 +5,15 @@ import {
   inject,
   input,
   InputSignal,
-  model,
-  ModelSignal,
   output,
   OutputEmitterRef,
   Signal,
   signal,
+  untracked,
+  effect,
   WritableSignal,
 } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AutoCompleteModule, type AutoCompleteCompleteEvent } from 'primeng/autocomplete';
@@ -35,9 +36,8 @@ import { Account } from '@models/account.model';
 import { Category } from '@models/category.model';
 import { Merchant } from '@models/merchant.model';
 import { Tag } from '@models/tag.model';
-import { DrawerComponent } from '@shared/components/drawer/drawer.component';
 import { toLocalDateString } from '@shared/utils/transaction.utils';
-import { finalize, forkJoin, map, Subject, switchMap } from 'rxjs';
+import { finalize, forkJoin, map, startWith, Subject, switchMap } from 'rxjs';
 import { CategoryApiService } from '@features/categories/services/category-api.service';
 import { AccountApiService } from '@features/accounts/services/account-api.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -59,7 +59,7 @@ const CREATE_MERCHANT_SENTINEL_ID = -1;
  * and features intelligent autocomplete for merchants and categories.
  */
 @Component({
-  selector: 'app-transaction-form-drawer',
+  selector: 'app-transaction-edit-form',
   standalone: true,
   imports: [
     CommonModule,
@@ -72,22 +72,18 @@ const CREATE_MERCHANT_SENTINEL_ID = -1;
     MultiSelectModule,
     DatePicker,
     MessageModule,
-    DrawerComponent,
     ProgressSpinner,
     Tooltip,
     MerchantFormDialogComponent,
   ],
-  templateUrl: './transaction-form-drawer.component.html',
+  templateUrl: './transaction-edit-form.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class TransactionFormDrawerComponent {
+export class TransactionEditFormComponent {
   private readonly categoryApi: CategoryApiService = inject(CategoryApiService);
   private readonly accountApi: AccountApiService = inject(AccountApiService);
   private readonly merchantApi: MerchantApiService = inject(MerchantApiService);
   private readonly tagApi: TagApiService = inject(TagApiService);
-
-  /** Two-way binding for drawer visibility. */
-  readonly visible: ModelSignal<boolean> = model.required<boolean>();
 
   /** The transaction being edited, or null for creation mode. */
   readonly transaction: InputSignal<Transaction | null> = input<Transaction | null>(null);
@@ -195,8 +191,23 @@ export class TransactionFormDrawerComponent {
    *  history -- switchMap cancels any still-in-flight search when a newer keystroke arrives. */
   private readonly merchantSearch$: Subject<string> = new Subject<string>();
 
+  /** Whether the form is currently valid (reactive, for the panel's Save button). */
+  readonly valid: Signal<boolean> = toSignal(
+    this.form.statusChanges.pipe(
+      map((): boolean => this.form.valid),
+      startWith(this.form.valid),
+    ),
+    { initialValue: this.form.valid },
+  );
+
   constructor() {
     this.loadData();
+
+    // reset the form whenever a different transaction (or none, for create) is shown
+    effect((): void => {
+      this.transaction();
+      untracked((): void => this.onShow());
+    });
 
     this.merchantSearch$
       .pipe(
@@ -356,6 +367,11 @@ export class TransactionFormDrawerComponent {
   /**
    * Searches merchants server-side based on user input (PF-320).
    */
+  /** Submits the form from outside (the side panel's Save button). */
+  submit(): void {
+    this.onSubmit();
+  }
+
   filterMerchants(event: AutoCompleteCompleteEvent): void {
     this.merchantSearch$.next(event.query);
   }

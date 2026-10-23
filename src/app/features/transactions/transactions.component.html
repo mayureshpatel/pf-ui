@@ -451,12 +451,7 @@
   }
 
   <!-- Operation Dialogs & Drawers -->
-  <app-transaction-form-drawer
-    [(visible)]="showDialog"
-    [transaction]="selectedTransaction()"
-    [saving]="savingTransaction()"
-    (save)="onSave($event)"
-  />
+  <!-- interim (PF-865 Task 8-10): the drawer moved to transaction-edit-form; the host is rebuilt in Task 10 -->
 
   <app-csv-import-dialog
     [(visible)]="showImportDialog"
