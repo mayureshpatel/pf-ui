@@ -127,7 +127,7 @@
         @for (txn of group.transactions; track txn.id) {
           <tr
             class="cursor-pointer border-t border-surface-100 hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-800/40"
-            [class.bg-primary-50]="isSelected(txn.id)"
+            [class]="isSelected(txn.id) ? 'bg-primary-50 dark:bg-primary-900/30' : ''"
             (click)="openTransaction.emit(txn)"
           >
             <td class="px-3 py-2" (click)="$event.stopPropagation()">

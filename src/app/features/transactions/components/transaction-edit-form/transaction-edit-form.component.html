@@ -5,8 +5,8 @@
   <form id="transaction-edit-form" [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-8 py-4">
     <!-- Transaction Type -->
     <div class="flex flex-col gap-3">
-      <label for="type-options" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
-        Transaction Classification
+      <label for="type-options" class="text-sm font-medium text-surface-700 dark:text-surface-200">
+        Type
       </label>
       <div id="type-options" class="flex flex-row justify-center gap-3">
         @for (option of typeOptions; track option.value) {
@@ -33,7 +33,7 @@
             <i
               [class]="'pi ' + option.icon + ' text-2xl mb-2 transition-transform group-hover:scale-110 ' + (form.value.type === option.value ? 'text-primary' : option.color)"></i>
             <span
-              [class]="'text-xs font-black uppercase tracking-widest ' + (form.value.type === option.value ? 'text-primary' : 'text-surface-500 dark:text-surface-400')">
+              [class]="'text-xs font-semibold ' + (form.value.type === option.value ? 'text-primary' : 'text-surface-500 dark:text-surface-400')">
               {{ option.label }}
             </span>
           </button>
@@ -43,7 +43,7 @@
 
     <!-- Amount -->
     <div class="flex flex-col gap-2">
-      <label for="amount" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">Amount</label>
+      <label for="amount" class="text-sm font-medium text-surface-700 dark:text-surface-200">Amount</label>
       <p-inputNumber
         id="amount"
         formControlName="amount"
@@ -57,7 +57,7 @@
 
     <!-- Date -->
     <div class="flex flex-col gap-2">
-      <label for="date" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">Date</label>
+      <label for="date" class="text-sm font-medium text-surface-700 dark:text-surface-200">Date</label>
       <p-datePicker
         id="date"
         formControlName="transactionDate"
@@ -67,8 +67,8 @@
 
     <!-- Merchant -->
     <div class="flex flex-col gap-2">
-      <label for="merchant" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
-        Merchant / Payee
+      <label for="merchant" class="text-sm font-medium text-surface-700 dark:text-surface-200">
+        Merchant
       </label>
       <p-autoComplete
         id="merchant"
@@ -113,7 +113,7 @@
 
     <!-- Category -->
     <div class="flex flex-col gap-2">
-      <label for="category" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
+      <label for="category" class="text-sm font-medium text-surface-700 dark:text-surface-200">
         Category
       </label>
       <p-select
@@ -129,7 +129,7 @@
         placeholder="Select a category..."
       >
         <ng-template #group let-group>
-          <div class="flex items-center gap-2 uppercase tracking-wide">
+          <div class="flex items-center gap-2">
             <i [class]="'pi ' + group.value.icon"></i>
             <span>{{ group.label }}</span>
           </div>
@@ -149,7 +149,7 @@
 
     <!-- Tags -->
     <div class="flex flex-col gap-2">
-      <label for="tags" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
+      <label for="tags" class="text-sm font-medium text-surface-700 dark:text-surface-200">
         Tags
       </label>
       <p-multiSelect
@@ -174,7 +174,7 @@
 
     <!-- Account -->
     <div class="flex flex-col gap-2">
-      <label for="account" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
+      <label for="account" class="text-sm font-medium text-surface-700 dark:text-surface-200">
         Account
       </label>
       <p-select
@@ -190,8 +190,8 @@
 
     <!-- Description -->
     <div class="flex flex-col gap-2">
-      <label for="description" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
-        Description / Notes
+      <label for="description" class="text-sm font-medium text-surface-700 dark:text-surface-200">
+        Description
       </label>
       <textarea
         pInputText

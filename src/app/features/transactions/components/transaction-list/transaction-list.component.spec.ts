@@ -210,4 +210,15 @@ describe('TransactionListComponent', () => {
     expect(headers).toContain('Description');
     expect(headers).toContain('Tags');
   });
+
+  it('should give a selected row a background that also works in dark mode', () => {
+    // act
+    render([txn({ id: 1 }), txn({ id: 2 })], { selectedIds: [1] });
+
+    // assert & verify
+    const rows = all('tbody tr');
+    expect(rows[1].className).toContain('bg-primary-50');
+    expect(rows[1].className).toContain('dark:bg-primary-900/30');
+    expect(rows[2].className).not.toContain('bg-primary-50');
+  });
 });
