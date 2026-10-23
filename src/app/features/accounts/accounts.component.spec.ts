@@ -1,16 +1,13 @@
 import { vi, Mock, Mocked } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { Router } from '@angular/router';
 import { AccountsComponent } from './accounts.component';
 import { AccountApiService } from './services/account-api.service';
+import { AccountEditFormComponent } from './components/account-edit-form/account-edit-form.component';
 import { ToastService } from '@core/services/toast.service';
 import { Confirmation, ConfirmationService } from 'primeng/api';
-import {
-  Account,
-  AccountCreateRequest,
-  AccountType,
-  AccountUpdateRequest,
-  BankName,
-} from '@models/account.model';
+import { Account, AccountType, BankName } from '@models/account.model';
 import { of, throwError } from 'rxjs';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 
@@ -22,31 +19,36 @@ describe('AccountsComponent', () => {
   >;
   let mockToast: Mocked<Pick<ToastService, 'success' | 'error'>>;
   let mockConfirmationService: { confirm: Mock<(confirmation: Confirmation) => void> };
+  let mockRouter: { navigate: Mock };
 
-  const mockAccountTypes: AccountType[] = [
-    {
-      code: 'CHECKING',
-      label: 'Checking',
-      isAsset: true,
-      sortOrder: 1,
-      isActive: true,
-      icon: 'pi',
-      color: 'blue',
-    },
-  ];
+  const checking: AccountType = {
+    code: 'CHECKING',
+    label: 'Checking',
+    isAsset: true,
+    sortOrder: 1,
+    isActive: true,
+    icon: 'pi-wallet',
+    color: 'text-emerald-600',
+  };
+  const credit: AccountType = { ...checking, code: 'CREDIT', label: 'Credit', isAsset: false };
 
-  const mockAccounts: Account[] = [
-    {
-      id: 1,
-      name: 'Test Checking',
-      type: mockAccountTypes[0],
-      currentBalance: 1000,
+  const acct = (id: number, name: string, balance: number, isAsset: boolean): Account =>
+    ({
+      id,
+      name,
+      type: isAsset ? checking : credit,
+      currentBalance: balance,
       currency: { code: 'USD', name: 'US Dollar', symbol: '$', isActive: true },
       bank: BankName.STANDARD,
       version: 1,
       user: { id: 1 },
-    } as Account,
-  ];
+    }) as Account;
+
+  function loadWith(list: Account[]): void {
+    mockAccountApi.getAccounts.mockReturnValue(of(list));
+    component.loadAccounts();
+    fixture.detectChanges();
+  }
 
   beforeEach(async () => {
     mockAccountApi = {
@@ -58,9 +60,10 @@ describe('AccountsComponent', () => {
     };
     mockToast = { success: vi.fn(), error: vi.fn() };
     mockConfirmationService = { confirm: vi.fn() };
+    mockRouter = { navigate: vi.fn() };
 
-    mockAccountApi.getAccounts.mockReturnValue(of(mockAccounts));
-    mockAccountApi.getAccountTypes.mockReturnValue(of(mockAccountTypes));
+    mockAccountApi.getAccounts.mockReturnValue(of([]));
+    mockAccountApi.getAccountTypes.mockReturnValue(of([checking, credit]));
 
     await TestBed.configureTestingModule({
       imports: [AccountsComponent, NoopAnimationsModule],
@@ -68,223 +71,349 @@ describe('AccountsComponent', () => {
         { provide: AccountApiService, useValue: mockAccountApi },
         { provide: ToastService, useValue: mockToast },
         { provide: ConfirmationService, useValue: mockConfirmationService },
+        { provide: Router, useValue: mockRouter },
       ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(AccountsComponent);
     component = fixture.componentInstance;
-  });
-
-  it('should create and load data on init', () => {
-    fixture.detectChanges(); // Triggers ngOnInit
-
-    expect(component).toBeTruthy();
-    expect(mockAccountApi.getAccounts).toHaveBeenCalled();
-    expect(mockAccountApi.getAccountTypes).toHaveBeenCalled();
-
-    expect(component.accounts()).toEqual(mockAccounts);
-    expect(component.accountTypes()).toEqual(mockAccountTypes);
-    expect(component.loading()).toBe(false);
-    expect(component.isEmpty()).toBe(false);
-  });
-
-  it('should handle load error gracefully', () => {
-    mockAccountApi.getAccounts.mockReturnValue(throwError(() => new Error('Network error')));
-
     fixture.detectChanges();
-
-    expect(mockToast.error).toHaveBeenCalledWith('Failed to load accounts');
-    expect(component.loading()).toBe(false);
   });
 
-  it('should compute isEmpty as true when there are no accounts and loading has finished', () => {
-    mockAccountApi.getAccounts.mockReturnValue(of([]));
+  describe('loading', () => {
+    it('should load accounts and types on init', () => {
+      // assert & verify
+      expect(mockAccountApi.getAccounts).toHaveBeenCalled();
+      expect(mockAccountApi.getAccountTypes).toHaveBeenCalled();
+      expect(component.accountTypes()).toEqual([checking, credit]);
+      expect(component.loading()).toBe(false);
+    });
 
-    fixture.detectChanges();
+    it('should toast and flag the error when loading fails', () => {
+      // arrange
+      mockAccountApi.getAccounts.mockReturnValue(throwError(() => new Error('down')));
 
-    expect(component.accounts()).toEqual([]);
-    expect(component.loading()).toBe(false);
-    expect(component.isEmpty()).toBe(true);
+      // act
+      component.loadAccounts();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(mockToast.error).toHaveBeenCalledWith('Failed to load accounts');
+      expect(component.loading()).toBe(false);
+      expect(fixture.nativeElement.querySelector('app-page-error-state')).toBeTruthy();
+    });
   });
 
-  describe('keyboard accessibility', () => {
-    function findButtonByLabel(label: string): HTMLButtonElement {
-      const buttons: HTMLButtonElement[] = Array.from(
-        fixture.nativeElement.querySelectorAll('button'),
+  describe('panel flow', () => {
+    it('should open the summary for a clicked account and highlight it', () => {
+      // arrange
+      loadWith([acct(1, 'Checking', 100, true), acct(2, 'Visa', -50, false)]);
+
+      // act
+      component.openAccount(component.accounts()[1]);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.panelMode()).toBe('summary');
+      expect(component.selectedAccount()?.id).toBe(2);
+    });
+
+    it('should open straight on Edit or Reconcile from the menu', () => {
+      // arrange
+      loadWith([acct(1, 'Checking', 100, true)]);
+
+      // act and assert & verify
+      component.startReconcile(component.accounts()[0]);
+      expect(component.panelMode()).toBe('reconcile');
+      component.startEdit(component.accounts()[0]);
+      expect(component.panelMode()).toBe('edit');
+    });
+
+    it('should go to the Transactions page filtered to the account, across all time', () => {
+      // arrange
+      loadWith([acct(7, 'Checking', 100, true)]);
+
+      // act
+      component.viewTransactions(component.accounts()[0]);
+
+      // assert & verify
+      expect(mockRouter.navigate).toHaveBeenCalledWith(['/transactions'], {
+        queryParams: { accountId: 7, period: 'all' },
+      });
+    });
+  });
+
+  describe('create', () => {
+    it('should open the new account summary after creating, though create returns only an id', () => {
+      // arrange
+      loadWith([acct(1, 'Checking', 100, true)]);
+      mockAccountApi.create.mockReturnValue(of(9));
+      mockAccountApi.getAccounts.mockReturnValue(
+        of([acct(1, 'Checking', 100, true), acct(9, 'ZZ New', 0, true)]),
       );
-      const match = buttons.find(
-        (b: HTMLButtonElement): boolean => b.textContent?.includes(label) ?? false,
-      );
-      expect(match, `expected a rendered <button> containing "${label}"`).toBeTruthy();
-      return match!;
-    }
+      component.startCreate();
 
-    it('should not open the create dialog when a non-activation key is pressed on the toolbar "New Account" button (PF-206)', () => {
-      // Arrange -- accounts non-empty renders the toolbar button
-      fixture.detectChanges();
-      const openSpy = vi.spyOn(component, 'openCreateDialog');
-      const button = findButtonByLabel('New Account');
-
-      // Act
-      button.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
-
-      // Assert
-      expect(openSpy).not.toHaveBeenCalled();
-    });
-
-    it('should not open the create dialog when a non-activation key is pressed on the empty-state "Add Your First Account" button (PF-206)', () => {
-      // Arrange -- empty accounts renders the empty-state button instead
-      mockAccountApi.getAccounts.mockReturnValue(of([]));
-      fixture.detectChanges();
-      const openSpy = vi.spyOn(component, 'openCreateDialog');
-      const button = findButtonByLabel('Add Your First Account');
-
-      // Act
-      button.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
-
-      // Assert
-      expect(openSpy).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('dialog operations', () => {
-    beforeEach(() => {
-      fixture.detectChanges();
-    });
-
-    it('should open create dialog', () => {
-      component.openCreateDialog();
-      expect(component.selectedAccount()).toBeNull();
-      expect(component.showDialog()).toBe(true);
-    });
-
-    it('should open edit dialog', () => {
-      component.openEditDialog(mockAccounts[0]);
-      expect(component.selectedAccount()).toEqual(mockAccounts[0]);
-      expect(component.showDialog()).toBe(true);
-    });
-  });
-
-  describe('onSave', () => {
-    beforeEach(() => {
-      fixture.detectChanges();
-    });
-
-    it('should route to createAccount when selectedAccount is null', () => {
-      component.selectedAccount.set(null);
-      const createReq: AccountCreateRequest = {
-        name: 'New',
+      // act
+      component.onSave({
+        name: 'ZZ New',
         type: 'CHECKING',
         startingBalance: 0,
         currencyCode: 'USD',
-        bankName: 'STANDARD',
-      };
+        bankName: null,
+      });
 
-      mockAccountApi.create.mockReturnValue(of(2));
-
-      component.onSave(createReq);
-
-      expect(mockAccountApi.create).toHaveBeenCalledWith(createReq);
+      // assert & verify
+      expect(component.panelMode()).toBe('summary');
+      expect(component.selectedAccount()?.id).toBe(9);
       expect(mockToast.success).toHaveBeenCalledWith('Account created successfully');
-      expect(component.showDialog()).toBe(false);
-      expect(mockAccountApi.getAccounts).toHaveBeenCalledTimes(2); // Initial load + reload
     });
 
-    it('should handle createAccount error', () => {
-      component.selectedAccount.set(null);
+    it('should toast the API message when creating fails', () => {
+      // arrange
+      loadWith([acct(1, 'Checking', 100, true)]);
       mockAccountApi.create.mockReturnValue(
         throwError(() => ({ error: { detail: 'Create error' } })),
       );
+      component.startCreate();
 
-      component.onSave({} as AccountCreateRequest);
-
-      expect(mockToast.error).toHaveBeenCalledWith('Create error');
-    });
-
-    it('should route to editAccount when selectedAccount exists', () => {
-      component.selectedAccount.set(mockAccounts[0]);
-      const updateReq: AccountUpdateRequest = {
-        id: 1,
-        name: 'Updated',
+      // act
+      component.onSave({
+        name: 'x',
         type: 'CHECKING',
+        startingBalance: 0,
         currencyCode: 'USD',
-        bankName: 'STANDARD',
-        version: 1,
-      };
+        bankName: null,
+      });
 
-      mockAccountApi.update.mockReturnValue(of(1));
-
-      component.onSave(updateReq);
-
-      expect(mockAccountApi.update).toHaveBeenCalledWith(updateReq);
-      expect(mockToast.success).toHaveBeenCalledWith('Account updated successfully');
-      expect(component.showDialog()).toBe(false);
-      expect(mockAccountApi.getAccounts).toHaveBeenCalledTimes(2);
-    });
-
-    it('should handle editAccount error with fallback message', () => {
-      component.selectedAccount.set(mockAccounts[0]);
-      mockAccountApi.update.mockReturnValue(throwError(() => ({})));
-
-      component.onSave({} as AccountUpdateRequest);
-
-      expect(mockToast.error).toHaveBeenCalledWith('Failed to update account');
+      // assert & verify
+      expect(mockToast.error).toHaveBeenCalledWith('Create error');
+      expect(component.panelMode()).toBe('create');
     });
   });
 
-  describe('deleteAccount', () => {
-    beforeEach(() => {
-      fixture.detectChanges();
-    });
+  describe('edit', () => {
+    it('should return to the refreshed summary after saving an edit', () => {
+      // arrange
+      loadWith([acct(1, 'Checking', 100, true)]);
+      component.startEdit(component.accounts()[0]);
+      mockAccountApi.update.mockReturnValue(of(1));
+      mockAccountApi.getAccounts.mockReturnValue(of([acct(1, 'Renamed', 100, true)]));
 
-    it('should open confirmation and delete upon accept', () => {
-      // Setup mock confirmation to instantly trigger 'accept'
-      mockConfirmationService.confirm.mockImplementation((config: Confirmation) => {
-        if (config.accept) {
-          config.accept();
-        }
+      // act
+      component.onSave({
+        id: 1,
+        name: 'Renamed',
+        type: 'CHECKING',
+        currencyCode: 'USD',
+        bankName: null,
+        version: 1,
       });
 
+      // assert & verify
+      expect(component.panelMode()).toBe('summary');
+      expect(component.selectedAccount()?.name).toBe('Renamed');
+      expect(mockToast.success).toHaveBeenCalledWith('Account updated successfully');
+    });
+
+    it('should toast a fallback message when updating fails', () => {
+      // arrange
+      loadWith([acct(1, 'Checking', 100, true)]);
+      component.startEdit(component.accounts()[0]);
+      mockAccountApi.update.mockReturnValue(throwError(() => ({})));
+
+      // act
+      component.onSave({
+        id: 1,
+        name: 'x',
+        type: 'CHECKING',
+        currencyCode: 'USD',
+        bankName: null,
+        version: 1,
+      });
+
+      // assert & verify
+      expect(mockToast.error).toHaveBeenCalledWith('Failed to update account');
+      expect(component.panelMode()).toBe('edit');
+    });
+  });
+
+  describe('reconcile', () => {
+    it('should reload and return to the summary after a successful reconcile', () => {
+      // arrange
+      loadWith([acct(1, 'Checking', 1000, true)]);
+      component.startReconcile(component.accounts()[0]);
+      mockAccountApi.getAccounts.mockReturnValue(of([acct(1, 'Checking', 1200, true)]));
+
+      // act
+      component.onReconciled({ adjustment: 200 });
+
+      // assert & verify
+      expect(component.panelMode()).toBe('summary');
+      expect(component.selectedAccount()?.currentBalance).toBe(1200);
+    });
+
+    it('should reload the accounts when the reconcile step asks, without leaving the step', () => {
+      // arrange
+      loadWith([acct(1, 'Checking', 1000, true)]);
+      component.startReconcile(component.accounts()[0]);
+      mockAccountApi.getAccounts.mockClear();
+
+      // act
+      component.onReloadRequested();
+
+      // assert & verify
+      expect(mockAccountApi.getAccounts).toHaveBeenCalledTimes(1);
+      expect(component.panelMode()).toBe('reconcile');
+    });
+  });
+
+  describe('delete', () => {
+    const acceptDelete = (): void => mockConfirmationService.confirm.mock.calls[0][0].accept!();
+
+    it('should close the panel and drop the account when the shown account is deleted', () => {
+      // arrange
+      loadWith([acct(1, 'Checking', 100, true), acct(2, 'Visa', -50, false)]);
+      component.openAccount(component.accounts()[0]);
       mockAccountApi.delete.mockReturnValue(of(undefined));
 
-      component.deleteAccount(mockAccounts[0]);
+      // act
+      component.deleteAccount(component.accounts()[0]);
+      acceptDelete();
 
-      expect(mockConfirmationService.confirm).toHaveBeenCalled();
-      expect(mockAccountApi.delete).toHaveBeenCalledWith(mockAccounts[0].id);
+      // assert & verify
+      expect(component.accounts().map((a) => a.id)).toEqual([2]);
+      expect(component.panelMode()).toBe('closed');
+      expect(component.selectedId()).toBeNull();
       expect(mockToast.success).toHaveBeenCalledWith('Account deleted successfully');
-
-      // Account should be removed from the signal
-      expect(component.accounts().length).toBe(0);
     });
 
-    it('should handle delete error', () => {
-      mockConfirmationService.confirm.mockImplementation((config: Confirmation) => {
-        if (config.accept) {
-          config.accept();
-        }
-      });
+    it('should leave the panel alone when a different account is deleted', () => {
+      // arrange
+      loadWith([acct(1, 'Checking', 100, true), acct(2, 'Visa', -50, false)]);
+      component.openAccount(component.accounts()[0]);
+      mockAccountApi.delete.mockReturnValue(of(undefined));
 
+      // act
+      component.deleteAccount(component.accounts()[1]);
+      acceptDelete();
+
+      // assert & verify
+      expect(component.panelMode()).toBe('summary');
+      expect(component.selectedId()).toBe(1);
+    });
+
+    it('should toast the API message and keep the account when delete is refused', () => {
+      // arrange
+      loadWith([acct(1, 'Checking', 100, true)]);
       mockAccountApi.delete.mockReturnValue(
-        throwError(() => ({ error: { detail: 'Cannot delete' } })),
+        throwError(() => ({ error: { detail: 'Account has transactions' } })),
       );
 
-      component.deleteAccount(mockAccounts[0]);
+      // act
+      component.deleteAccount(component.accounts()[0]);
+      acceptDelete();
 
-      expect(mockToast.error).toHaveBeenCalledWith('Cannot delete');
+      // assert & verify
+      expect(mockToast.error).toHaveBeenCalledWith('Account has transactions');
+      expect(component.accounts().length).toBe(1);
     });
 
-    it('should handle delete error with fallback message', () => {
-      mockConfirmationService.confirm.mockImplementation((config: Confirmation) => {
-        if (config.accept) {
-          config.accept();
-        }
-      });
-
+    it('should toast a fallback message when delete fails without a detail', () => {
+      // arrange
+      loadWith([acct(1, 'Checking', 100, true)]);
       mockAccountApi.delete.mockReturnValue(throwError(() => ({})));
 
-      component.deleteAccount(mockAccounts[0]);
+      // act
+      component.deleteAccount(component.accounts()[0]);
+      acceptDelete();
 
+      // assert & verify
       expect(mockToast.error).toHaveBeenCalledWith('Failed to delete account');
+    });
+  });
+
+  describe('unsaved edits', () => {
+    const dirtyEditForm = (): void => {
+      fixture.detectChanges();
+      const form = fixture.debugElement.query(By.directive(AccountEditFormComponent))
+        .componentInstance as AccountEditFormComponent;
+      form.form.markAsDirty();
+    };
+
+    it('should ask before leaving a dirty edit for another account, Back, or Close', () => {
+      // arrange
+      loadWith([acct(1, 'A', 1, true), acct(2, 'B', 2, true)]);
+      component.startEdit(component.accounts()[0]);
+      dirtyEditForm();
+
+      // act and assert & verify
+      component.openAccount(component.accounts()[1]);
+      expect(mockConfirmationService.confirm).toHaveBeenCalledTimes(1);
+      expect(component.selectedId()).toBe(1);
+
+      component.backToSummary();
+      expect(mockConfirmationService.confirm).toHaveBeenCalledTimes(2);
+
+      component.onPanelClose();
+      expect(mockConfirmationService.confirm).toHaveBeenCalledTimes(3);
+      expect(component.panelMode()).toBe('edit');
+    });
+
+    it('should not ask when the form is untouched', () => {
+      // arrange
+      loadWith([acct(1, 'A', 1, true), acct(2, 'B', 2, true)]);
+      component.startEdit(component.accounts()[0]);
+      fixture.detectChanges();
+
+      // act
+      component.openAccount(component.accounts()[1]);
+
+      // assert & verify
+      expect(mockConfirmationService.confirm).not.toHaveBeenCalled();
+      expect(component.selectedId()).toBe(2);
+    });
+
+    it('should proceed when the user chooses Discard', () => {
+      // arrange
+      loadWith([acct(1, 'A', 1, true), acct(2, 'B', 2, true)]);
+      component.startEdit(component.accounts()[0]);
+      dirtyEditForm();
+      component.openAccount(component.accounts()[1]);
+
+      // act
+      mockConfirmationService.confirm.mock.calls[0][0].accept!();
+
+      // assert & verify
+      expect(component.selectedId()).toBe(2);
+      expect(component.panelMode()).toBe('summary');
+    });
+  });
+
+  describe('states', () => {
+    it('should show the empty state with an Add account button when there are no accounts', () => {
+      // assert & verify
+      expect(fixture.nativeElement.textContent).toContain('No accounts yet');
+      expect(fixture.nativeElement.querySelector('[data-testid="empty-add-account"]')).toBeTruthy();
+      expect(fixture.nativeElement.querySelector('app-account-net-worth-card')).toBeNull();
+    });
+
+    it('should open the add panel from the empty state', () => {
+      // act
+      component.startCreate();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(fixture.nativeElement.querySelector('app-account-edit-form')).toBeTruthy();
+      expect(fixture.nativeElement.querySelector('app-side-panel')).toBeTruthy();
+    });
+
+    it('should show the net worth card and groups when there are accounts', () => {
+      // arrange
+      loadWith([acct(1, 'Checking', 100, true)]);
+
+      // assert & verify
+      expect(fixture.nativeElement.querySelector('app-account-net-worth-card')).toBeTruthy();
+      expect(fixture.nativeElement.querySelector('app-account-list')).toBeTruthy();
     });
   });
 });

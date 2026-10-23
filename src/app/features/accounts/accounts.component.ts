@@ -7,15 +7,14 @@ import {
   OnInit,
   Signal,
   signal,
+  viewChild,
   WritableSignal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpErrorResponse } from '@angular/common/http';
-import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
-import { TableModule } from 'primeng/table';
-import { CardModule } from 'primeng/card';
-import { TooltipModule } from 'primeng/tooltip';
+import { SkeletonModule } from 'primeng/skeleton';
 import { ConfirmationService } from 'primeng/api';
 import {
   Account,
@@ -24,26 +23,32 @@ import {
   AccountUpdateRequest,
 } from '@models/account.model';
 import { AccountApiService } from './services/account-api.service';
-import { AccountSummaryCardsComponent } from './components/account-summary-cards/account-summary-cards.component';
+import { AccountNetWorthCardComponent } from './components/account-net-worth-card/account-net-worth-card.component';
+import { AccountListComponent } from './components/account-list/account-list.component';
+import { AccountSummaryViewComponent } from './components/account-summary-view/account-summary-view.component';
+import { AccountEditFormComponent } from './components/account-edit-form/account-edit-form.component';
+import { AccountReconcileFormComponent } from './components/account-reconcile-form/account-reconcile-form.component';
+import { SidePanelComponent } from '@shared/components/side-panel/side-panel.component';
+import { AccountGroup, AccountTotals, accountTotals, groupAccounts } from './utils/account-totals';
 import { ToastService } from '@core/services/toast.service';
 import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen-toolbar';
 import { finalize, forkJoin } from 'rxjs';
-import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
 import { PageErrorStateComponent } from '@shared/components/page-error-state/page-error-state.component';
 
 @Component({
   selector: 'app-accounts',
   standalone: true,
   imports: [
-    CommonModule,
     ButtonModule,
-    TableModule,
-    CardModule,
-    TooltipModule,
+    SkeletonModule,
     ScreenToolbarComponent,
-    AccountSummaryCardsComponent,
-    FormatCurrencyPipe,
     PageErrorStateComponent,
+    SidePanelComponent,
+    AccountNetWorthCardComponent,
+    AccountListComponent,
+    AccountSummaryViewComponent,
+    AccountEditFormComponent,
+    AccountReconcileFormComponent,
   ],
   templateUrl: './accounts.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -53,29 +58,50 @@ export class AccountsComponent implements OnInit {
   private readonly toast: ToastService = inject(ToastService);
   private readonly confirmationService: ConfirmationService = inject(ConfirmationService);
   private readonly destroyRef: DestroyRef = inject(DestroyRef);
+  private readonly router: Router = inject(Router);
 
   accounts: WritableSignal<Account[]> = signal([]);
   accountTypes: WritableSignal<AccountType[]> = signal([]);
   loading: WritableSignal<boolean> = signal(false);
   loadError: WritableSignal<boolean> = signal(false);
-  showDialog: WritableSignal<boolean> = signal(false);
-  showReconcileDrawer: WritableSignal<boolean> = signal(false);
-  selectedAccount: WritableSignal<Account | null> = signal(null);
 
+  /** What the docked panel is showing. */
+  panelMode: WritableSignal<PanelMode> = signal('closed');
+  /** The account the panel is about (null when closed or adding). */
+  selectedId: WritableSignal<number | null> = signal(null);
+
+  selectedAccount: Signal<Account | null> = computed(
+    (): Account | null =>
+      this.accounts().find((a: Account): boolean => a.id === this.selectedId()) ?? null,
+  );
+  totals: Signal<AccountTotals> = computed((): AccountTotals => accountTotals(this.accounts()));
+  groups: Signal<AccountGroup[]> = computed((): AccountGroup[] => groupAccounts(this.accounts()));
   isEmpty: Signal<boolean> = computed(
-    (): boolean => this.accounts().length === 0 && !this.loading(),
+    (): boolean => this.accounts().length === 0 && !this.loading() && !this.loadError(),
   );
 
-  /**
-   * Lifecycle hook that initializes the component.
-   */
+  panelTitle: Signal<string> = computed((): string => {
+    const name: string = this.selectedAccount()?.name ?? 'account';
+    switch (this.panelMode()) {
+      case 'create':
+        return 'Add account';
+      case 'edit':
+        return `Edit ${name}`;
+      case 'reconcile':
+        return `Reconcile ${name}`;
+      default:
+        return this.selectedAccount()?.name ?? 'Account';
+    }
+  });
+
+  private readonly editForm = viewChild<AccountEditFormComponent>('editForm');
+  private readonly reconcileForm = viewChild<AccountReconcileFormComponent>('reconcileForm');
+
   ngOnInit(): void {
     this.loadAccounts();
   }
 
-  /**
-   * Loads accounts from the API and updates the accounts signal.
-   */
+  /** Loads accounts and account types from the API. */
   loadAccounts(): void {
     this.loading.set(true);
     this.loadError.set(false);
@@ -101,54 +127,96 @@ export class AccountsComponent implements OnInit {
       });
   }
 
-  /**
-   * Opens the account creation dialog.
-   */
-  openCreateDialog(): void {
-    this.selectedAccount.set(null);
-    this.showDialog.set(true);
+  /** Shows an account's summary in the panel. */
+  openAccount(account: Account): void {
+    if (this.panelMode() === 'summary' && this.selectedId() === account.id) return;
+    this.confirmDiscardIfDirty((): void => {
+      this.selectedId.set(account.id);
+      this.panelMode.set('summary');
+    });
   }
 
-  /**
-   * Opens the account edit dialog for the selected account.
-   * @param account The account to edit.
-   */
-  openEditDialog(account: Account): void {
-    this.selectedAccount.set(account);
-    this.showDialog.set(true);
+  /** Opens the Edit step, for the given account or the one already shown. */
+  startEdit(account?: Account): void {
+    this.confirmDiscardIfDirty((): void => {
+      if (account) this.selectedId.set(account.id);
+      this.panelMode.set('edit');
+    });
   }
 
-  /**
-   * Opens the account reconcile drawer for the selected account.
-   * @param account The account to reconcile.
-   */
-  openReconcileDrawer(account: Account): void {
-    this.selectedAccount.set(account);
-    this.showReconcileDrawer.set(true);
+  /** Opens the Reconcile step, for the given account or the one already shown. */
+  startReconcile(account?: Account): void {
+    this.confirmDiscardIfDirty((): void => {
+      if (account) this.selectedId.set(account.id);
+      this.panelMode.set('reconcile');
+    });
   }
 
-  onSave(formData: AccountCreateRequest | AccountUpdateRequest): void {
-    const account: Account | null = this.selectedAccount();
+  /** Opens the panel to add an account. */
+  startCreate(): void {
+    this.confirmDiscardIfDirty((): void => {
+      this.selectedId.set(null);
+      this.panelMode.set('create');
+    });
+  }
 
-    if (account) {
-      this.editAccount(formData as AccountUpdateRequest);
+  backToSummary(): void {
+    this.confirmDiscardIfDirty((): void => this.panelMode.set('summary'));
+  }
+
+  closePanel(): void {
+    this.panelMode.set('closed');
+    this.selectedId.set(null);
+  }
+
+  /** Close button, Escape: asks first when there are unsaved edits. */
+  onPanelClose(): void {
+    this.confirmDiscardIfDirty((): void => this.closePanel());
+  }
+
+  /** Opens the Transactions page filtered to one account, across all time. */
+  viewTransactions(account: Account): void {
+    void this.router.navigate(['/transactions'], {
+      queryParams: { accountId: account.id, period: 'all' },
+    });
+  }
+
+  /** The panel's Save button: submits whichever form is showing. */
+  onPanelSave(): void {
+    if (this.panelMode() === 'reconcile') {
+      this.reconcileForm()?.submit();
     } else {
-      this.createAccount(formData as AccountCreateRequest);
+      this.editForm()?.submit();
     }
   }
 
-  /**
-   * Handles the creation of a new account.
-   * @param data The account data to create.
-   */
+  onSave(formData: AccountCreateRequest | AccountUpdateRequest): void {
+    if (this.panelMode() === 'create') {
+      this.createAccount(formData as AccountCreateRequest);
+    } else {
+      this.editAccount(formData as AccountUpdateRequest);
+    }
+  }
+
+  onReconciled(_event: { adjustment: number }): void {
+    this.panelMode.set('summary');
+    this.loadAccounts();
+  }
+
+  onReloadRequested(): void {
+    this.loadAccounts();
+  }
+
   private createAccount(data: AccountCreateRequest): void {
     this.accountApi
       .create(data)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (): void => {
+        next: (newId: number): void => {
           this.toast.success('Account created successfully');
-          this.showDialog.set(false);
+          this.editForm()?.form.markAsPristine();
+          this.selectedId.set(newId);
+          this.panelMode.set('summary');
           this.loadAccounts();
         },
         error: (error: HttpErrorResponse): void => {
@@ -158,10 +226,6 @@ export class AccountsComponent implements OnInit {
       });
   }
 
-  /**
-   * Handles the editing of an existing account.
-   * @param data The updated account data.
-   */
   private editAccount(data: AccountUpdateRequest): void {
     this.accountApi
       .update(data)
@@ -169,7 +233,8 @@ export class AccountsComponent implements OnInit {
       .subscribe({
         next: (): void => {
           this.toast.success('Account updated successfully');
-          this.showDialog.set(false);
+          this.editForm()?.form.markAsPristine();
+          this.panelMode.set('summary');
           this.loadAccounts();
         },
         error: (error: HttpErrorResponse): void => {
@@ -179,14 +244,11 @@ export class AccountsComponent implements OnInit {
       });
   }
 
-  /**
-   * Deletes an account.
-   * @param account the account to delete
-   */
+  /** Confirms, then deletes an account; closes the panel if it was showing that account. */
   deleteAccount(account: Account): void {
     this.confirmationService.confirm({
       header: `Delete ${account.name}?`,
-      message: 'This will permanently delete the account. This action cannot be undone.',
+      message: 'This permanently deletes the account and cannot be undone.',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Delete',
       rejectLabel: 'Cancel',
@@ -201,14 +263,39 @@ export class AccountsComponent implements OnInit {
                 this.accounts().filter((a: Account): boolean => a.id !== account.id),
               );
               this.toast.success('Account deleted successfully');
+              if (this.selectedId() === account.id) {
+                this.closePanel();
+              }
             },
             error: (error: HttpErrorResponse): void => {
               console.error('Error deleting account:', error);
-              const message = error.error?.detail || 'Failed to delete account';
-              this.toast.error(message);
+              this.toast.error(error.error?.detail || 'Failed to delete account');
             },
           });
       },
     });
   }
+
+  /** Runs an action that would replace a form, after asking when that form has unsaved changes. */
+  private confirmDiscardIfDirty(proceed: () => void): void {
+    const mode: PanelMode = this.panelMode();
+    const dirty: boolean =
+      ((mode === 'edit' || mode === 'create') && !!this.editForm()?.form.dirty) ||
+      (mode === 'reconcile' && !!this.reconcileForm()?.form.dirty);
+    if (!dirty) {
+      proceed();
+      return;
+    }
+    this.confirmationService.confirm({
+      header: 'Discard changes?',
+      message: 'You have unsaved changes. Discard them?',
+      acceptLabel: 'Discard',
+      rejectLabel: 'Keep editing',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: proceed,
+    });
+  }
 }
+
+/** The docked panel's states. */
+export type PanelMode = 'closed' | 'summary' | 'edit' | 'reconcile' | 'create';
