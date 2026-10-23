@@ -657,7 +657,7 @@ export class TransactionsComponent implements OnInit {
    * field overrides that transaction's own current value; toggled-off fields pass through
    * unchanged -- `TransactionUpdateRequest` requires the full set of fields per transaction, not
    * just the ones being changed (a PATCH endpoint, but not a partial-object one).
-   * @param data the finalized mass-edit configuration from BulkEditDialogComponent
+   * @param data the finalized mass-edit configuration from TransactionBulkFormComponent
    */
   onBulkSave(data: BulkEditData): void {
     this.bulkSaving.set(true);

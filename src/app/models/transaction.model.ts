@@ -203,7 +203,7 @@ export type TransactionCreateRequest = components['schemas']['TransactionCreateR
 export type TransactionUpdateRequest = components['schemas']['TransactionUpdateRequest'];
 
 /**
- * Represents the payload emitted by {@link TransactionFormDrawerComponent} on save: the
+ * Represents the payload emitted by {@link TransactionEditFormComponent} on save: the
  * transaction fields themselves, plus the full set of tag ids the user selected (not a diff --
  * the caller is responsible for comparing against the transaction's previous tags to decide what
  * to assign/remove).

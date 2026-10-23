@@ -20,9 +20,9 @@ test.describe('Transactions Core CRUD', () => {
     await page.reload();
 
     // Create
-    await page.getByRole('button', {name: 'Add Transaction'}).click();
+    await page.getByRole('button', {name: 'Add transaction'}).click();
     const drawer = page.getByRole('complementary');
-    await expect(drawer.getByRole('heading', {name: 'New Transaction'})).toBeVisible();
+    await expect(drawer.getByRole('heading', {name: 'New transaction'})).toBeVisible();
 
     await drawer.getByRole('spinbutton').fill('42.50');
     await drawer.getByText('Select the account...').click();
@@ -30,7 +30,7 @@ test.describe('Transactions Core CRUD', () => {
     await drawer.getByText('Select a category...').click();
     await page.getByRole('option', {name: category.name, exact: true}).click();
     await drawer.locator('textarea#description').fill(description);
-    await drawer.getByRole('button', {name: 'Post Transaction'}).click();
+    await drawer.getByRole('button', {name: 'Post transaction'}).click();
 
     await expect(page.getByText('Transaction created')).toBeVisible();
     await expect(drawer).toBeHidden();
@@ -42,22 +42,23 @@ test.describe('Transactions Core CRUD', () => {
     await expect(row.getByText(account.name)).toBeVisible();
 
     // Edit
-    await row.locator('button:has(.pi-pencil)').click();
+    await row.getByTestId('open-transaction').click();
     const editDrawer = page.getByRole('complementary');
-    await expect(editDrawer.getByRole('heading', {name: 'Edit Transaction'})).toBeVisible();
+    await expect(editDrawer.getByRole('heading', {name: 'Edit transaction'})).toBeVisible();
     await expect(editDrawer.getByRole('spinbutton')).toHaveValue('$42.50');
 
     await editDrawer.getByRole('spinbutton').fill('99.99');
     await editDrawer.locator('textarea#description').fill(updatedDescription);
-    await editDrawer.getByRole('button', {name: 'Update Record'}).click();
+    await editDrawer.getByRole('button', {name: 'Save changes'}).click();
 
     await expect(page.getByText('Transaction updated')).toBeVisible();
+    // the panel stays open on the saved row, so the next step can use it
     const updatedRow = page.getByRole('row', {name: new RegExp(updatedDescription)});
     await expect(updatedRow).toBeVisible();
     await expect(updatedRow.getByText('-$99.99')).toBeVisible();
 
     // Delete, with confirmation
-    await updatedRow.locator('button:has(.pi-trash)').click();
+    await editDrawer.getByRole('button', {name: 'Delete'}).click();
     const confirmDialog = page.getByRole('alertdialog');
     await expect(confirmDialog.getByText('This will permanently remove this record. Continue?')).toBeVisible();
     await confirmDialog.getByRole('button', {name: 'Delete', exact: true}).click();

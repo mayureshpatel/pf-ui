@@ -89,7 +89,7 @@ describe('TransactionsComponent', () => {
       getCategories: vi.fn().mockReturnValue(of([])),
       getCategoriesWithTransactions: vi.fn().mockReturnValue(of([])),
       getMerchantsWithTransactions: vi.fn().mockReturnValue(of([])),
-      getGroupedCategories: vi.fn().mockReturnValue(of([])), // consumed by the child BulkEditDialogComponent
+      getGroupedCategories: vi.fn().mockReturnValue(of([])), // consumed by the child TransactionBulkFormComponent
     };
     mockMerchantApi = {
       getMerchants: vi.fn().mockReturnValue(of([])),
