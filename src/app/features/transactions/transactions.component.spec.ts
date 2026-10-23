@@ -1223,6 +1223,33 @@ describe('TransactionsComponent', () => {
         expect(component.selectedTransaction()?.id).toBe(2);
       });
 
+      it('should not ask to discard once the edits have been saved', () => {
+        // arrange
+        openAt({}, [row(1)]);
+        component.openEditDialog(row(1));
+        dirtyEditForm();
+        mockTransactionApi.updateTransaction.mockReturnValue(of(1));
+
+        // act
+        component.onSave({
+          request: {
+            id: 1,
+            accountId: 1,
+            amount: 10,
+            transactionDate: '2026-10-15',
+            description: 'test',
+            type: 'EXPENSE',
+            categoryId: 5,
+          } as TransactionUpdateRequest,
+          tagIds: [],
+        });
+        component.onPanelClose();
+
+        // assert & verify
+        expect(mockConfirmationService.confirm).not.toHaveBeenCalled();
+        expect(component.panelMode()).toBe('closed');
+      });
+
       it('should ask before Edit more replaces a dirty single form with the bulk form', () => {
         // arrange
         openAt({}, [row(1), row(2)]);

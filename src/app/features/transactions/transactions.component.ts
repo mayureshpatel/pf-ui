@@ -647,6 +647,8 @@ export class TransactionsComponent implements OnInit {
     ).subscribe({
       next: (): void => {
         this.toast.success(`Transaction ${existing ? 'updated' : 'created'}`);
+        // what is on screen is now what is saved, so closing should not ask about discarding
+        this.editForm()?.form.markAsPristine();
         if (!existing) this.closePanel();
         this.loadTransactions();
       },

@@ -44,10 +44,10 @@ test.describe('Transaction Tags', () => {
     await drawer.getByRole('button', {name: 'Save changes'}).click();
 
     await expect(page.getByText('Transaction updated')).toBeVisible();
-    await expect(row.getByText(tag.name, {exact: true})).toBeVisible();
-    // the panel stays open on the saved row; close it before filtering
+    // the panel stays open on the saved row; close it so the list shows its Tags column again
     await drawer.getByRole('button', {name: 'Close'}).click();
     await expect(drawer).toBeHidden();
+    await expect(row.getByText(tag.name, {exact: true})).toBeVisible();
 
     // Drop the search so the exclusion assertion below is about the tag filter alone.
     await page.getByRole('searchbox').fill('');

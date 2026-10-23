@@ -24,7 +24,7 @@ test.describe('Mobile navigation drawer (PF-285)', () => {
     await expect(transactionsLink).toBeVisible();
 
     await transactionsLink.click();
-    await expect(page).toHaveURL(/\/transactions$/);
+    await expect(page).toHaveURL(/\/transactions(\?.*)?$/);
   });
 
   test('desktop navigation is unaffected: the sidebar is visible and the hamburger is hidden', async ({page}) => {
