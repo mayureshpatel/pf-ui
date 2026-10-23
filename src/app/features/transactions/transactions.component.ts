@@ -49,7 +49,7 @@ import {
 } from './components/transaction-review-tabs/transaction-review-tabs.component';
 import { TransactionListComponent } from './components/transaction-list/transaction-list.component';
 import { TransactionBulkBarComponent } from './components/transaction-bulk-bar/transaction-bulk-bar.component';
-import { TransactionSidePanelComponent } from './components/transaction-side-panel/transaction-side-panel.component';
+import { SidePanelComponent } from '@shared/components/side-panel/side-panel.component';
 import { TransactionEditFormComponent } from './components/transaction-edit-form/transaction-edit-form.component';
 import { TransactionBulkFormComponent } from './components/transaction-bulk-form/transaction-bulk-form.component';
 import { AccountApiService } from '@features/accounts/services/account-api.service';
@@ -83,7 +83,7 @@ import { PageErrorStateComponent } from '@shared/components/page-error-state/pag
     TransactionReviewTabsComponent,
     TransactionListComponent,
     TransactionBulkBarComponent,
-    TransactionSidePanelComponent,
+    SidePanelComponent,
     TransactionEditFormComponent,
     TransactionBulkFormComponent,
     ScreenToolbarComponent,

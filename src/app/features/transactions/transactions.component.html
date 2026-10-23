@@ -114,7 +114,7 @@
       </div>
 
       @if (panelMode() !== 'closed') {
-        <app-transaction-side-panel
+        <app-side-panel
           [title]="panelTitle()"
           [saving]="savingTransaction() || bulkSaving()"
           [valid]="panelValid()"
@@ -179,7 +179,7 @@
               (save)="onSave($event)"
             />
           }
-        </app-transaction-side-panel>
+        </app-side-panel>
       }
     </div>
   }
