@@ -68,8 +68,16 @@ export function groupAccounts(accounts: Account[]): AccountGroup[] {
         };
 
   return [
-    build('ASSETS', 'Assets', accounts.filter((a) => a.type.isAsset)),
-    build('LIABILITIES', 'Liabilities', accounts.filter((a) => !a.type.isAsset)),
+    build(
+      'ASSETS',
+      'Assets',
+      accounts.filter((a) => a.type.isAsset),
+    ),
+    build(
+      'LIABILITIES',
+      'Liabilities',
+      accounts.filter((a) => !a.type.isAsset),
+    ),
   ].filter((group): group is AccountGroup => group !== null);
 }
 
