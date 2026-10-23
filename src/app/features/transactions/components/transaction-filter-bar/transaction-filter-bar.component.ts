@@ -10,6 +10,7 @@ import {
   OutputEmitterRef,
   Signal,
 } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { DatePicker } from 'primeng/datepicker';
@@ -37,6 +38,7 @@ const SEARCH_DEBOUNCE_MS = 300;
   selector: 'app-transaction-filter-bar',
   standalone: true,
   imports: [
+    DecimalPipe,
     FormsModule,
     ButtonModule,
     DatePicker,

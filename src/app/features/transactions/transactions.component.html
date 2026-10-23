@@ -82,6 +82,7 @@
             [pageCount]="pageCount()"
             [selectedIds]="selectedIds()"
             [loading]="loading()"
+            [compact]="panelMode() !== 'closed'"
             (sortChange)="onSortChange($event)"
             (selectionChange)="onSelectionChange($event)"
             (openTransaction)="openEditDialog($event)"

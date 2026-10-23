@@ -29,6 +29,7 @@ describe('TransactionListComponent', () => {
       loading: boolean;
       page: number;
       pageCount: number;
+      compact: boolean;
     }> = {},
   ): void {
     fixture.componentRef.setInput('transactions', transactions);
@@ -37,6 +38,7 @@ describe('TransactionListComponent', () => {
     fixture.componentRef.setInput('pageCount', overrides.pageCount ?? 1);
     fixture.componentRef.setInput('selectedIds', overrides.selectedIds ?? []);
     fixture.componentRef.setInput('loading', overrides.loading ?? false);
+    fixture.componentRef.setInput('compact', overrides.compact ?? false);
     fixture.detectChanges();
   }
 
@@ -185,5 +187,27 @@ describe('TransactionListComponent', () => {
 
     // assert & verify
     expect(all('[data-testid="open-transaction"]').length).toBe(2);
+  });
+
+  it('should hide the Description and Tags columns in compact mode, keeping the amount', () => {
+    // act
+    render([txn({ id: 1, tags: [{ id: 1, name: 'weekly' } as never] })], { compact: true });
+
+    // assert & verify
+    const headers = all('th').map((th) => th.textContent?.trim());
+    expect(headers).not.toContain('Description');
+    expect(headers).not.toContain('Tags');
+    expect(headers).toContain('Amount');
+    expect(fixture.nativeElement.textContent).not.toContain('weekly');
+  });
+
+  it('should show every column when not compact', () => {
+    // act
+    render([txn({ id: 1 })]);
+
+    // assert & verify
+    const headers = all('th').map((th) => th.textContent?.trim());
+    expect(headers).toContain('Description');
+    expect(headers).toContain('Tags');
   });
 });

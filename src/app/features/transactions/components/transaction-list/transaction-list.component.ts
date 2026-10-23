@@ -40,6 +40,9 @@ export class TransactionListComponent {
   readonly selectedIds: InputSignal<number[]> = input.required<number[]>();
   readonly loading: InputSignal<boolean> = input.required<boolean>();
 
+  /** Hides the Description and Tags columns, for when the edit panel narrows the list. */
+  readonly compact: InputSignal<boolean> = input<boolean>(false);
+
   /** Emits the sort string (for example `amount,desc`). */
   readonly sortChange: OutputEmitterRef<string> = output<string>();
 
@@ -85,6 +88,16 @@ export class TransactionListComponent {
   );
 
   readonly skeletonRows: number[] = [0, 1, 2, 3, 4, 5, 6, 7];
+
+  /** The sortable columns currently shown (Description hides in compact mode). */
+  readonly visibleColumns: Signal<SortColumn[]> = computed((): SortColumn[] =>
+    this.columns.filter((c: SortColumn): boolean => !(this.compact() && c.field === 'description')),
+  );
+
+  /** How many columns the table has right now (for full-width headings and skeleton rows). */
+  readonly columnCount: Signal<number> = computed(
+    (): number => 5 + (this.compact() ? 0 : 2) + (this.grouped() ? 0 : 1),
+  );
 
   private lastClickedIndex: number | null = null;
 

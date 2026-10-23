@@ -176,7 +176,8 @@
 
   @if (resultCount() !== null) {
     <p data-testid="result-line" class="text-sm text-muted-color">
-      {{ resultCount() }} {{ resultCount() === 1 ? 'transaction matches' : 'transactions match' }}
+      {{ resultCount() | number }}
+      {{ resultCount() === 1 ? 'transaction matches' : 'transactions match' }}
     </p>
   }
 </div>

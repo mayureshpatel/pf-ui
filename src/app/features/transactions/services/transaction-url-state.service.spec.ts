@@ -23,8 +23,8 @@ describe('TransactionUrlStateService', () => {
           categoryName: 'Dining',
           minAmount: 5,
           maxAmount: 50,
-          startDate: new Date('2026-03-01T00:00:00.000Z'),
-          endDate: new Date('2026-03-31T00:00:00.000Z'),
+          startDate: new Date(2026, 2, 1),
+          endDate: new Date(2026, 2, 31),
           tagId: 42,
         },
         page: 2,
@@ -42,7 +42,7 @@ describe('TransactionUrlStateService', () => {
 
     it('should round-trip a same-day filter (startDate equal to endDate)', () => {
       // Arrange -- functionally what the UI represents as a single-day "dateIs" filter
-      const sameDay = new Date('2026-05-15T00:00:00.000Z');
+      const sameDay = new Date(2026, 4, 15);
       const state: TransactionState = {
         filter: { startDate: sameDay, endDate: sameDay },
         page: 0,
@@ -59,6 +59,46 @@ describe('TransactionUrlStateService', () => {
       expect(params['endDate']).toBeDefined();
       expect(rehydrated.filter.startDate).toEqual(sameDay);
       expect(rehydrated.filter.endDate).toEqual(sameDay);
+    });
+
+    it('should write dates as plain yyyy-MM-dd, not a locale-dependent long string', () => {
+      // arrange
+      const state: TransactionState = {
+        filter: { startDate: new Date(2026, 9, 1), endDate: new Date(2026, 9, 31) },
+        page: 0,
+        size: 20,
+        sort: 'date,desc',
+      };
+
+      // act
+      const params: Params = service.buildQueryParams(state);
+
+      // assert & verify
+      expect(params['startDate']).toBe('2026-10-01');
+      expect(params['endDate']).toBe('2026-10-31');
+    });
+
+    it('should read a plain yyyy-MM-dd date as local midnight on that day', () => {
+      // act
+      const state: TransactionState = service.hydrateFromParams({
+        startDate: '2026-10-01',
+        endDate: '2026-10-31',
+      });
+
+      // assert & verify
+      expect(state.filter.startDate).toEqual(new Date(2026, 9, 1));
+      expect(state.filter.endDate).toEqual(new Date(2026, 9, 31));
+    });
+
+    it('should still read an older long-format date from a saved link', () => {
+      // arrange
+      const legacy: string = new Date(2026, 9, 1).toString();
+
+      // act
+      const state: TransactionState = service.hydrateFromParams({ startDate: legacy });
+
+      // assert & verify
+      expect(state.filter.startDate).toEqual(new Date(2026, 9, 1));
     });
 
     it('should omit default page, size, and sort values from the built params', () => {

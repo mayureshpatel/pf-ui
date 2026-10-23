@@ -153,4 +153,12 @@ describe('TransactionFilterBarComponent', () => {
       endDate: undefined,
     });
   });
+
+  it('should format a large result count with thousands separators', () => {
+    // act
+    render({}, 3211);
+
+    // assert & verify
+    expect(q('[data-testid="result-line"]').textContent?.trim()).toBe('3,211 transactions match');
+  });
 });

@@ -84,4 +84,29 @@ describe('TransactionSidePanelComponent', () => {
     // assert & verify
     expect(host.closed).toHaveBeenCalledTimes(1);
   });
+
+  describe('focus management', () => {
+    it('should move focus into the panel when it opens and give it back when it closes', () => {
+      // arrange -- a trigger outside the panel has focus, as when a row was just clicked
+      const trigger = document.createElement('button');
+      document.body.appendChild(trigger);
+      trigger.focus();
+      const second = TestBed.createComponent(HostComponent);
+
+      // act
+      second.detectChanges();
+
+      // assert & verify
+      expect(second.nativeElement.querySelector('aside').contains(document.activeElement)).toBe(
+        true,
+      );
+
+      // act
+      second.destroy();
+
+      // assert & verify
+      expect(document.activeElement).toBe(trigger);
+      trigger.remove();
+    });
+  });
 });
