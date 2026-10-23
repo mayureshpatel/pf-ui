@@ -19,13 +19,17 @@ test.describe('Transaction Tags', () => {
     const otherTxn = await createTestTransaction(page, account.id, category.id, 'E2E Untagged Txn');
 
     await page.reload();
+    // the page opens on This month and the seeded rows are older; look across all time and
+    // search for this run's own rows so they are on screen however much data the user has
+    await page.getByRole('button', {name: 'All time'}).click();
+    await page.getByRole('searchbox').fill('E2E Tagged Txn');
     const row = page.getByRole('row', {name: new RegExp(taggedTxn.description)});
-    await row.locator('button:has(.pi-pencil)').click();
+    await row.getByTestId('open-transaction').click();
 
     // app-drawer renders PrimeNG's p-drawer (a side panel), which uses role="complementary" --
     // confirmed in account-reconciliation.spec.ts for this same shared component.
     const drawer = page.getByRole('complementary');
-    await expect(drawer.getByRole('heading', {name: 'Edit Transaction'})).toBeVisible();
+    await expect(drawer.getByRole('heading', {name: 'Edit transaction'})).toBeVisible();
 
     // The tags p-multiSelect's overlay panel renders in a CDK-style portal appended outside the
     // drawer's own DOM subtree (same behavior already proven for p-select in csv-import.spec.ts),
@@ -36,19 +40,24 @@ test.describe('Transaction Tags', () => {
     // Multi-select overlays don't auto-close on pick. Close it via a neutral, non-widget click
     // inside the drawer (not Escape -- that risks bubbling up and dismissing the drawer itself)
     // before clicking Save, in case the still-open panel visually covers the footer button.
-    await drawer.getByRole('heading').click();
-    await drawer.getByRole('button', {name: 'Update Record'}).click();
+    await drawer.getByRole('heading', {name: 'Edit transaction'}).click();
+    await drawer.getByRole('button', {name: 'Save changes'}).click();
 
     await expect(page.getByText('Transaction updated')).toBeVisible();
+    // the panel stays open on the saved row; close it so the list shows its Tags column again
+    await drawer.getByRole('button', {name: 'Close'}).click();
     await expect(drawer).toBeHidden();
     await expect(row.getByText(tag.name, {exact: true})).toBeVisible();
 
-    // Filter the ledger down to just this tag via the Tags column's filter menu.
-    const tagsHeader = page.locator('#txn-tags');
-    await tagsHeader.getByRole('button', {name: 'Show Filter Menu'}).click();
-    await page.getByText('Select Tag').click();
+    // Drop the search so the exclusion assertion below is about the tag filter alone.
+    await page.getByRole('searchbox').fill('');
+
+    // Filter the ledger down to just this tag via the Filters popover.
+    await page.getByTestId('filters-button').click();
+    await page.getByText('Any tag').click();
     await page.getByRole('option', {name: tag.name, exact: true}).click();
-    await page.getByRole('button', {name: 'Apply'}).click();
+    await page.getByRole('button', {name: 'Apply filters'}).click();
+    await expect(page.getByTestId('filter-chip').filter({hasText: `Tag: ${tag.name}`})).toBeVisible();
 
     await expect(page.getByText(taggedTxn.description).first()).toBeVisible();
     await expect(page.getByText(otherTxn.description)).not.toBeVisible();

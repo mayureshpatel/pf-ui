@@ -1,0 +1,212 @@
+<div
+  class="overflow-x-auto rounded-2xl border border-surface-200 bg-surface-0 dark:border-surface-800 dark:bg-surface-900"
+>
+  @if (!grouped()) {
+    <p
+      data-testid="flat-note"
+      class="flex items-center justify-between gap-3 border-b border-surface-200 px-4 py-2 text-sm text-muted-color dark:border-surface-800"
+    >
+      Sorted by
+      {{
+        sortField() === 'description'
+          ? 'description'
+          : sortField() === 'category.name'
+            ? 'category'
+            : sortField() === 'account.name'
+              ? 'account'
+              : sortField()
+      }}, so days are not grouped.
+      <button type="button" class="cursor-pointer underline" (click)="onShowByDate()">
+        Show newest first
+      </button>
+    </p>
+  } @else {
+    <div
+      class="flex justify-end border-b border-surface-200 px-4 py-2 text-sm dark:border-surface-800"
+    >
+      <button
+        type="button"
+        class="cursor-pointer text-muted-color underline"
+        (click)="onToggleDateOrder()"
+      >
+        {{ sortDirection() === 'desc' ? 'Newest first' : 'Oldest first' }}
+      </button>
+    </div>
+  }
+
+  <table class="w-full text-sm" aria-label="Transactions">
+    <thead>
+      <tr class="text-left text-muted-color">
+        <th scope="col" class="w-10 px-3 py-2">
+          <input
+            type="checkbox"
+            data-testid="header-checkbox"
+            aria-label="Select all transactions on this page"
+            [checked]="allSelected()"
+            (click)="onHeaderCheckbox()"
+          />
+        </th>
+        @if (!grouped()) {
+          <th scope="col" class="px-3 py-2 font-medium">
+            <button type="button" class="cursor-pointer" (click)="onShowByDate()">Date</button>
+          </th>
+        }
+        <th scope="col" class="px-3 py-2 font-medium">Merchant</th>
+        @for (column of visibleColumns(); track column.field) {
+          <th
+            scope="col"
+            class="px-3 py-2 font-medium"
+            [class.text-right]="column.field === 'amount'"
+            [attr.aria-sort]="
+              sortField() === column.field
+                ? sortDirection() === 'asc'
+                  ? 'ascending'
+                  : 'descending'
+                : null
+            "
+          >
+            <button type="button" class="cursor-pointer" (click)="onSort(column.field)">
+              {{ column.label }}
+            </button>
+            @if (sortField() === column.field) {
+              <i
+                class="pi text-xs"
+                [class]="sortDirection() === 'asc' ? 'pi-arrow-up' : 'pi-arrow-down'"
+              ></i>
+            }
+          </th>
+        }
+        @if (!compact()) {
+          <th scope="col" class="px-3 py-2 font-medium">Tags</th>
+        }
+      </tr>
+    </thead>
+
+    <tbody>
+      @if (loading() && transactions().length === 0) {
+        @for (row of skeletonRows; track row) {
+          <tr
+            data-testid="skeleton-row"
+            class="border-t border-surface-100 dark:border-surface-800"
+          >
+            <td [attr.colspan]="columnCount()" class="px-3 py-3">
+              <div class="h-4 animate-pulse rounded bg-surface-200 dark:bg-surface-700"></div>
+            </td>
+          </tr>
+        }
+      }
+
+      @for (group of groups(); track group.key) {
+        @if (grouped()) {
+          <tr data-testid="day-heading" class="bg-surface-100 dark:bg-surface-800">
+            <th
+              scope="rowgroup"
+              [attr.colspan]="columnCount()"
+              class="px-3 py-2 text-left font-semibold"
+            >
+              <span class="flex items-center justify-between">
+                <span>
+                  {{ group.label }}
+                  @if (group.partial) {
+                    <span class="font-normal text-muted-color">(partial)</span>
+                  }
+                </span>
+                <span
+                  class="tabular-nums"
+                  [class.text-emerald-700]="group.net > 0"
+                  [class.dark:text-emerald-400]="group.net > 0"
+                >
+                  {{ group.net > 0 ? '+' : group.net < 0 ? '-' : ''
+                  }}{{ (group.net < 0 ? -group.net : group.net) | formatCurrency }}
+                </span>
+              </span>
+            </th>
+          </tr>
+        }
+
+        @for (txn of group.transactions; track txn.id) {
+          <tr
+            class="cursor-pointer border-t border-surface-100 hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-800/40"
+            [class]="isSelected(txn.id) ? 'bg-primary-50 dark:bg-primary-900/30' : ''"
+            (click)="openTransaction.emit(txn)"
+          >
+            <td class="px-3 py-2" (click)="$event.stopPropagation()">
+              <input
+                type="checkbox"
+                data-testid="row-checkbox"
+                [attr.aria-label]="'Select ' + (txn.merchant?.name ?? txn.description)"
+                [checked]="isSelected(txn.id)"
+                (click)="onRowCheckbox(indexOf(txn), $event)"
+              />
+            </td>
+            @if (!grouped()) {
+              <td class="px-3 py-2 tabular-nums text-muted-color">
+                {{ txn.date.substring(0, 10) }}
+              </td>
+            }
+            <td class="px-3 py-2">
+              <button
+                type="button"
+                data-testid="open-transaction"
+                class="cursor-pointer text-left font-medium text-surface-900 dark:text-surface-0"
+                (click)="$event.stopPropagation(); openTransaction.emit(txn)"
+              >
+                {{ txn.merchant?.name ?? txn.description }}
+              </button>
+            </td>
+            @if (!compact()) {
+              <td class="max-w-64 truncate px-3 py-2 text-muted-color">
+                {{ txn.merchant ? txn.description : '' }}
+              </td>
+            }
+            <td class="px-3 py-2">
+              @if (isTransfer(txn)) {
+                <span
+                  data-testid="transfer-pill"
+                  class="rounded-full bg-surface-100 px-2 py-0.5 text-xs text-surface-700 dark:bg-surface-800 dark:text-surface-200"
+                  >Transfer</span
+                >
+              } @else if (!txn.category) {
+                <button
+                  type="button"
+                  data-testid="choose-category"
+                  class="cursor-pointer whitespace-nowrap rounded-full border border-dashed border-amber-500 bg-amber-50 px-2.5 py-0.5 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-100"
+                  (click)="onPickCategory(txn, $event)"
+                >
+                  Choose category
+                </button>
+              } @else {
+                <span class="inline-flex items-center gap-1.5">
+                  <i
+                    class="inline-block h-2 w-2 rounded-full"
+                    [class]="txn.category.color || 'bg-surface-300'"
+                  ></i>
+                  {{ txn.category.name }}
+                </span>
+              }
+            </td>
+            <td class="px-3 py-2 text-muted-color">{{ txn.account.name }}</td>
+            <td
+              class="px-3 py-2 text-right font-semibold tabular-nums"
+              [class.text-emerald-700]="txn.type === TransactionType.INCOME"
+              [class.dark:text-emerald-400]="txn.type === TransactionType.INCOME"
+              [class.text-surface-500]="isTransfer(txn)"
+            >
+              {{ txn.amount | formatTransactionTypeAmount: txn.type }}
+            </td>
+            @if (!compact()) {
+              <td class="px-3 py-2">
+                @for (tag of txn.tags; track tag.id) {
+                  <span
+                    class="mr-1 rounded-full border border-surface-200 bg-surface-50 px-2 text-xs dark:border-surface-700 dark:bg-surface-800"
+                    >{{ tag.name }}</span
+                  >
+                }
+              </td>
+            }
+          </tr>
+        }
+      }
+    </tbody>
+  </table>
+</div>

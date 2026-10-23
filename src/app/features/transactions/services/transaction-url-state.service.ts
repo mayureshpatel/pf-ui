@@ -1,6 +1,14 @@
 import { Injectable } from '@angular/core';
 import { Params } from '@angular/router';
 import { TransactionFilter, TransactionState, TransactionType } from '@models/transaction.model';
+import { fromLocalDateString, toLocalDateString } from '@shared/utils/transaction.utils';
+
+/**
+ * Reads a date from the URL: plain `yyyy-MM-dd` as local midnight on that day, or (for links
+ * saved before dates were written that way) anything `new Date()` understands.
+ */
+const parseUrlDate = (value: string): Date =>
+  /^\d{4}-\d{2}-\d{2}$/.test(value) ? fromLocalDateString(value) : new Date(value);
 
 /**
  * Pure translation between the transactions ledger's URL query params and its internal
@@ -25,8 +33,8 @@ export class TransactionUrlStateService {
       categoryName: params['categoryName'] || undefined,
       minAmount: params['minAmount'] === undefined ? undefined : Number(params['minAmount']),
       maxAmount: params['maxAmount'] === undefined ? undefined : Number(params['maxAmount']),
-      startDate: params['startDate'] ? new Date(params['startDate']) : undefined,
-      endDate: params['endDate'] ? new Date(params['endDate']) : undefined,
+      startDate: params['startDate'] ? parseUrlDate(params['startDate']) : undefined,
+      endDate: params['endDate'] ? parseUrlDate(params['endDate']) : undefined,
       tagId: params['tagId'] ? Number(params['tagId']) : undefined,
     };
 
@@ -53,9 +61,11 @@ export class TransactionUrlStateService {
     if (filter.categoryName) queryParams['categoryName'] = filter.categoryName;
     if (filter.minAmount !== undefined) queryParams['minAmount'] = filter.minAmount;
     if (filter.maxAmount !== undefined) queryParams['maxAmount'] = filter.maxAmount;
-    if (filter.startDate) queryParams['startDate'] = filter.startDate;
-    if (filter.endDate) queryParams['endDate'] = filter.endDate;
+    if (filter.startDate) queryParams['startDate'] = toLocalDateString(filter.startDate);
+    if (filter.endDate) queryParams['endDate'] = toLocalDateString(filter.endDate);
     if (filter.tagId) queryParams['tagId'] = filter.tagId;
+    // an explicit marker, so All time survives a refresh instead of falling back to This month
+    if (!filter.startDate && !filter.endDate) queryParams['period'] = 'all';
 
     if (page > 0) queryParams['page'] = page;
     if (size !== 20) queryParams['size'] = size;

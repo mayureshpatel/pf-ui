@@ -6,19 +6,17 @@ import {
   inject,
   input,
   InputSignal,
-  model,
-  ModelSignal,
   output,
   OutputEmitterRef,
   Signal,
   signal,
+  untracked,
   WritableSignal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Subject, switchMap } from 'rxjs';
-import { DialogModule } from 'primeng/dialog';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { CheckboxModule } from 'primeng/checkbox';
@@ -32,7 +30,6 @@ import { CategoryApiService } from '../../../categories/services/category-api.se
 import { MerchantApiService } from '@features/merchants/services/merchant-api.service';
 import { Category, CategoryGroup } from '@models/category.model';
 import { Merchant } from '@models/merchant.model';
-import { RestoreFocusOnHideDirective } from '@shared/directives/restore-focus-on-hide.directive';
 
 /**
  * Data structure for finalized bulk edit operations.
@@ -47,35 +44,30 @@ export interface BulkEditData {
 }
 
 /**
- * Dialog for mass-modifying multiple transactions simultaneously.
+ * Panel form for mass-modifying multiple transactions simultaneously.
  *
  * Allows users to selectively toggle which fields (Category, Merchant, Description)
  * should be updated across all selected items in the ledger.
  */
 @Component({
-  selector: 'app-bulk-edit-dialog',
+  selector: 'app-transaction-bulk-form',
   standalone: true,
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    DialogModule,
     ButtonModule,
     InputTextModule,
     CheckboxModule,
     SelectModule,
     AutoCompleteModule,
     MessageModule,
-    RestoreFocusOnHideDirective,
   ],
-  templateUrl: './bulk-edit-dialog.component.html',
+  templateUrl: './transaction-bulk-form.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class BulkEditDialogComponent {
+export class TransactionBulkFormComponent {
   private readonly categoryApi: CategoryApiService = inject(CategoryApiService);
   private readonly merchantApi: MerchantApiService = inject(MerchantApiService);
-
-  /** Two-way binding for dialog visibility. */
-  readonly visible: ModelSignal<boolean> = model.required<boolean>();
 
   /** The list of transactions currently targeted for mass-edit. */
   readonly transactions: InputSignal<Transaction[]> = input.required<Transaction[]>();
@@ -84,7 +76,7 @@ export class BulkEditDialogComponent {
   readonly saving: InputSignal<boolean> = input<boolean>(false);
 
   /** Emitted when the user confirms the mass-edit changes. */
-  readonly save: OutputEmitterRef<BulkEditData> = output<BulkEditData>();
+  readonly apply: OutputEmitterRef<BulkEditData> = output<BulkEditData>();
 
   /**
    * Strongly typed form for mass-update configuration.
@@ -165,10 +157,10 @@ export class BulkEditDialogComponent {
     /**
      * Effect to handle dialog reset logic.
      */
+    // a different selection starts from a clean form
     effect((): void => {
-      if (!this.visible()) {
-        this.resetForm();
-      }
+      this.transactions();
+      untracked((): void => this.resetForm());
     });
   }
 
@@ -190,15 +182,58 @@ export class BulkEditDialogComponent {
   /**
    * Searches merchants server-side for the reassignment picker (PF-320).
    */
-  filterMerchants(event: { query: string }): void {
-    this.merchantSearch$.next(event.query);
+  /** Whether at least one field is switched on and every switched-on field is filled. */
+  readonly valid: Signal<boolean> = computed((): boolean => !!this.isValid());
+
+  /** What the category field will do, with what the selection currently has. */
+  readonly categorySummary: Signal<string> = computed((): string =>
+    this.summarize(
+      this.transactions().map((t: Transaction): string =>
+        t.category ? String(t.category.id) : '',
+      ),
+      (t: Transaction): string => t.category?.name ?? 'Uncategorized',
+    ),
+  );
+
+  /** What the merchant field will do, with what the selection currently has. */
+  readonly merchantSummary: Signal<string> = computed((): string =>
+    this.summarize(
+      this.transactions().map((t: Transaction): string =>
+        t.merchant ? String(t.merchant.id) : '',
+      ),
+      (t: Transaction): string => t.merchant?.name ?? 'No merchant',
+    ),
+  );
+
+  /** What the description field will do, with what the selection currently has. */
+  readonly descriptionSummary: Signal<string> = computed((): string =>
+    this.summarize(
+      this.transactions().map((t: Transaction): string => (t.description ?? '').trim()),
+      (t: Transaction): string => (t.description ?? '').trim() || 'No description',
+    ),
+  );
+
+  /** Picks a category and switches that field on, as when chosen from the bulk bar. */
+  setCategory(category: Category): void {
+    this.form.patchValue({ updateCategory: true, category });
   }
 
-  /**
-   * Resets the dialog state.
-   */
-  onCancel(): void {
-    this.visible.set(false);
+  /** Applies the form from outside (the side panel's Apply button). */
+  submit(): void {
+    this.onSave();
+  }
+
+  private summarize(keys: string[], label: (t: Transaction) => string): string {
+    const distinct: number = new Set(keys).size;
+    if (distinct <= 1) {
+      const first: Transaction | undefined = this.transactions()[0];
+      return first ? `Keep as is (${label(first)})` : 'Keep as is';
+    }
+    return `Keep as is, ${distinct} different`;
+  }
+
+  filterMerchants(event: { query: string }): void {
+    this.merchantSearch$.next(event.query);
   }
 
   /**
@@ -208,7 +243,7 @@ export class BulkEditDialogComponent {
     if (!this.isValid()) return;
 
     const v = this.form.getRawValue();
-    this.save.emit({
+    this.apply.emit({
       updateCategory: v.updateCategory,
       category: v.category || undefined,
       updateMerchant: v.updateMerchant,

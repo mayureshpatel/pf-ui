@@ -4,7 +4,7 @@ import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { signal } from '@angular/core';
 import { of } from 'rxjs';
 
-import { TransactionFormDrawerComponent } from './transaction-form-drawer.component';
+import { TransactionEditFormComponent } from './transaction-edit-form.component';
 import { CategoryApiService } from '@features/categories/services/category-api.service';
 import { AccountApiService } from '@features/accounts/services/account-api.service';
 import { MerchantApiService } from '@features/merchants/services/merchant-api.service';
@@ -15,9 +15,9 @@ import { Category } from '@models/category.model';
 import { Merchant } from '@models/merchant.model';
 import { User } from '@models/auth.model';
 
-describe('TransactionFormDrawerComponent', () => {
-  let component: TransactionFormDrawerComponent;
-  let fixture: ComponentFixture<TransactionFormDrawerComponent>;
+describe('TransactionEditFormComponent', () => {
+  let component: TransactionEditFormComponent;
+  let fixture: ComponentFixture<TransactionEditFormComponent>;
   let mockMerchantApi: Mocked<
     Pick<MerchantApiService, 'getMerchants' | 'createMerchant' | 'updateMerchant'>
   >;
@@ -35,7 +35,7 @@ describe('TransactionFormDrawerComponent', () => {
       updateMerchant: vi.fn().mockReturnValue(of(1)),
     };
     const mockTagApi = { getTags: vi.fn().mockReturnValue(of([])) };
-    // TransactionFormDrawerComponent itself doesn't inject these, but PF-847's embedded
+    // TransactionEditFormComponent itself doesn't inject these, but PF-847's embedded
     // <app-merchant-form-dialog> (for the inline "+ Create" flow) does -- Angular constructs it
     // as part of this component's own template tree, so its dependencies must resolve here too.
     const mockToast = { success: vi.fn(), error: vi.fn() };
@@ -43,7 +43,7 @@ describe('TransactionFormDrawerComponent', () => {
     const mockAuth = { user: signal<User | null>(mockUser) };
 
     await TestBed.configureTestingModule({
-      imports: [TransactionFormDrawerComponent, NoopAnimationsModule],
+      imports: [TransactionEditFormComponent, NoopAnimationsModule],
       providers: [
         { provide: CategoryApiService, useValue: mockCategoryApi },
         { provide: AccountApiService, useValue: mockAccountApi },
@@ -54,9 +54,8 @@ describe('TransactionFormDrawerComponent', () => {
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(TransactionFormDrawerComponent);
+    fixture = TestBed.createComponent(TransactionEditFormComponent);
     component = fixture.componentInstance;
-    fixture.componentRef.setInput('visible', true);
   });
 
   it("should default a new transaction's date to the local calendar date, not a UTC-shifted one, for a positive-UTC-offset user (PF-199)", () => {
@@ -327,6 +326,85 @@ describe('TransactionFormDrawerComponent', () => {
 
       // assert & verify
       expect(component.form.controls.merchant.value).toEqual(newMerchant);
+    });
+  });
+
+  describe('as a panel body', () => {
+    const existing = {
+      id: 1,
+      account: { id: 1, name: 'Checking' },
+      category: { id: 5, name: 'Groceries' },
+      amount: 42.5,
+      date: '2026-03-15T00:00:00Z',
+      description: 'FIRST',
+      type: 'EXPENSE',
+      merchant: null,
+      tags: [],
+    };
+
+    it('should reset the form when a different transaction is shown', () => {
+      // arrange
+      fixture.componentRef.setInput('transaction', existing);
+      fixture.detectChanges();
+      expect(component.form.getRawValue().description).toBe('FIRST');
+
+      // act
+      fixture.componentRef.setInput('transaction', { ...existing, id: 99, description: 'OTHER' });
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.form.getRawValue().description).toBe('OTHER');
+    });
+
+    it('should report validity and submit through submit()', () => {
+      // arrange
+      fixture.componentRef.setInput('transaction', existing);
+      fixture.detectChanges();
+      const saved = vi.fn();
+      component.save.subscribe(saved);
+
+      // act
+      component.submit();
+
+      // assert & verify
+      expect(component.valid()).toBe(true);
+      expect(saved).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not be valid for an empty new transaction', () => {
+      // act
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.valid()).toBe(false);
+    });
+  });
+
+  describe('background refreshes while editing', () => {
+    const existing = {
+      id: 1,
+      account: { id: 1, name: 'Checking' },
+      category: { id: 5, name: 'Groceries' },
+      amount: 42.5,
+      date: '2026-03-15T00:00:00Z',
+      description: 'FIRST',
+      type: 'EXPENSE',
+      merchant: null,
+      tags: [],
+    };
+
+    it('should keep what the user typed when the same transaction is refreshed in the background', () => {
+      // arrange
+      fixture.componentRef.setInput('transaction', existing);
+      fixture.detectChanges();
+      component.form.patchValue({ description: 'TYPED' });
+
+      // act -- a reload hands the form a new object for the same row
+      fixture.componentRef.setInput('transaction', { ...existing });
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.form.getRawValue().description).toBe('TYPED');
     });
   });
 });

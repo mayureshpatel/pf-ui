@@ -44,6 +44,9 @@ test.describe('CSV Ingestion -> ledger', () => {
     // nothing to match. It blocks the rest of the page until dismissed.
     await page.getByRole('dialog', {name: 'Internal Transfer Reconciliation'}).getByRole('button', {name: 'Close'}).click();
 
+    // the fixture's rows are dated in March, and the page opens on This month
+    await page.getByRole('button', {name: 'All time'}).click();
+    await page.getByRole('searchbox').fill('E2E Test Grocery Purchase');
     await expect(page.getByRole('cell', {name: /E2E Test Grocery Purchase/}).first()).toBeVisible();
     await expect(page.getByRole('cell', {name: '-$42.17'}).first()).toBeVisible();
   });

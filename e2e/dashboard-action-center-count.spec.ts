@@ -10,20 +10,25 @@ import { expect, test } from '@playwright/test';
  * TDD-for-bugs mandate.
  *
  * Requires the E2E_USERNAME test user to have real uncategorized expense data and a backend
- * running PF-825's fix. The exact count (2,594 as of this writing) reflects this session's seeded
- * dataset after some transactions were subsequently categorized by other in-session testing --
- * re-verify the real count via `GET /transactions?type=EXPENSE&categoryName=null` rather than
- * assuming this number stays fixed if the seed data changes again.
+ * running PF-825's fix. The real count is read from the Transactions page itself (the same
+ * `type=EXPENSE&categoryName=null` filter the banner links to) instead of being hard-coded, because
+ * other specs (for example the CSV import) add uncategorized rows to this shared user on every run.
  */
 test.describe('Dashboard - review banner count', () => {
   test('the UNCATEGORIZED action item displays the real transaction count, not a dollar sum', async ({
     page,
   }) => {
+    // the real number of uncategorized expenses, as the Transactions page reports it
+    await page.goto('/transactions?type=EXPENSE&categoryName=null');
+    const resultLine = page.getByTestId('result-line');
+    await expect(resultLine).toContainText('transactions match');
+    const count = (await resultLine.innerText()).split(' ')[0];
+
     await page.goto('/dashboard');
 
     const banner = page.getByRole('region', { name: 'Needs your review' });
     await expect(
-      banner.getByRole('button', { name: '2,594 uncategorized expenses' }),
+      banner.getByRole('button', { name: `${count} uncategorized expenses` }),
     ).toBeVisible();
   });
 });

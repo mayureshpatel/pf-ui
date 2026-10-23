@@ -1,0 +1,183 @@
+<div class="flex flex-col gap-3">
+  <div class="flex flex-wrap items-center gap-3" role="group" aria-label="Period">
+    <p-selectButton
+      [options]="presetOptions"
+      [ngModel]="preset()"
+      (ngModelChange)="onPresetChange($event)"
+      optionLabel="label"
+      optionValue="value"
+      [allowEmpty]="false"
+      class="custom-selectbutton"
+    />
+    @if (preset() === 'CUSTOM') {
+      <div class="flex items-center gap-2">
+        <p-datepicker
+          [ngModel]="filter().startDate ?? null"
+          (ngModelChange)="onCustomDate('startDate', $event)"
+          dateFormat="mm/dd/yy"
+          placeholder="Start date"
+          ariaLabel="Start date"
+        />
+        <p-datepicker
+          [ngModel]="filter().endDate ?? null"
+          (ngModelChange)="onCustomDate('endDate', $event)"
+          dateFormat="mm/dd/yy"
+          placeholder="End date"
+          ariaLabel="End date"
+        />
+      </div>
+    }
+  </div>
+
+  <div class="flex flex-wrap items-center gap-2">
+    <input
+      type="search"
+      class="min-w-64 flex-1 rounded-xl border border-surface-300 bg-surface-0 px-3 py-2 dark:border-surface-700 dark:bg-surface-900"
+      placeholder="Search description or merchant"
+      aria-label="Search description or merchant"
+      [value]="filter().description ?? ''"
+      (input)="onSearchInput($any($event.target).value)"
+    />
+
+    <p-button
+      data-testid="filters-button"
+      [label]="appliedCount() > 0 ? 'Filters ' + appliedCount() : 'Filters'"
+      icon="pi pi-sliders-h"
+      severity="secondary"
+      [outlined]="true"
+      (onClick)="filtersPopover.toggle($event)"
+    />
+    <p-popover #filtersPopover (onShow)="onPopoverShow()">
+      <div class="flex w-72 flex-col gap-3">
+        <div class="flex flex-col gap-1 text-sm">
+          <label id="fb-account-label" for="fb-account">Account</label>
+          <p-select
+            inputId="fb-account"
+            ariaLabelledBy="fb-account-label"
+            [options]="accounts()"
+            optionLabel="name"
+            optionValue="id"
+            [(ngModel)]="draft.accountId"
+            placeholder="Any account"
+            [showClear]="true"
+            appendTo="body"
+          />
+        </div>
+        <div class="flex flex-col gap-1 text-sm">
+          <label id="fb-category-label" for="fb-category">Category</label>
+          <p-select
+            inputId="fb-category"
+            ariaLabelledBy="fb-category-label"
+            [options]="groupedCategories()"
+            [group]="true"
+            [(ngModel)]="draft.categoryName"
+            placeholder="Any category"
+            [showClear]="true"
+            [filter]="true"
+            appendTo="body"
+          />
+        </div>
+        <div class="flex flex-col gap-1 text-sm">
+          <label id="fb-type-label" for="fb-type">Type</label>
+          <p-select
+            inputId="fb-type"
+            ariaLabelledBy="fb-type-label"
+            [options]="typeOptions"
+            optionLabel="label"
+            optionValue="value"
+            [(ngModel)]="draft.type"
+            placeholder="Any type"
+            [showClear]="true"
+            appendTo="body"
+          />
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div class="flex flex-col gap-1 text-sm">
+            <label id="fb-min-label" for="fb-min">Minimum amount</label>
+            <p-inputNumber
+              inputId="fb-min"
+              [(ngModel)]="draft.minAmount"
+              mode="currency"
+              currency="USD"
+              locale="en-US"
+            />
+          </div>
+          <div class="flex flex-col gap-1 text-sm">
+            <label id="fb-max-label" for="fb-max">Maximum amount</label>
+            <p-inputNumber
+              inputId="fb-max"
+              [(ngModel)]="draft.maxAmount"
+              mode="currency"
+              currency="USD"
+              locale="en-US"
+            />
+          </div>
+        </div>
+        <div class="flex flex-col gap-1 text-sm">
+          <label id="fb-merchant-label" for="fb-merchant">Merchant</label>
+          <p-select
+            inputId="fb-merchant"
+            ariaLabelledBy="fb-merchant-label"
+            [options]="merchantNames()"
+            [(ngModel)]="draft.merchant"
+            placeholder="Any merchant"
+            [showClear]="true"
+            [filter]="true"
+            appendTo="body"
+          />
+        </div>
+        <div class="flex flex-col gap-1 text-sm">
+          <label id="fb-tag-label" for="fb-tag">Tag</label>
+          <p-select
+            inputId="fb-tag"
+            ariaLabelledBy="fb-tag-label"
+            [options]="tags()"
+            optionLabel="name"
+            optionValue="id"
+            [(ngModel)]="draft.tagId"
+            placeholder="Any tag"
+            [showClear]="true"
+            appendTo="body"
+          />
+        </div>
+        <p-button label="Apply filters" (onClick)="onApplyPopover(filtersPopover, draft)" />
+      </div>
+    </p-popover>
+  </div>
+
+  @if (chips().length > 0 || filter().description) {
+    <div class="flex flex-wrap items-center gap-2">
+      @for (chip of chips(); track chip.key) {
+        <span
+          data-testid="filter-chip"
+          class="inline-flex items-center gap-1 rounded-full border border-primary-200 bg-primary-50 px-3 py-1 text-sm text-primary-700 dark:border-primary-800 dark:bg-primary-950/30 dark:text-primary-300"
+        >
+          {{ chip.label }}
+          <button
+            type="button"
+            class="cursor-pointer"
+            [attr.aria-label]="'Remove filter: ' + chip.label"
+            (click)="onRemoveChip(chip)"
+          >
+            <i class="pi pi-times text-xs"></i>
+          </button>
+        </span>
+      }
+      <button
+        type="button"
+        data-testid="clear-all"
+        class="cursor-pointer text-sm text-muted-color underline"
+        (click)="onClearAll()"
+      >
+        Clear all
+      </button>
+    </div>
+  }
+
+  @if (resultCount() !== null) {
+    <p data-testid="result-line" class="text-sm text-muted-color">
+      {{ resultCount() | number }}
+      {{ resultCount() === 1 ? 'transaction matches' : 'transactions match' }}
+    </p>
+  }
+</div>

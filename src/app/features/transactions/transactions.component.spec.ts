@@ -1,4 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { TransactionEditFormComponent } from './components/transaction-edit-form/transaction-edit-form.component';
 import { TransactionsComponent } from './transactions.component';
 import { TransactionApiService } from './services/transaction-api.service';
 import { AccountApiService } from '@features/accounts/services/account-api.service';
@@ -6,9 +8,12 @@ import { CategoryApiService } from '@features/categories/services/category-api.s
 import { MerchantApiService } from '@features/merchants/services/merchant-api.service';
 import { TagApiService } from '@features/tags/services/tag-api.service';
 import { ToastService } from '@core/services/toast.service';
+import { DashboardApiService } from '@features/dashboard/services/dashboard-api.service';
+import { ActionType } from '@models/dashboard.model';
+import { toLocalDateString } from '@shared/utils/transaction.utils';
 import { Confirmation, ConfirmationService, MessageService } from 'primeng/api';
 import { ActivatedRoute, Params, Router } from '@angular/router';
-import { Observable, of, throwError } from 'rxjs';
+import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { vi, Mock, Mocked } from 'vitest';
 import {
@@ -17,7 +22,7 @@ import {
   TransactionFormSaveEvent,
   TransactionUpdateRequest,
 } from '@models/transaction.model';
-import { BulkEditData } from './components/bulk-edit-dialog/bulk-edit-dialog.component';
+import { BulkEditData } from './components/transaction-bulk-form/transaction-bulk-form.component';
 import { Category } from '@models/category.model';
 import { Merchant } from '@models/merchant.model';
 
@@ -58,6 +63,7 @@ describe('TransactionsComponent', () => {
     Pick<TagApiService, 'getTags' | 'assignToTransaction' | 'removeFromTransaction'>
   >;
   let mockToast: Mocked<Pick<ToastService, 'success' | 'error'>>;
+  let mockDashboardApi: Mocked<Pick<DashboardApiService, 'getActionItems'>>;
   let mockConfirmationService: { confirm: Mock<(confirmation: Confirmation) => void> };
   let mockRouter: Mocked<Pick<Router, 'navigate'>>;
   let mockActivatedRoute: MockActivatedRoute;
@@ -85,7 +91,7 @@ describe('TransactionsComponent', () => {
       getCategories: vi.fn().mockReturnValue(of([])),
       getCategoriesWithTransactions: vi.fn().mockReturnValue(of([])),
       getMerchantsWithTransactions: vi.fn().mockReturnValue(of([])),
-      getGroupedCategories: vi.fn().mockReturnValue(of([])), // consumed by the child BulkEditDialogComponent
+      getGroupedCategories: vi.fn().mockReturnValue(of([])), // consumed by the child TransactionBulkFormComponent
     };
     mockMerchantApi = {
       getMerchants: vi.fn().mockReturnValue(of([])),
@@ -99,6 +105,7 @@ describe('TransactionsComponent', () => {
       success: vi.fn(),
       error: vi.fn(),
     };
+    mockDashboardApi = { getActionItems: vi.fn().mockReturnValue(of([])) };
     mockConfirmationService = {
       confirm: vi.fn(),
     };
@@ -119,6 +126,7 @@ describe('TransactionsComponent', () => {
         { provide: MerchantApiService, useValue: mockMerchantApi },
         { provide: TagApiService, useValue: mockTagApi },
         { provide: ToastService, useValue: mockToast },
+        { provide: DashboardApiService, useValue: mockDashboardApi },
         { provide: ConfirmationService, useValue: mockConfirmationService },
         { provide: MessageService, useValue: {} },
         { provide: Router, useValue: mockRouter },
@@ -135,139 +143,8 @@ describe('TransactionsComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should give the Clear Filters button an accessible name (PF-186)', () => {
-    // arrange -- the table (and its Clear button) only renders when !isEmpty(); set the
-    // signal directly since the initial fetch already resolved (empty) in beforeEach
-    component.transactions.set([
-      {
-        id: 1,
-        account: { name: 'Checking' },
-        category: null,
-        amount: -10,
-        date: new Date('2026-01-15'),
-        description: 'test',
-        type: 'EXPENSE',
-        merchant: { name: 'Test' },
-      } as unknown as Transaction,
-    ]);
-
-    // act
-    fixture.detectChanges();
-
-    // assert & verify -- already has a visible "Clear" label, but "Clear Filters" is
-    // the clearer, more specific accessible name (matches the pTooltip text)
-    const button: HTMLButtonElement = fixture.nativeElement.querySelector(
-      'button:has(.pi-filter-slash)',
-    );
-    expect(button.getAttribute('aria-label')).toBe('Clear Filters');
-  });
-
-  describe('merchant/description cell (PF-847: closes the loop on the original requirement)', () => {
-    // scoped to the merchant cell specifically via its unique receipt icon, not a whole-fixture
-    // textContent check -- the description renders a second time nearby (the small italic
-    // sub-line), which would make a broader match ambiguous.
-    const merchantCellText = (): string | null | undefined =>
-      fixture.nativeElement
-        .querySelector('.pi-receipt')
-        ?.closest('td')
-        ?.querySelector('.font-bold')
-        ?.textContent?.trim();
-
-    const descriptionSubLine = (): Element | null | undefined =>
-      fixture.nativeElement.querySelector('.pi-receipt')?.closest('td')?.querySelector('.italic');
-
-    it("should show the merchant's name when a merchant is assigned", () => {
-      // arrange
-      component.transactions.set([
-        {
-          id: 1,
-          account: { name: 'Checking' },
-          category: null,
-          amount: -10,
-          date: new Date('2026-01-15'),
-          description: 'COSTCO WHSE #123',
-          type: 'EXPENSE',
-          merchant: { name: 'Costco' },
-        } as unknown as Transaction,
-      ]);
-
-      // act
-      fixture.detectChanges();
-
-      // assert & verify
-      expect(merchantCellText()).toBe('Costco');
-    });
-
-    it('should also show the raw description in the italic sub-line when a merchant is assigned', () => {
-      // arrange -- here the bold line (merchant name) and the sub-line (raw description) genuinely
-      // differ, so both are worth displaying
-      component.transactions.set([
-        {
-          id: 1,
-          account: { name: 'Checking' },
-          category: null,
-          amount: -10,
-          date: new Date('2026-01-15'),
-          description: 'COSTCO WHSE #123',
-          type: 'EXPENSE',
-          merchant: { name: 'Costco' },
-        } as unknown as Transaction,
-      ]);
-
-      // act
-      fixture.detectChanges();
-
-      // assert & verify
-      expect(descriptionSubLine()?.textContent?.trim()).toBe('COSTCO WHSE #123');
-    });
-
-    it("should show the transaction's own description, not a placeholder, when no merchant is assigned", () => {
-      // arrange -- PF-847's own literal fix for the requirement this redesign started from
-      component.transactions.set([
-        {
-          id: 1,
-          account: { name: 'Checking' },
-          category: null,
-          amount: -10,
-          date: new Date('2026-01-15'),
-          description: 'UNASSIGNED RAW TEXT',
-          type: 'EXPENSE',
-          merchant: null,
-        } as unknown as Transaction,
-      ]);
-
-      // act
-      fixture.detectChanges();
-
-      // assert & verify
-      expect(merchantCellText()).toBe('UNASSIGNED RAW TEXT');
-    });
-
-    it('should not show the italic sub-line when no merchant is assigned, to avoid showing the same description twice', () => {
-      // arrange
-      component.transactions.set([
-        {
-          id: 1,
-          account: { name: 'Checking' },
-          category: null,
-          amount: -10,
-          date: new Date('2026-01-15'),
-          description: 'UNASSIGNED RAW TEXT',
-          type: 'EXPENSE',
-          merchant: null,
-        } as unknown as Transaction,
-      ]);
-
-      // act
-      fixture.detectChanges();
-
-      // assert & verify
-      expect(descriptionSubLine()).toBeFalsy();
-    });
-  });
-
   describe('openCreateDialog / openEditDialog (PF-397)', () => {
-    it('openCreateDialog should clear any selected transaction and open the dialog', () => {
+    it('openCreateDialog should clear any selected transaction and open the panel in create mode', () => {
       // arrange -- simulate a prior edit having left a transaction selected
       component.selectedTransaction.set({ id: 1 } as Transaction);
 
@@ -276,10 +153,10 @@ describe('TransactionsComponent', () => {
 
       // assert & verify
       expect(component.selectedTransaction()).toBeNull();
-      expect(component.showDialog()).toBe(true);
+      expect(component.panelMode()).toBe('create');
     });
 
-    it('openEditDialog should select the given transaction and open the dialog', () => {
+    it('openEditDialog should select the given transaction and open the panel in single mode', () => {
       // arrange
       const txn = { id: 42, description: 'Coffee' } as Transaction;
 
@@ -288,137 +165,8 @@ describe('TransactionsComponent', () => {
 
       // assert & verify
       expect(component.selectedTransaction()).toBe(txn);
-      expect(component.showDialog()).toBe(true);
+      expect(component.panelMode()).toBe('single');
     });
-  });
-
-  it('should handle onLazyLoad with dateIs filter', () => {
-    // arrange
-    const testDate = new Date('2026-03-12');
-    const event = {
-      first: 0,
-      rows: 20,
-      sortField: 'date',
-      sortOrder: -1,
-      filters: {
-        date: { value: testDate, matchMode: 'dateIs' },
-      },
-    };
-
-    // act
-    component.onLazyLoad(event);
-
-    // assert & verify
-    const state = component.state();
-    expect(state.filter.startDate?.getTime()).toBe(testDate.getTime());
-    expect(state.filter.endDate?.getTime()).toBe(testDate.getTime());
-    expect(mockTransactionApi.getTransactions).toHaveBeenCalled();
-  });
-
-  it('should handle onLazyLoad with dateAfter and dateBefore filters', () => {
-    // arrange
-    const startDate = new Date('2026-03-01');
-    const endDate = new Date('2026-03-31');
-    const event = {
-      first: 0,
-      rows: 20,
-      filters: {
-        date: [
-          { value: startDate, matchMode: 'dateAfter' },
-          { value: endDate, matchMode: 'dateBefore' },
-        ],
-      },
-    };
-
-    // act
-    component.onLazyLoad(event);
-
-    // assert & verify
-    const state = component.state();
-    expect(state.filter.startDate?.getTime()).toBe(startDate.getTime());
-    expect(state.filter.endDate?.getTime()).toBe(endDate.getTime());
-  });
-
-  it('should clear date filters when cleared in UI', () => {
-    // arrange
-    component.state.set({
-      filter: { startDate: new Date() },
-      page: 0,
-      size: 20,
-      sort: 'date,desc',
-    });
-    const event = {
-      first: 0,
-      rows: 20,
-      filters: {},
-    };
-
-    // act
-    component.onLazyLoad(event);
-
-    // assert & verify
-    const state = component.state();
-    expect(state.filter.startDate).toBeUndefined();
-    expect(state.filter.endDate).toBeUndefined();
-  });
-
-  it('should handle onLazyLoad with merchant and description filters', () => {
-    // arrange
-    const event = {
-      first: 0,
-      rows: 20,
-      filters: {
-        merchantAndDesc: [
-          {
-            value: { merchant: 'Amazon', description: 'cloud' },
-            matchMode: 'custom',
-          },
-        ],
-      },
-    };
-
-    // act
-    component.onLazyLoad(event);
-
-    // assert & verify
-    const state = component.state();
-    expect(state.filter.merchant).toBe('Amazon');
-    expect(state.filter.description).toBe('cloud');
-  });
-
-  it('PF-308: should handle onLazyLoad with a tag filter', () => {
-    // arrange
-    const event = {
-      first: 0,
-      rows: 20,
-      filters: {
-        tagId: { value: 7, matchMode: 'equals' },
-      },
-    };
-
-    // act
-    component.onLazyLoad(event);
-
-    // assert & verify
-    const state = component.state();
-    expect(state.filter.tagId).toBe(7);
-  });
-
-  it('PF-308: should clear the tag filter when cleared in UI', () => {
-    // arrange
-    component.state.set({
-      filter: { tagId: 7 },
-      page: 0,
-      size: 20,
-      sort: 'date,desc',
-    });
-    const event = { first: 0, rows: 20, filters: {} };
-
-    // act
-    component.onLazyLoad(event);
-
-    // assert & verify
-    expect(component.state().filter.tagId).toBeUndefined();
   });
 
   describe('onSave: create vs. update branching (PF-397)', () => {
@@ -466,10 +214,10 @@ describe('TransactionsComponent', () => {
       expect(mockTransactionApi.createTransaction).not.toHaveBeenCalled();
     });
 
-    it('should toast success, close the dialog, and reload on a successful create', () => {
+    it('should toast success, close the panel, and reload on a successful create', () => {
       // arrange
       component.selectedTransaction.set(null);
-      component.showDialog.set(true);
+      component.panelMode.set('create');
       mockTransactionApi.createTransaction.mockReturnValue(of(99));
 
       // act
@@ -477,14 +225,14 @@ describe('TransactionsComponent', () => {
 
       // assert & verify
       expect(mockToast.success).toHaveBeenCalledWith('Transaction created');
-      expect(component.showDialog()).toBe(false);
+      expect(component.panelMode()).toBe('closed');
       expect(mockTransactionApi.getTransactions).toHaveBeenCalledTimes(2); // initial load + reload
     });
 
-    it('should toast an error and leave the dialog open when create fails', () => {
+    it('should toast an error and leave the panel open when create fails', () => {
       // arrange
       component.selectedTransaction.set(null);
-      component.showDialog.set(true);
+      component.panelMode.set('create');
       mockTransactionApi.createTransaction.mockReturnValue(
         throwError(() => ({ error: { detail: 'Invalid account' } })),
       );
@@ -494,7 +242,7 @@ describe('TransactionsComponent', () => {
 
       // assert & verify
       expect(mockToast.error).toHaveBeenCalledWith('Invalid account');
-      expect(component.showDialog()).toBe(true);
+      expect(component.panelMode()).toBe('create');
     });
   });
 
@@ -710,45 +458,44 @@ describe('TransactionsComponent', () => {
     });
   });
 
-  describe('Bulk Edit trigger visibility (PF-395)', () => {
+  describe('floating bulk bar', () => {
+    const row = (id: number): Transaction =>
+      ({
+        id,
+        account: { id: 1, name: 'Checking' },
+        category: { id: 5, name: 'Groceries' },
+        amount: 10,
+        date: '2026-01-15T00:00:00Z',
+        description: 'test',
+        type: 'EXPENSE',
+        merchant: { id: 7, name: 'Test' },
+        tags: [],
+      }) as unknown as Transaction;
+
     beforeEach(() => {
-      // the toolbar (and its trigger buttons) only renders when !isEmpty(); a real table row
-      // needs the nested account/category/merchant fields a bare {id} fixture doesn't have
-      component.transactions.set([
-        {
-          id: 1,
-          account: { name: 'Checking' },
-          category: null,
-          amount: -10,
-          date: new Date('2026-01-15'),
-          description: 'test',
-          type: 'EXPENSE',
-          merchant: { name: 'Test' },
-        } as unknown as Transaction,
-      ]);
+      component.transactions.set([row(1), row(2)]);
+      fixture.detectChanges();
     });
 
-    // Scoped by label text, not just the pi-pencil icon class -- the table's own per-row edit
-    // action button also uses a pencil icon, and would otherwise false-match this selector.
-    const findBulkEditButton = (): HTMLButtonElement | undefined =>
-      (Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]).find(
-        (b: HTMLButtonElement): boolean => !!b.textContent?.includes('Bulk Edit'),
-      );
+    const bar = (): HTMLElement | null =>
+      fixture.nativeElement.querySelector('app-transaction-bulk-bar [role="region"]');
 
     it('should be hidden when nothing is selected', () => {
-      component.selectedTransactions.set([]);
+      // act
+      component.onSelectionChange([]);
       fixture.detectChanges();
 
-      expect(findBulkEditButton()).toBeUndefined();
+      // assert & verify
+      expect(bar()).toBeNull();
     });
 
-    it('should appear, showing the selection count, once at least one row is selected', () => {
-      component.selectedTransactions.set([{ id: 1 } as Transaction, { id: 2 } as Transaction]);
+    it('should appear with the selection count once rows are selected', () => {
+      // act
+      component.onSelectionChange([1, 2]);
       fixture.detectChanges();
 
-      const button = findBulkEditButton();
-      expect(button).not.toBeUndefined();
-      expect(button!.textContent).toContain('Bulk Edit (2)');
+      // assert & verify
+      expect(bar()?.textContent).toContain('2 selected');
     });
   });
 
@@ -869,18 +616,18 @@ describe('TransactionsComponent', () => {
       ]);
     });
 
-    it('should toast success, close the dialog, clear the selection, and reload on success', () => {
+    it('should toast success, close the panel, clear the selection, and reload on success', () => {
       // arrange
       mockTransactionApi.bulkUpdateTransactions.mockReturnValue(of(2));
       component.selectedTransactions.set([buildTxn(10), buildTxn(11)]);
-      component.showBulkEditDialog.set(true);
+      component.panelMode.set('bulk');
 
       // act
       component.onBulkSave({ ...noop, updateDescription: true, description: 'Corrected memo' });
 
       // assert & verify
-      expect(mockToast.success).toHaveBeenCalledWith('2 transactions updated');
-      expect(component.showBulkEditDialog()).toBe(false);
+      expect(mockToast.success).toHaveBeenCalledWith('Updated 2 transactions');
+      expect(component.panelMode()).toBe('closed');
       expect(component.selectedTransactions()).toEqual([]);
       expect(mockTransactionApi.getTransactions).toHaveBeenCalledTimes(2); // initial load + post-save reload
       expect(component.bulkSaving()).toBe(false);
@@ -892,23 +639,23 @@ describe('TransactionsComponent', () => {
 
       component.onBulkSave({ ...noop, updateDescription: true, description: 'Corrected memo' });
 
-      expect(mockToast.success).toHaveBeenCalledWith('1 transaction updated');
+      expect(mockToast.success).toHaveBeenCalledWith('Updated 1 transaction');
     });
 
-    it('should toast an error and keep the dialog open on failure', () => {
+    it('should toast an error and keep the panel open on failure', () => {
       // arrange
       mockTransactionApi.bulkUpdateTransactions.mockReturnValue(
         throwError(() => ({ error: { detail: 'One or more transactions could not be updated' } })),
       );
       component.selectedTransactions.set([buildTxn(10)]);
-      component.showBulkEditDialog.set(true);
+      component.panelMode.set('bulk');
 
       // act
       component.onBulkSave({ ...noop, updateDescription: true, description: 'Corrected memo' });
 
       // assert & verify
       expect(mockToast.error).toHaveBeenCalledWith('One or more transactions could not be updated');
-      expect(component.showBulkEditDialog()).toBe(true);
+      expect(component.panelMode()).toBe('bulk');
       expect(component.bulkSaving()).toBe(false);
     });
 
@@ -1129,6 +876,450 @@ describe('TransactionsComponent', () => {
       expect(localRouter.navigate).toHaveBeenCalledWith([], {
         queryParams: { accountId: '5' },
         replaceUrl: true,
+      });
+    });
+  });
+
+  describe('page behaviour after the redesign (PF-865)', () => {
+    const row = (id: number, overrides: Partial<Transaction> = {}): Transaction =>
+      ({
+        id,
+        account: { id: 1, name: 'Checking' },
+        category: { id: 5, name: 'Groceries' },
+        amount: 10,
+        date: '2026-10-15T00:00:00Z',
+        description: 'test',
+        type: 'EXPENSE',
+        merchant: { id: 7, name: 'Test' },
+        tags: [],
+        ...overrides,
+      }) as unknown as Transaction;
+
+    /** Re-creates the page as if it were opened at a URL with these query params. */
+    const openAt = (
+      queryParams: Params,
+      content: Transaction[] = [],
+      totalElements = content.length,
+    ): void => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date(2026, 9, 17));
+      mockActivatedRoute.snapshot.queryParams = queryParams;
+      mockTransactionApi.getTransactions.mockReturnValue(
+        of({ content, page: { totalElements, totalPages: 1, number: 0, size: 20 } }),
+      );
+      fixture = TestBed.createComponent(TransactionsComponent);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+    };
+
+    afterEach(() => vi.useRealTimers());
+
+    describe('default period', () => {
+      it('should default to This month when the URL carries no filter', () => {
+        // act
+        openAt({});
+
+        // assert & verify
+        expect(toLocalDateString(component.state().filter.startDate!)).toBe('2026-10-01');
+        expect(toLocalDateString(component.state().filter.endDate!)).toBe('2026-10-31');
+      });
+
+      it('should show all time, and the Needs a category tab, for ?categoryName=null', () => {
+        // act
+        openAt({ categoryName: 'null' });
+
+        // assert & verify
+        expect(component.state().filter.startDate).toBeUndefined();
+        expect(component.activeTab()).toBe('NEEDS_CATEGORY');
+      });
+    });
+
+    describe('tabs and filters', () => {
+      it('should apply the uncategorized filter from the tab and clear it again, back on page one', () => {
+        // arrange
+        openAt({});
+        component.onPageChange({ first: 40, rows: 20 });
+
+        // act
+        component.onTabChange('NEEDS_CATEGORY');
+
+        // assert & verify
+        expect(component.state().filter.categoryName).toBe('null');
+        expect(component.state().page).toBe(0);
+
+        // act
+        component.onTabChange('ALL');
+
+        // assert & verify
+        expect(component.state().filter.categoryName).toBeUndefined();
+      });
+
+      it('should return to page one when the filter, the sort or the page size changes', () => {
+        // arrange
+        openAt({});
+        component.onPageChange({ first: 20, rows: 20 });
+        expect(component.state().page).toBe(1);
+
+        // act and assert & verify
+        component.onFilterChange({ description: 'shell' });
+        expect(component.state().page).toBe(0);
+
+        component.onPageChange({ first: 20, rows: 20 });
+        component.onSortChange('amount,desc');
+        expect(component.state().page).toBe(0);
+        expect(component.state().sort).toBe('amount,desc');
+      });
+
+      it('should load the review counts from the action items', () => {
+        // arrange
+        mockDashboardApi.getActionItems.mockReturnValue(
+          of([
+            { type: ActionType.UNCATEGORIZED, count: 2594, message: 'x' },
+            { type: ActionType.TRANSFER_REVIEW, count: 96, message: 'y' },
+          ]),
+        );
+
+        // act
+        openAt({});
+
+        // assert & verify
+        expect(component.reviewCounts()).toEqual({ uncategorized: 2594, transfers: 96 });
+      });
+
+      it('should show zero counts, not an error, when the counts cannot be loaded', () => {
+        // arrange
+        mockDashboardApi.getActionItems.mockReturnValue(throwError(() => new Error('down')));
+
+        // act
+        openAt({});
+
+        // assert & verify
+        expect(component.reviewCounts()).toEqual({ uncategorized: 0, transfers: 0 });
+      });
+    });
+
+    describe('selection and the side panel', () => {
+      it('should clear the selection whenever a new page of results is loaded', () => {
+        // arrange
+        openAt({}, [row(1), row(2)]);
+        component.onSelectionChange([1, 2]);
+        expect(component.selectedIds()).toEqual([1, 2]);
+
+        // act
+        component.onSortChange('amount,desc');
+        fixture.detectChanges();
+
+        // assert & verify
+        expect(component.selectedIds()).toEqual([]);
+      });
+
+      it('should only select rows of the loaded page', () => {
+        // arrange
+        openAt({}, [row(1), row(2)]);
+
+        // act
+        component.onSelectionChange([2, 999]);
+
+        // assert & verify
+        expect(component.selectedIds()).toEqual([2]);
+      });
+
+      it('should open bulk mode for two or more selected rows and single mode for one', () => {
+        // arrange
+        openAt({}, [row(1), row(2)]);
+
+        // act
+        component.onSelectionChange([1, 2]);
+        component.onEditMore();
+
+        // assert & verify
+        expect(component.panelMode()).toBe('bulk');
+
+        // act
+        component.onSelectionChange([1]);
+        component.onEditMore();
+
+        // assert & verify
+        expect(component.panelMode()).toBe('single');
+        expect(component.selectedTransaction()?.id).toBe(1);
+      });
+
+      it('should close bulk mode when the selection is cleared', () => {
+        // arrange
+        openAt({}, [row(1), row(2)]);
+        component.onSelectionChange([1, 2]);
+        component.onEditMore();
+
+        // act
+        component.onSelectionChange([]);
+
+        // assert & verify
+        expect(component.panelMode()).toBe('closed');
+      });
+
+      it('should keep the panel open on the refreshed row after saving an edit', () => {
+        // arrange
+        openAt({}, [row(1, { description: 'OLD' })]);
+        component.openEditDialog(row(1, { description: 'OLD' }));
+        mockTransactionApi.updateTransaction.mockReturnValue(of(1));
+        mockTransactionApi.getTransactions.mockReturnValue(
+          of({
+            content: [row(1, { description: 'NEW' })],
+            page: { totalElements: 1, totalPages: 1, number: 0, size: 20 },
+          }),
+        );
+
+        // act
+        component.onSave({
+          request: {
+            id: 1,
+            accountId: 1,
+            amount: 10,
+            transactionDate: '2026-10-15',
+            description: 'NEW',
+            type: 'EXPENSE',
+            categoryId: 5,
+          } as TransactionUpdateRequest,
+          tagIds: [],
+        });
+
+        // assert & verify
+        expect(component.panelMode()).toBe('single');
+        expect(component.selectedTransaction()?.description).toBe('NEW');
+      });
+
+      it('should close the panel when the edited row is no longer on the page', () => {
+        // arrange
+        openAt({}, [row(1)]);
+        component.openEditDialog(row(1));
+        mockTransactionApi.getTransactions.mockReturnValue(
+          of({ content: [], page: { totalElements: 0, totalPages: 0, number: 0, size: 20 } }),
+        );
+
+        // act
+        component.loadTransactions();
+
+        // assert & verify
+        expect(component.panelMode()).toBe('closed');
+      });
+    });
+
+    describe('bulk apply', () => {
+      it('should name what changed on success and clear the selection', () => {
+        // arrange
+        openAt({}, [row(1), row(2)]);
+        component.onSelectionChange([1, 2]);
+        mockTransactionApi.bulkUpdateTransactions.mockReturnValue(of(2));
+
+        // act
+        component.onBulkSave({
+          updateCategory: true,
+          category: { id: 9, name: 'Fuel' } as Category,
+          updateMerchant: false,
+          updateDescription: false,
+        });
+
+        // assert & verify
+        expect(mockToast.success).toHaveBeenCalledWith('Set category on 2 transactions');
+        expect(component.selectedIds()).toEqual([]);
+      });
+
+      it('should keep the selection so the user can retry when the bulk update fails', () => {
+        // arrange
+        openAt({}, [row(1), row(2)]);
+        component.onSelectionChange([1, 2]);
+        mockTransactionApi.bulkUpdateTransactions.mockReturnValue(
+          throwError(() => ({ error: { detail: 'boom' } })),
+        );
+
+        // act
+        component.onBulkSave({
+          updateCategory: true,
+          category: { id: 9, name: 'Fuel' } as Category,
+          updateMerchant: false,
+          updateDescription: false,
+        });
+
+        // assert & verify
+        expect(mockToast.error).toHaveBeenCalledWith('boom');
+        expect(component.selectedIds()).toEqual([1, 2]);
+        expect(mockToast.success).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('default period and the URL', () => {
+      it('should keep All time across a refresh when the URL says period=all', () => {
+        // act
+        openAt({ page: '2', period: 'all' });
+
+        // assert & verify
+        expect(component.state().filter.startDate).toBeUndefined();
+        expect(component.state().page).toBe(2);
+      });
+
+      it('should apply This month to a URL with only paging, such as an older bookmark', () => {
+        // act
+        openAt({ page: '2' });
+
+        // assert & verify
+        expect(component.state().filter.startDate).toBeDefined();
+      });
+
+      it('should apply This month again when the sidebar link navigates to a bare /transactions', () => {
+        // arrange
+        const queryParams = new BehaviorSubject<Params>({});
+        mockActivatedRoute.queryParams = queryParams;
+        openAt({});
+        component.onFilterChange({});
+        expect(component.state().filter.startDate).toBeUndefined();
+
+        // act
+        queryParams.next({});
+
+        // assert & verify
+        expect(component.state().filter.startDate).toBeDefined();
+      });
+    });
+
+    describe('unsaved edits', () => {
+      const dirtyEditForm = (): void => {
+        fixture.detectChanges();
+        const form = fixture.debugElement.query(By.directive(TransactionEditFormComponent))
+          .componentInstance as TransactionEditFormComponent;
+        form.form.markAsDirty();
+      };
+
+      it('should ask before switching rows while the form has unsaved changes', () => {
+        // arrange
+        openAt({}, [row(1), row(2)]);
+        component.openEditDialog(row(1));
+        dirtyEditForm();
+
+        // act
+        component.openEditDialog(row(2));
+
+        // assert & verify -- nothing changes until the user agrees to discard
+        expect(mockConfirmationService.confirm).toHaveBeenCalledTimes(1);
+        expect(component.selectedTransaction()?.id).toBe(1);
+
+        // act
+        mockConfirmationService.confirm.mock.calls[0][0].accept!();
+
+        // assert & verify
+        expect(component.selectedTransaction()?.id).toBe(2);
+      });
+
+      it('should switch rows without asking when the form is untouched', () => {
+        // arrange
+        openAt({}, [row(1), row(2)]);
+        component.openEditDialog(row(1));
+        fixture.detectChanges();
+
+        // act
+        component.openEditDialog(row(2));
+
+        // assert & verify
+        expect(mockConfirmationService.confirm).not.toHaveBeenCalled();
+        expect(component.selectedTransaction()?.id).toBe(2);
+      });
+
+      it('should not ask to discard once the edits have been saved', () => {
+        // arrange
+        openAt({}, [row(1)]);
+        component.openEditDialog(row(1));
+        dirtyEditForm();
+        mockTransactionApi.updateTransaction.mockReturnValue(of(1));
+
+        // act
+        component.onSave({
+          request: {
+            id: 1,
+            accountId: 1,
+            amount: 10,
+            transactionDate: '2026-10-15',
+            description: 'test',
+            type: 'EXPENSE',
+            categoryId: 5,
+          } as TransactionUpdateRequest,
+          tagIds: [],
+        });
+        component.onPanelClose();
+
+        // assert & verify
+        expect(mockConfirmationService.confirm).not.toHaveBeenCalled();
+        expect(component.panelMode()).toBe('closed');
+      });
+
+      it('should ask before Edit more replaces a dirty single form with the bulk form', () => {
+        // arrange
+        openAt({}, [row(1), row(2)]);
+        component.openEditDialog(row(1));
+        dirtyEditForm();
+        component.onSelectionChange([1, 2]);
+
+        // act
+        component.onEditMore();
+
+        // assert & verify
+        expect(mockConfirmationService.confirm).toHaveBeenCalledTimes(1);
+        expect(component.panelMode()).toBe('single');
+
+        // act
+        mockConfirmationService.confirm.mock.calls[0][0].accept!();
+
+        // assert & verify
+        expect(component.panelMode()).toBe('bulk');
+      });
+    });
+
+    describe('tabs', () => {
+      it('should leave other filters alone when All is clicked while already on All', () => {
+        // arrange
+        openAt({});
+        component.onFilterChange({ categoryName: 'Groceries' });
+
+        // act
+        component.onTabChange('ALL');
+
+        // assert & verify
+        expect(component.state().filter.categoryName).toBe('Groceries');
+      });
+    });
+
+    describe('empty and loading states', () => {
+      it('should explain, and offer Clear filters, when filters match nothing, keeping the bar and tabs', () => {
+        // act
+        openAt({ description: 'zzz' });
+
+        // assert & verify
+        const root: HTMLElement = fixture.nativeElement;
+        expect(root.querySelector('app-transaction-filter-bar')).toBeTruthy();
+        expect(root.querySelector('app-transaction-review-tabs')).toBeTruthy();
+        expect(root.textContent).toContain('No transactions match these filters');
+        expect(root.querySelector('[data-testid="empty-clear-filters"]')).toBeTruthy();
+      });
+
+      it('should say there are no transactions yet when nothing is applied and nothing exists', () => {
+        // arrange -- no filters at all, so the default This month applies; clear it to All time
+        openAt({});
+        component.onFilterChange({});
+        fixture.detectChanges();
+
+        // assert & verify
+        expect(fixture.nativeElement.textContent).toContain('No transactions yet');
+      });
+
+      it('should show the error state with retry when loading fails with nothing to show', () => {
+        // arrange
+        openAt({});
+        mockTransactionApi.getTransactions.mockReturnValue(throwError(() => new Error('down')));
+
+        // act
+        component.loadTransactions();
+        fixture.detectChanges();
+
+        // assert & verify
+        expect(fixture.nativeElement.querySelector('app-page-error-state')).toBeTruthy();
       });
     });
   });

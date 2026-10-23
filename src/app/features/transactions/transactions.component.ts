@@ -9,6 +9,7 @@ import {
   Signal,
   signal,
   untracked,
+  viewChild,
   WritableSignal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -18,17 +19,8 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Params, Router } from '@angular/router';
 import { finalize, forkJoin, Observable, of, skip, switchMap } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
-import { TableModule, type TableLazyLoadEvent } from 'primeng/table';
-import { CardModule } from 'primeng/card';
-import { TooltipModule } from 'primeng/tooltip';
-import { CheckboxModule } from 'primeng/checkbox';
-import { TagModule } from 'primeng/tag';
-import { InputNumberModule } from 'primeng/inputnumber';
-import { InputTextModule } from 'primeng/inputtext';
-import { ConfirmationService, FilterMetadata, SelectItemGroup } from 'primeng/api';
-import { ContextMenuModule } from 'primeng/contextmenu';
-import { DatePicker } from 'primeng/datepicker';
-import { SelectModule } from 'primeng/select';
+import { PaginatorModule } from 'primeng/paginator';
+import { ConfirmationService, SelectItemGroup } from 'primeng/api';
 
 import {
   PageResponse,
@@ -37,6 +29,7 @@ import {
   TransactionFilter,
   TransactionFormSaveEvent,
   TransactionState,
+  TransactionType,
   TransactionUpdateRequest,
 } from '@models/transaction.model';
 import { Account } from '@models/account.model';
@@ -45,27 +38,28 @@ import { Merchant } from '@models/merchant.model';
 import { Tag } from '@models/tag.model';
 import { TransactionApiService } from './services/transaction-api.service';
 import { TransactionUrlStateService } from './services/transaction-url-state.service';
+import { DashboardApiService } from '@features/dashboard/services/dashboard-api.service';
+import { ActionItem, ActionType } from '@models/dashboard.model';
+import { hasAnyFilter, presetRange } from './utils/transaction-period';
+import { UNCATEGORIZED } from './utils/transaction-filter-chips';
+import { TransactionFilterBarComponent } from './components/transaction-filter-bar/transaction-filter-bar.component';
 import {
-  setAmountFilter,
-  setDateFilter,
-  setEqualsFilter,
-  setMerchantFilter,
-  updateCompositeFilterField,
-} from './services/transaction-filter.util';
+  ReviewTab,
+  TransactionReviewTabsComponent,
+} from './components/transaction-review-tabs/transaction-review-tabs.component';
+import { TransactionListComponent } from './components/transaction-list/transaction-list.component';
+import { TransactionBulkBarComponent } from './components/transaction-bulk-bar/transaction-bulk-bar.component';
+import { TransactionSidePanelComponent } from './components/transaction-side-panel/transaction-side-panel.component';
+import { TransactionEditFormComponent } from './components/transaction-edit-form/transaction-edit-form.component';
+import { TransactionBulkFormComponent } from './components/transaction-bulk-form/transaction-bulk-form.component';
 import { AccountApiService } from '@features/accounts/services/account-api.service';
 import { CategoryApiService } from '@features/categories/services/category-api.service';
 import { TagApiService } from '@features/tags/services/tag-api.service';
 import { ToastService } from '@core/services/toast.service';
 import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen-toolbar';
-import { FormatTransactionTypeAmountPipe } from '@shared/pipes/format-transaction-type-amount.pipe';
-import { TransactionFormDrawerComponent } from './components/transaction-form-drawer/transaction-form-drawer.component';
 import { CsvImportDialogComponent } from './components/csv-import-dialog/csv-import-dialog.component';
 import { TransferMatchingDialogComponent } from './components/transfer-matching-dialog/transfer-matching-dialog.component';
-import {
-  BulkEditData,
-  BulkEditDialogComponent,
-} from './components/bulk-edit-dialog/bulk-edit-dialog.component';
-import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
+import { BulkEditData } from './components/transaction-bulk-form/transaction-bulk-form.component';
 import { toApiDateTimeString } from '@shared/utils/transaction.utils';
 import { PageErrorStateComponent } from '@shared/components/page-error-state/page-error-state.component';
 
@@ -82,25 +76,19 @@ import { PageErrorStateComponent } from '@shared/components/page-error-state/pag
     CommonModule,
     FormsModule,
     ButtonModule,
-    TableModule,
-    CardModule,
-    TooltipModule,
-    CheckboxModule,
-    TagModule,
-    InputNumberModule,
-    InputTextModule,
-    ContextMenuModule,
-    DatePicker,
-    SelectModule,
+    PaginatorModule,
+    TransactionFilterBarComponent,
+    TransactionReviewTabsComponent,
+    TransactionListComponent,
+    TransactionBulkBarComponent,
+    TransactionSidePanelComponent,
+    TransactionEditFormComponent,
+    TransactionBulkFormComponent,
     ScreenToolbarComponent,
-    TransactionFormDrawerComponent,
     CsvImportDialogComponent,
     TransferMatchingDialogComponent,
-    BulkEditDialogComponent,
-    FormatTransactionTypeAmountPipe,
     PageErrorStateComponent,
   ],
-  providers: [FormatCurrencyPipe, FormatTransactionTypeAmountPipe],
   templateUrl: './transactions.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -157,14 +145,17 @@ export class TransactionsComponent implements OnInit {
   /** Indicates if a manual unmark-as-transfer operation is currently in flight. */
   readonly unmarkingAsTransfer: WritableSignal<boolean> = signal(false);
 
-  /** Indicates if the transaction form drawer is currently open. */
-  readonly showDialog: WritableSignal<boolean> = signal(false);
+  /** What the docked side panel is showing: closed, one transaction, a new one, or a bulk edit. */
+  readonly panelMode: WritableSignal<'closed' | 'single' | 'create' | 'bulk'> = signal('closed');
+
+  /** Counts for the review tabs (global, from the same data the dashboard banner uses). */
+  readonly reviewCounts: WritableSignal<{ uncategorized: number; transfers: number }> = signal({
+    uncategorized: 0,
+    transfers: 0,
+  });
 
   /** Indicates if the import dialog is currently open. */
   readonly showImportDialog: WritableSignal<boolean> = signal(false);
-
-  /** Indicates if the bulk edit dialog is currently open. */
-  readonly showBulkEditDialog: WritableSignal<boolean> = signal(false);
 
   /** Indicates if the transfer matching dialog is currently open. */
   readonly showTransferDialog: WritableSignal<boolean> = signal(false);
@@ -224,72 +215,10 @@ export class TransactionsComponent implements OnInit {
       result.unshift({
         label: 'Special',
         value: -1,
-        items: [{ label: 'Uncategorized', value: '__UNDEFINED__' }],
+        items: [{ label: 'Uncategorized', value: UNCATEGORIZED }],
       });
 
       return result;
-    },
-  );
-
-  /** Maps internal transaction state to PrimeNG filter metadata for UI synchronization. */
-  readonly tableFilters: Signal<Record<string, FilterMetadata | FilterMetadata[]>> = computed(
-    () => {
-      const filter: TransactionFilter = this.state().filter;
-      const filters: Record<string, FilterMetadata | FilterMetadata[]> = {
-        date: [{ value: null, matchMode: 'dateIs', operator: 'and' }],
-        merchantAndDesc: [{ value: null, matchMode: 'custom', operator: 'and' }],
-        categoryName: [
-          { value: filter.categoryName || null, matchMode: 'equals', operator: 'and' },
-        ],
-        accountId: [{ value: filter.accountId || null, matchMode: 'equals', operator: 'and' }],
-        tagId: [{ value: filter.tagId || null, matchMode: 'equals', operator: 'and' }],
-        amount: [{ value: null, matchMode: 'custom', operator: 'and' }],
-      };
-
-      if (filter.startDate || filter.endDate) {
-        const dateFilters: FilterMetadata[] = [];
-        if (
-          filter.startDate &&
-          filter.endDate &&
-          filter.startDate.getTime() === filter.endDate.getTime()
-        ) {
-          dateFilters.push({ value: filter.startDate, matchMode: 'dateIs', operator: 'and' });
-        } else {
-          if (filter.startDate) {
-            dateFilters.push({ value: filter.startDate, matchMode: 'dateAfter', operator: 'and' });
-          }
-          if (filter.endDate) {
-            dateFilters.push({ value: filter.endDate, matchMode: 'dateBefore', operator: 'and' });
-          }
-        }
-        filters['date'] = dateFilters;
-      }
-
-      if (filter.merchant || filter.description) {
-        filters['merchantAndDesc'] = [
-          {
-            value: { merchant: filter.merchant || null, description: filter.description || null },
-            matchMode: 'custom',
-            operator: 'and',
-          },
-        ];
-      }
-
-      if (filter.minAmount !== undefined || filter.maxAmount !== undefined || filter.type) {
-        filters['amount'] = [
-          {
-            value: {
-              min: filter.minAmount ?? null,
-              max: filter.maxAmount ?? null,
-              type: filter.type ?? null,
-            },
-            matchMode: 'custom',
-            operator: 'and',
-          },
-        ];
-      }
-
-      return filters;
     },
   );
 
@@ -298,12 +227,64 @@ export class TransactionsComponent implements OnInit {
     (): boolean => this.transactions().length === 0 && !this.loading(),
   );
 
-  /** Indicates if all visible transactions are currently selected. */
-  readonly allSelected: Signal<boolean> = computed(
-    (): boolean =>
-      this.selectedTransactions().length > 0 &&
-      this.selectedTransactions().length === this.transactions().length,
+  /** The ids of the selected transactions (what the list's checkboxes show). */
+  readonly selectedIds: Signal<number[]> = computed((): number[] =>
+    this.selectedTransactions().map((t: Transaction): number => t.id),
   );
+
+  /** True when every selected row is already a transfer, so the bar offers Unmark. */
+  readonly allSelectedAreTransfers: Signal<boolean> = computed((): boolean => {
+    const rows: Transaction[] = this.selectedTransactions();
+    return (
+      rows.length > 0 &&
+      rows.every(
+        (t: Transaction): boolean =>
+          t.type === TransactionType.TRANSFER ||
+          t.type === TransactionType.TRANSFER_IN ||
+          t.type === TransactionType.TRANSFER_OUT,
+      )
+    );
+  });
+
+  /** Which review tab matches the applied category filter. */
+  readonly activeTab: Signal<ReviewTab> = computed((): ReviewTab => {
+    const category: string | undefined = this.state().filter.categoryName;
+    return category === UNCATEGORIZED || category === '__UNDEFINED__' ? 'NEEDS_CATEGORY' : 'ALL';
+  });
+
+  /** How many pages the current result spans (at least one). */
+  readonly pageCount: Signal<number> = computed((): number =>
+    Math.max(1, Math.ceil(this.totalRecords() / this.state().size)),
+  );
+
+  /** Whether any filter other than an All time period is applied (drives the empty state). */
+  readonly hasAnyActiveFilter: Signal<boolean> = computed((): boolean =>
+    hasAnyFilter(this.state().filter),
+  );
+
+  /** Heading for the side panel. */
+  readonly panelTitle: Signal<string> = computed((): string => {
+    switch (this.panelMode()) {
+      case 'create':
+        return 'New transaction';
+      case 'bulk':
+        return `${this.selectedTransactions().length} selected`;
+      default:
+        return 'Edit transaction';
+    }
+  });
+
+  private readonly dashboardApi: DashboardApiService = inject(DashboardApiService);
+  private readonly editForm: Signal<TransactionEditFormComponent | undefined> =
+    viewChild<TransactionEditFormComponent>('editForm');
+  private readonly bulkForm: Signal<TransactionBulkFormComponent | undefined> =
+    viewChild<TransactionBulkFormComponent>('bulkForm');
+
+  /** Whether the visible panel form can be saved. */
+  readonly panelValid: Signal<boolean> = computed((): boolean => {
+    if (this.panelMode() === 'bulk') return this.bulkForm()?.valid() ?? false;
+    return this.editForm()?.valid() ?? false;
+  });
 
   constructor() {
     /**
@@ -358,6 +339,7 @@ export class TransactionsComponent implements OnInit {
   loadTransactions(): void {
     this.loading.set(true);
     this.loadError.set(false);
+    this.loadReviewCounts();
     const { filter, page, size, sort } = this.state();
 
     this.transactionApi
@@ -370,7 +352,21 @@ export class TransactionsComponent implements OnInit {
         next: (res: PageResponse<Transaction>): void => {
           this.transactions.set(res.content);
           this.totalRecords.set(res.page.totalElements);
+          // a selection never survives a reload, so bulk mode has nothing left to act on
           this.selectedTransactions.set([]);
+          if (this.panelMode() === 'bulk') {
+            this.closePanel();
+          } else if (this.panelMode() === 'single') {
+            const current: Transaction | null = this.selectedTransaction();
+            const refreshed: Transaction | undefined = res.content.find(
+              (t: Transaction): boolean => t.id === current?.id,
+            );
+            if (refreshed) {
+              this.selectedTransaction.set(refreshed);
+            } else {
+              this.closePanel();
+            }
+          }
         },
         error: (err: unknown): void => {
           console.error('Failed to load transactions:', err);
@@ -387,7 +383,16 @@ export class TransactionsComponent implements OnInit {
    * @param params - The query parameters from the active route.
    */
   private hydrateFromParams(params: Params): void {
-    const newState: TransactionState = this.urlState.hydrateFromParams(params);
+    const hydrated: TransactionState = this.urlState.hydrateFromParams(params);
+    // a bare /transactions shows This month; a URL that carries any filter, or says period=all,
+    // shows what it asks for (the dashboard's uncategorized link would otherwise hide older rows)
+    const useDefaultPeriod: boolean = params['period'] !== 'all' && !hasAnyFilter(hydrated.filter);
+    const newState: TransactionState = useDefaultPeriod
+      ? {
+          ...hydrated,
+          filter: { ...hydrated.filter, ...presetRange('THIS_MONTH', new Date()) },
+        }
+      : hydrated;
     const currentState: TransactionState = this.state();
 
     if (JSON.stringify(newState) !== JSON.stringify(currentState)) {
@@ -456,131 +461,125 @@ export class TransactionsComponent implements OnInit {
       .subscribe((data: Tag[]): void => this.tags.set(data));
   }
 
-  onLazyLoad(event: TableLazyLoadEvent): void {
-    const rows: number = event.rows ?? 20;
-    const first: number = event.first ?? 0;
-    const page: number = Math.floor(first / rows);
-    let sort: string = this.state().sort;
-
-    if (event.sortField) {
-      const dir: string = event.sortOrder === 1 ? 'asc' : 'desc';
-      sort = `${event.sortField},${dir}`;
-    }
-
-    const filter: TransactionFilter = this.hydrateFilters(event.filters);
-    const currentState: TransactionState = this.state();
-    if (
-      page !== currentState.page ||
-      rows !== currentState.size ||
-      sort !== currentState.sort ||
-      JSON.stringify(filter) !== JSON.stringify(currentState.filter)
-    ) {
-      this.state.set({
-        filter,
-        page,
-        size: rows,
-        sort,
-      });
-    }
+  /** Applies a new filter (period, search, popover, chips) and returns to the first page. */
+  onFilterChange(filter: TransactionFilter): void {
+    this.state.update((s: TransactionState) => ({ ...s, filter, page: 0 }));
   }
 
-  hydrateFilters(
-    filterEvent: Record<string, FilterMetadata | FilterMetadata[] | undefined> | undefined,
-  ): TransactionFilter {
-    const stateFilter: TransactionFilter = { ...this.state().filter };
-
-    if (filterEvent) {
-      setDateFilter(filterEvent['date'], stateFilter);
-      setMerchantFilter(filterEvent['merchantAndDesc'], stateFilter);
-      setEqualsFilter(filterEvent['categoryName'], stateFilter, 'categoryName');
-      setEqualsFilter(filterEvent['accountId'], stateFilter, 'accountId');
-      setEqualsFilter(filterEvent['tagId'], stateFilter, 'tagId');
-      setAmountFilter(filterEvent['amount'], stateFilter);
-    }
-
-    return stateFilter;
+  /** Switches between All and Needs a category. */
+  onTabChange(tab: ReviewTab): void {
+    // clicking All while already on All must not silently drop other filters such as a category
+    if (tab === 'ALL' && this.activeTab() === 'ALL') return;
+    const filter: TransactionFilter = { ...this.state().filter };
+    filter.categoryName = tab === 'NEEDS_CATEGORY' ? UNCATEGORIZED : undefined;
+    this.onFilterChange(filter);
   }
 
-  /**
-   * Clears the current transaction filter state.
-   */
-  clearFilters(): void {
+  /** Applies a new sort and returns to the first page. */
+  onSortChange(sort: string): void {
+    this.state.update((s: TransactionState) => ({ ...s, sort, page: 0 }));
+  }
+
+  /** Applies a page or page-size change from the paginator. */
+  onPageChange(event: { first?: number; rows?: number }): void {
+    const rows: number = event.rows ?? this.state().size;
     this.state.update((s: TransactionState) => ({
       ...s,
-      filter: {},
-      page: 0,
-      sort: 'date,desc',
+      size: rows,
+      page: Math.floor((event.first ?? 0) / rows),
     }));
   }
 
-  /**
-   * Updates the merchant filter state.
-   * @param filterConstraint the new filter constraint
-   * @param merchant the new merchant name
-   */
-  updateMerchantFilter(filterConstraint: FilterMetadata, merchant: string | null): void {
-    updateCompositeFilterField(
-      filterConstraint,
-      ['merchant', 'description'],
-      'merchant',
-      merchant,
-      {
-        isEmpty: (v: unknown): boolean => !v,
-      },
+  /** Replaces the selection with the rows of the loaded page whose ids are given. */
+  onSelectionChange(ids: number[]): void {
+    this.selectedTransactions.set(
+      this.transactions().filter((t: Transaction): boolean => ids.includes(t.id)),
     );
+    if (ids.length === 0 && this.panelMode() === 'bulk') this.closePanel();
+  }
+
+  /** Opens the panel for the selection: bulk mode for many, single mode for one. */
+  onEditMore(): void {
+    const rows: Transaction[] = this.selectedTransactions();
+    if (rows.length === 0) return;
+    if (rows.length === 1) {
+      this.openEditDialog(rows[0]);
+    } else {
+      this.confirmDiscardIfDirty((): void => this.panelMode.set('bulk'));
+    }
+  }
+
+  /** Closes the panel from its own Close button or Escape, asking first if edits are unsaved. */
+  onPanelClose(): void {
+    this.confirmDiscardIfDirty((): void => this.closePanel());
   }
 
   /**
-   * Updates the description filter state.
-   * @param filterConstraint the new filter constraint
-   * @param description the new description
+   * Runs an action that would replace the single-transaction form, after asking the user to
+   * confirm if that form has unsaved changes. Anything else runs straight away.
    */
-  updateDescriptionFilter(filterConstraint: FilterMetadata, description: string | null): void {
-    updateCompositeFilterField(
-      filterConstraint,
-      ['merchant', 'description'],
-      'description',
-      description,
-      {
-        normalize: (v: unknown): unknown => (v as string | null)?.trim() || null,
-        isEmpty: (v: unknown): boolean => !v,
-      },
-    );
+  private confirmDiscardIfDirty(proceed: () => void): void {
+    const editing: boolean = this.panelMode() === 'single' || this.panelMode() === 'create';
+    if (!editing || !this.editForm()?.form.dirty) {
+      proceed();
+      return;
+    }
+    this.confirmationService.confirm({
+      header: 'Discard changes?',
+      message: 'You have unsaved changes to this transaction. Discard them?',
+      acceptLabel: 'Discard',
+      rejectLabel: 'Keep editing',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: proceed,
+    });
   }
 
-  /**
-   * Updates the minimum amount filter state.
-   * @param filterConstraint the new filter constraint
-   * @param min the new minimum amount
-   */
-  updateMinAmountFilter(filterConstraint: FilterMetadata, min: number | null): void {
-    updateCompositeFilterField(filterConstraint, ['min', 'max', 'type'], 'min', min);
+  /** Opens the panel on the row whose "Choose category" pill was clicked. */
+  onPickCategory(txn: Transaction): void {
+    this.openEditDialog(txn);
   }
 
-  /**
-   * Updates the maximum amount filter state.
-   * @param filterConstraint the new filter constraint
-   * @param max the new maximum amount
-   */
-  updateMaxAmountFilter(filterConstraint: FilterMetadata, max: number | null): void {
-    updateCompositeFilterField(filterConstraint, ['min', 'max', 'type'], 'max', max);
+  /** Closes the side panel. */
+  closePanel(): void {
+    this.panelMode.set('closed');
+    this.selectedTransaction.set(null);
   }
 
-  /**
-   * Updates the transaction type filter state.
-   * @param filterConstraint the new filter constraint
-   * @param type the new transaction type
-   */
-  updateTypeFilter(filterConstraint: FilterMetadata, type: string | null): void {
-    updateCompositeFilterField(filterConstraint, ['min', 'max', 'type'], 'type', type);
+  /** Saves whichever form the panel is showing. */
+  onPanelSave(): void {
+    if (this.panelMode() === 'bulk') {
+      this.bulkForm()?.submit();
+    } else {
+      this.editForm()?.submit();
+    }
+  }
+
+  /** Loads the counts shown on the review tabs. */
+  private loadReviewCounts(): void {
+    this.dashboardApi
+      .getActionItems()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (items: ActionItem[]): void => {
+          const count = (type: ActionType): number =>
+            items.find((i: ActionItem): boolean => i.type === type)?.count ?? 0;
+          this.reviewCounts.set({
+            uncategorized: count(ActionType.UNCATEGORIZED),
+            transfers: count(ActionType.TRANSFER_REVIEW),
+          });
+        },
+        error: (): void => this.reviewCounts.set({ uncategorized: 0, transfers: 0 }),
+      });
   }
 
   /**
    * Opens the create transaction dialog.
    */
   openCreateDialog(): void {
-    this.selectedTransaction.set(null);
-    this.showDialog.set(true);
+    this.confirmDiscardIfDirty((): void => {
+      this.selectedTransaction.set(null);
+      this.panelMode.set('create');
+    });
   }
 
   /**
@@ -588,8 +587,12 @@ export class TransactionsComponent implements OnInit {
    * @param txn the transaction to edit
    */
   openEditDialog(txn: Transaction): void {
-    this.selectedTransaction.set(txn);
-    this.showDialog.set(true);
+    // clicking the row that is already open must not ask, or reset, anything
+    if (this.panelMode() === 'single' && this.selectedTransaction()?.id === txn.id) return;
+    this.confirmDiscardIfDirty((): void => {
+      this.selectedTransaction.set(txn);
+      this.panelMode.set('single');
+    });
   }
 
   /**
@@ -644,7 +647,9 @@ export class TransactionsComponent implements OnInit {
     ).subscribe({
       next: (): void => {
         this.toast.success(`Transaction ${existing ? 'updated' : 'created'}`);
-        this.showDialog.set(false);
+        // what is on screen is now what is saved, so closing should not ask about discarding
+        this.editForm()?.form.markAsPristine();
+        if (!existing) this.closePanel();
         this.loadTransactions();
       },
       error: (err: HttpErrorResponse): void =>
@@ -688,7 +693,7 @@ export class TransactionsComponent implements OnInit {
    * field overrides that transaction's own current value; toggled-off fields pass through
    * unchanged -- `TransactionUpdateRequest` requires the full set of fields per transaction, not
    * just the ones being changed (a PATCH endpoint, but not a partial-object one).
-   * @param data the finalized mass-edit configuration from BulkEditDialogComponent
+   * @param data the finalized mass-edit configuration from TransactionBulkFormComponent
    */
   onBulkSave(data: BulkEditData): void {
     this.bulkSaving.set(true);
@@ -711,8 +716,14 @@ export class TransactionsComponent implements OnInit {
       .pipe(finalize((): void => this.bulkSaving.set(false)))
       .subscribe({
         next: (count: number): void => {
-          this.toast.success(`${count} transaction${count === 1 ? '' : 's'} updated`);
-          this.showBulkEditDialog.set(false);
+          const what: string =
+            data.updateCategory && !data.updateMerchant && !data.updateDescription
+              ? 'Set category on'
+              : data.updateMerchant && !data.updateCategory && !data.updateDescription
+                ? 'Set merchant on'
+                : 'Updated';
+          this.toast.success(`${what} ${count} transaction${count === 1 ? '' : 's'}`);
+          this.closePanel();
           this.selectedTransactions.set([]);
           this.loadTransactions();
         },
@@ -793,6 +804,7 @@ export class TransactionsComponent implements OnInit {
           .subscribe({
             next: (): void => {
               this.toast.success('Transaction deleted');
+              this.closePanel();
               this.loadTransactions();
             },
             error: (err: unknown): void => {

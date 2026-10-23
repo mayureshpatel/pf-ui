@@ -1,16 +1,16 @@
 import { vi, Mocked } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
-import { BulkEditDialogComponent } from './bulk-edit-dialog.component';
+import { TransactionBulkFormComponent } from './transaction-bulk-form.component';
 import { CategoryApiService } from '@features/categories/services/category-api.service';
 import { MerchantApiService } from '@features/merchants/services/merchant-api.service';
 import { Category, CategoryGroup, CategoryType } from '@models/category.model';
 import { Merchant } from '@models/merchant.model';
 import { Transaction } from '@models/transaction.model';
 
-describe('BulkEditDialogComponent', () => {
-  let component: BulkEditDialogComponent;
-  let fixture: ComponentFixture<BulkEditDialogComponent>;
+describe('TransactionBulkFormComponent', () => {
+  let component: TransactionBulkFormComponent;
+  let fixture: ComponentFixture<TransactionBulkFormComponent>;
   let mockCategoryApi: Mocked<Pick<CategoryApiService, 'getGroupedCategories'>>;
   let mockMerchantApi: Mocked<Pick<MerchantApiService, 'getMerchants'>>;
 
@@ -62,16 +62,15 @@ describe('BulkEditDialogComponent', () => {
     };
 
     await TestBed.configureTestingModule({
-      imports: [BulkEditDialogComponent],
+      imports: [TransactionBulkFormComponent],
       providers: [
         { provide: CategoryApiService, useValue: mockCategoryApi },
         { provide: MerchantApiService, useValue: mockMerchantApi },
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(BulkEditDialogComponent);
+    fixture = TestBed.createComponent(TransactionBulkFormComponent);
     component = fixture.componentInstance;
-    fixture.componentRef.setInput('visible', true);
     fixture.componentRef.setInput('transactions', mockTransactions);
     fixture.detectChanges();
   });
@@ -204,7 +203,7 @@ describe('BulkEditDialogComponent', () => {
   describe('onSave', () => {
     it('should not emit when the form is invalid', () => {
       const saveSpy = vi.fn();
-      component.save.subscribe(saveSpy);
+      component.apply.subscribe(saveSpy);
 
       component.onSave();
 
@@ -214,7 +213,7 @@ describe('BulkEditDialogComponent', () => {
     it('should emit only the toggled-on fields', () => {
       // arrange
       const saveSpy = vi.fn();
-      component.save.subscribe(saveSpy);
+      component.apply.subscribe(saveSpy);
       component.form.controls.updateCategory.setValue(true);
       component.form.controls.category.setValue(rent);
 
@@ -236,7 +235,7 @@ describe('BulkEditDialogComponent', () => {
       // PF-395: merchant is now a real picker bound to Merchant objects (MerchantApiService
       // .getMerchants()), not a free-text input wrapped in an unsafe `as Merchant` cast.
       const saveSpy = vi.fn();
-      component.save.subscribe(saveSpy);
+      component.apply.subscribe(saveSpy);
       component.form.controls.updateMerchant.setValue(true);
       component.form.controls.merchant.setValue(costco);
 
@@ -253,7 +252,7 @@ describe('BulkEditDialogComponent', () => {
       component.form.controls.updateDescription.setValue(true);
       component.form.controls.description.setValue('  Business trip  ');
       const saveSpy = vi.fn();
-      component.save.subscribe(saveSpy);
+      component.apply.subscribe(saveSpy);
 
       component.onSave();
 
@@ -275,7 +274,7 @@ describe('BulkEditDialogComponent', () => {
       component.form.controls.merchant.setValue(costco);
       component.form.controls.updateMerchant.setValue(false); // toggled back off, value left behind
       const saveSpy = vi.fn();
-      component.save.subscribe(saveSpy);
+      component.apply.subscribe(saveSpy);
 
       // act
       component.onSave();
@@ -284,42 +283,6 @@ describe('BulkEditDialogComponent', () => {
       expect(saveSpy).toHaveBeenCalledWith(
         expect.objectContaining({ updateMerchant: false, merchant: costco }),
       );
-    });
-  });
-
-  describe('onCancel', () => {
-    it('should close the dialog', () => {
-      component.onCancel();
-
-      expect(component.visible()).toBe(false);
-    });
-  });
-
-  describe('reset-on-close effect', () => {
-    it('should reset the form once the dialog becomes hidden', () => {
-      // arrange
-      component.form.controls.updateCategory.setValue(true);
-      component.form.controls.category.setValue(rent);
-      component.form.controls.updateMerchant.setValue(true);
-      component.form.controls.merchant.setValue(costco);
-
-      // act
-      fixture.componentRef.setInput('visible', false);
-      fixture.detectChanges();
-
-      // assert & verify
-      expect(component.form.controls.updateCategory.value).toBe(false);
-      expect(component.form.controls.category.value).toBeNull();
-      expect(component.form.controls.merchant.value).toBeNull();
-    });
-
-    it('should not reset the form while the dialog remains open', () => {
-      // arrange & act
-      component.form.controls.updateCategory.setValue(true);
-      fixture.detectChanges();
-
-      // assert & verify
-      expect(component.form.controls.updateCategory.value).toBe(true);
     });
   });
 
@@ -369,21 +332,25 @@ describe('BulkEditDialogComponent', () => {
 
     it('should show the combined validation error only once a toggle is on and the form is still invalid', () => {
       // before any toggle
-      expect(fixture.nativeElement.textContent).not.toContain('Selected fields must be populated');
+      expect(fixture.nativeElement.textContent).not.toContain(
+        'Fill in every field you switched on',
+      );
 
       // toggled on, still blank
       component.form.controls.updateDescription.setValue(true);
       fixture.detectChanges();
-      expect(fixture.nativeElement.textContent).toContain('Selected fields must be populated');
+      expect(fixture.nativeElement.textContent).toContain('Fill in every field you switched on');
 
       // filled in
       component.form.controls.description.setValue('Business trip');
       fixture.detectChanges();
-      expect(fixture.nativeElement.textContent).not.toContain('Selected fields must be populated');
+      expect(fixture.nativeElement.textContent).not.toContain(
+        'Fill in every field you switched on',
+      );
     });
 
-    it('should show the live transaction count in the dialog header', () => {
-      expect(fixture.nativeElement.textContent).toContain('Bulk Management: 1 Selected');
+    it('should say how many transactions the fields will change', () => {
+      expect(fixture.nativeElement.textContent).toContain('1 selected transactions');
     });
   });
 
@@ -414,8 +381,71 @@ describe('BulkEditDialogComponent', () => {
         expect(combo!.getAttribute('aria-labelledby')).toBe('bulk-edit-category-label');
         const label = fixture.nativeElement.querySelector('#bulk-edit-category-label');
         expect(label).not.toBeNull();
-        expect(label!.textContent!.trim()).toBe('Target Category');
+        expect(label!.textContent!.trim()).toBe('Category');
       },
     );
+  });
+
+  describe('keep as is, valid and submit', () => {
+    it('should describe a field that is the same across the selection', () => {
+      // act
+      fixture.componentRef.setInput('transactions', [
+        { id: 1, category: { id: 5, name: 'Groceries' } },
+        { id: 2, category: { id: 5, name: 'Groceries' } },
+      ]);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.categorySummary()).toBe('Keep as is (Groceries)');
+    });
+
+    it('should say how many different values a field has across the selection', () => {
+      // act
+      fixture.componentRef.setInput('transactions', [
+        { id: 1, category: { id: 5, name: 'Groceries' } },
+        { id: 2, category: null },
+        { id: 3, category: { id: 6, name: 'Dining' } },
+      ]);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.categorySummary()).toBe('Keep as is, 3 different');
+    });
+
+    it('should not be valid, and emit nothing, until at least one field is changed', () => {
+      // arrange
+      fixture.componentRef.setInput('transactions', [{ id: 1 }, { id: 2 }]);
+      fixture.detectChanges();
+      const applied = vi.fn();
+      component.apply.subscribe(applied);
+
+      // act
+      component.submit();
+
+      // assert & verify
+      expect(component.valid()).toBe(false);
+      expect(applied).not.toHaveBeenCalled();
+    });
+
+    it('should send only the fields the user changed', () => {
+      // arrange
+      fixture.componentRef.setInput('transactions', [{ id: 1 }, { id: 2 }]);
+      fixture.detectChanges();
+      const applied = vi.fn();
+      component.apply.subscribe(applied);
+
+      // act
+      component.setCategory({ id: 9, name: 'Fuel' } as never);
+      component.submit();
+
+      // assert & verify
+      expect(applied).toHaveBeenCalledWith(
+        expect.objectContaining({
+          updateCategory: true,
+          updateMerchant: false,
+          updateDescription: false,
+        }),
+      );
+    });
   });
 });
