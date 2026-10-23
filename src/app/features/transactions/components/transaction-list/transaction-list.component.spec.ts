@@ -221,4 +221,45 @@ describe('TransactionListComponent', () => {
     expect(rows[1].className).toContain('dark:bg-primary-900/30');
     expect(rows[2].className).not.toContain('bg-primary-50');
   });
+
+  it('should keep Merchant, Category and Amount on a phone and hide Description, Account and Tags', () => {
+    // act
+    render([txn({ id: 1 })]);
+
+    // assert & verify
+    const header = (label: string): HTMLElement =>
+      all('th').find((th) => th.textContent?.trim() === label)!;
+    for (const hidden of ['Description', 'Account', 'Tags']) {
+      expect(header(hidden).className).toContain('hidden');
+      expect(header(hidden).className).toContain('sm:table-cell');
+    }
+    for (const shown of ['Merchant', 'Category', 'Amount']) {
+      expect(header(shown).className).not.toContain('hidden');
+    }
+    // the matching body cells hide too, so the columns stay aligned
+    const row = all('tbody tr').find((tr) => tr.textContent?.includes('Whole Foods'))!;
+    const cells = Array.from(row.querySelectorAll('td'));
+    expect(cells.filter((c) => c.className.includes('hidden')).length).toBe(3);
+  });
+
+  it('should dim the old rows and mark the table busy while new results load', () => {
+    // act
+    render([txn({ id: 1 })], { loading: true });
+
+    // assert & verify
+    const wrapper = fixture.nativeElement.firstElementChild as HTMLElement;
+    expect(wrapper.getAttribute('aria-busy')).toBe('true');
+    expect(wrapper.className).toContain('opacity-60');
+    expect(wrapper.className).toContain('pointer-events-none');
+  });
+
+  it('should look normal once loading finishes', () => {
+    // act
+    render([txn({ id: 1 })]);
+
+    // assert & verify
+    const wrapper = fixture.nativeElement.firstElementChild as HTMLElement;
+    expect(wrapper.getAttribute('aria-busy')).not.toBe('true');
+    expect(wrapper.className).not.toContain('opacity-60');
+  });
 });

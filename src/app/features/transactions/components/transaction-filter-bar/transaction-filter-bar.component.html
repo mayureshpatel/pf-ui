@@ -1,5 +1,5 @@
 <div class="flex flex-col gap-3">
-  <div class="flex flex-wrap items-center gap-3" role="group" aria-label="Period">
+  <div class="flex max-w-full flex-wrap items-center gap-3" role="group" aria-label="Period">
     <p-selectButton
       [options]="presetOptions"
       [ngModel]="preset()"
@@ -7,7 +7,7 @@
       optionLabel="label"
       optionValue="value"
       [allowEmpty]="false"
-      class="custom-selectbutton"
+      class="custom-selectbutton max-w-full overflow-x-auto"
     />
     @if (preset() === 'CUSTOM') {
       <div class="flex items-center gap-2">
@@ -92,20 +92,24 @@
           />
         </div>
         <div class="grid grid-cols-2 gap-2">
-          <div class="flex flex-col gap-1 text-sm">
+          <div class="flex min-w-0 flex-col gap-1 text-sm">
             <label id="fb-min-label" for="fb-min">Minimum amount</label>
             <p-inputNumber
               inputId="fb-min"
+              styleClass="w-full min-w-0"
+              inputStyleClass="w-full min-w-0"
               [(ngModel)]="draft.minAmount"
               mode="currency"
               currency="USD"
               locale="en-US"
             />
           </div>
-          <div class="flex flex-col gap-1 text-sm">
+          <div class="flex min-w-0 flex-col gap-1 text-sm">
             <label id="fb-max-label" for="fb-max">Maximum amount</label>
             <p-inputNumber
               inputId="fb-max"
+              styleClass="w-full min-w-0"
+              inputStyleClass="w-full min-w-0"
               [(ngModel)]="draft.maxAmount"
               mode="currency"
               currency="USD"

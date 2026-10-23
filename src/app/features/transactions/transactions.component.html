@@ -46,7 +46,7 @@
         panelMode() === 'closed' ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-[minmax(0,1fr)_26rem]'
       "
     >
-      <div class="flex min-w-0 flex-col gap-3">
+      <div class="flex min-w-0 flex-col gap-3" [class.pb-24]="selectedIds().length > 0">
         @if (isEmpty()) {
           <div
             class="rounded-2xl border border-surface-200 p-10 text-center dark:border-surface-800"
@@ -88,15 +88,17 @@
             (openTransaction)="openEditDialog($event)"
             (pickCategory)="onPickCategory($event)"
           />
-          <p-paginator
-            [rows]="state().size"
-            [first]="state().page * state().size"
-            [totalRecords]="totalRecords()"
-            [rowsPerPageOptions]="[10, 20, 50, 100]"
-            [showCurrentPageReport]="true"
-            currentPageReportTemplate="Showing {first} to {last} of {totalRecords}"
-            (onPageChange)="onPageChange($event)"
-          />
+          <div [class.pointer-events-none]="loading()" [class.opacity-60]="loading()">
+            <p-paginator
+              [rows]="state().size"
+              [first]="state().page * state().size"
+              [totalRecords]="totalRecords()"
+              [rowsPerPageOptions]="[10, 20, 50, 100]"
+              [showCurrentPageReport]="true"
+              currentPageReportTemplate="Showing {first} to {last} of {totalRecords}"
+              (onPageChange)="onPageChange($event)"
+            />
+          </div>
         }
 
         <app-transaction-bulk-bar

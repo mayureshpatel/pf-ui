@@ -88,4 +88,14 @@ describe('TransactionBulkBarComponent', () => {
     expect(button(/Set category/)?.disabled).toBe(true);
     expect(button(/Mark as transfer/)?.disabled).toBe(true);
   });
+
+  it('should be fixed to the viewport, not sticky, so it floats even inside a clipping container', () => {
+    // act
+    render(2);
+
+    // assert & verify -- the app's <main> has overflow set, which silently disables sticky
+    const region: HTMLElement = fixture.nativeElement.querySelector('[role="region"]');
+    expect(region.className).toContain('fixed');
+    expect(region.className).not.toContain('sticky');
+  });
 });

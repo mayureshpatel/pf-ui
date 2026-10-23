@@ -283,7 +283,9 @@ export class TransactionsComponent implements OnInit {
   /** Whether the visible panel form can be saved. */
   readonly panelValid: Signal<boolean> = computed((): boolean => {
     if (this.panelMode() === 'bulk') return this.bulkForm()?.valid() ?? false;
-    return this.editForm()?.valid() ?? false;
+    // an incomplete single form keeps Save enabled: clicking it shows what needs fixing, which a
+    // disabled button never can
+    return true;
   });
 
   constructor() {

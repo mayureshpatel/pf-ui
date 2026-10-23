@@ -1272,6 +1272,58 @@ describe('TransactionsComponent', () => {
       });
     });
 
+    describe('floating bulk bar spacing', () => {
+      it('should leave room under the list while rows are selected so the bar never hides the last row', () => {
+        // arrange
+        openAt({}, [row(1), row(2)]);
+        const listColumn = (): HTMLElement =>
+          fixture.nativeElement.querySelector('app-transaction-list').parentElement;
+        expect(listColumn().className).not.toContain('pb-24');
+
+        // act
+        component.onSelectionChange([1]);
+        fixture.detectChanges();
+
+        // assert & verify
+        expect(listColumn().className).toContain('pb-24');
+      });
+    });
+
+    describe('paging while loading', () => {
+      it('should disable the paginator while a new page is loading', () => {
+        // arrange
+        openAt({}, [row(1)]);
+        const wrapper = (): HTMLElement =>
+          fixture.nativeElement.querySelector('p-paginator').parentElement;
+
+        // act
+        component.loading.set(true);
+        fixture.detectChanges();
+
+        // assert & verify
+        expect(wrapper().className).toContain('pointer-events-none');
+
+        // act
+        component.loading.set(false);
+        fixture.detectChanges();
+
+        // assert & verify
+        expect(wrapper().className).not.toContain('pointer-events-none');
+      });
+    });
+
+    describe('save button', () => {
+      it('should keep Save enabled for an incomplete single form so the user can see what to fix', () => {
+        // arrange -- an uncategorized transaction: the form requires a category
+        openAt({}, [row(1, { category: null as never })]);
+        component.openEditDialog(row(1, { category: null as never }));
+        fixture.detectChanges();
+
+        // assert & verify
+        expect(component.panelValid()).toBe(true);
+      });
+    });
+
     describe('tabs', () => {
       it('should leave other filters alone when All is clicked while already on All', () => {
         // arrange
