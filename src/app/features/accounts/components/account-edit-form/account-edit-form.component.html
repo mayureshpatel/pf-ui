@@ -1,0 +1,75 @@
+<form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-4">
+  <div class="flex flex-col gap-1">
+    <label for="name" class="text-sm font-medium">Name</label>
+    <input
+      pInputText
+      id="name"
+      formControlName="name"
+      placeholder="For example, Personal checking"
+      class="w-full"
+    />
+    @if (form.controls.name.touched && form.controls.name.invalid) {
+      <small data-testid="name-error" class="text-rose-700 dark:text-rose-400">
+        Name is required.
+      </small>
+    }
+  </div>
+
+  <div class="flex flex-col gap-1">
+    <label id="type-label" for="type" class="text-sm font-medium">Type</label>
+    <p-select
+      inputId="type"
+      ariaLabelledBy="type-label"
+      formControlName="type"
+      [options]="accountTypes()"
+      optionLabel="label"
+      placeholder="Select account type"
+      appendTo="body"
+    />
+    @if (form.controls.type.touched && form.controls.type.invalid) {
+      <small data-testid="type-error" class="text-rose-700 dark:text-rose-400">
+        Choose an account type.
+      </small>
+    }
+  </div>
+
+  <div class="flex flex-col gap-1">
+    <label id="bank-label" for="bank" class="text-sm font-medium">Bank (for CSV imports)</label>
+    <p-select
+      inputId="bank"
+      ariaLabelledBy="bank-label"
+      formControlName="bankName"
+      [options]="bankOptions"
+      optionLabel="label"
+      optionValue="value"
+      placeholder="Select a bank"
+      [showClear]="true"
+      appendTo="body"
+    />
+  </div>
+
+  <div class="flex flex-col gap-1">
+    <label for="currency" class="text-sm font-medium">Currency</label>
+    <input pInputText id="currency" formControlName="currencyCode" class="w-full" />
+  </div>
+
+  <div class="flex flex-col gap-1">
+    <label for="balance" class="text-sm font-medium">
+      {{ isEditMode() ? 'Current balance' : 'Initial balance' }}
+    </label>
+    <p-inputNumber
+      inputId="balance"
+      formControlName="currentBalance"
+      mode="currency"
+      [currency]="form.controls.currencyCode.value || 'USD'"
+      locale="en-US"
+    />
+    @if (isEditMode()) {
+      <small class="text-muted-color">Change the balance by reconciling.</small>
+    }
+  </div>
+
+  @if (errorMessage()) {
+    <p-message severity="error">{{ errorMessage() }}</p-message>
+  }
+</form>

@@ -141,15 +141,6 @@
     </div>
   }
 
-  <!-- Form Drawer -->
-  <app-account-form-drawer
-    [(visible)]="showDialog"
-    [accountTypes]="accountTypes()"
-    [account]="selectedAccount()"
-    [saving]="loading()"
-    (save)="onSave($event)"
-  />
-
   <!-- Reconcile Drawer -->
   @if (selectedAccount()) {
     <app-reconcile-drawer

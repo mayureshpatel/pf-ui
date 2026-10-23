@@ -1,12 +1,12 @@
 import { vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { AccountFormDrawerComponent } from './account-form-drawer.component';
+import { AccountEditFormComponent } from './account-edit-form.component';
 import { Account, AccountType, BankName } from '@models/account.model';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 
-describe('AccountFormDrawerComponent', () => {
-  let component: AccountFormDrawerComponent;
-  let fixture: ComponentFixture<AccountFormDrawerComponent>;
+describe('AccountEditFormComponent', () => {
+  let component: AccountEditFormComponent;
+  let fixture: ComponentFixture<AccountEditFormComponent>;
 
   const mockAccountTypes: AccountType[] = [
     {
@@ -33,13 +33,12 @@ describe('AccountFormDrawerComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [AccountFormDrawerComponent, NoopAnimationsModule],
+      imports: [AccountEditFormComponent, NoopAnimationsModule],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(AccountFormDrawerComponent);
+    fixture = TestBed.createComponent(AccountEditFormComponent);
     component = fixture.componentInstance;
 
-    fixture.componentRef.setInput('visible', true);
     fixture.componentRef.setInput('accountTypes', mockAccountTypes);
     fixture.componentRef.setInput('account', null);
     fixture.detectChanges();
@@ -49,23 +48,15 @@ describe('AccountFormDrawerComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  describe('isEditMode & computed signals', () => {
-    it('should be false and set create titles when account is null', () => {
+  describe('isEditMode', () => {
+    it('should be false when account is null and true when an account is provided', () => {
       fixture.componentRef.setInput('account', null);
       fixture.detectChanges();
-
       expect(component.isEditMode()).toBe(false);
-      expect(component.drawerTitle()).toBe('Create Account');
-      expect(component.drawerIcon()).toBe('pi-plus');
-    });
 
-    it('should be true and set edit titles when account is provided', () => {
       fixture.componentRef.setInput('account', mockAccount);
       fixture.detectChanges();
-
       expect(component.isEditMode()).toBe(true);
-      expect(component.drawerTitle()).toBe('Edit Account');
-      expect(component.drawerIcon()).toBe('pi-wallet');
     });
   });
 
@@ -207,6 +198,72 @@ describe('AccountFormDrawerComponent', () => {
           bankName: null,
         }),
       );
+    });
+  });
+
+  describe('as a panel body', () => {
+    it('should keep what the user typed when the same account is refreshed in the background', () => {
+      // arrange
+      fixture.componentRef.setInput('account', mockAccount);
+      fixture.detectChanges();
+      component.form.patchValue({ name: 'TYPED' });
+
+      // act -- a reload hands the form a new object for the same account
+      fixture.componentRef.setInput('account', { ...mockAccount });
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.form.getRawValue().name).toBe('TYPED');
+    });
+
+    it('should reset when a different account is shown, and when switching to add', () => {
+      // arrange
+      fixture.componentRef.setInput('account', mockAccount);
+      fixture.detectChanges();
+
+      // act and assert & verify
+      fixture.componentRef.setInput('account', { ...mockAccount, id: 99, name: 'OTHER' });
+      fixture.detectChanges();
+      expect(component.form.getRawValue().name).toBe('OTHER');
+
+      fixture.componentRef.setInput('account', null);
+      fixture.detectChanges();
+      expect(component.form.getRawValue().name).toBe('');
+      expect(component.isEditMode()).toBe(false);
+    });
+
+    it('should say what is missing, in words, after saving an incomplete form, and send nothing', () => {
+      // arrange
+      const saved = vi.fn();
+      component.save.subscribe(saved);
+      expect(fixture.nativeElement.querySelector('[data-testid="name-error"]')).toBeNull();
+
+      // act
+      component.submit();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(saved).not.toHaveBeenCalled();
+      expect(
+        fixture.nativeElement.querySelector('[data-testid="name-error"]').textContent,
+      ).toContain('Name is required.');
+      expect(
+        fixture.nativeElement.querySelector('[data-testid="type-error"]').textContent,
+      ).toContain('Choose an account type.');
+    });
+
+    it('should label the balance Initial when adding and show the reconcile note when editing', () => {
+      // assert & verify
+      expect(fixture.nativeElement.textContent).toContain('Initial balance');
+      expect(fixture.nativeElement.textContent).not.toContain('Change the balance by reconciling.');
+
+      // act
+      fixture.componentRef.setInput('account', mockAccount);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(fixture.nativeElement.textContent).toContain('Current balance');
+      expect(fixture.nativeElement.textContent).toContain('Change the balance by reconciling.');
     });
   });
 });

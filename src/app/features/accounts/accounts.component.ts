@@ -25,7 +25,6 @@ import {
 } from '@models/account.model';
 import { AccountApiService } from './services/account-api.service';
 import { AccountSummaryCardsComponent } from './components/account-summary-cards/account-summary-cards.component';
-import { AccountFormDrawerComponent } from './components/account-form-drawer/account-form-drawer.component';
 import { ReconcileDrawerComponent } from './components/reconcile-dialog/reconcile-dialog.component';
 import { ToastService } from '@core/services/toast.service';
 import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen-toolbar';
@@ -44,7 +43,6 @@ import { PageErrorStateComponent } from '@shared/components/page-error-state/pag
     TooltipModule,
     ScreenToolbarComponent,
     AccountSummaryCardsComponent,
-    AccountFormDrawerComponent,
     ReconcileDrawerComponent,
     FormatCurrencyPipe,
     PageErrorStateComponent,
