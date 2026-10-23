@@ -1289,6 +1289,74 @@ describe('TransactionsComponent', () => {
       });
     });
 
+    describe('bulk mode panel', () => {
+      const openBulk = (rows: Transaction[]): void => {
+        openAt({}, rows);
+        component.onSelectionChange(rows.map((r) => r.id));
+        component.onEditMore();
+        fixture.detectChanges();
+      };
+      const panelButton = (name: RegExp): HTMLButtonElement | undefined =>
+        Array.from<HTMLButtonElement>(fixture.nativeElement.querySelectorAll('aside button')).find(
+          (b) => name.test((b.textContent ?? '').trim()),
+        );
+
+      it('should hide the floating bar while a panel is open, so it never covers the panel footer', () => {
+        // act
+        openBulk([row(1), row(2)]);
+
+        // assert & verify
+        expect(component.panelMode()).toBe('bulk');
+        expect(
+          fixture.nativeElement.querySelector('app-transaction-bulk-bar [role="region"]'),
+        ).toBeNull();
+      });
+
+      it('should offer Mark as transfer and Clear selection inside the bulk panel', () => {
+        // arrange
+        openBulk([row(1), row(2)]);
+        mockTransactionApi.markAsTransfer.mockReturnValue(of(undefined));
+
+        // act
+        panelButton(/^Mark as transfer/)?.click();
+
+        // assert & verify
+        expect(mockTransactionApi.markAsTransfer).toHaveBeenCalledWith([1, 2]);
+
+        // act
+        openBulk([row(1), row(2)]);
+        panelButton(/^Clear selection/)?.click();
+        fixture.detectChanges();
+
+        // assert & verify
+        expect(component.selectedIds()).toEqual([]);
+        expect(component.panelMode()).toBe('closed');
+      });
+
+      it('should offer Unmark as transfer when every selected row is a transfer', () => {
+        // act
+        openBulk([row(1, { type: 'TRANSFER' as never }), row(2, { type: 'TRANSFER' as never })]);
+
+        // assert & verify
+        expect(panelButton(/^Unmark as transfer/)).toBeTruthy();
+        expect(panelButton(/^Mark as transfer/)).toBeUndefined();
+      });
+
+      it('should show the net total of the selection, ignoring transfers', () => {
+        // act
+        openBulk([
+          row(1, { type: 'INCOME' as never, amount: 100 }),
+          row(2, { type: 'EXPENSE' as never, amount: 30 }),
+          row(3, { type: 'TRANSFER' as never, amount: 500 }),
+        ]);
+
+        // assert & verify
+        expect(
+          fixture.nativeElement.querySelector('[data-testid="selection-net"]').textContent,
+        ).toContain('+$70.00');
+      });
+    });
+
     describe('paging while loading', () => {
       it('should disable the paginator while a new page is loading', () => {
         // arrange

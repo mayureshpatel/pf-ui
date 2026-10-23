@@ -102,7 +102,7 @@
         }
 
         <app-transaction-bulk-bar
-          [selectionCount]="selectedIds().length"
+          [selectionCount]="panelMode() === 'closed' ? selectedIds().length : 0"
           [allTransfers]="allSelectedAreTransfers()"
           [busy]="bulkSaving() || markingAsTransfer() || unmarkingAsTransfer()"
           (setCategory)="onEditMore()"
@@ -131,12 +131,46 @@
           (delete)="deleteTransaction(selectedTransaction()!)"
         >
           @if (panelMode() === 'bulk') {
+            <p data-testid="selection-net" class="mb-3 text-sm text-muted-color">
+              Net of the selection:
+              <span class="font-semibold tabular-nums">
+                {{ selectionNet() > 0 ? '+' : selectionNet() < 0 ? '-' : ''
+                }}{{ (selectionNet() < 0 ? -selectionNet() : selectionNet()) | formatCurrency }}
+              </span>
+            </p>
             <app-transaction-bulk-form
               #bulkForm
               [transactions]="selectedTransactions()"
               [saving]="bulkSaving()"
               (apply)="onBulkSave($event)"
             />
+            <div
+              class="mt-4 flex flex-wrap gap-2 border-t border-surface-200 pt-3 dark:border-surface-800"
+            >
+              @if (allSelectedAreTransfers()) {
+                <p-button
+                  label="Unmark as transfer"
+                  severity="secondary"
+                  [outlined]="true"
+                  [loading]="unmarkingAsTransfer()"
+                  (onClick)="onUnmarkAsTransfer()"
+                />
+              } @else {
+                <p-button
+                  label="Mark as transfer"
+                  severity="secondary"
+                  [outlined]="true"
+                  [loading]="markingAsTransfer()"
+                  (onClick)="onMarkAsTransfer()"
+                />
+              }
+              <p-button
+                label="Clear selection"
+                severity="secondary"
+                [text]="true"
+                (onClick)="onSelectionChange([])"
+              />
+            </div>
           } @else {
             <app-transaction-edit-form
               #editForm
