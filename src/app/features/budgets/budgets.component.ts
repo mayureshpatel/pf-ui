@@ -451,6 +451,8 @@ export class BudgetsComponent implements OnInit {
 
   /** Switches mode and moves focus: into the panel for any step, back to the opener for overview. */
   private go(mode: BudgetPanelMode): void {
+    // already on the overview (a month change, a reload): nothing moved, so focus stays put
+    if (mode === 'overview' && this.panelMode() === 'overview') return;
     if (this.panelMode() === 'overview' && mode !== 'overview') {
       this.focusReturn = document.activeElement as HTMLElement | null;
     }

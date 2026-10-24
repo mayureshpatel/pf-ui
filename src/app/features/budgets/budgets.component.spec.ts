@@ -790,6 +790,22 @@ describe('BudgetsComponent', () => {
       expect(document.activeElement).toBe(aside());
     });
 
+    it('should leave focus on the month button when the month changes while already on the overview', async () => {
+      // arrange
+      const next = Array.from<HTMLButtonElement>(
+        fixture.nativeElement.querySelectorAll('button'),
+      ).find((b) => b.getAttribute('aria-label') === 'Next month')!;
+      next.focus();
+
+      // act
+      component.nextMonth();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      // assert & verify
+      expect(document.activeElement).toBe(next);
+    });
+
     it('should move focus into the panel when add opens', async () => {
       // arrange
       (document.activeElement as HTMLElement | null)?.blur();
