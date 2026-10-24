@@ -26,8 +26,9 @@ test.describe('Categories', () => {
     await expect(page.getByText('Category added')).toBeVisible();
     await expect(panel).toHaveAccessibleName(parentName);
 
-    // Create the child under it
+    // Create the child under it (wait for the panel to switch: the old category form also has a Name field)
     await page.getByRole('button', {name: 'Add category'}).first().click();
+    await expect(panel).toHaveAccessibleName('Add category');
     await panel.getByLabel('Name').fill(childName);
     await panel.getByText('No parent').click();
     await page.getByRole('option', {name: parentName}).click();
