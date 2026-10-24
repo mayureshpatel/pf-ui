@@ -1,268 +1,130 @@
-<div class="w-full flex flex-col gap-4">
-  <!-- Page Header -->
-  <app-screen-toolbar class="mb-6">
+<div class="flex w-full flex-col gap-4">
+  <app-screen-toolbar [showDivider]="false">
     <div toolbarTitle>
-      <h1 class="text-4xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight">Budgets</h1>
-      <p class="text-muted-color mt-1 text-lg">Set monthly spending limits and track your financial health</p>
+      <h1 class="text-3xl font-bold tracking-tight text-surface-900 dark:text-surface-0">
+        Budgets
+      </h1>
     </div>
-
-    <div toolbarFilters class="flex items-center gap-4">
-      <!-- Mode Selection -->
-      <p-selectButton
-        [(ngModel)]="viewMode"
-        [options]="viewOptions"
-        optionLabel="label"
-        optionValue="value"
-        (onChange)="onToggleView()"
-        class="card-soft"
-      >
-        <ng-template #item let-item>
-          <div class="flex items-center gap-2 px-1">
-            <i [class]="item.icon"></i>
-            <span class="font-medium">{{ item.label }}</span>
-          </div>
-        </ng-template>
-      </p-selectButton>
-
-      <!-- Period Filters (Conditional) -->
-      @if (viewMode() === 'monthly') {
-        <div
-          class="flex items-center p-1 card-soft">
-          <p-select
-            [(ngModel)]="selectedMonth"
-            [options]="monthOptions"
-            optionLabel="label"
-            optionValue="value"
-            (onChange)="onPeriodChange()"
-            class="w-36 border-none bg-transparent"
-          />
-          <div class="w-px h-6 mx-2"></div>
-          <p-select
-            [(ngModel)]="selectedYear"
-            [options]="yearOptions"
-            optionLabel="label"
-            optionValue="value"
-            (onChange)="onPeriodChange()"
-            class="w-24 border-none bg-transparent"
-          />
+    <div toolbarFilters>
+      <div class="flex flex-wrap items-center gap-2">
+        <div class="flex items-center gap-1">
+          <button
+            type="button"
+            class="cursor-pointer rounded-lg px-2 py-2"
+            aria-label="Previous month"
+            (click)="previousMonth()"
+          >
+            <i class="pi pi-chevron-left" aria-hidden="true"></i>
+          </button>
+          <span data-testid="month-label" class="min-w-36 text-center font-medium">
+            {{ monthLabel() }}
+          </span>
+          <button
+            type="button"
+            class="cursor-pointer rounded-lg px-2 py-2"
+            aria-label="Next month"
+            (click)="nextMonth()"
+          >
+            <i class="pi pi-chevron-right" aria-hidden="true"></i>
+          </button>
         </div>
-      }
-    </div>
-
-    <div toolbarActions>
-      <p-button
-        label="Set Budget"
-        icon="pi pi-plus"
-        (onClick)="openSetBudgetDialog()"
-        severity="primary"
-        [raised]="true"
-      />
+        @if (!isCurrentMonth()) {
+          <button
+            type="button"
+            class="cursor-pointer rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium dark:border-surface-700"
+            (click)="thisMonth()"
+          >
+            This month
+          </button>
+        }
+        <p-button label="Add budget" icon="pi pi-plus" (onClick)="startAdd()" />
+      </div>
     </div>
   </app-screen-toolbar>
 
-  @if (loading()) {
-    <div class="flex flex-col justify-center items-center py-24 gap-4">
-      <p-progressSpinner strokeWidth="4"/>
-      <span class="text-muted-color font-medium animate-pulse">Loading budget data...</span>
+  @if (loadError() && statuses().length === 0) {
+    <app-page-error-state message="Failed to load budget data." (retry)="loadMonth()" />
+  } @else if (loading() && !loadedOnce()) {
+    <div class="flex flex-col gap-4" aria-busy="true" role="status">
+      <span class="sr-only">Loading budgets</span>
+      <p-skeleton height="12rem" borderRadius="1rem" />
+      <p-skeleton height="10rem" borderRadius="1rem" />
     </div>
-  } @else if (loadError() && (viewMode() === 'monthly' ? budgetStatuses().length === 0 : allBudgets().length === 0)) {
-    <app-page-error-state message="Failed to load budget data." (retry)="refreshData()"/>
   } @else {
-    @if (viewMode() === 'monthly') {
-      <!-- Summary Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <!-- Budgeted -->
-        <p-card class="card-soft">
-          <div class="flex flex-col gap-1">
-            <span class="text-xs font-bold uppercase tracking-widest text-surface-500 dark:text-surface-400">Total Budgeted</span>
-            <span class="text-3xl font-black text-surface-900 dark:text-surface-0 font-mono">
-              {{ totalBudgeted() | formatCurrency }}
-            </span>
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_26rem]">
+      <div class="flex min-w-0 flex-col gap-4">
+        @if (rows().length > 0) {
+          <app-budget-list
+            [groups]="groups()"
+            [selectedCategoryId]="selectedCategoryId()"
+            [loading]="loading()"
+            (openCategory)="openCategory($event)"
+          />
+        } @else if (!loading()) {
+          <div
+            class="rounded-2xl border border-surface-200 p-10 text-center dark:border-surface-800"
+          >
+            <p class="font-medium">No budgets for {{ monthName() }}</p>
+            <p class="text-muted-color">
+              Set a limit for each category you want to track, or copy last month's.
+            </p>
           </div>
-        </p-card>
-
-        <!-- Spent -->
-        <p-card class="card-soft">
-          <div class="flex flex-col gap-1">
-            <span class="text-xs font-bold uppercase tracking-widest text-surface-500 dark:text-surface-400">Total Spent</span>
-            <span class="text-3xl font-black text-rose-600 dark:text-rose-400 font-mono">
-              {{ totalSpent() | formatCurrency }}
-            </span>
-          </div>
-        </p-card>
-
-        <!-- Remaining -->
-        <p-card class="card-soft">
-          <div class="flex flex-col gap-1">
-            <span class="text-xs font-bold uppercase tracking-widest text-surface-500 dark:text-surface-400">Remaining</span>
-            <span class="text-3xl font-black font-mono"
-                  [class.text-emerald-600]="totalRemaining() >= 0"
-                  [class.text-rose-600]="totalRemaining() < 0">
-              {{ totalRemaining() | formatCurrency }}
-            </span>
-          </div>
-        </p-card>
-
-        <!-- Overall Progress -->
-        <p-card class="card-soft">
-          <div class="flex flex-col gap-3">
-            <div class="flex justify-between items-center">
-              <span class="text-xs font-bold uppercase tracking-widest text-surface-500 dark:text-surface-400">Budget Usage</span>
-              <span class="text-sm font-bold font-mono">{{ totalSpentPercentage().toFixed(0) }}%</span>
-            </div>
-            <p-progressBar
-              [value]="totalSpentPercentage()"
-              [showValue]="false"
-              [class]="'h-3 rounded-full ' + getProgressBarTailwind(totalSpentPercentage())"
-            />
-          </div>
-        </p-card>
+        }
       </div>
 
-      <!-- Budget Status Table -->
-      <p-card class="overflow-hidden card-soft">
-        <p-table
-          [value]="budgetStatuses()"
-          [stripedRows]="true"
-          size="small"
-          responsiveLayout="stack"
-          [breakpoint]="'960px'">
-
-          <ng-template #header>
-            <tr>
-              <th id="category" colspan="2" class="py-4 font-bold text-surface-700 dark:text-surface-200">Category</th>
-              <th id="budgeted" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-right">Budgeted</th>
-              <th id="spent" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-right">Spent</th>
-              <th id="progress" class="py-4 font-bold text-surface-700 dark:text-surface-200 w-1/4">
-                Progress
-              </th>
-              <th id="remaining" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-right">Remaining</th>
-            </tr>
-          </ng-template>
-
-          <ng-template #body let-status>
-            <tr class="hover:bg-surface-100/50 dark:hover:bg-surface-800/30 transition-colors duration-200">
-              <td class="w-12 py-4">
-                <div
-                  [style.backgroundColor]="status.category?.color || getCategoryColor(status.category?.name || '')"
-                  class="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm">
-                  <i [class]="'pi ' + (status.category?.icon || 'pi-tag') + ' text-lg'"></i>
-                </div>
-              </td>
-              <td class="font-bold text-surface-900 dark:text-surface-0">{{ status.category?.name }}</td>
-              <td class="text-right font-mono font-bold">{{ status.budgetedAmount | formatCurrency }}</td>
-              <td class="text-right font-mono font-bold text-rose-600 dark:text-rose-400">
-                {{ status.spentAmount | formatCurrency }}
-              </td>
-              <td class="py-4">
-                <div class="flex flex-col gap-1">
-                  <p-progressBar
-                    [value]="status.percentageUsed"
-                    [showValue]="false"
-                    [class]="'h-2 rounded-full ' + getProgressBarTailwind(status.percentageUsed)">
-                  </p-progressBar>
-                  <span class="text-xs font-bold text-muted-color text-right font-mono">
-                    {{ status.percentageUsed.toFixed(0) }}%
-                  </span>
-                </div>
-              </td>
-              <td class="text-right py-4">
-                <span class="font-mono font-black text-lg"
-                      [class.text-emerald-600]="status.remainingAmount >= 0"
-                      [class.text-rose-600]="status.remainingAmount < 0">
-                  {{ status.remainingAmount | formatCurrency }}
-                </span>
-              </td>
-            </tr>
-          </ng-template>
-
-          <ng-template #emptymessage>
-            <tr>
-              <td colspan="6" class="text-center py-16">
-                <div class="flex flex-col items-center gap-4">
-                  <i class="pi pi-calendar-plus text-6xl text-surface-300 dark:text-surface-600"></i>
-                  <div class="flex flex-col gap-1">
-                    <h3 class="text-xl font-bold text-surface-900 dark:text-surface-0">No budgets for this month</h3>
-                    <p class="text-muted-color">Start tracking your spending by setting your first budget limit.</p>
-                  </div>
-                  <p-button label="Set Budget" icon="pi pi-plus" [text]="true" (onClick)="openSetBudgetDialog()"/>
-                </div>
-              </td>
-            </tr>
-          </ng-template>
-        </p-table>
-      </p-card>
-    } @else {
-      <!-- Manage All Budgets Table -->
-      <p-card class="overflow-hidden card-soft">
-        <p-table
-          [value]="allBudgets()"
-          [stripedRows]="true"
-          size="small"
-          [lazy]="true"
-          [lazyLoadOnInit]="false"
-          (onLazyLoad)="onAllBudgetsPageChange($event)"
-          [totalRecords]="allBudgetsTotalRecords()"
-          [first]="allBudgetsPage() * 20"
-          [paginator]="allBudgetsTotalRecords() > 20"
-          [rows]="20"
-          responsiveLayout="stack">
-
-          <ng-template #header>
-            <tr>
-              <th id="period" class="py-4 font-bold text-surface-700 dark:text-surface-200">Period</th>
-              <th id="all-category" class="py-4 font-bold text-surface-700 dark:text-surface-200">Category</th>
-              <th id="amount" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-right">Amount</th>
-              <th id="actions" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-center w-25">Action
-              </th>
-            </tr>
-          </ng-template>
-
-          <ng-template #body let-budget>
-            <tr class="hover:bg-surface-100/50 dark:hover:bg-surface-800/30 transition-colors duration-200">
-              <td class="py-4">
-                <span class="font-bold text-surface-600 dark:text-surface-400">
-                  {{ getMonthName(budget.month) }} {{ budget.year }}
-                </span>
-              </td>
-              <td class="font-bold text-surface-900 dark:text-surface-0">{{ budget.category?.name }}</td>
-              <td class="text-right font-mono font-black text-primary text-lg">
-                {{ budget.amount | formatCurrency }}
-              </td>
-              <td class="text-center">
-                <p-button
-                  icon="pi pi-trash"
-                  [text]="true"
-                  [rounded]="true"
-                  severity="danger"
-                  (onClick)="deleteBudget(budget)"
-                  pTooltip="Delete Budget"
-                  ariaLabel="Delete Budget"
-                  tooltipPosition="top"
-                />
-              </td>
-            </tr>
-          </ng-template>
-
-          <ng-template #emptymessage>
-            <tr>
-              <td colspan="4" class="text-center py-16">
-                <i class="pi pi-inbox text-5xl text-surface-300 dark:text-surface-600 mb-3 block"></i>
-                <span class="text-muted-color">No budgets have been created yet.</span>
-              </td>
-            </tr>
-          </ng-template>
-        </p-table>
-      </p-card>
-    }
+      <app-side-panel
+        class="order-first block lg:order-none"
+        [title]="panelTitle()"
+        [saving]="saving()"
+        [showClose]="panelMode() !== 'overview'"
+        [sheet]="panelMode() !== 'overview'"
+        [moveFocus]="false"
+        [showFooter]="panelMode() !== 'overview'"
+        [saveLabel]="panelMode() === 'add' ? 'Add budget' : 'Save limit'"
+        [showDelete]="false"
+        (save)="onPanelSave()"
+        (closePanel)="onPanelClose()"
+      >
+        @switch (panelMode()) {
+          @case ('overview') {
+            <app-budget-overview
+              [totals]="totals()"
+              [monthLabel]="monthLabel()"
+              [canCopy]="canCopy()"
+              (copyLimits)="startAdd()"
+              (add)="startAdd()"
+            />
+          }
+          @case ('category') {
+            @if (selectedRow(); as row) {
+              <button type="button" class="mb-3 cursor-pointer text-sm underline" (click)="back()">
+                Back to overview
+              </button>
+              <app-budget-category-view
+                #categoryView
+                [row]="row"
+                [monthName]="monthName()"
+                [saving]="saving()"
+                (save)="saveLimit($event)"
+                (remove)="removeBudget()"
+                (viewTransactions)="viewTransactions()"
+              />
+            } @else {
+              <p-skeleton height="8rem" borderRadius="1rem" />
+            }
+          }
+          @case ('add') {
+            <button type="button" class="mb-3 cursor-pointer text-sm underline" (click)="back()">
+              Back
+            </button>
+            <app-budget-add-form
+              #addForm
+              [categories]="availableCategories()"
+              (save)="addBudget($event)"
+            />
+          }
+        }
+      </app-side-panel>
+    </div>
   }
-
-  <!-- Budget Form Dialog -->
-  <app-budget-form-dialog
-    [(visible)]="showDialog"
-    [categories]="categories()"
-    [month]="selectedMonth()"
-    [year]="selectedYear()"
-    (save)="onBudgetSaved()"
-  />
 </div>

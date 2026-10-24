@@ -76,7 +76,11 @@ export class BudgetApiService {
     year: number,
   ): Observable<number> {
     const userId = this.authService.user()?.id;
-    return this.http.post<number>(this.apiUrl, { userId, categoryId, amount, month, year });
+    return this.http.post<number>(
+      this.apiUrl,
+      { userId, categoryId, amount, month, year },
+      { context: SKIP_TOAST_CONTEXT },
+    );
   }
 
   /**
