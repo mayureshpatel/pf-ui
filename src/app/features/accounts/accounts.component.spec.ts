@@ -406,7 +406,7 @@ describe('AccountsComponent', () => {
       // assert & verify
       expect(fixture.nativeElement.textContent).toContain('No accounts yet');
       expect(fixture.nativeElement.querySelector('[data-testid="empty-add-account"]')).toBeTruthy();
-      expect(fixture.nativeElement.querySelector('app-account-net-worth-card')).toBeNull();
+      expect(fixture.nativeElement.querySelector('app-account-overview')).toBeNull();
     });
 
     it('should open the add panel from the empty state', () => {
@@ -424,7 +424,7 @@ describe('AccountsComponent', () => {
       loadWith([acct(1, 'Checking', 100, true)]);
 
       // assert & verify
-      expect(fixture.nativeElement.querySelector('app-account-net-worth-card')).toBeTruthy();
+      expect(fixture.nativeElement.querySelector('app-account-overview')).toBeTruthy();
       expect(fixture.nativeElement.querySelector('app-account-list')).toBeTruthy();
     });
   });

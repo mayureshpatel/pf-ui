@@ -34,7 +34,7 @@
     >
       <div class="flex min-w-0 flex-col gap-4">
         @if (accounts().length > 0) {
-          <app-account-net-worth-card [totals]="totals()" />
+          <app-account-overview [totals]="totals()" />
           <app-account-list
             [groups]="groups()"
             [selectedId]="selectedId()"

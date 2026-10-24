@@ -23,7 +23,7 @@ import {
   AccountUpdateRequest,
 } from '@models/account.model';
 import { AccountApiService } from './services/account-api.service';
-import { AccountNetWorthCardComponent } from './components/account-net-worth-card/account-net-worth-card.component';
+import { AccountOverviewComponent } from './components/account-overview/account-overview.component';
 import { AccountListComponent } from './components/account-list/account-list.component';
 import { AccountSummaryViewComponent } from './components/account-summary-view/account-summary-view.component';
 import { AccountEditFormComponent } from './components/account-edit-form/account-edit-form.component';
@@ -44,7 +44,7 @@ import { PageErrorStateComponent } from '@shared/components/page-error-state/pag
     ScreenToolbarComponent,
     PageErrorStateComponent,
     SidePanelComponent,
-    AccountNetWorthCardComponent,
+    AccountOverviewComponent,
     AccountListComponent,
     AccountSummaryViewComponent,
     AccountEditFormComponent,
