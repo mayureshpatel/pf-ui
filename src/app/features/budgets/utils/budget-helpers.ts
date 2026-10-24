@@ -35,7 +35,7 @@ const cents = (value: number): number => Math.round(value * 100);
  * @param budgets - The month's budgets.
  */
 export function budgetRows(statuses: BudgetStatus[], budgets: Budget[]): BudgetRow[] {
-  const ids: Map<number, number> = new Map(budgets.map((b: Budget) => [b.category.id, b.id]));
+  const ids = new Map<number, number>(budgets.map((b: Budget) => [b.category.id, b.id]));
   return statuses.map((status: BudgetStatus): BudgetRow => ({
     status,
     budgetId: ids.get(status.category.id) ?? null,
@@ -136,7 +136,7 @@ export function copyPlan(
   last: Budget[],
   current: Budget[],
 ): { add: Budget[]; overwrite: Budget[] } {
-  const now: Map<number, number> = new Map(current.map((b: Budget) => [b.category.id, b.amount]));
+  const now = new Map<number, number>(current.map((b: Budget) => [b.category.id, b.amount]));
   const add: Budget[] = last.filter((b: Budget): boolean => !now.has(b.category.id));
   const overwrite: Budget[] = last.filter(
     (b: Budget): boolean =>
@@ -152,7 +152,7 @@ export function copyPlan(
  * @param budgets - This month's budgets.
  */
 export function unbudgetedCategories(categories: Category[], budgets: Budget[]): Category[] {
-  const used: Set<number> = new Set(budgets.map((b: Budget): number => b.category.id));
+  const used = new Set<number>(budgets.map((b: Budget): number => b.category.id));
   return categories.filter((c: Category): boolean => !used.has(c.id));
 }
 
