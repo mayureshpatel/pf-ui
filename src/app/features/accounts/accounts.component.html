@@ -29,7 +29,7 @@
     <div
       class="grid gap-4"
       [class]="
-        panelMode() === 'closed' ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-[minmax(0,1fr)_26rem]'
+        panelMode() === 'overview' ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-[minmax(0,1fr)_26rem]'
       "
     >
       <div class="flex min-w-0 flex-col gap-4">
@@ -48,11 +48,11 @@
         }
       </div>
 
-      @if (panelMode() !== 'closed') {
+      @if (panelMode() !== 'overview') {
         <app-side-panel
           [title]="panelTitle()"
           [saving]="saving()"
-          [showFooter]="panelMode() !== 'summary'"
+          [showFooter]="panelMode() !== 'account'"
           [saveLabel]="
             panelMode() === 'reconcile'
               ? 'Reconcile'
@@ -65,7 +65,7 @@
           (closePanel)="onPanelClose()"
         >
           @switch (panelMode()) {
-            @case ('summary') {
+            @case ('account') {
               @if (selectedAccount(); as account) {
                 <app-account-summary-view
                   [account]="account"
@@ -81,7 +81,7 @@
                 <button
                   type="button"
                   class="mb-3 cursor-pointer text-sm underline"
-                  (click)="backToSummary()"
+                  (click)="back()"
                 >
                   Back
                 </button>
@@ -98,7 +98,7 @@
                 <button
                   type="button"
                   class="mb-3 cursor-pointer text-sm underline"
-                  (click)="backToSummary()"
+                  (click)="back()"
                 >
                   Back
                 </button>
