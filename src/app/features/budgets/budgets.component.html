@@ -91,7 +91,7 @@
               [totals]="totals()"
               [monthLabel]="monthLabel()"
               [canCopy]="canCopy()"
-              (copyLimits)="startAdd()"
+              (copyLimits)="openCopyDialog()"
               (add)="startAdd()"
             />
           }
@@ -127,4 +127,14 @@
       </app-side-panel>
     </div>
   }
+
+  <app-budget-copy-dialog
+    [(visible)]="copyDialogVisible"
+    [fromName]="previousMonthName()"
+    [toName]="monthName()"
+    [addCount]="copyCounts().add"
+    [overwriteCount]="copyCounts().overwrite"
+    (fill)="runCopy('fill')"
+    (replace)="runCopy('replace')"
+  />
 </div>

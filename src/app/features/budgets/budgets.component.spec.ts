@@ -501,4 +501,113 @@ describe('BudgetsComponent', () => {
       });
     });
   });
+
+  describe('copy last month', () => {
+    const overviewButton = (name: string): HTMLButtonElement | undefined =>
+      Array.from<HTMLButtonElement>(
+        fixture.nativeElement.querySelectorAll('app-budget-overview button'),
+      ).find((b) => b.textContent?.trim() === name);
+
+    it('should open the dialog from the overview with counts of what would be added and overwritten', () => {
+      // act
+      overviewButton("Copy last month's limits")?.click();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.copyDialogVisible()).toBe(true);
+      expect(component.copyCounts()).toEqual({ add: 1, overwrite: 1 });
+      expect(component.previousMonthName()).toBe('September');
+    });
+
+    it('should hide Copy when last month has no budgets', () => {
+      // arrange
+      mockBudgetApi.getBudgets.mockImplementation((month: number) =>
+        of(month === 10 ? thisMonth : []),
+      );
+
+      // act
+      component.loadMonth();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.canCopy()).toBe(false);
+      expect(overviewButton("Copy last month's limits")).toBeUndefined();
+    });
+
+    it('should fill gaps only: add missing categories and never touch an existing limit', () => {
+      // arrange
+      mockBudgetApi.getBudgetStatus.mockClear();
+
+      // act
+      component.runCopy('fill');
+
+      // assert & verify
+      expect(mockBudgetApi.createBudget).toHaveBeenCalledTimes(1);
+      expect(mockBudgetApi.createBudget).toHaveBeenCalledWith(4, 100, 10, 2026);
+      expect(mockToast.success).toHaveBeenCalledWith('Added 1 limit');
+      expect(mockBudgetApi.getBudgetStatus).toHaveBeenCalledTimes(1);
+      expect(component.panelMode()).toBe('overview');
+    });
+
+    it('should replace all: also overwrite differing limits, skip identical ones, and never remove this-month-only ones', () => {
+      // act
+      component.runCopy('replace');
+
+      // assert & verify
+      const sent = mockBudgetApi.createBudget.mock.calls.map((c) => [c[0], c[1]]);
+      expect(sent).toEqual(
+        expect.arrayContaining([
+          [4, 100],
+          [2, 180],
+        ]),
+      );
+      expect(sent).toHaveLength(2);
+      expect(mockBudgetApi.deleteBudget).not.toHaveBeenCalled();
+      expect(mockToast.success).toHaveBeenCalledWith('Added 2 limits');
+    });
+
+    it('should report a partial failure, still reload and not claim full success', () => {
+      // arrange
+      mockBudgetApi.createBudget.mockImplementation((categoryId: number) =>
+        categoryId === 2 ? throwError(() => ({})) : of(99),
+      );
+      mockBudgetApi.getBudgetStatus.mockClear();
+
+      // act
+      component.runCopy('replace');
+
+      // assert & verify
+      expect(mockToast.error).toHaveBeenCalledWith('Added 1 limit, 1 failed');
+      expect(mockToast.success).not.toHaveBeenCalled();
+      expect(mockBudgetApi.getBudgetStatus).toHaveBeenCalledTimes(1);
+      expect(component.saving()).toBe(false);
+    });
+
+    it('should ignore a second copy while the first is still running', () => {
+      // arrange
+      mockBudgetApi.createBudget.mockReturnValue(new Subject<number>());
+
+      // act
+      component.runCopy('fill');
+      component.runCopy('fill');
+
+      // assert & verify
+      expect(mockBudgetApi.createBudget).toHaveBeenCalledTimes(1);
+      expect(component.saving()).toBe(true);
+    });
+
+    it('should just reload when there is nothing to copy', () => {
+      // arrange
+      mockBudgetApi.getBudgets.mockImplementation(() => of(thisMonth));
+      component.loadMonth();
+      mockBudgetApi.getBudgetStatus.mockClear();
+
+      // act
+      component.runCopy('fill');
+
+      // assert & verify
+      expect(mockBudgetApi.createBudget).not.toHaveBeenCalled();
+      expect(mockBudgetApi.getBudgetStatus).toHaveBeenCalledTimes(1);
+    });
+  });
 });

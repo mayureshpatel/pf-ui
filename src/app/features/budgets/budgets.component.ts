@@ -13,7 +13,7 @@ import {
 import { HttpErrorResponse } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Params, Router } from '@angular/router';
-import { finalize, forkJoin, skip } from 'rxjs';
+import { catchError, finalize, forkJoin, map, Observable, of, skip } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { SkeletonModule } from 'primeng/skeleton';
 import { ConfirmationService } from 'primeng/api';
@@ -29,6 +29,7 @@ import { PageErrorStateComponent } from '@shared/components/page-error-state/pag
 import { toLocalDateString } from '@shared/utils/transaction.utils';
 import { BudgetListComponent } from './components/budget-list/budget-list.component';
 import { BudgetOverviewComponent } from './components/budget-overview/budget-overview.component';
+import { BudgetCopyDialogComponent } from './components/budget-copy-dialog/budget-copy-dialog.component';
 import { BudgetCategoryViewComponent } from './components/budget-category-view/budget-category-view.component';
 import { BudgetAddFormComponent } from './components/budget-add-form/budget-add-form.component';
 import {
@@ -37,6 +38,7 @@ import {
   BudgetTotals,
   budgetRows,
   budgetTotals,
+  copyPlan,
   groupBudgetRows,
   isSameMonth,
   monthLabel,
@@ -65,6 +67,7 @@ export type BudgetPanelMode = 'overview' | 'category' | 'add';
     BudgetOverviewComponent,
     BudgetCategoryViewComponent,
     BudgetAddFormComponent,
+    BudgetCopyDialogComponent,
   ],
   templateUrl: './budgets.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -122,6 +125,18 @@ export class BudgetsComponent implements OnInit {
   );
   readonly availableCategories: Signal<Category[]> = computed((): Category[] =>
     unbudgetedCategories(this.categories(), this.budgets()),
+  );
+  /** Whether the Copy dialog is showing. */
+  readonly copyDialogVisible: WritableSignal<boolean> = signal(false);
+  /** How many categories Copy would add and how many existing limits it would overwrite. */
+  readonly copyCounts: Signal<{ add: number; overwrite: number }> = computed(
+    (): { add: number; overwrite: number } => {
+      const plan = copyPlan(this.previousBudgets(), this.budgets());
+      return { add: plan.add.length, overwrite: plan.overwrite.length };
+    },
+  );
+  readonly previousMonthName: Signal<string> = computed((): string =>
+    monthName(shiftMonth(this.selectedMonth(), this.selectedYear(), -1).month),
   );
   readonly canCopy: Signal<boolean> = computed((): boolean => this.previousBudgets().length > 0);
 
@@ -219,6 +234,51 @@ export class BudgetsComponent implements OnInit {
       this.updateUrlParams();
       this.loadMonth();
     });
+  }
+
+  /** Opens the dialog that asks how to copy last month's limits. */
+  openCopyDialog(): void {
+    this.copyDialogVisible.set(true);
+  }
+
+  /**
+   * Copies last month's limits into this month. Fill gaps adds only categories with no limit yet;
+   * Replace all also overwrites limits that differ. Categories budgeted only this month are never
+   * touched. Requests run in parallel and a failure of one does not stop the others.
+   */
+  runCopy(mode: 'fill' | 'replace'): void {
+    if (this.saving()) return;
+    const plan = copyPlan(this.previousBudgets(), this.budgets());
+    const items: Budget[] = mode === 'fill' ? plan.add : [...plan.add, ...plan.overwrite];
+    if (items.length === 0) {
+      this.loadMonth();
+      return;
+    }
+    this.saving.set(true);
+    const month: number = this.selectedMonth();
+    const year: number = this.selectedYear();
+    const calls: Observable<boolean>[] = items.map((item: Budget): Observable<boolean> =>
+      this.budgetApi.createBudget(item.category.id, item.amount, month, year).pipe(
+        map((): boolean => true),
+        catchError((): Observable<boolean> => of(false)),
+      ),
+    );
+    forkJoin(calls)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize((): void => this.saving.set(false)),
+      )
+      .subscribe((results: boolean[]): void => {
+        const added: number = results.filter(Boolean).length;
+        const failed: number = results.length - added;
+        const noun: string = added === 1 ? 'limit' : 'limits';
+        if (failed === 0) {
+          this.toast.success(`Added ${added} ${noun}`);
+        } else {
+          this.toast.error(`Added ${added} ${noun}, ${failed} failed`);
+        }
+        this.loadMonth();
+      });
   }
 
   /** Shows a category in the panel. */
