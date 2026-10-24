@@ -12,7 +12,8 @@ test.describe('Accounts Core CRUD', () => {
     const renamedAccountName = `${accountName} Renamed`;
 
     await page.goto('/accounts');
-    await expect(page.getByRole('complementary', {name: 'Overview'})).toBeVisible();
+    // With no accounts at all the panel opens on the add form instead of the overview.
+    await expect(page.getByRole('complementary', {name: /^(Overview|Add account)$/})).toBeVisible();
 
     // Create
     await page.getByRole('button', {name: 'Add account'}).first().click();
@@ -55,7 +56,8 @@ test.describe('Accounts Core CRUD', () => {
     await expect(page.getByText('Account deleted successfully')).toBeVisible();
     await expect(page.getByTestId('open-account').filter({hasText: renamedAccountName})).toHaveCount(0);
     // Deleting the shown account returns the panel to the overview.
-    await expect(page.getByRole('complementary', {name: 'Overview'})).toBeVisible();
+    // With no accounts at all the panel opens on the add form instead of the overview.
+    await expect(page.getByRole('complementary', {name: /^(Overview|Add account)$/})).toBeVisible();
   });
 
   test('refuses to delete an account that has existing transactions', async ({page}) => {

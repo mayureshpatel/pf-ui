@@ -917,4 +917,63 @@ describe('AccountsComponent', () => {
       expect(document.activeElement).toBe(aside());
     });
   });
+
+  describe('review fixes (persistent panel)', () => {
+    it('should not wipe an open add form when the account it came from is deleted', () => {
+      // arrange
+      loadWith([acct(1, 'A', 1, true), acct(2, 'B', 2, true)]);
+      component.openAccount(component.accounts()[0]);
+      component.startCreate();
+      fixture.detectChanges();
+      const form = fixture.debugElement.query(By.directive(AccountEditFormComponent))
+        .componentInstance as AccountEditFormComponent;
+      form.form.patchValue({ name: 'half typed' });
+      form.form.markAsDirty();
+      mockAccountApi.delete.mockReturnValue(of(undefined));
+
+      // act -- delete the account the form was opened from, through a row menu
+      component.deleteAccount(component.accounts()[0]);
+      mockConfirmationService.confirm.mock.calls[0][0].accept!();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.panelMode()).toBe('create');
+      expect(component.selectedId()).toBeNull();
+      expect(form.form.getRawValue().name).toBe('half typed');
+      component.back();
+      expect(mockConfirmationService.confirm).toHaveBeenCalledTimes(2);
+    });
+
+    it('should return focus to the row menu button after a row-menu action closes the panel', async () => {
+      // arrange
+      loadWith([acct(1, 'A', 1, true)]);
+      const menuButton = fixture.nativeElement.querySelector(
+        '[data-testid="account-menu"]',
+      ) as HTMLButtonElement;
+      menuButton.focus();
+      menuButton.click();
+      fixture.detectChanges();
+      // the popup menu item has focus when its command runs; then the popup is removed
+      const item = document.createElement('a');
+      item.setAttribute('role', 'menuitem');
+      const menu = document.createElement('ul');
+      menu.setAttribute('role', 'menu');
+      menu.appendChild(item);
+      document.body.appendChild(menu);
+      item.tabIndex = 0;
+      item.focus();
+
+      // act
+      component.startEdit(component.accounts()[0]);
+      menu.remove();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      component.closePanel();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      // assert & verify
+      expect(document.activeElement).toBe(menuButton);
+    });
+  });
 });

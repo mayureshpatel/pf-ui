@@ -64,9 +64,13 @@ export class AccountListComponent {
     ];
   }
 
+  /** The menu button last used, so a host can hand focus back to it after a menu action. */
+  lastMenuTrigger: HTMLElement | null = null;
+
   /** Opens the popup menu next to the button that was used. */
   toggleMenu(event: Event, account: Account): void {
     event.stopPropagation();
+    this.lastMenuTrigger = event.currentTarget as HTMLElement | null;
     this.menuModel = this.menuItemsFor(account);
     this.menu()?.toggle(event);
   }

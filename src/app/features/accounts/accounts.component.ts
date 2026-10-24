@@ -122,6 +122,7 @@ export class AccountsComponent implements OnInit {
 
   private readonly injector: Injector = inject(Injector);
   private readonly panel = viewChild(SidePanelComponent);
+  private readonly list = viewChild(AccountListComponent);
 
   /** The element that had focus when the panel left the overview, to hand focus back to. */
   private focusReturn: HTMLElement | null = null;
@@ -240,7 +241,12 @@ export class AccountsComponent implements OnInit {
   /** Switches mode and moves focus: into the panel for any step, back to the opener for overview. */
   private go(mode: PanelMode): void {
     if (this.panelMode() === 'overview' && mode !== 'overview') {
-      this.focusReturn = document.activeElement as HTMLElement | null;
+      let opener: HTMLElement | null = document.activeElement as HTMLElement | null;
+      // a row-menu action runs with focus on a popup item that is about to be removed
+      if (!opener?.isConnected || opener.closest('[role="menu"]')) {
+        opener = this.list()?.lastMenuTrigger ?? opener;
+      }
+      this.focusReturn = opener;
     }
     this.panelMode.set(mode);
     afterNextRender(
@@ -350,7 +356,12 @@ export class AccountsComponent implements OnInit {
               );
               this.toast.success('Account deleted successfully');
               if (this.selectedId() === account.id) {
-                this.closePanel();
+                // an add form opened from this account keeps its typing; only Back's target resets
+                if (this.panelMode() === 'create') {
+                  this.selectedId.set(null);
+                } else {
+                  this.closePanel();
+                }
               }
             },
             error: (error: HttpErrorResponse): void => {
