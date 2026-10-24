@@ -1,7 +1,7 @@
 import { Account, BankName } from '@models/account.model';
+import { toCents } from '@shared/utils/money.utils';
 
-/** Rounds to whole cents so floating point noise never reaches a comparison or the screen. */
-export const toCents = (value: number): number => Math.round(value * 100) / 100;
+export { toCents };
 
 /** Net worth figures for the summary card. */
 export interface AccountTotals {

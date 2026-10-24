@@ -1,0 +1,45 @@
+<p-dialog
+  [header]="title()"
+  [(visible)]="visible"
+  appRestoreFocusOnHide
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '28rem' }"
+  [breakpoints]="{ '960px': '95vw' }"
+>
+  <div class="flex flex-col gap-4">
+    <p class="text-sm text-muted-color">
+      {{ addCount() }} new, {{ overwriteCount() }} to overwrite.
+    </p>
+    <p class="text-sm text-muted-color">
+      Fill gaps only adds limits for categories that have none yet. Replace all also changes the
+      limits that differ from last month.
+    </p>
+    <div class="flex flex-wrap justify-end gap-2">
+      <button
+        type="button"
+        class="cursor-pointer rounded-lg bg-primary-700 px-3 py-2 text-sm font-medium text-white hover:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-50"
+        [disabled]="addCount() === 0"
+        (click)="onFill()"
+      >
+        Fill gaps
+      </button>
+      <button
+        type="button"
+        class="cursor-pointer rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 dark:border-surface-700"
+        [disabled]="addCount() + overwriteCount() === 0"
+        (click)="onReplace()"
+      >
+        Replace all
+      </button>
+      <button
+        type="button"
+        class="cursor-pointer rounded-lg px-3 py-2 text-sm font-medium underline"
+        (click)="onCancel()"
+      >
+        Cancel
+      </button>
+    </div>
+  </div>
+</p-dialog>

@@ -133,6 +133,31 @@ export async function createTestTag(page: Page, namePrefix: string): Promise<{id
 }
 
 /**
+ * Creates (or overwrites -- the endpoint upserts) a category's budget for a month via the real API.
+ */
+export async function createTestBudget(
+  page: Page,
+  categoryId: number,
+  amount: number,
+  month: number,
+  year: number
+): Promise<number> {
+  const token = await getAuthToken(page);
+  const userId = await getAuthenticatedUserId(page);
+
+  const response = await page.request.post(`${API_URL}/budgets`, {
+    headers: {Authorization: `Bearer ${token}`},
+    data: {userId, categoryId, amount, month, year}
+  });
+
+  if (!response.ok()) {
+    throw new Error(`Failed to create test budget: ${response.status()} ${await response.text()}`);
+  }
+
+  return (await response.json()) as number;
+}
+
+/**
  * Creates a fresh, uniquely-named category via the real API, mirroring `createTestAccount`. The
  * edit-transaction form's `category` field is `Validators.required` (silently blocks submit via
  * `markAllAsTouched()` otherwise, no toast/network call), so any transaction a test plans to

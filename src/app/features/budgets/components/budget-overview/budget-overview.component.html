@@ -1,0 +1,55 @@
+<div class="flex flex-col gap-4">
+  <div>
+    <p class="text-sm text-muted-color">Left to spend in {{ monthLabel() }}</p>
+    <p
+      data-testid="left-to-spend"
+      class="mt-1 text-3xl font-bold tracking-tight tabular-nums"
+      [class]="
+        totals().left < 0
+          ? 'text-rose-700 dark:text-rose-400'
+          : 'text-emerald-700 dark:text-emerald-400'
+      "
+    >
+      {{ totals().left < 0 ? '-' : ''
+      }}{{ (totals().left < 0 ? -totals().left : totals().left) | formatCurrency }}
+    </p>
+    <div
+      role="img"
+      [attr.aria-label]="barLabel()"
+      class="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-surface-200 dark:bg-surface-700"
+    >
+      <span
+        class="block h-full rounded-full"
+        [class]="totals().left < 0 ? 'bg-rose-500' : 'bg-emerald-500'"
+        [style.width.%]="spentWidth()"
+      ></span>
+    </div>
+    <p class="mt-2 text-sm text-muted-color tabular-nums">
+      Spent {{ totals().spent | formatCurrency }} of {{ totals().budgeted | formatCurrency }}
+    </p>
+    @if (totals().unbudgeted > 0) {
+      <p data-testid="unbudgeted" class="mt-1 text-sm text-muted-color tabular-nums">
+        {{ totals().unbudgeted | formatCurrency }} spent in categories with no limit
+      </p>
+    }
+  </div>
+
+  <div class="flex flex-col gap-2">
+    @if (canCopy()) {
+      <button
+        type="button"
+        class="cursor-pointer rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium dark:border-surface-700"
+        (click)="copyLimits.emit()"
+      >
+        Copy last month's limits
+      </button>
+    }
+    <button
+      type="button"
+      class="cursor-pointer rounded-lg bg-primary-700 px-3 py-2 text-sm font-medium text-white hover:bg-primary-800"
+      (click)="add.emit()"
+    >
+      Add budget
+    </button>
+  </div>
+</div>

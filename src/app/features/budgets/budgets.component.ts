@@ -1,71 +1,75 @@
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
   DestroyRef,
   inject,
+  Injector,
   OnInit,
   Signal,
   signal,
+  viewChild,
   WritableSignal,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { HttpErrorResponse } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Params, Router } from '@angular/router';
-import { finalize, skip } from 'rxjs';
-import { CardModule } from 'primeng/card';
+import { catchError, finalize, forkJoin, map, Observable, of, skip, Subscription } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
-import { TableModule } from 'primeng/table';
-import { ProgressBarModule } from 'primeng/progressbar';
-import { Select } from 'primeng/select';
-import { SelectButton } from 'primeng/selectbutton';
-import { CheckboxModule } from 'primeng/checkbox';
-import { ProgressSpinnerModule } from 'primeng/progressspinner';
-import { Tooltip } from 'primeng/tooltip';
+import { SkeletonModule } from 'primeng/skeleton';
 import { ConfirmationService } from 'primeng/api';
 
 import { Budget, BudgetStatus } from '@models/budget.model';
 import { Category } from '@models/category.model';
-import { MonthOption, YearOption } from '@models/dashboard.model';
-import { PageResponse } from '@models/transaction.model';
 import { BudgetApiService } from './services/budget-api.service';
 import { CategoryApiService } from '@features/categories/services/category-api.service';
 import { ToastService } from '@core/services/toast.service';
 import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen-toolbar';
-import { BudgetFormDialogComponent } from './components/budget-form-dialog/budget-form-dialog.component';
-import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
-import { getCategoryColor } from '@shared/utils/category.utils';
+import { SidePanelComponent } from '@shared/components/side-panel/side-panel.component';
 import { PageErrorStateComponent } from '@shared/components/page-error-state/page-error-state.component';
+import { toLocalDateString } from '@shared/utils/transaction.utils';
+import { BudgetListComponent } from './components/budget-list/budget-list.component';
+import { BudgetOverviewComponent } from './components/budget-overview/budget-overview.component';
+import { BudgetCopyDialogComponent } from './components/budget-copy-dialog/budget-copy-dialog.component';
+import { BudgetCategoryViewComponent } from './components/budget-category-view/budget-category-view.component';
+import { BudgetAddFormComponent } from './components/budget-add-form/budget-add-form.component';
+import {
+  BudgetRow,
+  BudgetRowGroup,
+  BudgetTotals,
+  budgetRows,
+  budgetTotals,
+  copyPlan,
+  groupBudgetRows,
+  isSameMonth,
+  monthLabel,
+  monthName,
+  shiftMonth,
+  unbudgetedCategories,
+} from './utils/budget-helpers';
 
-const ALL_BUDGETS_PAGE_SIZE = 20;
+/** What the docked panel is showing. */
+export type BudgetPanelMode = 'overview' | 'category' | 'add';
 
 /**
- * Component for managing and tracking monthly budgets.
- *
- * Provides two view modes:
- * 1. Monthly Status: Tracks spending against budgets for a specific month/year.
- * 2. Manage All: A flat list of all defined budgets for administrative actions.
+ * The Budgets page: a month's categories in three groups beside an always-present panel. The panel
+ * shows the month overview by default, and a category's limit editor or the add form on request.
  */
 @Component({
   selector: 'app-budgets',
   standalone: true,
   imports: [
-    CommonModule,
-    FormsModule,
-    CardModule,
     ButtonModule,
-    TableModule,
-    ProgressBarModule,
-    Select,
-    SelectButton,
-    CheckboxModule,
-    ProgressSpinnerModule,
+    SkeletonModule,
     ScreenToolbarComponent,
-    BudgetFormDialogComponent,
-    FormatCurrencyPipe,
-    Tooltip,
     PageErrorStateComponent,
+    SidePanelComponent,
+    BudgetListComponent,
+    BudgetOverviewComponent,
+    BudgetCategoryViewComponent,
+    BudgetAddFormComponent,
+    BudgetCopyDialogComponent,
   ],
   templateUrl: './budgets.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -79,130 +83,456 @@ export class BudgetsComponent implements OnInit {
   private readonly route: ActivatedRoute = inject(ActivatedRoute);
   private readonly router: Router = inject(Router);
 
-  /** The list of budgets status for the selected month/year. */
-  readonly budgetStatuses: WritableSignal<BudgetStatus[]> = signal([]);
-
-  /** The current page of the "manage all" budgets list (PF-320: server-paginated -- this list
-   *  grows unboundedly with how many periods a user has budgeted). */
-  readonly allBudgets: WritableSignal<Budget[]> = signal([]);
-
-  /** Total budgets across all periods, for the "manage all" paginator. */
-  readonly allBudgetsTotalRecords: WritableSignal<number> = signal(0);
-
-  /** Zero-based index of the currently displayed "manage all" page. */
-  readonly allBudgetsPage: WritableSignal<number> = signal(0);
-
-  /** Available categories for creating new budgets. */
+  readonly statuses: WritableSignal<BudgetStatus[]> = signal([]);
+  /** This month's budgets (they carry the ids needed to remove one). */
+  readonly budgets: WritableSignal<Budget[]> = signal([]);
+  /** Last month's budgets, the source for Copy. */
+  readonly previousBudgets: WritableSignal<Budget[]> = signal([]);
   readonly categories: WritableSignal<Category[]> = signal([]);
 
-  /** Global loading state for API operations. */
   readonly loading: WritableSignal<boolean> = signal(false);
-
-  /** Whether the most recent load attempt for the active view mode failed. */
   readonly loadError: WritableSignal<boolean> = signal(false);
+  /** True once a month has loaded; later reloads dim the list instead of replacing the page. */
+  readonly loadedOnce: WritableSignal<boolean> = signal(false);
+  /** A save or remove request is in flight. */
+  readonly saving: WritableSignal<boolean> = signal(false);
 
-  /** Visibility of the set-budget dialog. */
-  readonly showDialog: WritableSignal<boolean> = signal(false);
-
-  /** Current view mode: 'monthly' status or 'all' list. */
-  readonly viewMode: WritableSignal<'monthly' | 'all'> = signal('monthly');
-
-  /** Currently selected month (1-12). Defaults to current month. */
   readonly selectedMonth: WritableSignal<number> = signal(new Date().getMonth() + 1);
-
-  /** Currently selected year. Defaults to current year. */
   readonly selectedYear: WritableSignal<number> = signal(new Date().getFullYear());
 
-  /** Sum of all budgeted amounts for the selected period. */
-  readonly totalBudgeted: Signal<number> = computed((): number =>
-    this.budgetStatuses().reduce((acc, curr): number => acc + curr.budgetedAmount, 0),
+  readonly panelMode: WritableSignal<BudgetPanelMode> = signal('overview');
+  readonly selectedCategoryId: WritableSignal<number | null> = signal(null);
+
+  readonly rows: Signal<BudgetRow[]> = computed((): BudgetRow[] =>
+    budgetRows(this.statuses(), this.budgets()),
   );
-
-  /** Sum of all spent amounts for the selected period. */
-  readonly totalSpent: Signal<number> = computed((): number =>
-    this.budgetStatuses().reduce((acc, curr): number => acc + curr.spentAmount, 0),
+  readonly groups: Signal<BudgetRowGroup[]> = computed((): BudgetRowGroup[] =>
+    groupBudgetRows(this.rows()),
   );
-
-  /** Difference between total budgeted and total spent. */
-  readonly totalRemaining: Signal<number> = computed(
-    (): number => this.totalBudgeted() - this.totalSpent(),
+  readonly totals: Signal<BudgetTotals> = computed((): BudgetTotals => budgetTotals(this.rows()));
+  readonly monthName: Signal<string> = computed((): string => monthName(this.selectedMonth()));
+  readonly monthLabel: Signal<string> = computed((): string =>
+    monthLabel(this.selectedMonth(), this.selectedYear()),
   );
+  readonly isCurrentMonth: Signal<boolean> = computed((): boolean =>
+    isSameMonth(this.selectedMonth(), this.selectedYear()),
+  );
+  readonly selectedRow: Signal<BudgetRow | null> = computed(
+    (): BudgetRow | null =>
+      this.rows().find(
+        (row: BudgetRow): boolean => row.status.category.id === this.selectedCategoryId(),
+      ) ?? null,
+  );
+  readonly availableCategories: Signal<Category[]> = computed((): Category[] =>
+    unbudgetedCategories(this.categories(), this.budgets()),
+  );
+  /** Whether the Copy dialog is showing. */
+  readonly copyDialogVisible: WritableSignal<boolean> = signal(false);
+  /** How many categories Copy would add and how many existing limits it would overwrite. */
+  readonly copyCounts: Signal<{ add: number; overwrite: number }> = computed(
+    (): { add: number; overwrite: number } => {
+      const plan = copyPlan(this.previousBudgets(), this.budgets());
+      return { add: plan.add.length, overwrite: plan.overwrite.length };
+    },
+  );
+  readonly previousMonthName: Signal<string> = computed((): string =>
+    monthName(shiftMonth(this.selectedMonth(), this.selectedYear(), -1).month),
+  );
+  readonly canCopy: Signal<boolean> = computed((): boolean => this.previousBudgets().length > 0);
 
-  /** Overall percentage of the total budget spent. */
-  readonly totalSpentPercentage: Signal<number> = computed((): number => {
-    const budgeted: number = this.totalBudgeted();
-
-    if (budgeted === 0) {
-      return 0;
+  readonly panelTitle: Signal<string> = computed((): string => {
+    switch (this.panelMode()) {
+      case 'add':
+        return 'Add budget';
+      case 'category':
+        return this.selectedRow()?.status.category.name ?? 'Budget';
+      default:
+        return 'Overview';
     }
-    return (this.totalSpent() / budgeted) * 100;
   });
 
-  readonly viewOptions = [
-    { label: 'Monthly Status', value: 'monthly', icon: 'pi pi-calendar' },
-    { label: 'Manage All', value: 'all', icon: 'pi pi-list' },
-  ];
+  private readonly injector: Injector = inject(Injector);
+  private readonly panel = viewChild(SidePanelComponent);
 
-  readonly monthOptions: MonthOption[] = [
-    { label: 'January', value: 1 },
-    { label: 'February', value: 2 },
-    { label: 'March', value: 3 },
-    { label: 'April', value: 4 },
-    { label: 'May', value: 5 },
-    { label: 'June', value: 6 },
-    { label: 'July', value: 7 },
-    { label: 'August', value: 8 },
-    { label: 'September', value: 9 },
-    { label: 'October', value: 10 },
-    { label: 'November', value: 11 },
-    { label: 'December', value: 12 },
-  ];
+  /** The element that had focus when the panel left the overview, to hand focus back to. */
+  private focusReturn: HTMLElement | null = null;
 
-  yearOptions: YearOption[] = [];
-  getCategoryColor = getCategoryColor;
+  /** The in-flight month load, cancelled when a newer one starts. */
+  private loadSubscription: Subscription | null = null;
+
+  private readonly categoryView = viewChild<BudgetCategoryViewComponent>('categoryView');
+  private readonly addForm = viewChild<BudgetAddFormComponent>('addForm');
 
   /**
-   * Initializes component data. Hydrates the month/year selection from URL query params first
-   * (if present) so the initial load reflects a shared/refreshed link, then keeps it in sync with
-   * later external navigation (e.g. browser back/forward).
+   * Hydrates the month from the URL first so a shared or refreshed link loads the right month, then
+   * keeps it in sync with later external navigation (browser back and forward).
    *
-   * PF-819: `updateUrlParams()` below (and `onPeriodChange()`'s own call to it) triggers a router
-   * navigation that this component's own `queryParams` subscription also observes. Without the
-   * `hydrateFromParams` change-check in that subscription, every self-triggered navigation caused
-   * a second, redundant refresh on top of the explicit one right here -- not a p-selectButton
-   * quirk (confirmed live: toggling Monthly Status/Manage All fires exactly one request each way;
-   * changing the month/year dropdown was the one that genuinely double-fired).
+   * PF-819: our own `updateUrlParams()` navigation echoes back through the `queryParams`
+   * subscription; `hydrateFromParams` reports whether anything really changed, so only a genuine
+   * external change triggers a second load.
    */
   ngOnInit(): void {
     this.hydrateFromParams(this.route.snapshot.queryParams);
-    this.initializeYearOptions();
     this.loadCategories();
     this.updateUrlParams();
-    this.refreshData();
+    this.loadMonth();
 
     this.route.queryParams
       .pipe(skip(1), takeUntilDestroyed(this.destroyRef))
       .subscribe((params: Params): void => {
-        // Only a genuine external change (browser back/forward, a shared link with different
-        // values) warrants another refresh -- our own updateUrlParams() round-trips back through
-        // here with the values we already have, which hydrateFromParams reports as no change.
         if (this.hydrateFromParams(params)) {
-          this.refreshData();
+          this.closePanel(false);
+          this.loadMonth();
         }
       });
   }
 
+  /** Loads the status, this month's budgets and last month's budgets together. */
+  loadMonth(): void {
+    const month: number = this.selectedMonth();
+    const year: number = this.selectedYear();
+    const previous: { month: number; year: number } = shiftMonth(month, year, -1);
+    // a newer request replaces any earlier one, so a slow answer for another month is dropped
+    this.loadSubscription?.unsubscribe();
+    this.loading.set(true);
+    this.loadError.set(false);
+    this.loadSubscription = forkJoin({
+      statuses: this.budgetApi.getBudgetStatus(month, year),
+      budgets: this.budgetApi.getBudgets(month, year),
+      previousBudgets: this.budgetApi.getBudgets(previous.month, previous.year),
+    })
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize((): void => this.loading.set(false)),
+      )
+      .subscribe({
+        next: ({ statuses, budgets, previousBudgets }): void => {
+          this.statuses.set(statuses);
+          this.budgets.set(budgets);
+          this.previousBudgets.set(previousBudgets);
+          this.loadedOnce.set(true);
+          this.closePanelIfCategoryGone();
+        },
+        error: (err: unknown): void => {
+          console.error('Failed to load budget data:', err);
+          this.toast.error('Failed to load budget data');
+          // never keep the previous month's rows under the new month's label
+          this.statuses.set([]);
+          this.budgets.set([]);
+          this.previousBudgets.set([]);
+          this.loadError.set(true);
+        },
+      });
+  }
+
+  previousMonth(): void {
+    const target = shiftMonth(this.selectedMonth(), this.selectedYear(), -1);
+    this.goToMonth(target.month, target.year);
+  }
+
+  nextMonth(): void {
+    const target = shiftMonth(this.selectedMonth(), this.selectedYear(), 1);
+    this.goToMonth(target.month, target.year);
+  }
+
+  thisMonth(): void {
+    const now: Date = new Date();
+    this.goToMonth(now.getMonth() + 1, now.getFullYear());
+  }
+
+  /** Changes the month (after the discard prompt), returns to overview, updates the URL and loads. */
+  goToMonth(month: number, year: number): void {
+    this.confirmDiscardIfDirty((): void => {
+      this.selectedMonth.set(month);
+      this.selectedYear.set(year);
+      this.closePanel(false);
+      this.updateUrlParams();
+      this.loadMonth();
+    });
+  }
+
+  /** Opens the dialog that asks how to copy last month's limits. */
+  openCopyDialog(): void {
+    if (this.loading()) return;
+    this.copyDialogVisible.set(true);
+  }
+
   /**
-   * Translates URL query params into the month/year signals, only writing when the parsed value
-   * actually differs from the current one.
+   * Copies last month's limits into this month. Fill gaps adds only categories with no limit yet;
+   * Replace all also overwrites limits that differ. Categories budgeted only this month are never
+   * touched. Requests run in parallel and a failure of one does not stop the others.
+   */
+  runCopy(mode: 'fill' | 'replace'): void {
+    if (this.saving() || this.loading()) return;
+    const plan = copyPlan(this.previousBudgets(), this.budgets());
+    const items: Budget[] = mode === 'fill' ? plan.add : [...plan.add, ...plan.overwrite];
+    if (items.length === 0) {
+      this.loadMonth();
+      return;
+    }
+    this.saving.set(true);
+    const month: number = this.selectedMonth();
+    const year: number = this.selectedYear();
+    const currentIds = new Map<number, number>(
+      this.budgets().map((b: Budget): [number, number] => [b.category.id, b.id]),
+    );
+    const calls: Observable<boolean>[] = items.map((item: Budget): Observable<boolean> => {
+      const existingId: number | undefined = currentIds.get(item.category.id);
+      // a category that already has a limit this month is updated by id, a missing one is created
+      const request: Observable<number> =
+        existingId !== undefined
+          ? this.budgetApi.updateBudget(existingId, item.amount)
+          : this.budgetApi.createBudget(item.category.id, item.amount, month, year);
+      return request.pipe(
+        map((): boolean => true),
+        catchError((): Observable<boolean> => of(false)),
+      );
+    });
+    forkJoin(calls)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize((): void => this.saving.set(false)),
+      )
+      .subscribe((results: boolean[]): void => {
+        const added: number = results.filter(Boolean).length;
+        const failed: number = results.length - added;
+        const noun: string = added === 1 ? 'limit' : 'limits';
+        if (failed === 0) {
+          this.toast.success(`Added ${added} ${noun}`);
+        } else {
+          this.toast.error(`Added ${added} ${noun}, ${failed} failed`);
+        }
+        this.loadMonth();
+      });
+  }
+
+  /** Shows a category in the panel. */
+  openCategory(row: BudgetRow): void {
+    if (this.panelMode() === 'category' && this.selectedCategoryId() === row.status.category.id) {
+      return;
+    }
+    this.confirmDiscardIfDirty((): void => {
+      this.selectedCategoryId.set(row.status.category.id);
+      this.go('category');
+    });
+  }
+
+  /** Opens the panel to add a budget. */
+  startAdd(): void {
+    if (this.panelMode() === 'add') return;
+    this.confirmDiscardIfDirty((): void => {
+      this.selectedCategoryId.set(null);
+      this.go('add');
+    });
+  }
+
+  /** Back from category or add to the overview. */
+  back(): void {
+    if (this.panelMode() === 'overview') return;
+    this.confirmDiscardIfDirty((): void => this.closePanel());
+  }
+
+  /**
+   * Returns to the overview with nothing selected, without asking. A month change passes
+   * `moveFocus = false` so focus stays on the month button the user just pressed.
+   */
+  closePanel(moveFocus = true): void {
+    this.selectedCategoryId.set(null);
+    this.go('overview', moveFocus);
+  }
+
+  /** Close button and Escape: asks first when there are unsaved edits; the overview ignores them. */
+  onPanelClose(): void {
+    if (this.panelMode() === 'overview') return;
+    this.confirmDiscardIfDirty((): void => this.closePanel());
+  }
+
+  /** The panel's Save button: submits whichever form is showing. */
+  onPanelSave(): void {
+    if (this.panelMode() === 'category') {
+      this.categoryView()?.submit();
+    } else if (this.panelMode() === 'add') {
+      this.addForm()?.submit();
+    }
+  }
+
+  /** Sets the selected category's limit for this month (the backend upserts). */
+  saveLimit(amount: number): void {
+    const row: BudgetRow | null = this.selectedRow();
+    if (!row || this.saving() || this.loading()) return;
+    this.saving.set(true);
+    // an existing budget is updated by id; the backend rejects a second create for the same month
+    const request: Observable<number> =
+      row.budgetId !== null
+        ? this.budgetApi.updateBudget(row.budgetId, amount)
+        : this.budgetApi.createBudget(
+            row.status.category.id,
+            amount,
+            this.selectedMonth(),
+            this.selectedYear(),
+          );
+    request
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize((): void => this.saving.set(false)),
+      )
+      .subscribe({
+        next: (): void => {
+          this.toast.success('Budget updated');
+          this.categoryView()?.form.markAsPristine();
+          this.loadMonth();
+        },
+        error: (error: HttpErrorResponse): void => {
+          console.error('Error saving budget:', error);
+          this.toast.error(error.error?.detail || 'Failed to save budget');
+        },
+      });
+  }
+
+  /** Adds a budget for a category with no limit this month, then opens it. */
+  addBudget(request: { categoryId: number; amount: number }): void {
+    if (this.saving() || this.loading()) return;
+    this.saving.set(true);
+    this.budgetApi
+      .createBudget(request.categoryId, request.amount, this.selectedMonth(), this.selectedYear())
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize((): void => this.saving.set(false)),
+      )
+      .subscribe({
+        next: (): void => {
+          this.toast.success('Budget added');
+          this.addForm()?.form.markAsPristine();
+          this.selectedCategoryId.set(request.categoryId);
+          this.go('category');
+          this.loadMonth();
+        },
+        error: (error: HttpErrorResponse): void => {
+          console.error('Error adding budget:', error);
+          this.toast.error(error.error?.detail || 'Failed to add budget');
+        },
+      });
+  }
+
+  /** Confirms, then removes the selected category's budget for this month. */
+  removeBudget(): void {
+    const row: BudgetRow | null = this.selectedRow();
+    if (!row || row.budgetId === null || this.saving() || this.loading()) return;
+    const budgetId: number = row.budgetId;
+    this.confirmationService.confirm({
+      header: 'Remove budget?',
+      message: `Remove the ${row.status.category.name} budget for ${this.monthName()}?`,
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Remove',
+      rejectLabel: 'Cancel',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: (): void => {
+        if (this.saving()) return;
+        this.saving.set(true);
+        this.budgetApi
+          .deleteBudget(budgetId)
+          .pipe(
+            takeUntilDestroyed(this.destroyRef),
+            finalize((): void => this.saving.set(false)),
+          )
+          .subscribe({
+            next: (): void => {
+              this.toast.success('Budget removed');
+              this.closePanel();
+              this.loadMonth();
+            },
+            error: (error: unknown): void => {
+              console.error('Failed to remove budget:', error);
+              this.toast.error('Failed to remove budget');
+            },
+          });
+      },
+    });
+  }
+
+  /** Opens Transactions for the selected category across the whole month. */
+  viewTransactions(): void {
+    const row: BudgetRow | null = this.selectedRow();
+    if (!row) return;
+    this.confirmDiscardIfDirty((): void => {
+      const month: number = this.selectedMonth();
+      const year: number = this.selectedYear();
+      void this.router.navigate(['/transactions'], {
+        queryParams: {
+          categoryName: row.status.category.name,
+          startDate: toLocalDateString(new Date(year, month - 1, 1)),
+          endDate: toLocalDateString(new Date(year, month, 0)),
+        },
+      });
+    });
+  }
+
+  /** Switches mode and moves focus: into the panel for any step, back to the opener for overview. */
+  private go(mode: BudgetPanelMode, moveFocus = true): void {
+    if (!moveFocus) {
+      this.focusReturn = null;
+      this.panelMode.set(mode);
+      return;
+    }
+    // already on the overview (a reload): nothing moved, so focus stays put
+    if (mode === 'overview' && this.panelMode() === 'overview') return;
+    if (this.panelMode() === 'overview' && mode !== 'overview') {
+      this.focusReturn = document.activeElement as HTMLElement | null;
+    }
+    this.panelMode.set(mode);
+    afterNextRender(
+      (): void => {
+        const target: HTMLElement | null = this.focusReturn;
+        if (mode === 'overview' && target?.isConnected) {
+          target.focus();
+        } else {
+          this.panel()?.focus();
+        }
+        if (mode === 'overview') this.focusReturn = null;
+      },
+      { injector: this.injector },
+    );
+  }
+
+  /** A reload that no longer contains the shown category (removed elsewhere) closes the panel. */
+  private closePanelIfCategoryGone(): void {
+    const id: number | null = this.selectedCategoryId();
+    if (this.panelMode() !== 'category' || id === null) return;
+    if (this.rows().some((row: BudgetRow): boolean => row.status.category.id === id)) return;
+    this.closePanel();
+    this.toast.error('That budget no longer exists.');
+  }
+
+  /** Runs an action that would replace a form, after asking when that form has unsaved changes. */
+  private confirmDiscardIfDirty(proceed: () => void): void {
+    const mode: BudgetPanelMode = this.panelMode();
+    const dirty: boolean =
+      (mode === 'category' && !!this.categoryView()?.form.dirty) ||
+      (mode === 'add' && !!this.addForm()?.form.dirty);
+    if (!dirty) {
+      proceed();
+      return;
+    }
+    this.confirmationService.confirm({
+      header: 'Discard changes?',
+      message: 'You have unsaved changes. Discard them?',
+      acceptLabel: 'Discard',
+      rejectLabel: 'Keep editing',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: proceed,
+    });
+  }
+
+  /**
+   * Translates URL query params into the month and year signals, only writing when the parsed value
+   * differs from the current one.
    *
-   * @return whether either signal was actually written (i.e. a genuine change occurred).
+   * @return whether either signal was written (a genuine change).
    */
   private hydrateFromParams(params: Params): boolean {
     const month: number | undefined = params['month'] ? Number(params['month']) : undefined;
     const year: number | undefined = params['year'] ? Number(params['year']) : undefined;
     let changed = false;
-
     if (month !== undefined && month !== this.selectedMonth()) {
       this.selectedMonth.set(month);
       changed = true;
@@ -214,34 +544,16 @@ export class BudgetsComponent implements OnInit {
     return changed;
   }
 
-  /**
-   * Serializes the current month/year to URL query params. Always written (never omitted as a
-   * "default"), since some month/year is always selected -- there's no meaningful "unset" state.
-   */
+  /** Writes the month and year to the URL (always, since some month is always selected). */
   private updateUrlParams(): void {
-    this.router.navigate([], {
+    void this.router.navigate([], {
       queryParams: { month: this.selectedMonth(), year: this.selectedYear() },
       queryParamsHandling: 'replace',
       replaceUrl: true,
     });
   }
 
-  /**
-   * Populates year options for the filter dropdown.
-   */
-  private initializeYearOptions(): void {
-    const currentYear: number = new Date().getFullYear();
-    const years: YearOption[] = [];
-
-    for (let year = 2020; year <= currentYear + 1; year++) {
-      years.push({ label: year.toString(), value: year });
-    }
-    this.yearOptions = years;
-  }
-
-  /**
-   * Fetches all categories from the API.
-   */
+  /** Fetches the categories offered by the add form. */
   private loadCategories(): void {
     this.categoryApi
       .getCategories()
@@ -253,157 +565,5 @@ export class BudgetsComponent implements OnInit {
           this.toast.error('Failed to load categories');
         },
       });
-  }
-
-  /**
-   * Refreshes the budget data based on the current view mode.
-   */
-  refreshData(): void {
-    if (this.viewMode() === 'all') {
-      this.loadAllBudgets();
-    } else {
-      this.loadBudgetStatus();
-    }
-  }
-
-  /**
-   * Loads the budget status summary for the selected period.
-   */
-  private loadBudgetStatus(): void {
-    this.loading.set(true);
-    this.loadError.set(false);
-    this.budgetApi
-      .getBudgetStatus(this.selectedMonth(), this.selectedYear())
-      .pipe(
-        takeUntilDestroyed(this.destroyRef),
-        finalize((): void => this.loading.set(false)),
-      )
-      .subscribe({
-        next: (status: BudgetStatus[]): void => this.budgetStatuses.set(status),
-        error: (err: unknown): void => {
-          console.error('Failed to load budget status:', err);
-          this.toast.error('Failed to load budget status');
-          this.loadError.set(true);
-        },
-      });
-  }
-
-  /**
-   * Loads the current page of the "manage all" budgets list.
-   */
-  private loadAllBudgets(): void {
-    this.loading.set(true);
-    this.loadError.set(false);
-    this.budgetApi
-      .getAllBudgets({ page: this.allBudgetsPage(), size: ALL_BUDGETS_PAGE_SIZE })
-      .pipe(
-        takeUntilDestroyed(this.destroyRef),
-        finalize((): void => this.loading.set(false)),
-      )
-      .subscribe({
-        next: (page: PageResponse<Budget>): void => {
-          this.allBudgets.set(page.content);
-          this.allBudgetsTotalRecords.set(page.page.totalElements);
-        },
-        error: (err: unknown): void => {
-          console.error('Failed to load all budgets:', err);
-          this.toast.error('Failed to load all budgets');
-          this.loadError.set(true);
-        },
-      });
-  }
-
-  /**
-   * Handles the "manage all" table's lazy-load event (page navigation).
-   * @param event the PrimeNG lazy-load event carrying the new page's starting row offset.
-   */
-  onAllBudgetsPageChange(event: { first?: number }): void {
-    this.allBudgetsPage.set(Math.floor((event.first ?? 0) / ALL_BUDGETS_PAGE_SIZE));
-    this.loadAllBudgets();
-  }
-
-  /**
-   * Responds to changes in the month or year filters.
-   */
-  onPeriodChange(): void {
-    this.updateUrlParams();
-    this.loadBudgetStatus();
-  }
-
-  /**
-   * Responds to view mode toggle. Resets to the first "manage all" page on every fresh entry into
-   * that view, rather than preserving wherever the user last scrolled to.
-   */
-  onToggleView(): void {
-    if (this.viewMode() === 'all') {
-      this.allBudgetsPage.set(0);
-    }
-    this.refreshData();
-  }
-
-  /**
-   * Opens the budget creation dialog.
-   */
-  openSetBudgetDialog(): void {
-    this.showDialog.set(true);
-  }
-
-  /**
-   * Callback for when a budget is saved successfully in the child dialog.
-   */
-  onBudgetSaved(): void {
-    this.showDialog.set(false);
-    this.refreshData();
-  }
-
-  /**
-   * Deletes a specific budget entry.
-   * @param budget The budget object to delete.
-   */
-  deleteBudget(budget: Budget): void {
-    this.confirmationService.confirm({
-      header: 'Delete Budget?',
-      message: `Are you sure you want to delete the budget for ${budget.category.name} in ${this.getMonthName(budget.month)} ${budget.year}?`,
-      icon: 'pi pi-exclamation-triangle',
-      acceptLabel: 'Delete',
-      rejectLabel: 'Cancel',
-      acceptButtonStyleClass: 'p-button-danger',
-      accept: (): void => {
-        this.budgetApi
-          .deleteBudget(budget.id)
-          .pipe(takeUntilDestroyed(this.destroyRef))
-          .subscribe({
-            next: (): void => {
-              this.toast.success('Budget deleted successfully');
-              this.refreshData();
-            },
-            error: (err: unknown): void => {
-              console.error('Failed to delete budget:', err);
-              this.toast.error('Failed to delete budget');
-            },
-          });
-      },
-    });
-  }
-
-  /**
-   * Maps a month number to its human-readable name.
-   * @param month The month number (1-12).
-   */
-  getMonthName(month: number): string {
-    return (
-      this.monthOptions.find((m: MonthOption): boolean => m.value === month)?.label ||
-      month.toString()
-    );
-  }
-
-  /**
-   * Returns appropriate Tailwind classes for the progress bar based on utilization.
-   * @param percentage The percentage of the budget used.
-   */
-  getProgressBarTailwind(percentage: number): string {
-    if (percentage < 80) return '!bg-emerald-500';
-    if (percentage <= 100) return '!bg-amber-500';
-    return '!bg-rose-500';
   }
 }

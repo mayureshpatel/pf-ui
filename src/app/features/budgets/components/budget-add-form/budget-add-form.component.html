@@ -1,0 +1,46 @@
+@if (categories().length === 0) {
+  <p class="text-sm text-muted-color">Every category already has a budget this month.</p>
+} @else {
+  <form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-4">
+    <div class="flex flex-col gap-1">
+      <label id="category-label" for="category" class="text-sm font-medium">Category</label>
+      <p-select
+        inputId="category"
+        ariaLabelledBy="category-label"
+        formControlName="categoryId"
+        [options]="categoryGroups()"
+        [group]="true"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="Select a category"
+        [filter]="true"
+        filterPlaceholder="Search categories"
+        appendTo="body"
+      />
+      @if (form.controls.categoryId.invalid && form.controls.categoryId.touched) {
+        <small data-testid="category-error" class="text-rose-700 dark:text-rose-400">
+          Choose a category.
+        </small>
+      }
+    </div>
+
+    <div class="flex flex-col gap-1">
+      <label for="amount" class="text-sm font-medium">Monthly limit</label>
+      <p-inputNumber
+        inputId="amount"
+        formControlName="amount"
+        mode="currency"
+        currency="USD"
+        locale="en-US"
+        [min]="0"
+        class="w-full"
+        inputStyleClass="w-full text-xl font-semibold"
+      />
+      @if (form.controls.amount.invalid && form.controls.amount.touched) {
+        <small data-testid="amount-error" class="text-rose-700 dark:text-rose-400">
+          Enter an amount of $0 or more.
+        </small>
+      }
+    </div>
+  </form>
+}

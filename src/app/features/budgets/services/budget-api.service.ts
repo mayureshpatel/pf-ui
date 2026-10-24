@@ -62,7 +62,23 @@ export class BudgetApiService {
   }
 
   /**
-   * Creates a budget for a category and period.
+   * Changes the limit of an existing budget.
+   * @param id the budget to update.
+   * @param amount the new budgeted amount.
+   * @returns the id of the updated budget.
+   */
+  updateBudget(id: number, amount: number): Observable<number> {
+    const userId = this.authService.user()?.id;
+    return this.http.put<number>(
+      this.apiUrl,
+      { id, userId, amount },
+      { context: SKIP_TOAST_CONTEXT },
+    );
+  }
+
+  /**
+   * Creates a budget for a category and period. The backend rejects a second budget for the same
+   * category and period, so changing an existing limit goes through {@link updateBudget}.
    * @param categoryId the category to budget for.
    * @param amount the budgeted amount.
    * @param month the budget month.
@@ -76,7 +92,11 @@ export class BudgetApiService {
     year: number,
   ): Observable<number> {
     const userId = this.authService.user()?.id;
-    return this.http.post<number>(this.apiUrl, { userId, categoryId, amount, month, year });
+    return this.http.post<number>(
+      this.apiUrl,
+      { userId, categoryId, amount, month, year },
+      { context: SKIP_TOAST_CONTEXT },
+    );
   }
 
   /**
