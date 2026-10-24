@@ -591,4 +591,178 @@ describe('CategoriesComponent', () => {
       expect(component.onlyAddMode()).toBe(true);
     });
   });
+
+  describe('selection and bulk delete', () => {
+    /** Food (unused) with two unused subcategories, plus Travel: everything can be ticked. */
+    const unusedTree = (): void => {
+      loadWith([food, coffee, dining, travel], []);
+      component.setFilter({ ...NO_FILTER, unusedOnly: true });
+    };
+    const tick = (...ids: number[]): void => ids.forEach((id) => component.toggleTick(id));
+    const deletedIds = (): number[] => mockCategoryApi.deleteCategory.mock.calls.map((c) => c[0]);
+
+    it('should list the ticked names and confirm once, naming them', () => {
+      // arrange
+      unusedTree();
+      tick(6, 4);
+      fixture.detectChanges();
+
+      // act
+      component.deleteSelected();
+
+      // assert & verify
+      expect(
+        Array.from(fixture.nativeElement.querySelectorAll('[data-testid="ticked-names"] li')).map(
+          (li) => (li as HTMLElement).textContent?.trim(),
+        ),
+      ).toEqual(['Coffee', 'Travel']);
+      expect(mockConfirmationService.confirm).toHaveBeenCalledTimes(1);
+      const message = mockConfirmationService.confirm.mock.calls[0][0].message ?? '';
+      expect(message).toContain('2 categories');
+      expect(message).toContain('Coffee');
+      expect(message).toContain('Travel');
+      expect(mockCategoryApi.deleteCategory).not.toHaveBeenCalled();
+    });
+
+    it('should delete subcategories before their parent', () => {
+      // arrange
+      unusedTree();
+      tick(4, 3, 1);
+
+      // act
+      component.deleteSelected();
+      confirmAccept();
+
+      // assert & verify
+      expect(deletedIds().slice(0, 2).sort()).toEqual([3, 4]);
+      expect(deletedIds()[2]).toBe(1);
+    });
+
+    it('should send a level in parallel and wait for it before the next level', () => {
+      // arrange
+      unusedTree();
+      tick(4, 3, 1);
+      const pending: Subject<void>[] = [];
+      mockCategoryApi.deleteCategory.mockImplementation(() => {
+        const request = new Subject<void>();
+        pending.push(request);
+        return request;
+      });
+
+      // act
+      component.deleteSelected();
+      confirmAccept();
+
+      // assert & verify -- both subcategories requested, the parent not yet
+      expect(pending.length).toBe(2);
+
+      // act
+      pending.forEach((request) => {
+        request.next();
+        request.complete();
+      });
+
+      // assert & verify
+      expect(pending.length).toBe(3);
+    });
+
+    it('should report a success, clear the ticks, return to overview and reload', () => {
+      // arrange
+      unusedTree();
+      tick(6, 4);
+      mockCategoryApi.getCategories.mockClear();
+
+      // act
+      component.deleteSelected();
+      confirmAccept();
+
+      // assert & verify
+      expect(mockToast.success).toHaveBeenCalledWith('Deleted 2 categories');
+      expect(component.tickedIds().size).toBe(0);
+      expect(component.panelMode()).toBe('overview');
+      expect(mockCategoryApi.getCategories).toHaveBeenCalledTimes(1);
+    });
+
+    it('should use the singular for one category', () => {
+      // arrange
+      unusedTree();
+      tick(6);
+
+      // act
+      component.deleteSelected();
+      confirmAccept();
+
+      // assert & verify
+      expect(mockToast.success).toHaveBeenCalledWith('Deleted 1 category');
+    });
+
+    it("should report a failure with the server's message and still reload", () => {
+      // arrange
+      unusedTree();
+      tick(6, 4);
+      mockCategoryApi.deleteCategory.mockImplementation((id: number) =>
+        id === 4
+          ? throwError(() => ({ error: { detail: "Category 'Coffee' is used by a rule" } }))
+          : of(undefined),
+      );
+      mockCategoryApi.getCategories.mockClear();
+
+      // act
+      component.deleteSelected();
+      confirmAccept();
+
+      // assert & verify
+      expect(mockToast.error).toHaveBeenCalledWith(
+        "Deleted 1, 1 failed: Category 'Coffee' is used by a rule",
+      );
+      expect(mockToast.success).not.toHaveBeenCalled();
+      expect(mockCategoryApi.getCategories).toHaveBeenCalledTimes(1);
+    });
+
+    it('should skip a parent whose subcategory failed and count it as failed', () => {
+      // arrange
+      unusedTree();
+      tick(4, 3, 1);
+      mockCategoryApi.deleteCategory.mockImplementation((id: number) =>
+        id === 4 ? throwError(() => ({ error: { detail: 'Refused' } })) : of(undefined),
+      );
+
+      // act
+      component.deleteSelected();
+      confirmAccept();
+
+      // assert & verify
+      expect(deletedIds()).not.toContain(1);
+      expect(mockToast.error).toHaveBeenCalledWith('Deleted 1, 2 failed: Refused');
+    });
+
+    it('should ignore a second bulk delete while one is running, and while loading', () => {
+      // arrange
+      unusedTree();
+      tick(6);
+      mockCategoryApi.deleteCategory.mockReturnValue(new Subject<void>());
+
+      // act
+      component.deleteSelected();
+      confirmAccept();
+      component.deleteSelected();
+
+      // assert & verify
+      expect(mockConfirmationService.confirm).toHaveBeenCalledTimes(1);
+      expect(component.saving()).toBe(true);
+    });
+
+    it('should clear the selection from the panel', () => {
+      // arrange
+      unusedTree();
+      tick(6);
+
+      // act
+      component.clearSelection();
+
+      // assert & verify
+      expect(component.tickedIds().size).toBe(0);
+      expect(component.panelMode()).toBe('overview');
+    });
+  });
 });

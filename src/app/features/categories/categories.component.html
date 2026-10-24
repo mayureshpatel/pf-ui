@@ -135,11 +135,29 @@
             />
           }
           @case ('selection') {
-            <ul class="m-0 list-none p-0 text-sm" data-testid="ticked-names">
+            <ul class="m-0 mb-4 list-none p-0 text-sm" data-testid="ticked-names">
               @for (category of selectedCategories(); track category.id) {
-                <li>{{ category.name }}</li>
+                <li class="py-0.5">{{ category.name }}</li>
               }
             </ul>
+            <div class="flex flex-col gap-2">
+              <button
+                type="button"
+                class="cursor-pointer rounded-lg border border-rose-300 px-3 py-2 text-sm font-medium text-rose-700 disabled:opacity-50 dark:text-rose-400"
+                [disabled]="saving()"
+                (click)="deleteSelected()"
+              >
+                Delete {{ selectedCategories().length }}
+                {{ selectedCategories().length === 1 ? 'category' : 'categories' }}
+              </button>
+              <button
+                type="button"
+                class="cursor-pointer rounded-lg px-3 py-2 text-sm font-medium underline"
+                (click)="clearSelection()"
+              >
+                Clear selection
+              </button>
+            </div>
           }
         }
       </app-side-panel>

@@ -15,7 +15,19 @@ import {
 import { HttpErrorResponse } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
-import { finalize, forkJoin, Subscription } from 'rxjs';
+import {
+  catchError,
+  concat,
+  defer,
+  finalize,
+  forkJoin,
+  map,
+  Observable,
+  of,
+  Subscription,
+  tap,
+  toArray,
+} from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { SkeletonModule } from 'primeng/skeleton';
 import { ConfirmationService } from 'primeng/api';
@@ -38,6 +50,7 @@ import {
   CategoryNode,
   CategoryStats,
   categoryStats,
+  deleteOrder,
   filterNodes,
   isFiltering,
   isTickable,
@@ -399,6 +412,84 @@ export class CategoriesComponent implements OnInit {
           });
       },
     });
+  }
+
+  /** Unticks everything and returns to the overview. */
+  clearSelection(): void {
+    this.tickedIds.set(new Set<number>());
+    this.closePanel();
+  }
+
+  /** Confirms once, then deletes the ticked categories (see {@link runBulkDelete}). */
+  deleteSelected(): void {
+    const selected: Category[] = this.selectedCategories();
+    if (selected.length === 0 || this.saving() || this.loading()) return;
+    const names: string = selected.map((c: Category): string => c.name).join(', ');
+    this.confirmationService.confirm({
+      header: 'Delete categories?',
+      message: `Delete these ${selected.length} categories? ${names}`,
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Delete',
+      rejectLabel: 'Cancel',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: (): void => this.runBulkDelete(),
+    });
+  }
+
+  /**
+   * Deletes the ticked categories level by level: every ticked subcategory (in parallel), then every
+   * ticked parent. A parent whose subcategory failed is not requested. One failure never stops the
+   * rest; the toast reports the counts and the first server message.
+   */
+  private runBulkDelete(): void {
+    if (this.saving()) return;
+    this.saving.set(true);
+    const categories: Category[] = this.categories();
+    const failedIds = new Set<number>();
+
+    const deleteOne = (id: number): Observable<{ ok: boolean; message: string }> => {
+      const blockedByChild: boolean = categories.some(
+        (c: Category): boolean => c.parent?.id === id && failedIds.has(c.id),
+      );
+      if (blockedByChild) {
+        failedIds.add(id);
+        return of({ ok: false, message: 'Its subcategories could not all be deleted.' });
+      }
+      return this.categoryApi.deleteCategory(id).pipe(
+        map((): { ok: boolean; message: string } => ({ ok: true, message: '' })),
+        catchError((error: HttpErrorResponse) =>
+          of({ ok: false, message: error.error?.detail || 'Failed to delete category' }),
+        ),
+        tap((result): void => {
+          if (!result.ok) failedIds.add(id);
+        }),
+      );
+    };
+
+    const levels: Observable<{ ok: boolean; message: string }[]>[] = deleteOrder(
+      [...this.tickedIds()],
+      categories,
+    ).map((level: number[]) => defer(() => forkJoin(level.map(deleteOne))));
+
+    concat(...levels)
+      .pipe(
+        toArray(),
+        takeUntilDestroyed(this.destroyRef),
+        finalize((): void => this.saving.set(false)),
+      )
+      .subscribe((perLevel): void => {
+        const results = perLevel.flat();
+        const deleted: number = results.filter((r): boolean => r.ok).length;
+        const failed = results.filter((r): boolean => !r.ok);
+        if (failed.length === 0) {
+          this.toast.success(`Deleted ${deleted} ${deleted === 1 ? 'category' : 'categories'}`);
+        } else {
+          this.toast.error(`Deleted ${deleted}, ${failed.length} failed: ${failed[0].message}`);
+        }
+        this.tickedIds.set(new Set<number>());
+        this.closePanel();
+        this.loadData();
+      });
   }
 
   /** Opens Transactions for a category across all time (the selected one by default). */
