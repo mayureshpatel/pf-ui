@@ -15,7 +15,7 @@ import {
 import { HttpErrorResponse } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Params, Router } from '@angular/router';
-import { catchError, finalize, forkJoin, map, Observable, of, skip } from 'rxjs';
+import { catchError, finalize, forkJoin, map, Observable, of, skip, Subscription } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { SkeletonModule } from 'primeng/skeleton';
 import { ConfirmationService } from 'primeng/api';
@@ -157,6 +157,9 @@ export class BudgetsComponent implements OnInit {
   /** The element that had focus when the panel left the overview, to hand focus back to. */
   private focusReturn: HTMLElement | null = null;
 
+  /** The in-flight month load, cancelled when a newer one starts. */
+  private loadSubscription: Subscription | null = null;
+
   private readonly categoryView = viewChild<BudgetCategoryViewComponent>('categoryView');
   private readonly addForm = viewChild<BudgetAddFormComponent>('addForm');
 
@@ -178,7 +181,7 @@ export class BudgetsComponent implements OnInit {
       .pipe(skip(1), takeUntilDestroyed(this.destroyRef))
       .subscribe((params: Params): void => {
         if (this.hydrateFromParams(params)) {
-          this.closePanel();
+          this.closePanel(false);
           this.loadMonth();
         }
       });
@@ -189,9 +192,11 @@ export class BudgetsComponent implements OnInit {
     const month: number = this.selectedMonth();
     const year: number = this.selectedYear();
     const previous: { month: number; year: number } = shiftMonth(month, year, -1);
+    // a newer request replaces any earlier one, so a slow answer for another month is dropped
+    this.loadSubscription?.unsubscribe();
     this.loading.set(true);
     this.loadError.set(false);
-    forkJoin({
+    this.loadSubscription = forkJoin({
       statuses: this.budgetApi.getBudgetStatus(month, year),
       budgets: this.budgetApi.getBudgets(month, year),
       previousBudgets: this.budgetApi.getBudgets(previous.month, previous.year),
@@ -211,6 +216,10 @@ export class BudgetsComponent implements OnInit {
         error: (err: unknown): void => {
           console.error('Failed to load budget data:', err);
           this.toast.error('Failed to load budget data');
+          // never keep the previous month's rows under the new month's label
+          this.statuses.set([]);
+          this.budgets.set([]);
+          this.previousBudgets.set([]);
           this.loadError.set(true);
         },
       });
@@ -236,7 +245,7 @@ export class BudgetsComponent implements OnInit {
     this.confirmDiscardIfDirty((): void => {
       this.selectedMonth.set(month);
       this.selectedYear.set(year);
-      this.closePanel();
+      this.closePanel(false);
       this.updateUrlParams();
       this.loadMonth();
     });
@@ -244,6 +253,7 @@ export class BudgetsComponent implements OnInit {
 
   /** Opens the dialog that asks how to copy last month's limits. */
   openCopyDialog(): void {
+    if (this.loading()) return;
     this.copyDialogVisible.set(true);
   }
 
@@ -253,7 +263,7 @@ export class BudgetsComponent implements OnInit {
    * touched. Requests run in parallel and a failure of one does not stop the others.
    */
   runCopy(mode: 'fill' | 'replace'): void {
-    if (this.saving()) return;
+    if (this.saving() || this.loading()) return;
     const plan = copyPlan(this.previousBudgets(), this.budgets());
     const items: Budget[] = mode === 'fill' ? plan.add : [...plan.add, ...plan.overwrite];
     if (items.length === 0) {
@@ -322,10 +332,13 @@ export class BudgetsComponent implements OnInit {
     this.confirmDiscardIfDirty((): void => this.closePanel());
   }
 
-  /** Returns to the overview with nothing selected, without asking. */
-  closePanel(): void {
+  /**
+   * Returns to the overview with nothing selected, without asking. A month change passes
+   * `moveFocus = false` so focus stays on the month button the user just pressed.
+   */
+  closePanel(moveFocus = true): void {
     this.selectedCategoryId.set(null);
-    this.go('overview');
+    this.go('overview', moveFocus);
   }
 
   /** Close button and Escape: asks first when there are unsaved edits; the overview ignores them. */
@@ -346,7 +359,7 @@ export class BudgetsComponent implements OnInit {
   /** Sets the selected category's limit for this month (the backend upserts). */
   saveLimit(amount: number): void {
     const row: BudgetRow | null = this.selectedRow();
-    if (!row || this.saving()) return;
+    if (!row || this.saving() || this.loading()) return;
     this.saving.set(true);
     // an existing budget is updated by id; the backend rejects a second create for the same month
     const request: Observable<number> =
@@ -378,7 +391,7 @@ export class BudgetsComponent implements OnInit {
 
   /** Adds a budget for a category with no limit this month, then opens it. */
   addBudget(request: { categoryId: number; amount: number }): void {
-    if (this.saving()) return;
+    if (this.saving() || this.loading()) return;
     this.saving.set(true);
     this.budgetApi
       .createBudget(request.categoryId, request.amount, this.selectedMonth(), this.selectedYear())
@@ -404,7 +417,7 @@ export class BudgetsComponent implements OnInit {
   /** Confirms, then removes the selected category's budget for this month. */
   removeBudget(): void {
     const row: BudgetRow | null = this.selectedRow();
-    if (!row || row.budgetId === null) return;
+    if (!row || row.budgetId === null || this.saving() || this.loading()) return;
     const budgetId: number = row.budgetId;
     this.confirmationService.confirm({
       header: 'Remove budget?',
@@ -414,9 +427,14 @@ export class BudgetsComponent implements OnInit {
       rejectLabel: 'Cancel',
       acceptButtonStyleClass: 'p-button-danger',
       accept: (): void => {
+        if (this.saving()) return;
+        this.saving.set(true);
         this.budgetApi
           .deleteBudget(budgetId)
-          .pipe(takeUntilDestroyed(this.destroyRef))
+          .pipe(
+            takeUntilDestroyed(this.destroyRef),
+            finalize((): void => this.saving.set(false)),
+          )
           .subscribe({
             next: (): void => {
               this.toast.success('Budget removed');
@@ -450,8 +468,13 @@ export class BudgetsComponent implements OnInit {
   }
 
   /** Switches mode and moves focus: into the panel for any step, back to the opener for overview. */
-  private go(mode: BudgetPanelMode): void {
-    // already on the overview (a month change, a reload): nothing moved, so focus stays put
+  private go(mode: BudgetPanelMode, moveFocus = true): void {
+    if (!moveFocus) {
+      this.focusReturn = null;
+      this.panelMode.set(mode);
+      return;
+    }
+    // already on the overview (a reload): nothing moved, so focus stays put
     if (mode === 'overview' && this.panelMode() === 'overview') return;
     if (this.panelMode() === 'overview' && mode !== 'overview') {
       this.focusReturn = document.activeElement as HTMLElement | null;

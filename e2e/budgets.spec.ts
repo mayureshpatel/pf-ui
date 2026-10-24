@@ -92,9 +92,15 @@ test.describe('Budgets', () => {
     const row = page.getByTestId('open-budget').filter({hasText: category.name});
     await expect(row).toContainText('$120.00 of $250.00');
   });
+});
 
+/**
+ * PF-819: counts network requests only, so it uses the shared dev user's cached session instead of
+ * registering another user (registration is limited to 5 per minute per IP, and the suite already
+ * registers several).
+ */
+test.describe('Budgets month switcher', () => {
   test('changing month fires one status request and updates the URL (PF-819)', async ({page}) => {
-    await registerTestUser(page);
     const statusRequests: string[] = [];
     page.on('request', (req) => {
       if (req.url().includes('/api/v1/budgets/status')) statusRequests.push(req.url());

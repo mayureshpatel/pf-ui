@@ -819,4 +819,105 @@ describe('BudgetsComponent', () => {
       expect(document.activeElement).toBe(aside());
     });
   });
+
+  describe('review fixes', () => {
+    it('should ignore a slower response for an earlier month (out-of-order responses)', () => {
+      // arrange
+      const pending: Subject<BudgetStatus[]>[] = [];
+      mockBudgetApi.getBudgetStatus.mockImplementation(() => {
+        const request = new Subject<BudgetStatus[]>();
+        pending.push(request);
+        return request;
+      });
+
+      // act -- two quick clicks on Next month, answered in reverse order
+      component.nextMonth();
+      component.nextMonth();
+      pending[1].next([status(travel, 100, 10)]);
+      pending[1].complete();
+      pending[0].next([status(dining, 5, 1)]);
+      pending[0].complete();
+
+      // assert & verify
+      expect(component.selectedMonth()).toBe(12);
+      expect(component.statuses().map((s) => s.category.id)).toEqual([4]);
+      expect(component.loading()).toBe(false);
+    });
+
+    it('should not copy, save, add or remove while a month is still loading', () => {
+      // arrange
+      component.openCategory(component.rows()[0]);
+      component.loading.set(true);
+
+      // act
+      component.runCopy('fill');
+      component.saveLimit(500);
+      component.addBudget({ categoryId: 4, amount: 10 });
+      component.removeBudget();
+      component.openCopyDialog();
+
+      // assert & verify
+      expect(mockBudgetApi.createBudget).not.toHaveBeenCalled();
+      expect(mockBudgetApi.updateBudget).not.toHaveBeenCalled();
+      expect(mockConfirmationService.confirm).not.toHaveBeenCalled();
+      expect(component.copyDialogVisible()).toBe(false);
+    });
+
+    it('should not keep the old month under the new label when a reload fails', () => {
+      // arrange
+      expect(component.statuses().length).toBe(3);
+      mockBudgetApi.getBudgetStatus.mockReturnValue(throwError(() => new Error('down')));
+
+      // act
+      component.nextMonth();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.statuses()).toEqual([]);
+      expect(component.budgets()).toEqual([]);
+      expect(component.previousBudgets()).toEqual([]);
+      expect(component.loadError()).toBe(true);
+      expect(fixture.nativeElement.querySelector('app-page-error-state')).toBeTruthy();
+    });
+
+    it('should leave focus on the month button when the month changes from a category', async () => {
+      // arrange
+      const row = fixture.nativeElement.querySelector(
+        '[data-testid="open-budget"]',
+      ) as HTMLButtonElement;
+      row.focus();
+      component.openCategory(component.rows()[0]);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      const next = Array.from<HTMLButtonElement>(
+        fixture.nativeElement.querySelectorAll('button'),
+      ).find((b) => b.getAttribute('aria-label') === 'Next month')!;
+      next.focus();
+
+      // act
+      component.nextMonth();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      // assert & verify
+      expect(component.panelMode()).toBe('overview');
+      expect(document.activeElement).toBe(next);
+    });
+
+    it('should block a second remove while the first is in flight', () => {
+      // arrange
+      component.openCategory(component.rows()[0]);
+      mockBudgetApi.deleteBudget.mockReturnValue(new Subject<void>());
+
+      // act
+      component.removeBudget();
+      confirmAccept(0);
+      component.removeBudget();
+
+      // assert & verify
+      expect(mockConfirmationService.confirm).toHaveBeenCalledTimes(1);
+      expect(mockBudgetApi.deleteBudget).toHaveBeenCalledTimes(1);
+      expect(component.saving()).toBe(true);
+    });
+  });
 });

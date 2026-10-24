@@ -45,14 +45,18 @@ export class BudgetCategoryViewComponent {
     toCents(this.row().status.budgetedAmount - this.row().status.spentAmount),
   );
 
-  /** Which category is shown; the form resets only when this changes, not on a background refresh. */
-  private readonly categoryId: Signal<number> = computed(
-    (): number => this.row().status.category.id,
+  /**
+   * Which category is shown, and whether it has a budget yet. The form resets only when this
+   * changes (a different category, or the same one just getting its first budget), not on a
+   * background refresh that keeps both the same.
+   */
+  private readonly formKey: Signal<string> = computed(
+    (): string => `${this.row().status.category.id}:${this.row().budgetId ?? 'none'}`,
   );
 
   constructor() {
     effect((): void => {
-      this.categoryId();
+      this.formKey();
       untracked((): void => {
         this.form.reset({
           amount: isUnbudgeted(this.row()) ? null : this.row().status.budgetedAmount,

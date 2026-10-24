@@ -155,4 +155,16 @@ describe('BudgetCategoryViewComponent', () => {
     // assert & verify
     expect(button('Remove budget')).toBeUndefined();
   });
+
+  it('should fill in the limit once an unbudgeted category gets its budget (same category, new budget id)', () => {
+    // arrange -- the add flow opens the category before the reload: still spending with no limit
+    render(row(1, 0, 120, null));
+    expect(component.form.controls.amount.value).toBeNull();
+
+    // act -- the reload returns the same category, now with its 300 budget
+    render(row(1, 300, 120, 9));
+
+    // assert & verify
+    expect(component.form.controls.amount.value).toBe(300);
+  });
 });
