@@ -1,0 +1,41 @@
+<div class="flex flex-wrap items-center gap-2">
+  <div class="flex flex-wrap items-center gap-2" role="group" aria-label="Filter by type">
+    <button
+      type="button"
+      class="cursor-pointer rounded-full border px-3 py-1 text-sm font-medium"
+      [class]="pillClass(filter().type === 'ALL')"
+      [attr.aria-pressed]="filter().type === 'ALL'"
+      (click)="setType('ALL')"
+    >
+      All
+    </button>
+    @for (type of types(); track type) {
+      <button
+        type="button"
+        class="cursor-pointer rounded-full border px-3 py-1 text-sm font-medium"
+        [class]="pillClass(filter().type === type)"
+        [attr.aria-pressed]="filter().type === type"
+        (click)="setType(type)"
+      >
+        {{ label(type) }}
+      </button>
+    }
+  </div>
+  <button
+    type="button"
+    class="cursor-pointer rounded-full border px-3 py-1 text-sm font-medium"
+    [class]="pillClass(filter().unusedOnly)"
+    [attr.aria-pressed]="filter().unusedOnly"
+    (click)="toggleUnused()"
+  >
+    Unused {{ unusedCount() }}
+  </button>
+  <input
+    type="search"
+    class="min-w-48 flex-1 rounded-lg border border-surface-300 bg-surface-0 px-3 py-1.5 text-sm dark:border-surface-700 dark:bg-surface-900"
+    placeholder="Search categories"
+    aria-label="Search categories"
+    [value]="filter().search"
+    (input)="setSearch($event)"
+  />
+</div>
