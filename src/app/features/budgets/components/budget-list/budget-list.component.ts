@@ -49,16 +49,4 @@ export class BudgetListComponent {
   barClass(key: BudgetGroupKey): string {
     return key === 'OVER' ? 'bg-rose-500' : key === 'CLOSE' ? 'bg-amber-500' : 'bg-emerald-500';
   }
-
-  /** The row spoken as one sentence, so status never depends on colour. */
-  label(row: BudgetRow): string {
-    const money = (n: number): string =>
-      new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
-    if (isUnbudgeted(row)) {
-      return `${row.status.category.name}, ${money(row.status.spentAmount)} spent, no limit set`;
-    }
-    const left: number = this.left(row);
-    const tail: string = left < 0 ? `${money(-left)} over` : `${money(left)} left`;
-    return `${row.status.category.name}, ${money(row.status.spentAmount)} of ${money(row.status.budgetedAmount)}, ${tail}`;
-  }
 }

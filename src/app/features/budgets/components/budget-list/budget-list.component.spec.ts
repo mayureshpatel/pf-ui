@@ -65,7 +65,8 @@ describe('BudgetListComponent', () => {
     expect(rows[0].textContent).toContain('$512.00 of $450.00');
     expect(rows[0].textContent).toContain('$62.00 over');
     expect(rows[1].textContent).toContain('$16.00 left');
-    expect(rows[0].getAttribute('aria-label')).toBe('Groceries, $512.00 of $450.00, $62.00 over');
+    // the visible text is the accessible name: no aria-label override that could drift from it
+    expect(rows[0].getAttribute('aria-label')).toBeNull();
   });
 
   it('should colour the bar by group and cap its width at 100%', () => {
@@ -134,7 +135,9 @@ describe('BudgetListComponent', () => {
     expect(heading).toContain('$200.00 spent');
     expect(heading).not.toContain('over');
     const first = all('[data-testid="open-budget"]')[0];
-    expect(first.getAttribute('aria-label')).toBe('Gifts, $120.00 spent, no limit set');
+    expect(first.getAttribute('aria-label')).toBeNull();
+    expect(first.textContent).toContain('Gifts');
+    expect(first.textContent).toContain('$120.00 spent');
     expect(first.textContent).toContain('No limit');
     expect(all('[data-testid="budget-bar"]').length).toBe(0);
   });
@@ -163,8 +166,10 @@ describe('BudgetListComponent', () => {
     fixture.detectChanges();
 
     // assert & verify
-    const labels = all('[data-testid="open-budget"]').map((r) => r.getAttribute('aria-label'));
-    expect(labels).toContain('Zero over, $5.00 of $0.00, $5.00 over');
-    expect(labels).toContain('Zero spent, $0.00 of $0.00, $0.00 left');
+    const texts = all('[data-testid="open-budget"]').map((r) =>
+      r.textContent?.replace(/\s+/g, ' ').trim(),
+    );
+    expect(texts).toContain('Zero over $5.00 of $0.00 $5.00 over');
+    expect(texts).toContain('Zero spent $0.00 of $0.00 $0.00 left');
   });
 });
