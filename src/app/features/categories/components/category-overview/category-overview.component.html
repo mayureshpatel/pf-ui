@@ -1,0 +1,36 @@
+<div class="flex flex-col gap-4">
+  <div>
+    <p class="text-sm text-muted-color">
+      {{ plural(stats().categories, 'category', 'categories') }} in
+      {{ plural(stats().groups, 'group', 'groups') }}
+    </p>
+    <p class="mt-1 text-2xl font-bold tabular-nums">
+      {{ plural(stats().transactions, 'transaction', 'transactions') }}
+    </p>
+    @if (stats().unused > 0) {
+      <p data-testid="unused-line" class="mt-2 text-sm text-amber-700 dark:text-amber-400">
+        {{ stats().unused === 1 ? '1 category has' : stats().unused + ' categories have' }} no
+        transactions
+      </p>
+    }
+  </div>
+
+  <div class="flex flex-col gap-2">
+    @if (stats().unused > 0) {
+      <button
+        type="button"
+        class="cursor-pointer rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium dark:border-surface-700"
+        (click)="reviewUnused.emit()"
+      >
+        Review unused categories
+      </button>
+    }
+    <button
+      type="button"
+      class="cursor-pointer rounded-lg bg-primary-700 px-3 py-2 text-sm font-medium text-white hover:bg-primary-800"
+      (click)="add.emit()"
+    >
+      Add category
+    </button>
+  </div>
+</div>
