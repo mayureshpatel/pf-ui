@@ -765,4 +765,182 @@ describe('CategoriesComponent', () => {
       expect(component.panelMode()).toBe('overview');
     });
   });
+
+  describe('layout and states', () => {
+    const aside = (): HTMLElement => fixture.nativeElement.querySelector('app-side-panel aside');
+
+    it('should always render the panel, on the overview by default, beside the tree and filters', () => {
+      // assert & verify
+      expect(aside().getAttribute('aria-label')).toBe('Overview');
+      expect(fixture.nativeElement.querySelector('app-category-overview')).toBeTruthy();
+      expect(fixture.nativeElement.querySelector('app-category-filters')).toBeTruthy();
+      expect(fixture.nativeElement.querySelectorAll('[data-testid="open-category"]').length).toBe(
+        4,
+      );
+    });
+
+    it('should show the full skeleton on the first load with no panel yet', () => {
+      // arrange
+      const first = TestBed.createComponent(CategoriesComponent);
+      mockCategoryApi.getCategories.mockReturnValue(new Subject<Category[]>());
+
+      // act
+      first.detectChanges();
+
+      // assert & verify
+      expect(first.nativeElement.querySelector('[aria-busy="true"] p-skeleton')).toBeTruthy();
+      expect(first.nativeElement.querySelector('app-side-panel')).toBeNull();
+    });
+
+    it('should keep the same panel element mounted across a reload and a save', () => {
+      // arrange
+      const panel = fixture.nativeElement.querySelector('app-side-panel');
+      openByName('Travel');
+
+      // act
+      component.saveCategory({ id: 6, name: 'Trips', type: 'EXPENSE' });
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(fixture.nativeElement.querySelector('app-side-panel')).toBe(panel);
+    });
+
+    it('should show No categories yet beside the add form when there are none', () => {
+      // act
+      loadWith([], []);
+
+      // assert & verify
+      expect(fixture.nativeElement.textContent).toContain('No categories yet');
+      expect(fixture.nativeElement.querySelector('app-category-edit-form')).toBeTruthy();
+      expect(aside().getAttribute('aria-label')).toBe('Add category');
+    });
+
+    it('should explain an empty filter result and offer a working Clear filters button', () => {
+      // act
+      component.setFilter({ ...NO_FILTER, search: 'zzzz' });
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(fixture.nativeElement.textContent).toContain('No categories match these filters');
+
+      // act
+      fixture.nativeElement
+        .querySelector('[data-testid="clear-filters"] button, button[data-testid="clear-filters"]')
+        .click();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.filtering()).toBe(false);
+      expect(fixture.nativeElement.querySelectorAll('[data-testid="open-category"]').length).toBe(
+        4,
+      );
+    });
+
+    it('should retry from the error state', () => {
+      // arrange
+      mockCategoryApi.getCategories.mockReturnValue(throwError(() => new Error('down')));
+      component.loadData();
+      fixture.detectChanges();
+      mockCategoryApi.getCategories.mockReturnValue(of(flat));
+
+      // act
+      fixture.nativeElement.querySelector('app-page-error-state button').click();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.loadError()).toBe(false);
+      expect(component.categories().length).toBe(8);
+    });
+
+    it('should no longer render the old table, nested table or New Category button', () => {
+      // assert & verify
+      expect(fixture.nativeElement.querySelector('p-table')).toBeNull();
+      expect(fixture.nativeElement.textContent).not.toContain('New Category');
+      expect(fixture.nativeElement.textContent).not.toContain('EXPENSE');
+    });
+  });
+
+  describe('focus', () => {
+    const aside = (): HTMLElement => fixture.nativeElement.querySelector('app-side-panel aside');
+    const rowButton = (): HTMLButtonElement =>
+      fixture.nativeElement.querySelector('[data-testid="open-category"]');
+
+    it('should not take focus on page load', async () => {
+      // arrange
+      await fixture.whenStable();
+
+      // assert & verify
+      expect(document.activeElement).not.toBe(aside());
+    });
+
+    it('should move focus into the panel when a row is opened and back to that row on return', async () => {
+      // arrange
+      const row = rowButton();
+      row.focus();
+
+      // act
+      component.openCategory(component.categories().find((c) => c.id === 1)!);
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      // assert & verify
+      expect(document.activeElement).toBe(aside());
+
+      // act
+      component.closePanel();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      // assert & verify
+      expect(document.activeElement).toBe(row);
+    });
+
+    it('should focus the panel instead when the element that opened it is gone', async () => {
+      // arrange
+      rowButton().focus();
+      component.openCategory(component.categories().find((c) => c.id === 1)!);
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      // act -- the opening row disappears, then the panel returns to overview
+      component.setFilter({ ...NO_FILTER, search: 'travel' });
+      fixture.detectChanges();
+      component.closePanel();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      // assert & verify
+      expect(document.activeElement).toBe(aside());
+    });
+
+    it('should leave focus on the search box while the filters change on the overview', async () => {
+      // arrange
+      const search = fixture.nativeElement.querySelector(
+        'input[aria-label="Search categories"]',
+      ) as HTMLInputElement;
+      search.focus();
+
+      // act
+      component.setFilter({ ...NO_FILTER, search: 'a' });
+      component.setFilter({ ...NO_FILTER, search: 'ab' });
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      // assert & verify
+      expect(document.activeElement).toBe(search);
+    });
+
+    it('should move focus into the panel when add opens', async () => {
+      // arrange
+      (document.activeElement as HTMLElement | null)?.blur();
+
+      // act
+      component.startAdd();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      // assert & verify
+      expect(document.activeElement).toBe(aside());
+    });
+  });
 });

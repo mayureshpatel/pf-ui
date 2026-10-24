@@ -1,10 +1,12 @@
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
   DestroyRef,
   effect,
   inject,
+  Injector,
   OnInit,
   Signal,
   signal,
@@ -187,6 +189,11 @@ export class CategoriesComponent implements OnInit {
     return null;
   });
 
+  private readonly injector: Injector = inject(Injector);
+  private readonly panel = viewChild(SidePanelComponent);
+
+  /** The element that had focus when the panel left the overview, to hand focus back to. */
+  private focusReturn: HTMLElement | null = null;
   private loadSubscription: Subscription | null = null;
   private readonly editForm = viewChild<CategoryEditFormComponent>('editForm');
 
@@ -238,7 +245,7 @@ export class CategoriesComponent implements OnInit {
     this.filter.set(filter);
     this.pruneTicks();
     if (this.panelMode() === 'selection' && this.tickedIds().size === 0) {
-      this.closePanel();
+      this.closePanel(false);
     }
   }
 
@@ -318,10 +325,13 @@ export class CategoriesComponent implements OnInit {
     });
   }
 
-  /** Returns to the overview with nothing selected, without asking. */
-  closePanel(): void {
+  /**
+   * Returns to the overview with nothing selected, without asking. Filter changes pass
+   * `moveFocus = false` so focus stays on the control the user is typing in.
+   */
+  closePanel(moveFocus = true): void {
     this.selectedCategoryId.set(null);
-    this.go('overview');
+    this.go('overview', moveFocus);
   }
 
   /** Close button and Escape: asks first when there are unsaved edits; the overview ignores them. */
@@ -502,8 +512,31 @@ export class CategoriesComponent implements OnInit {
     });
   }
 
-  private go(mode: CategoryPanelMode): void {
+  /** Switches mode and moves focus: into the panel for any step, back to the opener for overview. */
+  private go(mode: CategoryPanelMode, moveFocus = true): void {
+    if (!moveFocus) {
+      this.focusReturn = null;
+      this.panelMode.set(mode);
+      return;
+    }
+    // already on the overview (a filter change, a reload): nothing moved, so focus stays put
+    if (mode === 'overview' && this.panelMode() === 'overview') return;
+    if (this.panelMode() === 'overview' && mode !== 'overview') {
+      this.focusReturn = document.activeElement as HTMLElement | null;
+    }
     this.panelMode.set(mode);
+    afterNextRender(
+      (): void => {
+        const target: HTMLElement | null = this.focusReturn;
+        if (mode === 'overview' && target?.isConnected) {
+          target.focus();
+        } else {
+          this.panel()?.focus();
+        }
+        if (mode === 'overview') this.focusReturn = null;
+      },
+      { injector: this.injector },
+    );
   }
 
   private saveFailed(error: HttpErrorResponse): void {
