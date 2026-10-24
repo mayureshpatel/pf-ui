@@ -49,6 +49,16 @@ export class CategoryTreeComponent {
     return isUnused(category) ? null : (category.transactionCount ?? 0);
   }
 
+  /**
+   * A checkbox flips itself when clicked, but only the host decides whether the tick counts (it may
+   * be refused, for example while an edit is unsaved). Put the box back to what the inputs say
+   * before emitting; if the host accepts, the binding ticks it again.
+   */
+  onTick(event: Event, id: number): void {
+    (event.target as HTMLInputElement).checked = this.ticked().has(id);
+    this.toggleTick.emit(id);
+  }
+
   subcategoryLabel(count: number): string {
     return count === 1 ? '1 subcategory' : `${count} subcategories`;
   }

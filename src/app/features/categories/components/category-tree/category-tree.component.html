@@ -32,7 +32,7 @@
               [checked]="ticked().has(node.parent.id)"
               [disabled]="!tickable().has(node.parent.id)"
               [attr.aria-label]="'Select ' + node.parent.name"
-              (change)="toggleTick.emit(node.parent.id)"
+              (change)="onTick($event, node.parent.id)"
             />
           }
           @if (node.children.length > 0) {
@@ -101,7 +101,7 @@
                       [checked]="ticked().has(child.id)"
                       [disabled]="!tickable().has(child.id)"
                       [attr.aria-label]="'Select ' + child.name"
-                      (change)="toggleTick.emit(child.id)"
+                      (change)="onTick($event, child.id)"
                     />
                   }
                   <button

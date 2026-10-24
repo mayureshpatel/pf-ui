@@ -75,7 +75,7 @@
         [title]="panelTitle()"
         [saving]="saving()"
         [showClose]="panelMode() !== 'overview' && !onlyAddMode()"
-        [sheet]="panelMode() !== 'overview'"
+        [sheet]="panelMode() !== 'overview' && panelMode() !== 'selection'"
         [moveFocus]="false"
         [showFooter]="panelMode() === 'category' || panelMode() === 'add'"
         [saveLabel]="panelMode() === 'add' ? 'Add category' : 'Save changes'"

@@ -982,4 +982,45 @@ describe('CategoriesComponent', () => {
       expect(after.form.getRawValue().name).toBe('Trips');
     });
   });
+
+  describe('selection on the page', () => {
+    const checkbox = (name: string): HTMLInputElement =>
+      fixture.nativeElement.querySelector(`input[aria-label="Select ${name}"]`);
+
+    it('should leave keyboard focus on the checkbox when more rows are ticked', async () => {
+      // arrange
+      loadWith([food, coffee, dining, travel], []);
+      component.setFilter({ ...NO_FILTER, unusedOnly: true });
+      fixture.detectChanges();
+
+      // act -- the first tick opens the panel (focus may move); the second must not move it
+      checkbox('Coffee').click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      checkbox('Travel').focus();
+      checkbox('Travel').click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      // assert & verify
+      expect(component.tickedIds().size).toBe(2);
+      expect(document.activeElement).toBe(checkbox('Travel'));
+    });
+
+    it('should keep the selection panel inline, not a full-screen sheet, so more rows can be ticked on a phone', () => {
+      // arrange
+      loadWith([food, coffee, dining, travel], []);
+      component.setFilter({ ...NO_FILTER, unusedOnly: true });
+      fixture.detectChanges();
+
+      // act
+      component.toggleTick(6);
+      fixture.detectChanges();
+
+      // assert & verify
+      const aside = fixture.nativeElement.querySelector('app-side-panel aside') as HTMLElement;
+      expect(component.panelMode()).toBe('selection');
+      expect(aside.className).not.toContain('fixed');
+    });
+  });
 });

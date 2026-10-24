@@ -287,7 +287,8 @@ export class CategoriesComponent implements OnInit {
         this.closePanel();
       } else {
         this.selectedCategoryId.set(null);
-        this.go('selection');
+        // only the first tick opens the panel; later ticks leave keyboard focus where it is
+        if (this.panelMode() !== 'selection') this.go('selection');
       }
     });
   }

@@ -188,4 +188,17 @@ describe('CategoryTreeComponent', () => {
     expect(expandAll).toHaveBeenCalledTimes(1);
     expect(collapseAll).toHaveBeenCalledTimes(1);
   });
+
+  it('should not leave a checkbox looking ticked when the parent does not accept the tick', () => {
+    // arrange -- the host ignores the tick (for example the user chose Keep editing)
+    render({ expanded: [1], showChecks: true, tickable: [3], ticked: [] });
+    const box = all<HTMLInputElement>('input[type="checkbox"]').find((b) => !b.disabled)!;
+
+    // act -- the browser flips the box itself when it is clicked
+    box.click();
+    fixture.detectChanges();
+
+    // assert & verify -- the box follows the ticked input, which did not change
+    expect(box.checked).toBe(false);
+  });
 });
