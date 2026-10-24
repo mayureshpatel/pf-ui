@@ -610,4 +610,164 @@ describe('BudgetsComponent', () => {
       expect(mockBudgetApi.getBudgetStatus).toHaveBeenCalledTimes(1);
     });
   });
+
+  describe('layout and states', () => {
+    const aside = (): HTMLElement => fixture.nativeElement.querySelector('app-side-panel aside');
+
+    it('should always render the panel, showing the overview with what is left to spend', () => {
+      // assert & verify
+      expect(aside().getAttribute('aria-label')).toBe('Overview');
+      expect(
+        fixture.nativeElement.querySelector('[data-testid="left-to-spend"]').textContent,
+      ).toContain('$108.00');
+    });
+
+    it('should show the full skeleton on the first load only, with no panel yet', () => {
+      // arrange
+      const first = TestBed.createComponent(BudgetsComponent);
+      mockBudgetApi.getBudgetStatus.mockReturnValue(new Subject<BudgetStatus[]>());
+
+      // act
+      first.detectChanges();
+
+      // assert & verify
+      expect(first.nativeElement.querySelector('[aria-busy="true"] p-skeleton')).toBeTruthy();
+      expect(first.nativeElement.querySelector('app-side-panel')).toBeNull();
+    });
+
+    it('should keep the same panel element mounted across a month change and a save', () => {
+      // arrange
+      const panel = fixture.nativeElement.querySelector('app-side-panel');
+
+      // act
+      component.nextMonth();
+      fixture.detectChanges();
+      component.openCategory(component.rows()[0]);
+      component.saveLimit(1);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(fixture.nativeElement.querySelector('app-side-panel')).toBe(panel);
+    });
+
+    it('should show a skeleton in the panel body for a just-added category that has not loaded yet', () => {
+      // arrange
+      component.selectedCategoryId.set(4);
+      component.panelMode.set('category');
+
+      // act
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(fixture.nativeElement.querySelector('app-side-panel p-skeleton')).toBeTruthy();
+    });
+
+    it('should show the empty month message and keep Add budget available', () => {
+      // arrange
+      mockBudgetApi.getBudgetStatus.mockReturnValue(of([]));
+      mockBudgetApi.getBudgets.mockImplementation(() => of([]));
+
+      // act
+      component.loadMonth();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(fixture.nativeElement.textContent).toContain('No budgets for October');
+      expect(fixture.nativeElement.querySelector('app-budget-list')).toBeNull();
+      expect(fixture.nativeElement.querySelector('app-budget-overview')).toBeTruthy();
+    });
+
+    it('should show the error state with retry when nothing could be loaded', () => {
+      // arrange
+      component.statuses.set([]);
+      mockBudgetApi.getBudgetStatus.mockReturnValue(throwError(() => new Error('down')));
+
+      // act
+      component.loadMonth();
+      fixture.detectChanges();
+      mockBudgetApi.getBudgetStatus.mockReturnValue(of(statuses));
+      fixture.nativeElement.querySelector('app-page-error-state button')?.click();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.loadError()).toBe(false);
+      expect(component.statuses()).toEqual(statuses);
+    });
+
+    it('should no longer offer the old Manage all view, summary cards or paginator', () => {
+      // assert & verify
+      const text: string = fixture.nativeElement.textContent;
+      expect(text).not.toContain('Manage All');
+      expect(text).not.toContain('Total Budgeted');
+      expect(fixture.nativeElement.querySelector('p-paginator')).toBeNull();
+      expect(fixture.nativeElement.querySelector('p-table')).toBeNull();
+    });
+  });
+
+  describe('focus', () => {
+    const aside = (): HTMLElement => fixture.nativeElement.querySelector('app-side-panel aside');
+    const rowButton = (): HTMLButtonElement =>
+      fixture.nativeElement.querySelector('[data-testid="open-budget"]');
+
+    it('should not take focus on page load', async () => {
+      // arrange
+      await fixture.whenStable();
+
+      // assert & verify
+      expect(document.activeElement).not.toBe(aside());
+    });
+
+    it('should move focus into the panel when a row is opened and back to that row on return', async () => {
+      // arrange
+      const row = rowButton();
+      row.focus();
+
+      // act
+      component.openCategory(component.rows()[0]);
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      // assert & verify
+      expect(document.activeElement).toBe(aside());
+
+      // act
+      component.closePanel();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      // assert & verify
+      expect(document.activeElement).toBe(row);
+    });
+
+    it('should focus the panel instead when the element that opened it is gone', async () => {
+      // arrange
+      rowButton().focus();
+      component.openCategory(component.rows()[0]);
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      // act -- the opening row disappears from the list, then the panel returns to overview
+      component.statuses.set([status(dining, 200, 184)]);
+      fixture.detectChanges();
+      component.closePanel();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      // assert & verify
+      expect(document.activeElement).toBe(aside());
+    });
+
+    it('should move focus into the panel when add opens', async () => {
+      // arrange
+      (document.activeElement as HTMLElement | null)?.blur();
+
+      // act
+      component.startAdd();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      // assert & verify
+      expect(document.activeElement).toBe(aside());
+    });
+  });
 });

@@ -1,9 +1,11 @@
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
   DestroyRef,
   inject,
+  Injector,
   OnInit,
   Signal,
   signal,
@@ -150,6 +152,12 @@ export class BudgetsComponent implements OnInit {
         return 'Overview';
     }
   });
+
+  private readonly injector: Injector = inject(Injector);
+  private readonly panel = viewChild(SidePanelComponent);
+
+  /** The element that had focus when the panel left the overview, to hand focus back to. */
+  private focusReturn: HTMLElement | null = null;
 
   private readonly categoryView = viewChild<BudgetCategoryViewComponent>('categoryView');
   private readonly addForm = viewChild<BudgetAddFormComponent>('addForm');
@@ -425,8 +433,24 @@ export class BudgetsComponent implements OnInit {
     });
   }
 
+  /** Switches mode and moves focus: into the panel for any step, back to the opener for overview. */
   private go(mode: BudgetPanelMode): void {
+    if (this.panelMode() === 'overview' && mode !== 'overview') {
+      this.focusReturn = document.activeElement as HTMLElement | null;
+    }
     this.panelMode.set(mode);
+    afterNextRender(
+      (): void => {
+        const target: HTMLElement | null = this.focusReturn;
+        if (mode === 'overview' && target?.isConnected) {
+          target.focus();
+        } else {
+          this.panel()?.focus();
+        }
+        if (mode === 'overview') this.focusReturn = null;
+      },
+      { injector: this.injector },
+    );
   }
 
   /** A reload that no longer contains the shown category (removed elsewhere) closes the panel. */
