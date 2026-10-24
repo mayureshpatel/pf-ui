@@ -1,15 +1,15 @@
 import { vi, Mocked } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ReconcileDrawerComponent } from './reconcile-dialog.component';
+import { AccountReconcileFormComponent } from './account-reconcile-form.component';
 import { AccountApiService } from '@features/accounts/services/account-api.service';
 import { ToastService } from '@core/services/toast.service';
 import { Account } from '@models/account.model';
 import { of, throwError } from 'rxjs';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 
-describe('ReconcileDrawerComponent', () => {
-  let component: ReconcileDrawerComponent;
-  let fixture: ComponentFixture<ReconcileDrawerComponent>;
+describe('AccountReconcileFormComponent', () => {
+  let component: AccountReconcileFormComponent;
+  let fixture: ComponentFixture<AccountReconcileFormComponent>;
   let mockAccountApiService: Mocked<Pick<AccountApiService, 'reconcile'>>;
   let mockToastService: Mocked<Pick<ToastService, 'success' | 'error'>>;
 
@@ -26,17 +26,16 @@ describe('ReconcileDrawerComponent', () => {
     mockToastService = { success: vi.fn(), error: vi.fn() };
 
     await TestBed.configureTestingModule({
-      imports: [ReconcileDrawerComponent, NoopAnimationsModule],
+      imports: [AccountReconcileFormComponent, NoopAnimationsModule],
       providers: [
         { provide: AccountApiService, useValue: mockAccountApiService },
         { provide: ToastService, useValue: mockToastService },
       ],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(ReconcileDrawerComponent);
+    fixture = TestBed.createComponent(AccountReconcileFormComponent);
     component = fixture.componentInstance;
     fixture.componentRef.setInput('account', mockAccount);
-    fixture.componentRef.setInput('visible', true);
   });
 
   it('should create', () => {
@@ -101,8 +100,7 @@ describe('ReconcileDrawerComponent', () => {
       version: mockAccount.version,
     });
     expect(mockToastService.success).toHaveBeenCalledWith('Account reconciled successfully');
-    expect(component.reconciled.emit).toHaveBeenCalled();
-    expect(component.visible()).toBe(false);
+    expect(component.reconciled.emit).toHaveBeenCalledWith({ adjustment: 50 });
   });
 
   describe('onBalanceKeyDown', () => {
@@ -150,22 +148,66 @@ describe('ReconcileDrawerComponent', () => {
     expect(component.errorMessage()).toBe('Failed to reconcile account');
   });
 
-  it('should close dialog on cancel', () => {
+  it('should treat float noise as balanced and never post', () => {
+    // arrange
+    fixture.componentRef.setInput('account', { ...mockAccount, currentBalance: 0.3 });
     fixture.detectChanges();
-    component.onCancel();
-    expect(component.visible()).toBe(false);
+    component.form.controls.targetBalance.setValue(0.1 + 0.2);
+
+    // act
+    component.submit();
+
+    // assert & verify
+    expect(component.difference()).toBe(0);
+    expect(component.balanced()).toBe(true);
+    expect(mockAccountApiService.reconcile).not.toHaveBeenCalled();
   });
 
-  it('should reset form and error message when visibility becomes false', async () => {
+  it('should compute the adjustment in cents', () => {
+    // arrange
+    fixture.componentRef.setInput('account', { ...mockAccount, currentBalance: 4820.15 });
     fixture.detectChanges();
+
+    // act
+    component.form.controls.targetBalance.setValue(4832.55);
+
+    // assert & verify
+    expect(component.difference()).toBe(12.4);
+  });
+
+  it('should show a version conflict inline, stay on the step and ask the host to reload', () => {
+    // arrange
+    fixture.detectChanges();
+    mockAccountApiService.reconcile.mockReturnValue(
+      throwError(() => ({ error: { detail: 'Account was changed by someone else' } })),
+    );
+    const reload = vi.fn();
+    component.reloadRequested.subscribe(reload);
     component.form.controls.targetBalance.setValue(150);
-    component.errorMessage.set('Some error');
 
-    fixture.componentRef.setInput('visible', false);
+    // act
+    component.submit();
     fixture.detectChanges();
-    await fixture.whenStable();
 
-    expect(component.form.controls.targetBalance.value).toBeNull();
-    expect(component.errorMessage()).toBeNull();
+    // assert & verify
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="reconcile-error"]').textContent,
+    ).toContain('changed by someone else');
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('should keep what was typed when the same account is refreshed, and reset for another account', () => {
+    // arrange
+    fixture.detectChanges();
+    component.form.controls.targetBalance.setValue(1200);
+
+    // act and assert & verify
+    fixture.componentRef.setInput('account', { ...mockAccount, version: 2 });
+    fixture.detectChanges();
+    expect(component.form.value.targetBalance).toBe(1200);
+
+    fixture.componentRef.setInput('account', { ...mockAccount, id: 2 });
+    fixture.detectChanges();
+    expect(component.form.value.targetBalance).toBeNull();
   });
 });

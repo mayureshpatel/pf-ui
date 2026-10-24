@@ -14,45 +14,45 @@ test.describe('Accounts Core CRUD', () => {
     await page.goto('/accounts');
 
     // Create
-    await page.getByRole('button', {name: 'New Account'}).click();
+    await page.getByRole('button', {name: 'Add account'}).first().click();
     const drawer = page.getByRole('complementary');
-    await expect(drawer.getByRole('heading', {name: 'Create Account'})).toBeVisible();
+    await expect(drawer.getByRole('heading', {name: 'Add account'})).toBeVisible();
 
     await drawer.locator('#name').fill(accountName);
     await drawer.getByText('Select account type').click();
     await page.getByRole('option', {name: 'Checking', exact: true}).click();
     await drawer.getByRole('spinbutton').fill('500');
-    await drawer.getByRole('button', {name: 'Create'}).click();
+    await drawer.getByRole('button', {name: 'Add account'}).click();
 
     await expect(page.getByText('Account created successfully')).toBeVisible();
-    await expect(drawer).toBeHidden();
+    // The panel stays open on the new account's summary.
+    await expect(drawer.getByRole('heading', {name: accountName})).toBeVisible();
+    await expect(drawer.getByTestId('balance')).toContainText('$500.00');
 
-    const row = page.getByRole('row', {name: new RegExp(accountName)});
+    const row = page.getByTestId('open-account').filter({hasText: accountName});
     await expect(row).toBeVisible();
-    await expect(row.getByText('$500.00')).toBeVisible();
-    await expect(row.getByText('Checking')).toBeVisible();
+    await expect(row).toContainText('$500.00');
 
     // Edit
-    await row.getByRole('button', {name: 'Edit Account'}).click();
-    const editDrawer = page.getByRole('complementary');
-    await expect(editDrawer.getByRole('heading', {name: 'Edit Account'})).toBeVisible();
-    await expect(editDrawer.locator('#name')).toHaveValue(accountName);
+    await drawer.getByRole('button', {name: 'Edit details'}).click();
+    await expect(drawer.getByRole('heading', {name: `Edit ${accountName}`})).toBeVisible();
+    await expect(drawer.locator('#name')).toHaveValue(accountName);
 
-    await editDrawer.locator('#name').fill(renamedAccountName);
-    await editDrawer.getByRole('button', {name: 'Update'}).click();
+    await drawer.locator('#name').fill(renamedAccountName);
+    await drawer.getByRole('button', {name: 'Save changes'}).click();
 
     await expect(page.getByText('Account updated successfully')).toBeVisible();
-    const renamedRow = page.getByRole('row', {name: new RegExp(renamedAccountName)});
+    const renamedRow = page.getByTestId('open-account').filter({hasText: renamedAccountName});
     await expect(renamedRow).toBeVisible();
 
     // Delete, with confirmation
-    await renamedRow.getByRole('button', {name: 'Delete Account'}).click();
+    await drawer.getByRole('button', {name: 'Delete account'}).click();
     const confirmDialog = page.getByRole('alertdialog');
-    await expect(confirmDialog.getByText('This will permanently delete the account. This action cannot be undone.')).toBeVisible();
+    await expect(confirmDialog.getByText('This permanently deletes the account and cannot be undone.')).toBeVisible();
     await confirmDialog.getByRole('button', {name: 'Delete', exact: true}).click();
 
     await expect(page.getByText('Account deleted successfully')).toBeVisible();
-    await expect(page.getByRole('row', {name: new RegExp(renamedAccountName)})).not.toBeVisible();
+    await expect(page.getByTestId('open-account').filter({hasText: renamedAccountName})).toHaveCount(0);
   });
 
   test('refuses to delete an account that has existing transactions', async ({page}) => {
@@ -60,16 +60,16 @@ test.describe('Accounts Core CRUD', () => {
 
     await page.goto('/accounts');
 
-    await page.getByRole('button', {name: 'New Account'}).click();
+    await page.getByRole('button', {name: 'Add account'}).first().click();
     const drawer = page.getByRole('complementary');
     await drawer.locator('#name').fill(accountName);
     await drawer.getByText('Select account type').click();
     await page.getByRole('option', {name: 'Checking', exact: true}).click();
     await drawer.getByRole('spinbutton').fill('100');
-    await drawer.getByRole('button', {name: 'Create'}).click();
+    await drawer.getByRole('button', {name: 'Add account'}).click();
     await expect(page.getByText('Account created successfully')).toBeVisible();
 
-    const row = page.getByRole('row', {name: new RegExp(accountName)});
+    const row = page.getByTestId('open-account').filter({hasText: accountName});
     await expect(row).toBeVisible();
 
     // The account's real id isn't exposed in the DOM -- look it up via the API instead of parsing
@@ -80,10 +80,11 @@ test.describe('Accounts Core CRUD', () => {
     await createTestTransaction(page, account.id, category.id, 'E2E CRUD Guard Txn');
 
     await page.reload();
-    await row.getByRole('button', {name: 'Delete Account'}).click();
+    await row.click();
+    await page.getByRole('complementary').getByRole('button', {name: 'Delete account'}).click();
     await page.getByRole('alertdialog').getByRole('button', {name: 'Delete', exact: true}).click();
 
     await expect(page.getByText(/Cannot delete account with existing transactions/)).toBeVisible();
-    await expect(page.getByRole('row', {name: new RegExp(accountName)})).toBeVisible();
+    await expect(page.getByTestId('open-account').filter({hasText: accountName})).toBeVisible();
   });
 });

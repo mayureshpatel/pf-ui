@@ -17,17 +17,20 @@ import {
  * as a full-screen sheet.
  */
 @Component({
-  selector: 'app-transaction-side-panel',
+  selector: 'app-side-panel',
   standalone: true,
-  templateUrl: './transaction-side-panel.component.html',
+  templateUrl: './side-panel.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class TransactionSidePanelComponent {
+export class SidePanelComponent {
   readonly title: InputSignal<string> = input.required<string>();
   readonly saving: InputSignal<boolean> = input<boolean>(false);
   readonly valid: InputSignal<boolean> = input<boolean>(true);
   readonly saveLabel: InputSignal<string> = input<string>('Save changes');
   readonly showDelete: InputSignal<boolean> = input<boolean>(false);
+
+  /** Whether to render the Save and Delete footer (a summary view has its own buttons). */
+  readonly showFooter: InputSignal<boolean> = input<boolean>(true);
 
   readonly save: OutputEmitterRef<void> = output<void>();
   readonly closePanel: OutputEmitterRef<void> = output<void>();

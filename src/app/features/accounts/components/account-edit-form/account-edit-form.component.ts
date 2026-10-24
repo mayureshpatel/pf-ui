@@ -2,14 +2,14 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   input,
   InputSignal,
-  model,
-  ModelSignal,
   output,
   OutputEmitterRef,
   Signal,
   signal,
+  untracked,
   WritableSignal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -26,12 +26,10 @@ import {
   AccountUpdateRequest,
   BankName,
 } from '@models/account.model';
-import { DrawerComponent } from '@shared/components/drawer/drawer.component';
-import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
 import { BankOption } from '@models/transaction.model';
 
 @Component({
-  selector: 'app-account-form-drawer',
+  selector: 'app-account-edit-form',
   imports: [
     CommonModule,
     ReactiveFormsModule,
@@ -40,14 +38,11 @@ import { BankOption } from '@models/transaction.model';
     SelectModule,
     InputNumberModule,
     MessageModule,
-    DrawerComponent,
-    FormatCurrencyPipe,
   ],
-  templateUrl: './account-form-drawer.component.html',
+  templateUrl: './account-edit-form.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AccountFormDrawerComponent {
-  visible: ModelSignal<boolean> = model.required<boolean>();
+export class AccountEditFormComponent {
   account: InputSignal<Account | null> = input<Account | null>(null);
   accountTypes: InputSignal<AccountType[]> = input.required<AccountType[]>();
   saving: InputSignal<boolean> = input<boolean>(false);
@@ -59,12 +54,6 @@ export class AccountFormDrawerComponent {
   errorMessage: WritableSignal<string | null> = signal(null);
 
   isEditMode: Signal<boolean> = computed((): boolean => this.account() !== null);
-  drawerTitle: Signal<string> = computed((): string =>
-    this.isEditMode() ? 'Edit Account' : 'Create Account',
-  );
-  drawerIcon: Signal<string> = computed((): string =>
-    this.isEditMode() ? 'pi-wallet' : 'pi-plus',
-  );
 
   bankOptions: BankOption[] = [
     {
@@ -111,6 +100,23 @@ export class AccountFormDrawerComponent {
     bankName: new FormControl<BankName | null>(null),
   });
 
+  /** Which account is shown (null when adding one). The form resets only when this changes. */
+  private readonly accountId: Signal<number | null> = computed(
+    (): number | null => this.account()?.id ?? null,
+  );
+
+  constructor() {
+    effect((): void => {
+      this.accountId();
+      untracked((): void => this.onShow());
+    });
+  }
+
+  /** Submits from outside (the panel's Save button). */
+  submit(): void {
+    this.onSubmit();
+  }
+
   /**
    * Handles form submission, emitting either a create or update request depending on
    * whether an existing account is being edited.
@@ -149,7 +155,7 @@ export class AccountFormDrawerComponent {
   }
 
   /**
-   * Resets and re-populates the form when the drawer is shown, based on whether an
+   * Resets and re-populates the form when a different account is shown, based on whether an
    * existing account was passed in for editing.
    */
   onShow(): void {

@@ -1,0 +1,48 @@
+<div class="flex flex-col gap-4">
+  <div>
+    <p data-testid="subtitle" class="text-sm text-muted-color">{{ subtitle() }}</p>
+    <p
+      data-testid="balance"
+      class="mt-2 text-3xl font-bold tracking-tight tabular-nums"
+      [class.text-rose-700]="account().currentBalance < 0"
+      [class.dark:text-rose-400]="account().currentBalance < 0"
+    >
+      {{ account().currentBalance < 0 ? '-' : ''
+      }}{{
+        (account().currentBalance < 0 ? -account().currentBalance : account().currentBalance)
+          | formatCurrency: true : account().currency.code
+      }}
+    </p>
+  </div>
+
+  <div class="flex flex-col gap-2">
+    <button
+      type="button"
+      class="cursor-pointer rounded-lg bg-primary-700 px-3 py-2 text-sm font-medium text-white hover:bg-primary-800"
+      (click)="reconcile.emit()"
+    >
+      Reconcile with statement
+    </button>
+    <button
+      type="button"
+      class="cursor-pointer rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium dark:border-surface-700"
+      (click)="viewTransactions.emit()"
+    >
+      View transactions
+    </button>
+    <button
+      type="button"
+      class="cursor-pointer rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium dark:border-surface-700"
+      (click)="edit.emit()"
+    >
+      Edit details
+    </button>
+    <button
+      type="button"
+      class="cursor-pointer rounded-lg border border-rose-300 px-3 py-2 text-sm font-medium text-rose-700 dark:text-rose-400"
+      (click)="delete.emit()"
+    >
+      Delete account
+    </button>
+  </div>
+</div>

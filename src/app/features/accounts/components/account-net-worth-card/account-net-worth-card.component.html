@@ -1,0 +1,38 @@
+<section
+  class="rounded-2xl border border-surface-200 bg-surface-0 p-5 dark:border-surface-800 dark:bg-surface-900"
+  aria-label="Net worth"
+>
+  <p class="text-sm text-muted-color">Net worth</p>
+  <p
+    data-testid="net-worth"
+    class="mt-1 text-3xl font-bold tracking-tight tabular-nums"
+    [class]="
+      totals().netWorth < 0
+        ? 'text-rose-700 dark:text-rose-400'
+        : 'text-emerald-700 dark:text-emerald-400'
+    "
+  >
+    {{ totals().netWorth < 0 ? '-' : ''
+    }}{{ (totals().netWorth < 0 ? -totals().netWorth : totals().netWorth) | formatCurrency }}
+  </p>
+
+  <div
+    role="img"
+    [attr.aria-label]="barLabel()"
+    class="mt-4 flex h-2.5 w-full overflow-hidden rounded-full bg-surface-200 dark:bg-surface-700"
+  >
+    <span class="h-full bg-emerald-500" [style.width.%]="assetsShare()"></span>
+    <span class="h-full bg-rose-500" [style.width.%]="liabilitiesShare()"></span>
+  </div>
+
+  <div class="mt-2 flex flex-wrap justify-between gap-2 text-sm text-muted-color">
+    <span data-testid="assets-total">
+      Assets
+      <span class="font-medium tabular-nums">{{ totals().assets | formatCurrency }}</span>
+    </span>
+    <span data-testid="liabilities-total">
+      Liabilities
+      <span class="font-medium tabular-nums">{{ totals().liabilities | formatCurrency }}</span>
+    </span>
+  </div>
+</section>

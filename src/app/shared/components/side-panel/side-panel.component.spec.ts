@@ -1,23 +1,24 @@
 import { vi } from 'vitest';
 import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { TransactionSidePanelComponent } from './transaction-side-panel.component';
+import { SidePanelComponent } from './side-panel.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TransactionSidePanelComponent],
+  imports: [SidePanelComponent],
   template: `
-    <app-transaction-side-panel
+    <app-side-panel
       [title]="title()"
       [saving]="saving()"
       [valid]="valid()"
       [showDelete]="showDelete()"
+      [showFooter]="showFooter()"
       (save)="saved()"
       (closePanel)="closed()"
       (delete)="deleted()"
     >
       <p data-testid="body">body</p>
-    </app-transaction-side-panel>
+    </app-side-panel>
   `,
 })
 class HostComponent {
@@ -25,12 +26,13 @@ class HostComponent {
   saving = signal(false);
   valid = signal(true);
   showDelete = signal(true);
+  showFooter = signal(true);
   saved = vi.fn();
   closed = vi.fn();
   deleted = vi.fn();
 }
 
-describe('TransactionSidePanelComponent', () => {
+describe('SidePanelComponent', () => {
   let fixture: ComponentFixture<HostComponent>;
   let host: HostComponent;
 
@@ -75,6 +77,17 @@ describe('TransactionSidePanelComponent', () => {
     // assert & verify
     expect(button(/Delete/)).toBeUndefined();
     expect(button(/Save changes/)?.disabled).toBe(true);
+  });
+
+  it('should hide the Save and Delete footer when showFooter is false', () => {
+    // act
+    host.showFooter.set(false);
+    fixture.detectChanges();
+
+    // assert & verify
+    expect(button(/Save changes/)).toBeUndefined();
+    expect(button(/Delete/)).toBeUndefined();
+    expect(button(/Close/)).toBeTruthy();
   });
 
   it('should close on Escape', () => {
