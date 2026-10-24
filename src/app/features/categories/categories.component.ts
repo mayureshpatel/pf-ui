@@ -3,56 +3,69 @@ import {
   Component,
   computed,
   DestroyRef,
+  effect,
   inject,
   OnInit,
   Signal,
   signal,
+  untracked,
+  viewChild,
   WritableSignal,
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
-import { finalize, forkJoin, Observable } from 'rxjs';
+import { finalize, forkJoin, Subscription } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
-import { TableModule } from 'primeng/table';
-import { ProgressBarModule } from 'primeng/progressbar';
-import { CardModule } from 'primeng/card';
-import { TooltipModule } from 'primeng/tooltip';
+import { SkeletonModule } from 'primeng/skeleton';
 import { ConfirmationService } from 'primeng/api';
+
+import { Category, CategoryCreateRequest, CategoryUpdateRequest } from '@models/category.model';
 import { CategoryApiService } from './services/category-api.service';
 import { TransactionApiService } from '@features/transactions/services/transaction-api.service';
-import { CategoryFormDrawerComponent } from './components/category-form-drawer/category-form-drawer.component';
 import { ToastService } from '@core/services/toast.service';
 import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen-toolbar';
-import {
-  Category,
-  CategoryCreateRequest,
-  CategoryGroup,
-  CategoryUpdateRequest,
-} from '@models/category.model';
+import { SidePanelComponent } from '@shared/components/side-panel/side-panel.component';
 import { PageErrorStateComponent } from '@shared/components/page-error-state/page-error-state.component';
+import { CategoryFiltersComponent } from './components/category-filters/category-filters.component';
+import { CategoryTreeComponent } from './components/category-tree/category-tree.component';
+import { CategoryOverviewComponent } from './components/category-overview/category-overview.component';
+import { CategoryEditFormComponent } from './components/category-edit-form/category-edit-form.component';
+import {
+  availableTypes,
+  buildNodes,
+  CategoryFilter,
+  CategoryNode,
+  CategoryStats,
+  categoryStats,
+  filterNodes,
+  isFiltering,
+  isTickable,
+  isUnused,
+  NO_FILTER,
+} from './utils/category-helpers';
+
+/** What the docked panel is showing. */
+export type CategoryPanelMode = 'overview' | 'category' | 'add' | 'selection';
 
 /**
- * Component for managing financial categories.
- *
- * Displays categories in a grouped table with usage statistics and
- * budget progress. It aggregates data from categories, transactions, and budgets
- * to provide a comprehensive overview.
+ * The Categories page: a filterable tree of categories beside an always-present panel. The panel
+ * shows an overview by default, an editor for the selected category, the add form, or the
+ * categories ticked for deletion.
  */
 @Component({
   selector: 'app-categories',
   standalone: true,
   imports: [
-    CommonModule,
     ButtonModule,
-    TableModule,
-    ProgressBarModule,
-    CardModule,
-    TooltipModule,
+    SkeletonModule,
     ScreenToolbarComponent,
-    CategoryFormDrawerComponent,
     PageErrorStateComponent,
+    SidePanelComponent,
+    CategoryFiltersComponent,
+    CategoryTreeComponent,
+    CategoryOverviewComponent,
+    CategoryEditFormComponent,
   ],
   templateUrl: './categories.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -65,205 +78,406 @@ export class CategoriesComponent implements OnInit {
   private readonly router: Router = inject(Router);
   private readonly destroyRef: DestroyRef = inject(DestroyRef);
 
-  /** The enriched and grouped list of categories. */
-  readonly categories: WritableSignal<CategoryGroup[]> = signal([]);
-
-  /** Controls which rows are expanded in the table. Initialized to empty to start collapsed. */
-  readonly expandedRows: WritableSignal<Record<number, boolean>> = signal({});
-
-  /** Flattened list of all categories for the form drawer. */
-  readonly allCategories: Signal<Category[]> = computed(() =>
-    this.categories().flatMap((g) => [g.parent, ...g.items]),
-  );
-
-  /** Global loading state for API operations. */
+  /** Every category, flat, each carrying its own transaction count. */
+  readonly categories: WritableSignal<Category[]> = signal([]);
   readonly loading: WritableSignal<boolean> = signal(false);
-
-  /** Whether the most recent load attempt failed. */
   readonly loadError: WritableSignal<boolean> = signal(false);
+  /** True once a load has succeeded; later reloads dim the tree instead of replacing the page. */
+  readonly loadedOnce: WritableSignal<boolean> = signal(false);
+  /** A save, add or delete is in flight. */
+  readonly saving: WritableSignal<boolean> = signal(false);
 
-  /** Visibility of the category creation/edit drawer. */
-  readonly showDialog: WritableSignal<boolean> = signal(false);
+  readonly filter: WritableSignal<CategoryFilter> = signal(NO_FILTER);
+  readonly expandedIds: WritableSignal<ReadonlySet<number>> = signal(new Set<number>());
+  readonly tickedIds: WritableSignal<ReadonlySet<number>> = signal(new Set<number>());
 
-  /** The category currently selected for editing. */
-  readonly selectedCategory: WritableSignal<Category | null> = signal(null);
+  readonly panelMode: WritableSignal<CategoryPanelMode> = signal('overview');
+  readonly selectedCategoryId: WritableSignal<number | null> = signal(null);
+  /** The parent to pre-select when adding from a parent's panel. */
+  readonly addParentId: WritableSignal<number | null> = signal(null);
 
-  /** Indicates if there are no categories to display. */
-  readonly isEmpty: Signal<boolean> = computed(
-    (): boolean => this.categories().length === 0 && !this.loading(),
+  readonly nodes: Signal<CategoryNode[]> = computed((): CategoryNode[] =>
+    buildNodes(this.categories(), this.categories()),
+  );
+  readonly visibleNodes: Signal<CategoryNode[]> = computed((): CategoryNode[] =>
+    filterNodes(this.nodes(), this.filter()),
+  );
+  readonly filtering: Signal<boolean> = computed((): boolean => isFiltering(this.filter()));
+  readonly stats: Signal<CategoryStats> = computed((): CategoryStats =>
+    categoryStats(this.categories()),
+  );
+  readonly types = computed(() => availableTypes(this.categories()));
+
+  /** While filtering, every parent that has a visible child is shown expanded. */
+  readonly expandedForTree: Signal<ReadonlySet<number>> = computed((): ReadonlySet<number> =>
+    this.filtering()
+      ? new Set<number>(
+          this.visibleNodes()
+            .filter((n: CategoryNode): boolean => n.children.length > 0)
+            .map((n: CategoryNode): number => n.parent.id),
+        )
+      : this.expandedIds(),
   );
 
-  /**
-   * Initializes component data.
-   */
+  /** Checkboxes show while the Unused pill is on. */
+  readonly showChecks: Signal<boolean> = computed((): boolean => this.filter().unusedOnly);
+  readonly tickableIds: Signal<ReadonlySet<number>> = computed((): ReadonlySet<number> => {
+    const ticked: ReadonlySet<number> = this.tickedIds();
+    const ids = new Set<number>();
+    for (const node of this.visibleNodes()) {
+      for (const category of [node.parent, ...node.children]) {
+        if (isTickable(category, this.nodes(), ticked)) ids.add(category.id);
+      }
+    }
+    return ids;
+  });
+
+  readonly selectedCategory: Signal<Category | null> = computed(
+    (): Category | null =>
+      this.categories().find((c: Category): boolean => c.id === this.selectedCategoryId()) ?? null,
+  );
+  readonly selectedCategories: Signal<Category[]> = computed((): Category[] =>
+    this.categories().filter((c: Category): boolean => this.tickedIds().has(c.id)),
+  );
+
+  /** With no categories the add form is the only useful mode, so it has no Back or Close. */
+  readonly onlyAddMode: Signal<boolean> = computed(
+    (): boolean => this.categories().length === 0 && !this.loading() && this.panelMode() === 'add',
+  );
+  private readonly isEmpty: Signal<boolean> = computed(
+    (): boolean =>
+      this.loadedOnce() && this.categories().length === 0 && !this.loading() && !this.loadError(),
+  );
+
+  readonly panelTitle: Signal<string> = computed((): string => {
+    switch (this.panelMode()) {
+      case 'add':
+        return 'Add category';
+      case 'category':
+        return this.selectedCategory()?.name ?? 'Category';
+      case 'selection':
+        return `${this.tickedIds().size} selected`;
+      default:
+        return 'Overview';
+    }
+  });
+
+  /** Why the selected category cannot be deleted, or null when it can. */
+  readonly deleteBlockedReason: Signal<string | null> = computed((): string | null => {
+    const category: Category | null = this.selectedCategory();
+    if (!category) return null;
+    const count: number = category.transactionCount ?? 0;
+    if (count > 0) return `It has ${count} ${count === 1 ? 'transaction' : 'transactions'}.`;
+    if (this.categories().some((c: Category): boolean => c.parent?.id === category.id)) {
+      return 'Move or delete its subcategories first.';
+    }
+    return null;
+  });
+
+  private loadSubscription: Subscription | null = null;
+  private readonly editForm = viewChild<CategoryEditFormComponent>('editForm');
+
+  constructor() {
+    effect((): void => {
+      if (this.isEmpty() && this.panelMode() !== 'add') {
+        untracked((): void => this.panelMode.set('add'));
+      }
+    });
+  }
+
   ngOnInit(): void {
     this.loadData();
   }
 
-  /**
-   * Fetches and aggregates data from categories, transactions, and budgets.
-   *
-   * Orchestrates a forkJoin to fetch all required data points and then
-   * enriches the categories with usage counts and budget progress.
-   */
+  /** Loads the categories and their transaction counts; a newer load replaces an older one. */
   loadData(): void {
+    this.loadSubscription?.unsubscribe();
     this.loading.set(true);
     this.loadError.set(false);
-
-    forkJoin({
+    this.loadSubscription = forkJoin({
       categories: this.categoryApi.getCategories(),
-      transactionCounts: this.transactionApi.getCountsByCategory(),
+      counts: this.transactionApi.getCountsByCategory(),
     })
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize((): void => this.loading.set(false)),
       )
       .subscribe({
-        next: ({ categories, transactionCounts }): void => {
-          this.categories.set(this.enrichCategories(categories, transactionCounts));
+        next: ({ categories, counts }): void => {
+          const nodes: CategoryNode[] = buildNodes(categories, counts);
+          this.categories.set(
+            nodes.flatMap((n: CategoryNode): Category[] => [n.parent, ...n.children]),
+          );
+          this.loadedOnce.set(true);
+          this.pruneTicks();
+          this.closePanelIfCategoryGone();
         },
         error: (err: unknown): void => {
           console.error('Failed to load category data:', err);
           this.toast.error('Failed to load categories');
+          this.categories.set([]);
           this.loadError.set(true);
         },
       });
   }
 
-  private enrichCategories(categories: Category[], transactionCounts: Category[]): CategoryGroup[] {
-    const countsMap = new Map<number, number>(
-      transactionCounts.map((c) => [c.id, c.transactionCount || 0]),
-    );
-
-    const enriched = categories.map((c) => ({
-      ...c,
-      transactionCount: countsMap.get(c.id) || 0,
-    }));
-
-    const parents = enriched.filter((c) => !c.parent);
-    const children = enriched.filter((c) => !!c.parent);
-
-    const groups: CategoryGroup[] = parents.map((p) => {
-      const groupItems = children.filter((c) => c.parent?.id === p.id);
-      const totalCount: number =
-        p.transactionCount +
-        groupItems.reduce((sum, c): number => sum + (c.transactionCount || 0), 0);
-      const parentWithTotal = { ...p, transactionCount: totalCount };
-
-      return {
-        parent: parentWithTotal,
-        items: groupItems.sort((a, b) => a.name.localeCompare(b.name)),
-      };
-    });
-
-    return groups.sort((a, b) => a.parent.name.localeCompare(b.parent.name));
+  setFilter(filter: CategoryFilter): void {
+    this.filter.set(filter);
+    this.pruneTicks();
+    if (this.panelMode() === 'selection' && this.tickedIds().size === 0) {
+      this.closePanel();
+    }
   }
 
-  /**
-   * Expands all parent category groups.
-   */
+  clearFilters(): void {
+    this.setFilter(NO_FILTER);
+  }
+
+  toggleExpand(id: number): void {
+    const next = new Set<number>(this.expandedIds());
+    if (!next.delete(id)) next.add(id);
+    this.expandedIds.set(next);
+  }
+
   expandAll(): void {
-    const expanded: Record<number, boolean> = {};
-    this.categories().forEach((g) => {
-      if (g.items.length > 0) {
-        expanded[g.parent.id] = true;
+    this.expandedIds.set(
+      new Set<number>(
+        this.nodes()
+          .filter((n: CategoryNode): boolean => n.children.length > 0)
+          .map((n: CategoryNode): number => n.parent.id),
+      ),
+    );
+  }
+
+  collapseAll(): void {
+    this.expandedIds.set(new Set<number>());
+  }
+
+  /** Ticks or unticks a row (Unused pill on); the first tick opens selection mode. */
+  toggleTick(id: number): void {
+    const isTicked: boolean = this.tickedIds().has(id);
+    if (!isTicked && !this.tickableIds().has(id)) return;
+    this.confirmDiscardIfDirty((): void => {
+      const next = new Set<number>(this.tickedIds());
+      if (isTicked) next.delete(id);
+      else next.add(id);
+      this.tickedIds.set(next);
+      this.pruneTicks();
+      if (this.tickedIds().size === 0) {
+        this.closePanel();
+      } else {
+        this.selectedCategoryId.set(null);
+        this.go('selection');
       }
     });
-    this.expandedRows.set(expanded);
   }
 
-  /**
-   * Collapses all parent category groups.
-   */
-  collapseAll(): void {
-    this.expandedRows.set({});
+  /** Shows a category in the panel. */
+  openCategory(category: Category): void {
+    if (this.panelMode() === 'category' && this.selectedCategoryId() === category.id) return;
+    this.confirmDiscardIfDirty((): void => {
+      this.selectedCategoryId.set(category.id);
+      this.go('category');
+    });
   }
 
-  /**
-   * Opens the creation drawer.
-   */
-  openCreateDialog(): void {
-    this.selectedCategory.set(null);
-    this.showDialog.set(true);
+  /** Opens the add form; from a parent's panel (`parentId`) that parent is pre-selected. */
+  startAdd(parentId?: number): void {
+    if (this.panelMode() === 'add' && this.addParentId() === (parentId ?? null)) return;
+    this.confirmDiscardIfDirty((): void => {
+      this.addParentId.set(parentId ?? null);
+      if (parentId === undefined) this.selectedCategoryId.set(null);
+      this.go('add');
+    });
   }
 
-  /**
-   * Opens the edit drawer for the selected category.
-   * @param category - The category to edit.
-   */
-  openEditDialog(category: Category): void {
-    this.selectedCategory.set(category);
-    this.showDialog.set(true);
+  /** Back: add returns to the category it came from, everything else to the overview. */
+  back(): void {
+    const mode: CategoryPanelMode = this.panelMode();
+    if (mode === 'overview') return;
+    this.confirmDiscardIfDirty((): void => {
+      if (mode === 'add' && this.selectedCategoryId() !== null) {
+        this.go('category');
+      } else {
+        this.clearTicksIfSelecting();
+        this.closePanel();
+      }
+    });
   }
 
-  /**
-   * Handles saving a category (create or update).
-   * @param formData - The validated category data.
-   */
-  onSave(formData: CategoryCreateRequest | CategoryUpdateRequest): void {
-    const existing: Category | null = this.selectedCategory();
-    const operation: Observable<number> = existing
-      ? this.categoryApi.updateCategory(existing.id, formData as CategoryUpdateRequest)
-      : this.categoryApi.createCategory(formData as CategoryCreateRequest);
+  /** Returns to the overview with nothing selected, without asking. */
+  closePanel(): void {
+    this.selectedCategoryId.set(null);
+    this.go('overview');
+  }
 
-    this.loading.set(true);
-    operation
+  /** Close button and Escape: asks first when there are unsaved edits; the overview ignores them. */
+  onPanelClose(): void {
+    if (this.panelMode() === 'overview' || this.onlyAddMode()) return;
+    this.confirmDiscardIfDirty((): void => {
+      this.clearTicksIfSelecting();
+      this.closePanel();
+    });
+  }
+
+  /** The panel's Save button: submits the form that is showing. */
+  onPanelSave(): void {
+    this.editForm()?.submit();
+  }
+
+  /** Saves the form: an update when a category is open, otherwise a create. */
+  saveCategory(request: CategoryCreateRequest | CategoryUpdateRequest): void {
+    if (this.saving() || this.loading()) return;
+    this.saving.set(true);
+    if ('id' in request) {
+      this.categoryApi
+        .updateCategory(request.id, request)
+        .pipe(
+          takeUntilDestroyed(this.destroyRef),
+          finalize((): void => this.saving.set(false)),
+        )
+        .subscribe({
+          next: (): void => {
+            this.toast.success('Category updated');
+            this.editForm()?.form.markAsPristine();
+            this.loadData();
+          },
+          error: (error: HttpErrorResponse): void => this.saveFailed(error),
+        });
+      return;
+    }
+    this.categoryApi
+      .createCategory(request)
       .pipe(
         takeUntilDestroyed(this.destroyRef),
-        finalize(() => this.loading.set(false)),
+        finalize((): void => this.saving.set(false)),
       )
       .subscribe({
-        next: (): void => {
-          this.toast.success(`Category ${existing ? 'updated' : 'created'} successfully`);
-          this.showDialog.set(false);
+        next: (newId: number): void => {
+          this.toast.success('Category added');
+          this.editForm()?.form.markAsPristine();
+          if (request.parentId !== undefined) {
+            this.expandedIds.set(new Set<number>(this.expandedIds()).add(request.parentId));
+          }
+          this.selectedCategoryId.set(newId);
+          this.go('category');
           this.loadData();
         },
-        error: (err: HttpErrorResponse): void => {
-          console.error('Category operation failed:', err);
-          this.toast.error(
-            err.error?.detail || `Failed to ${existing ? 'update' : 'create'} category`,
-          );
-        },
+        error: (error: HttpErrorResponse): void => this.saveFailed(error),
       });
   }
 
-  /**
-   * Deletes a category if it has no associated transactions.
-   * @param category - The category to delete.
-   */
-  deleteCategory(category: Category): void {
+  /** Confirms, then deletes a category (the selected one by default). */
+  deleteCategory(category: Category | null = this.selectedCategory()): void {
+    if (!category || this.deleteBlockedReason() !== null || this.saving() || this.loading()) return;
     this.confirmationService.confirm({
-      header: 'Delete Category?',
-      message: `Are you sure you want to delete '${category.name}'?`,
+      header: 'Delete category?',
+      message: `Delete the ${category.name} category?`,
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Delete',
       rejectLabel: 'Cancel',
       acceptButtonStyleClass: 'p-button-danger',
       accept: (): void => {
+        if (this.saving()) return;
+        this.saving.set(true);
         this.categoryApi
           .deleteCategory(category.id)
-          .pipe(takeUntilDestroyed(this.destroyRef))
+          .pipe(
+            takeUntilDestroyed(this.destroyRef),
+            finalize((): void => this.saving.set(false)),
+          )
           .subscribe({
             next: (): void => {
-              this.toast.success('Category deleted successfully');
+              this.toast.success('Category deleted');
+              this.closePanel();
               this.loadData();
             },
-            error: (err: HttpErrorResponse): void => {
-              console.error('Delete failed:', err);
-              this.toast.error(err.error?.detail || 'Failed to delete category');
+            error: (error: HttpErrorResponse): void => {
+              console.error('Error deleting category:', error);
+              this.toast.error(error.error?.detail || 'Failed to delete category');
             },
           });
       },
     });
   }
 
-  /**
-   * Navigates to the transactions view filtered by this category.
-   * @param category - The category to filter by.
-   */
-  viewTransactions(category: Category): void {
-    this.router.navigate(['/transactions'], {
-      queryParams: { categoryName: category.name },
+  /** Opens Transactions for a category across all time (the selected one by default). */
+  viewTransactions(category: Category | null = this.selectedCategory()): void {
+    if (!category) return;
+    this.confirmDiscardIfDirty((): void => {
+      void this.router.navigate(['/transactions'], {
+        queryParams: { categoryName: category.name, period: 'all' },
+      });
+    });
+  }
+
+  private go(mode: CategoryPanelMode): void {
+    this.panelMode.set(mode);
+  }
+
+  private saveFailed(error: HttpErrorResponse): void {
+    console.error('Error saving category:', error);
+    this.toast.error(error.error?.detail || 'Failed to save category');
+  }
+
+  private clearTicksIfSelecting(): void {
+    if (this.panelMode() === 'selection') this.tickedIds.set(new Set<number>());
+  }
+
+  /** Drops ticks that are gone, hidden by the filters, or no longer allowed. */
+  private pruneTicks(): void {
+    if (!this.filter().unusedOnly) {
+      if (this.tickedIds().size > 0) this.tickedIds.set(new Set<number>());
+      return;
+    }
+    const visible = new Set<number>(
+      this.visibleNodes().flatMap((n: CategoryNode): number[] => [
+        n.parent.id,
+        ...n.children.map((c: Category): number => c.id),
+      ]),
+    );
+    let next = new Set<number>(
+      [...this.tickedIds()].filter((id: number): boolean => visible.has(id)),
+    );
+    // a parent stays ticked only while every subcategory is ticked and it is still unused
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const id of [...next]) {
+        const category: Category | undefined = this.categories().find((c: Category) => c.id === id);
+        if (!category || !isUnused(category) || !isTickable(category, this.nodes(), next)) {
+          next = new Set<number>([...next].filter((other: number): boolean => other !== id));
+          changed = true;
+        }
+      }
+    }
+    this.tickedIds.set(next);
+  }
+
+  /** A reload that no longer contains the shown category (deleted elsewhere) closes the panel. */
+  private closePanelIfCategoryGone(): void {
+    const id: number | null = this.selectedCategoryId();
+    if (this.panelMode() !== 'category' || id === null) return;
+    if (this.categories().some((c: Category): boolean => c.id === id)) return;
+    this.closePanel();
+    this.toast.error('That category no longer exists.');
+  }
+
+  /** Runs an action that would replace a form, after asking when that form has unsaved changes. */
+  private confirmDiscardIfDirty(proceed: () => void): void {
+    const mode: CategoryPanelMode = this.panelMode();
+    const dirty: boolean = (mode === 'category' || mode === 'add') && !!this.editForm()?.form.dirty;
+    if (!dirty) {
+      proceed();
+      return;
+    }
+    this.confirmationService.confirm({
+      header: 'Discard changes?',
+      message: 'You have unsaved changes. Discard them?',
+      acceptLabel: 'Discard',
+      rejectLabel: 'Keep editing',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: proceed,
     });
   }
 }
