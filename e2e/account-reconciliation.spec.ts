@@ -21,6 +21,22 @@ test.describe('Account Reconciliation', () => {
     await expect(menu.getByRole('menuitem', {name: 'Delete'})).toBeVisible();
   });
 
+  test('the overview is the default and a row opens its account and back', async ({page}) => {
+    await page.goto('/accounts');
+    const account = await createTestAccount(page, 'E2E Overview');
+
+    await page.reload();
+    const panel = page.getByRole('complementary');
+    await expect(panel).toHaveAccessibleName('Overview');
+    await expect(panel.getByTestId('net-worth')).toBeVisible();
+
+    await page.getByTestId('open-account').filter({hasText: account.name}).click();
+    await expect(panel).toHaveAccessibleName(account.name);
+
+    await panel.getByRole('button', {name: 'Back to overview'}).click();
+    await expect(panel).toHaveAccessibleName('Overview');
+  });
+
   test('reconciling to a different balance updates the account via an adjustment transaction', async ({page}) => {
     await page.goto('/accounts');
     const account = await createTestAccount(page, 'E2E Reconcile');
