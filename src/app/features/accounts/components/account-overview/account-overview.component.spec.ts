@@ -1,9 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { AccountNetWorthCardComponent } from './account-net-worth-card.component';
+import { AccountOverviewComponent } from './account-overview.component';
 
-describe('AccountNetWorthCardComponent', () => {
-  let fixture: ComponentFixture<AccountNetWorthCardComponent>;
-  let component: AccountNetWorthCardComponent;
+describe('AccountOverviewComponent', () => {
+  let fixture: ComponentFixture<AccountOverviewComponent>;
+  let component: AccountOverviewComponent;
 
   function render(assets: number, liabilities: number): void {
     fixture.componentRef.setInput('totals', {
@@ -17,9 +17,9 @@ describe('AccountNetWorthCardComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [AccountNetWorthCardComponent],
+      imports: [AccountOverviewComponent],
     }).compileComponents();
-    fixture = TestBed.createComponent(AccountNetWorthCardComponent);
+    fixture = TestBed.createComponent(AccountOverviewComponent);
     component = fixture.componentInstance;
   });
 
@@ -74,5 +74,41 @@ describe('AccountNetWorthCardComponent', () => {
     expect(bar.getAttribute('aria-label')).toContain('Assets');
     expect(bar.getAttribute('aria-label')).toContain('$23,020.15');
     expect(bar.getAttribute('aria-label')).toContain('$1,853.03');
+  });
+
+  it('should clamp the bar when assets are negative so it never overflows', () => {
+    // act
+    render(-100, 200);
+
+    // assert & verify
+    expect(component.assetsShare()).toBe(0);
+    expect(component.liabilitiesShare()).toBe(100);
+  });
+
+  it('should show an empty bar when assets are negative and there are no liabilities', () => {
+    // act
+    render(-50, 0);
+
+    // assert & verify
+    expect(component.assetsShare()).toBe(0);
+    expect(component.liabilitiesShare()).toBe(0);
+  });
+
+  it('should format the bar description with the same currency formatting as the figures', () => {
+    // act
+    render(1234.5, 99);
+
+    // assert & verify
+    expect(q('[role="img"]').getAttribute('aria-label')).toBe(
+      'Assets $1,234.50, liabilities $99.00',
+    );
+  });
+
+  it('should not render its own landmark or card border (the panel is the container)', () => {
+    // act
+    render(100, 50);
+
+    // assert & verify
+    expect(fixture.nativeElement.querySelector('section')).toBeNull();
   });
 });

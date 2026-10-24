@@ -32,6 +32,15 @@ export class SidePanelComponent {
   /** Whether to render the Save and Delete footer (a summary view has its own buttons). */
   readonly showFooter: InputSignal<boolean> = input<boolean>(true);
 
+  /** Whether to render the Close button (the always-present overview has nothing to close). */
+  readonly showClose: InputSignal<boolean> = input<boolean>(true);
+
+  /** When false the panel is a normal block on narrow screens instead of a full-screen sheet. */
+  readonly sheet: InputSignal<boolean> = input<boolean>(true);
+
+  /** When false the panel never takes focus on creation or gives it back on destroy. */
+  readonly moveFocus: InputSignal<boolean> = input<boolean>(true);
+
   readonly save: OutputEmitterRef<void> = output<void>();
   readonly closePanel: OutputEmitterRef<void> = output<void>();
   readonly delete: OutputEmitterRef<void> = output<void>();
@@ -46,6 +55,11 @@ export class SidePanelComponent {
     }
   }
 
+  /** Moves focus to the panel (a host that keeps the panel mounted calls this on mode changes). */
+  focus(): void {
+    this.host.nativeElement.querySelector<HTMLElement>('aside')?.focus();
+  }
+
   private readonly host: ElementRef<HTMLElement> = inject(ElementRef<HTMLElement>);
 
   /** Whatever had focus when the panel opened (usually the row that was clicked). */
@@ -55,8 +69,10 @@ export class SidePanelComponent {
   constructor() {
     // move focus into the panel once it exists, and hand it back when the panel goes away
     afterNextRender((): void => {
-      this.host.nativeElement.querySelector<HTMLElement>('aside')?.focus();
+      if (this.moveFocus()) this.focus();
     });
-    inject(DestroyRef).onDestroy((): void => this.previouslyFocused?.focus?.());
+    inject(DestroyRef).onDestroy((): void => {
+      if (this.moveFocus()) this.previouslyFocused?.focus?.();
+    });
   }
 }

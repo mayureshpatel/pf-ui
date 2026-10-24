@@ -1,12 +1,16 @@
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   DestroyRef,
   inject,
+  Injector,
   OnInit,
   Signal,
   signal,
+  untracked,
   viewChild,
   WritableSignal,
 } from '@angular/core';
@@ -23,7 +27,7 @@ import {
   AccountUpdateRequest,
 } from '@models/account.model';
 import { AccountApiService } from './services/account-api.service';
-import { AccountNetWorthCardComponent } from './components/account-net-worth-card/account-net-worth-card.component';
+import { AccountOverviewComponent } from './components/account-overview/account-overview.component';
 import { AccountListComponent } from './components/account-list/account-list.component';
 import { AccountSummaryViewComponent } from './components/account-summary-view/account-summary-view.component';
 import { AccountEditFormComponent } from './components/account-edit-form/account-edit-form.component';
@@ -44,7 +48,7 @@ import { PageErrorStateComponent } from '@shared/components/page-error-state/pag
     ScreenToolbarComponent,
     PageErrorStateComponent,
     SidePanelComponent,
-    AccountNetWorthCardComponent,
+    AccountOverviewComponent,
     AccountListComponent,
     AccountSummaryViewComponent,
     AccountEditFormComponent,
@@ -68,8 +72,8 @@ export class AccountsComponent implements OnInit {
   saving: WritableSignal<boolean> = signal(false);
 
   /** What the docked panel is showing. */
-  panelMode: WritableSignal<PanelMode> = signal('closed');
-  /** The account the panel is about (null when closed or adding). */
+  panelMode: WritableSignal<PanelMode> = signal('overview');
+  /** The account the panel is about (null in overview and when no account is chosen). */
   selectedId: WritableSignal<number | null> = signal(null);
 
   selectedAccount: Signal<Account | null> = computed(
@@ -82,9 +86,29 @@ export class AccountsComponent implements OnInit {
     (): boolean => this.accounts().length === 0 && !this.loading() && !this.loadError(),
   );
 
+  /** The row to highlight: only while the panel is about an account. */
+  highlightedId: Signal<number | null> = computed((): number | null =>
+    ['account', 'edit', 'reconcile'].includes(this.panelMode()) ? this.selectedId() : null,
+  );
+
+  /** With no accounts the add form is the only useful mode, so it has no Back or Close. */
+  onlyAddMode: Signal<boolean> = computed(
+    (): boolean => this.accounts().length === 0 && !this.loading() && this.panelMode() === 'create',
+  );
+
+  showClose: Signal<boolean> = computed(
+    (): boolean => this.panelMode() !== 'overview' && !this.onlyAddMode(),
+  );
+
+  showBack: Signal<boolean> = computed(
+    (): boolean => this.panelMode() !== 'overview' && !this.onlyAddMode(),
+  );
+
   panelTitle: Signal<string> = computed((): string => {
     const name: string = this.selectedAccount()?.name ?? 'account';
     switch (this.panelMode()) {
+      case 'overview':
+        return 'Overview';
       case 'create':
         return 'Add account';
       case 'edit':
@@ -96,8 +120,23 @@ export class AccountsComponent implements OnInit {
     }
   });
 
+  private readonly injector: Injector = inject(Injector);
+  private readonly panel = viewChild(SidePanelComponent);
+  private readonly list = viewChild(AccountListComponent);
+
+  /** The element that had focus when the panel left the overview, to hand focus back to. */
+  private focusReturn: HTMLElement | null = null;
+
   private readonly editForm = viewChild<AccountEditFormComponent>('editForm');
   private readonly reconcileForm = viewChild<AccountReconcileFormComponent>('reconcileForm');
+
+  constructor() {
+    effect((): void => {
+      if (this.isEmpty() && this.panelMode() !== 'create') {
+        untracked((): void => this.panelMode.set('create'));
+      }
+    });
+  }
 
   ngOnInit(): void {
     this.loadAccounts();
@@ -130,12 +169,12 @@ export class AccountsComponent implements OnInit {
       });
   }
 
-  /** Shows an account's summary in the panel. */
+  /** Shows an account in the panel. */
   openAccount(account: Account): void {
-    if (this.panelMode() === 'summary' && this.selectedId() === account.id) return;
+    if (this.panelMode() === 'account' && this.selectedId() === account.id) return;
     this.confirmDiscardIfDirty((): void => {
       this.selectedId.set(account.id);
-      this.panelMode.set('summary');
+      this.go('account');
     });
   }
 
@@ -144,7 +183,7 @@ export class AccountsComponent implements OnInit {
     if (this.panelMode() === 'edit' && (!account || account.id === this.selectedId())) return;
     this.confirmDiscardIfDirty((): void => {
       if (account) this.selectedId.set(account.id);
-      this.panelMode.set('edit');
+      this.go('edit');
     });
   }
 
@@ -153,30 +192,40 @@ export class AccountsComponent implements OnInit {
     if (this.panelMode() === 'reconcile' && (!account || account.id === this.selectedId())) return;
     this.confirmDiscardIfDirty((): void => {
       if (account) this.selectedId.set(account.id);
-      this.panelMode.set('reconcile');
+      this.go('reconcile');
     });
   }
 
-  /** Opens the panel to add an account. */
+  /** Opens the panel to add an account (the selected account, if any, is kept for Back). */
   startCreate(): void {
     if (this.panelMode() === 'create') return;
+    this.confirmDiscardIfDirty((): void => this.go('create'));
+  }
+
+  /** Back: account to overview, edit and reconcile to account, create to where it came from. */
+  back(): void {
+    const mode: PanelMode = this.panelMode();
+    if (mode === 'overview') return;
     this.confirmDiscardIfDirty((): void => {
-      this.selectedId.set(null);
-      this.panelMode.set('create');
+      if (mode === 'account') {
+        this.closePanel();
+      } else if (mode === 'create' && this.selectedId() === null) {
+        this.go('overview');
+      } else {
+        this.go('account');
+      }
     });
   }
 
-  backToSummary(): void {
-    this.confirmDiscardIfDirty((): void => this.panelMode.set('summary'));
-  }
-
+  /** Returns to the overview with nothing selected, without asking. */
   closePanel(): void {
-    this.panelMode.set('closed');
     this.selectedId.set(null);
+    this.go('overview');
   }
 
-  /** Close button, Escape: asks first when there are unsaved edits. */
+  /** Close button and Escape: asks first when there are unsaved edits; the overview ignores them. */
   onPanelClose(): void {
+    if (this.panelMode() === 'overview' || this.onlyAddMode()) return;
     this.confirmDiscardIfDirty((): void => this.closePanel());
   }
 
@@ -187,6 +236,31 @@ export class AccountsComponent implements OnInit {
         queryParams: { accountId: account.id, period: 'all' },
       });
     });
+  }
+
+  /** Switches mode and moves focus: into the panel for any step, back to the opener for overview. */
+  private go(mode: PanelMode): void {
+    if (this.panelMode() === 'overview' && mode !== 'overview') {
+      let opener: HTMLElement | null = document.activeElement as HTMLElement | null;
+      // a row-menu action runs with focus on a popup item that is about to be removed
+      if (!opener?.isConnected || opener.closest('[role="menu"]')) {
+        opener = this.list()?.lastMenuTrigger ?? opener;
+      }
+      this.focusReturn = opener;
+    }
+    this.panelMode.set(mode);
+    afterNextRender(
+      (): void => {
+        const target: HTMLElement | null = this.focusReturn;
+        if (mode === 'overview' && target?.isConnected) {
+          target.focus();
+        } else {
+          this.panel()?.focus();
+        }
+        if (mode === 'overview') this.focusReturn = null;
+      },
+      { injector: this.injector },
+    );
   }
 
   /** The panel's Save button: submits whichever form is showing. */
@@ -207,7 +281,7 @@ export class AccountsComponent implements OnInit {
   }
 
   onReconciled(_event: { adjustment: number }): void {
-    this.panelMode.set('summary');
+    this.go('account');
     this.loadAccounts();
   }
 
@@ -229,7 +303,7 @@ export class AccountsComponent implements OnInit {
           this.toast.success('Account created successfully');
           this.editForm()?.form.markAsPristine();
           this.selectedId.set(newId);
-          this.panelMode.set('summary');
+          this.go('account');
           this.loadAccounts();
         },
         error: (error: HttpErrorResponse): void => {
@@ -252,7 +326,7 @@ export class AccountsComponent implements OnInit {
         next: (): void => {
           this.toast.success('Account updated successfully');
           this.editForm()?.form.markAsPristine();
-          this.panelMode.set('summary');
+          this.go('account');
           this.loadAccounts();
         },
         error: (error: HttpErrorResponse): void => {
@@ -282,7 +356,12 @@ export class AccountsComponent implements OnInit {
               );
               this.toast.success('Account deleted successfully');
               if (this.selectedId() === account.id) {
-                this.closePanel();
+                // an add form opened from this account keeps its typing; only Back's target resets
+                if (this.panelMode() === 'create') {
+                  this.selectedId.set(null);
+                } else {
+                  this.closePanel();
+                }
               }
             },
             error: (error: HttpErrorResponse): void => {
@@ -325,4 +404,4 @@ export class AccountsComponent implements OnInit {
 }
 
 /** The docked panel's states. */
-export type PanelMode = 'closed' | 'summary' | 'edit' | 'reconcile' | 'create';
+export type PanelMode = 'overview' | 'account' | 'edit' | 'reconcile' | 'create';

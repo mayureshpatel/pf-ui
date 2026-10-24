@@ -1,5 +1,5 @@
 import { vi } from 'vitest';
-import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, signal, viewChild } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { SidePanelComponent } from './side-panel.component';
 
@@ -13,6 +13,8 @@ import { SidePanelComponent } from './side-panel.component';
       [valid]="valid()"
       [showDelete]="showDelete()"
       [showFooter]="showFooter()"
+      [showClose]="showClose()"
+      [sheet]="sheet()"
       (save)="saved()"
       (closePanel)="closed()"
       (delete)="deleted()"
@@ -27,10 +29,20 @@ class HostComponent {
   valid = signal(true);
   showDelete = signal(true);
   showFooter = signal(true);
+  showClose = signal(true);
+  sheet = signal(true);
+  panel = viewChild(SidePanelComponent);
   saved = vi.fn();
   closed = vi.fn();
   deleted = vi.fn();
 }
+
+@Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [SidePanelComponent],
+  template: `<app-side-panel title="No focus" [moveFocus]="false"><p>body</p></app-side-panel>`,
+})
+class NoFocusHostComponent {}
 
 describe('SidePanelComponent', () => {
   let fixture: ComponentFixture<HostComponent>;
@@ -141,6 +153,61 @@ describe('SidePanelComponent', () => {
     it('should give the Save button enough contrast for white text', () => {
       // assert & verify -- primary-500 is only about 2.5:1 with white; 700 is about 5.5:1
       expect(button(/Save changes/)?.className).toContain('bg-primary-700');
+    });
+  });
+
+  describe('persistent-panel inputs', () => {
+    it('should hide the Close button when showClose is false', () => {
+      // act
+      host.showClose.set(false);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(button(/Close/)).toBeUndefined();
+    });
+
+    it('should be an in-flow block, not a fixed full-screen sheet, when sheet is false', () => {
+      // assert & verify -- default is the sheet
+      expect(q('aside').className).toContain('fixed');
+
+      // act
+      host.sheet.set(false);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(q('aside').className).not.toContain('fixed');
+      expect(q('aside').className).not.toContain('inset-0');
+      expect(q('aside').className).toContain('rounded-2xl');
+    });
+
+    it('should take focus after first render by default', async () => {
+      // assert & verify
+      await fixture.whenStable();
+      expect(document.activeElement).toBe(q('aside'));
+    });
+
+    it('should not take focus after first render when moveFocus is false', async () => {
+      // arrange
+      (document.activeElement as HTMLElement | null)?.blur();
+
+      // act
+      const quiet = TestBed.createComponent(NoFocusHostComponent);
+      quiet.detectChanges();
+      await quiet.whenStable();
+
+      // assert & verify
+      expect(document.activeElement).not.toBe(quiet.nativeElement.querySelector('aside'));
+    });
+
+    it('should focus the aside when focus() is called', () => {
+      // arrange
+      (document.activeElement as HTMLElement | null)?.blur();
+
+      // act
+      host.panel()!.focus();
+
+      // assert & verify
+      expect(document.activeElement).toBe(q('aside'));
     });
   });
 });
