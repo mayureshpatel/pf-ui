@@ -6,6 +6,8 @@ import { environment } from '@env';
 import { TransactionApiService } from './transaction-api.service';
 import { PageResponse, Transaction, TransactionFilter } from '@models/transaction.model';
 
+import { Category } from '@models/category.model';
+
 describe('TransactionApiService', () => {
   let service: TransactionApiService;
   let httpMock: HttpTestingController;
@@ -60,6 +62,28 @@ describe('TransactionApiService', () => {
       expect(req.request.params.get('vendorName')).toBe('Whole Foods');
       expect(req.request.params.get('merchantCleanName')).toBeNull();
       req.flush({ content: [], totalElements: 0 } as unknown as PageResponse<Transaction>);
+    });
+  });
+
+  describe('getCountsByCategory', () => {
+    it("should flatten the backend's { category, transactionCount } rows into categories carrying their own count", () => {
+      // arrange
+      let result: Category[] = [];
+
+      // act
+      service.getCountsByCategory().subscribe((counts) => (result = counts));
+      const req = httpMock.expectOne((r) => r.url === `${apiUrl}/count-by-category`);
+      req.flush([
+        { category: { id: 322, name: 'Groceries', parent: { id: 321 } }, transactionCount: 3 },
+        { category: { id: 329, name: 'Paycheck', parent: null }, transactionCount: 2 },
+      ]);
+
+      // assert & verify
+      expect(result.map((c) => [c.id, c.transactionCount])).toEqual([
+        [322, 3],
+        [329, 2],
+      ]);
+      expect(result[0].name).toBe('Groceries');
     });
   });
 });
