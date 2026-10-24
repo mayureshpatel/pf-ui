@@ -713,4 +713,208 @@ describe('AccountsComponent', () => {
       expect(component.onlyAddMode()).toBe(true);
     });
   });
+
+  describe('layout and states', () => {
+    const aside = (): HTMLElement => fixture.nativeElement.querySelector('app-side-panel aside');
+    const panelButton = (label: string): HTMLButtonElement | undefined =>
+      Array.from<HTMLButtonElement>(
+        fixture.nativeElement.querySelectorAll('app-side-panel button'),
+      ).find((b) => b.textContent?.trim() === label);
+
+    it('should always render the panel, showing the overview with the totals by default', () => {
+      // arrange
+      loadWith([acct(1, 'Checking', 1000, true), acct(2, 'Visa', -250, false)]);
+
+      // assert & verify
+      expect(aside().getAttribute('aria-label')).toBe('Overview');
+      expect(fixture.nativeElement.querySelectorAll('app-account-overview').length).toBe(1);
+      expect(
+        fixture.nativeElement.querySelector('[data-testid="net-worth"]').textContent,
+      ).toContain('$750.00');
+    });
+
+    it('should show the account view with a Back to overview link when a row is opened', () => {
+      // arrange
+      loadWith([acct(1, 'Checking', 100, true)]);
+
+      // act
+      component.openAccount(component.accounts()[0]);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(aside().getAttribute('aria-label')).toBe('Checking');
+      expect(panelButton('Back to overview')).toBeTruthy();
+    });
+
+    it('should show No accounts yet and the add form when there are no accounts', () => {
+      // act
+      loadWith([]);
+
+      // assert & verify
+      expect(fixture.nativeElement.textContent).toContain('No accounts yet');
+      expect(fixture.nativeElement.querySelector('app-account-edit-form')).toBeTruthy();
+      expect(aside().getAttribute('aria-label')).toBe('Add account');
+    });
+
+    it('should show the full skeleton on first load with no panel yet', () => {
+      // arrange
+      component.accounts.set([]);
+      component.panelMode.set('overview');
+      component.loading.set(true);
+
+      // act
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(fixture.nativeElement.querySelector('[aria-busy="true"] p-skeleton')).toBeTruthy();
+      expect(fixture.nativeElement.querySelector('app-side-panel')).toBeNull();
+    });
+
+    it('should keep the panel mounted and skeleton its body while a just-created account loads', () => {
+      // arrange
+      loadWith([]);
+      const panelBefore = fixture.nativeElement.querySelector('app-side-panel');
+      component.selectedId.set(9);
+      component.panelMode.set('account');
+      component.loading.set(true);
+
+      // act
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(fixture.nativeElement.querySelector('app-side-panel')).toBe(panelBefore);
+      expect(fixture.nativeElement.querySelector('app-side-panel p-skeleton')).toBeTruthy();
+    });
+
+    it('should hide Close in overview and in the only-add mode, and show it elsewhere', () => {
+      // arrange
+      loadWith([acct(1, 'A', 1, true)]);
+
+      // assert & verify
+      expect(panelButton('Close')).toBeUndefined();
+
+      // act
+      component.openAccount(component.accounts()[0]);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(panelButton('Close')).toBeTruthy();
+
+      // act
+      loadWith([]);
+
+      // assert & verify
+      expect(panelButton('Close')).toBeUndefined();
+    });
+
+    it('should show the footer only in edit, reconcile and create', () => {
+      // arrange
+      loadWith([acct(1, 'A', 1, true)]);
+
+      // assert & verify
+      expect(panelButton('Save changes')).toBeUndefined();
+
+      // act
+      component.openAccount(component.accounts()[0]);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(panelButton('Save changes')).toBeUndefined();
+
+      // act
+      component.startEdit();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(panelButton('Save changes')).toBeTruthy();
+    });
+
+    it('should not be a fixed sheet in overview, and be one in every other mode', () => {
+      // arrange
+      loadWith([acct(1, 'A', 1, true)]);
+
+      // assert & verify
+      expect(aside().className).not.toContain('fixed');
+
+      // act
+      component.openAccount(component.accounts()[0]);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(aside().className).toContain('fixed');
+    });
+  });
+
+  describe('focus', () => {
+    const aside = (): HTMLElement => fixture.nativeElement.querySelector('app-side-panel aside');
+    const rowButton = (): HTMLButtonElement =>
+      fixture.nativeElement.querySelector('[data-testid="open-account"]');
+
+    it('should not take focus on page load', async () => {
+      // arrange
+      loadWith([acct(1, 'A', 1, true)]);
+      await fixture.whenStable();
+
+      // assert & verify
+      expect(document.activeElement).not.toBe(aside());
+    });
+
+    it('should move focus into the panel when a row is opened and back to that row on return', async () => {
+      // arrange
+      loadWith([acct(1, 'A', 1, true)]);
+      const row = rowButton();
+      row.focus();
+
+      // act
+      component.openAccount(component.accounts()[0]);
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      // assert & verify
+      expect(document.activeElement).toBe(aside());
+
+      // act
+      component.closePanel();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      // assert & verify
+      expect(document.activeElement).toBe(row);
+    });
+
+    it('should focus the panel instead when the element that opened it is gone', async () => {
+      // arrange
+      loadWith([acct(1, 'A', 1, true), acct(2, 'B', 2, true)]);
+      rowButton().focus();
+      component.openAccount(component.accounts()[0]);
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      // act -- the opening row disappears, then the panel returns to overview
+      loadWith([acct(2, 'B', 2, true)]);
+      component.closePanel();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      // assert & verify
+      expect(document.activeElement).toBe(aside());
+    });
+
+    it('should move focus into the panel on step changes (edit)', async () => {
+      // arrange
+      loadWith([acct(1, 'A', 1, true)]);
+      component.openAccount(component.accounts()[0]);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      (document.activeElement as HTMLElement).blur();
+
+      // act
+      component.startEdit();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      // assert & verify
+      expect(document.activeElement).toBe(aside());
+    });
+  });
 });
