@@ -1,102 +1,126 @@
 import {expect, test} from '@playwright/test';
-import {createTestAccount, createTestCategory, createTestTransaction, registerTestUser} from './helpers/api';
+import {
+  createTestAccount,
+  createTestBudget,
+  createTestCategory,
+  createTestTransaction,
+  registerTestUser
+} from './helpers/api';
 
 /**
- * Covers PF-333: setting a budget through the real UI (budget-form-dialog) and verifying actual
- * vs. budgeted spending renders correctly. Uses a brand-new registered user so the spent/remaining
- * amounts are exact -- the shared dev user has months of accumulated transactions that would make
- * asserting a specific total fragile. Budgets default to the current month/year, so the seeded
- * transaction is dated "today" (in UTC) rather than a fixed date.
- *
- * budget-form-dialog was migrated from p-dialog to DrawerComponent by PF-803 -- PrimeNG 21.1.3's
- * p-select silently failed to register a clicked option when hosted inside a p-dialog (no error,
- * no visible sign, just a permanently-disabled Save button). Interacting with it here as a drawer
- * (getByRole('complementary'), matching every other drawer-based form spec) rather than a dialog.
+ * Covers PF-333/PF-875: the redesigned Budgets page through the real UI -- a category list beside an
+ * always-present panel (overview, category, add), a month switcher kept in the URL, edit and remove
+ * in place, and Copy last month. Uses a brand-new registered user so spent/left amounts are exact
+ * (the shared dev user's accumulated transactions would make specific totals fragile). Budgets
+ * default to the current month, so seeded transactions are dated "today" (in UTC).
  */
 test.describe('Budgets', () => {
   test.use({storageState: {cookies: [], origins: []}});
 
-  test('set a budget and see actual spending tracked against it', async ({page}) => {
-    await registerTestUser(page);
-
-    // Budgeting allows either a parent or a subcategory, but transactions can only be assigned to
-    // a subcategory -- budget and transact against the same subcategory to keep this simple and
-    // sidestep whether/how a parent's budget rolls up its children's spending.
+  async function seedCategoryWithSpending(page: import('@playwright/test').Page) {
+    // Budgeting allows a parent or a subcategory, but transactions can only be assigned to a
+    // subcategory -- budget and transact against the same subcategory to keep this simple.
     const parentCategory = await createTestCategory(page, 'E2E Budget Parent');
     const category = await createTestCategory(page, 'E2E Budget Category', parentCategory.id);
     const account = await createTestAccount(page, 'E2E Budget Account');
-
     const now = new Date();
     const currentMonthDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 15)).toISOString();
     await createTestTransaction(page, account.id, category.id, 'E2E Budget Expense', {
       amount: 120, type: 'EXPENSE', transactionDate: currentMonthDate
     });
+    return category;
+  }
+
+  test('set a budget, then edit its limit and remove it', async ({page}) => {
+    await registerTestUser(page);
+    const category = await seedCategoryWithSpending(page);
 
     await page.goto('/budgets');
+    const panel = page.getByRole('complementary');
+    await expect(panel).toHaveAccessibleName('Overview');
 
-    // Set the budget through the real UI
-    await page.getByRole('button', {name: 'Set Budget'}).click();
-    const drawer = page.getByRole('complementary');
-    await expect(drawer.getByText('Set Category Budget')).toBeVisible();
-
-    await drawer.getByText('Select a category').click();
+    // Add through the panel
+    await page.getByRole('button', {name: 'Add budget'}).first().click();
+    await expect(panel).toHaveAccessibleName('Add budget');
+    await panel.getByText('Select a category').click();
     await page.getByRole('option', {name: category.name}).click();
-    await drawer.getByRole('spinbutton').fill('300');
-    await drawer.getByRole('button', {name: 'Save Budget'}).click();
+    await panel.getByRole('spinbutton').fill('300');
+    await panel.getByRole('button', {name: 'Add budget'}).click();
 
-    await expect(page.getByText('Budget saved successfully')).toBeVisible();
-    await expect(drawer).toBeHidden();
+    await expect(page.getByText('Budget added')).toBeVisible();
+    const row = page.getByTestId('open-budget').filter({hasText: category.name});
+    await expect(row).toContainText('$120.00 of $300.00');
+    await expect(row).toContainText('$180.00 left');
+    await expect(panel).toHaveAccessibleName(category.name);
 
-    // Monthly status reflects the real budgeted vs. actual spend
-    const row = page.getByRole('row', {name: new RegExp(category.name)});
-    await expect(row).toBeVisible();
-    await expect(row.getByText('$300.00')).toBeVisible(); // budgeted
-    await expect(row.getByText('$120.00')).toBeVisible(); // spent
-    await expect(row.getByText('$180.00')).toBeVisible(); // remaining
-    await expect(row.getByText('40%')).toBeVisible(); // percentage used
+    // Back to the month overview
+    await panel.getByRole('button', {name: 'Back to overview'}).click();
+    await expect(panel).toHaveAccessibleName('Overview');
+    await expect(panel.getByTestId('left-to-spend')).toContainText('$180.00');
 
-    const budgetedCard = page.locator('p-card').filter({hasText: 'Total Budgeted'});
-    await expect(budgetedCard.getByText('$300.00')).toBeVisible();
-    const spentCard = page.locator('p-card').filter({hasText: 'Total Spent'});
-    await expect(spentCard.getByText('$120.00')).toBeVisible();
-    // "Remaining" is also the monthly-status table's own column header -- .first() picks the
-    // summary card, which renders before the table in DOM order.
-    const remainingCard = page.locator('p-card').filter({hasText: 'Remaining'}).first();
-    await expect(remainingCard.getByText('$180.00')).toBeVisible();
+    // Edit the limit in place
+    await row.click();
+    await panel.getByRole('spinbutton').fill('400');
+    await panel.getByRole('button', {name: 'Save limit'}).click();
+    await expect(page.getByText('Budget updated')).toBeVisible();
+    await expect(row).toContainText('$280.00 left');
+
+    // Remove it
+    await panel.getByRole('button', {name: 'Remove budget'}).click();
+    await page.getByRole('alertdialog').getByRole('button', {name: 'Remove', exact: true}).click();
+    await expect(page.getByText('Budget removed')).toBeVisible();
+    // the spending is still there, now with no limit
+    await expect(row).toContainText('$120.00 spent');
+    await expect(row).toContainText('No limit');
+    await expect(panel).toHaveAccessibleName('Overview');
   });
 
-  /**
-   * PF-819: originally found via a live network trace showing GET /api/v1/budgets/status fired
-   * twice, identically, back-to-back for one real click on the Monthly Status/Manage All toggle.
-   * Uses the shared dev user's own cached session (not a fresh registration) -- this is purely
-   * about counting network requests, no specific data needed.
-   */
-  test('toggling the Monthly Status / Manage All view fires exactly one request per real click (PF-819)', async ({page}) => {
+  test('copy last month fills the gaps in this month', async ({page}) => {
+    await registerTestUser(page);
+    const category = await seedCategoryWithSpending(page);
+    const now = new Date();
+    const last = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    await createTestBudget(page, category.id, 250, last.getMonth() + 1, last.getFullYear());
+
+    await page.goto('/budgets');
+    await expect(page.getByText(/No budgets for/)).toBeVisible();
+
+    await page.getByRole('button', {name: "Copy last month's limits"}).click();
+    await page.getByRole('button', {name: 'Fill gaps'}).click();
+
+    await expect(page.getByText('Added 1 limit')).toBeVisible();
+    const row = page.getByTestId('open-budget').filter({hasText: category.name});
+    await expect(row).toContainText('$120.00 of $250.00');
+  });
+});
+
+/**
+ * PF-819: counts network requests only, so it uses the shared dev user's cached session instead of
+ * registering another user (registration is limited to 5 per minute per IP, and the suite already
+ * registers several).
+ */
+test.describe('Budgets month switcher', () => {
+  test('changing month fires one status request and updates the URL (PF-819)', async ({page}) => {
     const statusRequests: string[] = [];
-    const allBudgetsRequests: string[] = [];
     page.on('request', (req) => {
-      const url = req.url();
-      if (url.includes('/api/v1/budgets/status')) statusRequests.push(url);
-      if (url.includes('/api/v1/budgets') && !url.includes('/status')) allBudgetsRequests.push(url);
+      if (req.url().includes('/api/v1/budgets/status')) statusRequests.push(req.url());
     });
 
     await page.goto('/budgets');
-    await expect(page.getByText('Monthly Status')).toBeVisible();
+    await expect(page.getByTestId('month-label')).toBeVisible();
+    await page.waitForLoadState('networkidle');
     statusRequests.length = 0; // clear whatever the initial page load itself triggered
 
-    // act -- one real click, toggling from the default Monthly Status to Manage All
-    await page.getByText('Manage All', {exact: true}).click();
-    await page.waitForLoadState('networkidle');
-
-    // assert & verify
-    expect(allBudgetsRequests).toHaveLength(1);
-
-    // act -- one real click back to Monthly Status
-    allBudgetsRequests.length = 0;
-    await page.getByText('Monthly Status', {exact: true}).click();
+    // act -- one real click on Next month
+    await page.getByRole('button', {name: 'Next month'}).click();
     await page.waitForLoadState('networkidle');
 
     // assert & verify
     expect(statusRequests).toHaveLength(1);
+    await expect(page).toHaveURL(/month=\d+&year=\d+/);
+    await expect(page.getByRole('button', {name: 'This month'})).toBeVisible();
+
+    await page.getByRole('button', {name: 'This month'}).click();
+    await expect(page.getByRole('button', {name: 'This month'})).toHaveCount(0);
   });
 });
