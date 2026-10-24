@@ -9,7 +9,13 @@ import {
 import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
 import { getCategoryColor } from '@shared/utils/category.utils';
 import { toCents } from '@shared/utils/money.utils';
-import { BudgetGroupKey, BudgetRow, BudgetRowGroup, usedPercent } from '../../utils/budget-helpers';
+import {
+  BudgetGroupKey,
+  BudgetRow,
+  BudgetRowGroup,
+  isUnbudgeted,
+  usedPercent,
+} from '../../utils/budget-helpers';
 
 /** The month's categories in three groups. It renders what it is given and owns no data. */
 @Component({
@@ -27,6 +33,7 @@ export class BudgetListComponent {
   readonly openCategory: OutputEmitterRef<BudgetRow> = output<BudgetRow>();
 
   readonly categoryColor = getCategoryColor;
+  readonly isUnbudgeted = isUnbudgeted;
 
   /** What is left (positive) or over (negative) for a row, in cents. */
   left(row: BudgetRow): number {
@@ -47,6 +54,9 @@ export class BudgetListComponent {
   label(row: BudgetRow): string {
     const money = (n: number): string =>
       new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
+    if (isUnbudgeted(row)) {
+      return `${row.status.category.name}, ${money(row.status.spentAmount)} spent, no limit set`;
+    }
     const left: number = this.left(row);
     const tail: string = left < 0 ? `${money(-left)} over` : `${money(left)} left`;
     return `${row.status.category.name}, ${money(row.status.spentAmount)} of ${money(row.status.budgetedAmount)}, ${tail}`;

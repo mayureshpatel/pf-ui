@@ -59,6 +59,28 @@ describe('BudgetCategoryViewComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('$62.00 over');
   });
 
+  it('should start empty for a category with no limit and need one before saving', () => {
+    // arrange
+    render(row(1, 0, 120, null));
+    const saved = vi.fn();
+    component.save.subscribe(saved);
+
+    // act
+    component.submit();
+
+    // assert & verify
+    expect(component.form.controls.amount.value).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('No limit set yet');
+    expect(saved).not.toHaveBeenCalled();
+
+    // act
+    component.form.controls.amount.setValue(200);
+    component.submit();
+
+    // assert & verify
+    expect(saved).toHaveBeenCalledWith(200);
+  });
+
   it('should emit the new limit on submit, and nothing while invalid or saving', () => {
     // arrange
     render(row(1, 450, 100));

@@ -54,7 +54,10 @@ describe('BudgetsComponent', () => {
   let component: BudgetsComponent;
   let fixture: ComponentFixture<BudgetsComponent>;
   let mockBudgetApi: Mocked<
-    Pick<BudgetApiService, 'getBudgetStatus' | 'getBudgets' | 'createBudget' | 'deleteBudget'>
+    Pick<
+      BudgetApiService,
+      'getBudgetStatus' | 'getBudgets' | 'createBudget' | 'updateBudget' | 'deleteBudget'
+    >
   >;
   let mockCategoryApi: Mocked<Pick<CategoryApiService, 'getCategories'>>;
   let mockToast: Mocked<Pick<ToastService, 'success' | 'error'>>;
@@ -99,6 +102,7 @@ describe('BudgetsComponent', () => {
         .fn()
         .mockImplementation((month: number) => of(month === 10 ? thisMonth : lastMonth)),
       createBudget: vi.fn().mockReturnValue(of(99)),
+      updateBudget: vi.fn().mockReturnValue(of(11)),
       deleteBudget: vi.fn().mockReturnValue(of(undefined)),
     };
     mockCategoryApi = { getCategories: vi.fn().mockReturnValue(of(allCategories)) };
@@ -287,8 +291,9 @@ describe('BudgetsComponent', () => {
       // act
       component.saveLimit(500);
 
-      // assert & verify
-      expect(mockBudgetApi.createBudget).toHaveBeenCalledWith(1, 500, 10, 2026);
+      // assert & verify -- an existing budget is updated by id (create would be rejected as a duplicate)
+      expect(mockBudgetApi.updateBudget).toHaveBeenCalledWith(11, 500);
+      expect(mockBudgetApi.createBudget).not.toHaveBeenCalled();
       expect(mockToast.success).toHaveBeenCalledWith('Budget updated');
       expect(mockBudgetApi.getBudgetStatus).toHaveBeenCalledTimes(1);
       expect(component.panelMode()).toBe('category');
@@ -297,21 +302,21 @@ describe('BudgetsComponent', () => {
     it('should ignore a second save while the first is in flight', () => {
       // arrange
       component.openCategory(component.rows()[0]);
-      mockBudgetApi.createBudget.mockReturnValue(new Subject<number>());
+      mockBudgetApi.updateBudget.mockReturnValue(new Subject<number>());
 
       // act
       component.saveLimit(500);
       component.saveLimit(600);
 
       // assert & verify
-      expect(mockBudgetApi.createBudget).toHaveBeenCalledTimes(1);
+      expect(mockBudgetApi.updateBudget).toHaveBeenCalledTimes(1);
       expect(component.saving()).toBe(true);
     });
 
     it('should toast the API message and keep the panel when saving fails', () => {
       // arrange
       component.openCategory(component.rows()[0]);
-      mockBudgetApi.createBudget.mockReturnValue(
+      mockBudgetApi.updateBudget.mockReturnValue(
         throwError(() => ({ error: { detail: 'Budget conflict' } })),
       );
 
@@ -322,6 +327,24 @@ describe('BudgetsComponent', () => {
       expect(mockToast.error).toHaveBeenCalledWith('Budget conflict');
       expect(component.panelMode()).toBe('category');
       expect(component.saving()).toBe(false);
+    });
+  });
+
+  describe('save limit without a known budget id', () => {
+    it('should create the budget when the id could not be found', () => {
+      // arrange -- the status line exists but its budget is not in this month's list
+      mockBudgetApi.getBudgets.mockImplementation((month: number) =>
+        of(month === 10 ? [] : lastMonth),
+      );
+      component.loadMonth();
+      component.openCategory(component.rows()[0]);
+
+      // act
+      component.saveLimit(500);
+
+      // assert & verify
+      expect(mockBudgetApi.createBudget).toHaveBeenCalledWith(1, 500, 10, 2026);
+      expect(mockBudgetApi.updateBudget).not.toHaveBeenCalled();
     });
   });
 
@@ -554,23 +577,18 @@ describe('BudgetsComponent', () => {
       component.runCopy('replace');
 
       // assert & verify
-      const sent = mockBudgetApi.createBudget.mock.calls.map((c) => [c[0], c[1]]);
-      expect(sent).toEqual(
-        expect.arrayContaining([
-          [4, 100],
-          [2, 180],
-        ]),
-      );
-      expect(sent).toHaveLength(2);
+      // the missing category is created, the differing one is updated by its id, identical ones are skipped
+      expect(mockBudgetApi.createBudget).toHaveBeenCalledTimes(1);
+      expect(mockBudgetApi.createBudget).toHaveBeenCalledWith(4, 100, 10, 2026);
+      expect(mockBudgetApi.updateBudget).toHaveBeenCalledTimes(1);
+      expect(mockBudgetApi.updateBudget).toHaveBeenCalledWith(12, 180);
       expect(mockBudgetApi.deleteBudget).not.toHaveBeenCalled();
       expect(mockToast.success).toHaveBeenCalledWith('Added 2 limits');
     });
 
     it('should report a partial failure, still reload and not claim full success', () => {
       // arrange
-      mockBudgetApi.createBudget.mockImplementation((categoryId: number) =>
-        categoryId === 2 ? throwError(() => ({})) : of(99),
-      );
+      mockBudgetApi.updateBudget.mockReturnValue(throwError(() => ({})));
       mockBudgetApi.getBudgetStatus.mockClear();
 
       // act
@@ -675,6 +693,21 @@ describe('BudgetsComponent', () => {
       expect(fixture.nativeElement.textContent).toContain('No budgets for October');
       expect(fixture.nativeElement.querySelector('app-budget-list')).toBeNull();
       expect(fixture.nativeElement.querySelector('app-budget-overview')).toBeTruthy();
+    });
+
+    it('should show the empty month message above spending that has no limit, and keep it out of the totals', () => {
+      // arrange -- the backend reports spent categories with no budget as a $0 limit
+      mockBudgetApi.getBudgetStatus.mockReturnValue(of([status(travel, 0, 120)]));
+      mockBudgetApi.getBudgets.mockImplementation(() => of([]));
+
+      // act
+      component.loadMonth();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(fixture.nativeElement.textContent).toContain('No budgets for October');
+      expect(fixture.nativeElement.querySelector('app-budget-list')).toBeTruthy();
+      expect(component.totals()).toEqual({ budgeted: 0, spent: 0, left: 0, unbudgeted: 120 });
     });
 
     it('should show the error state with retry when nothing could be loaded', () => {

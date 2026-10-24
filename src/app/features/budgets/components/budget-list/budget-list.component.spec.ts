@@ -116,9 +116,51 @@ describe('BudgetListComponent', () => {
     expect(wrapper.className).toContain('opacity-60');
   });
 
-  it('should show a $0 limit with spending as over and one with none as on track', () => {
+  it('should show spending with no limit under No limit set, without a bar or an over label', () => {
+    // arrange
+    fixture.componentRef.setInput(
+      'groups',
+      groupBudgetRows(budgetRows([status(1, 'Gifts', 0, 120), status(2, 'Fuel', 0, 80)], [])),
+    );
+    fixture.componentRef.setInput('selectedCategoryId', null);
+    fixture.componentRef.setInput('loading', false);
+
     // act
-    render({ list: [status(1, 'Zero spent', 0, 0), status(2, 'Zero over', 0, 5)] });
+    fixture.detectChanges();
+
+    // assert & verify
+    const heading = all('[data-testid="group-heading"]')[0].textContent?.replace(/\s+/g, ' ');
+    expect(heading).toContain('No limit set');
+    expect(heading).toContain('$200.00 spent');
+    expect(heading).not.toContain('over');
+    const first = all('[data-testid="open-budget"]')[0];
+    expect(first.getAttribute('aria-label')).toBe('Gifts, $120.00 spent, no limit set');
+    expect(first.textContent).toContain('No limit');
+    expect(all('[data-testid="budget-bar"]').length).toBe(0);
+  });
+
+  it('should show a $0 budget with spending as over and one with none as on track', () => {
+    // arrange -- real $0 budgets have ids, unlike spending with no budget at all
+    const rows = budgetRows(
+      [status(1, 'Zero spent', 0, 0), status(2, 'Zero over', 0, 5)],
+      [
+        { id: 1, userId: 1, category: statuses[0].category, amount: 0, month: 10, year: 2026 },
+        {
+          id: 2,
+          userId: 1,
+          category: { ...statuses[0].category, id: 2 },
+          amount: 0,
+          month: 10,
+          year: 2026,
+        },
+      ],
+    );
+    fixture.componentRef.setInput('groups', groupBudgetRows(rows));
+    fixture.componentRef.setInput('selectedCategoryId', null);
+    fixture.componentRef.setInput('loading', false);
+
+    // act
+    fixture.detectChanges();
 
     // assert & verify
     const labels = all('[data-testid="open-budget"]').map((r) => r.getAttribute('aria-label'));

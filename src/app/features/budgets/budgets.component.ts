@@ -109,9 +109,7 @@ export class BudgetsComponent implements OnInit {
   readonly groups: Signal<BudgetRowGroup[]> = computed((): BudgetRowGroup[] =>
     groupBudgetRows(this.rows()),
   );
-  readonly totals: Signal<BudgetTotals> = computed((): BudgetTotals =>
-    budgetTotals(this.statuses()),
-  );
+  readonly totals: Signal<BudgetTotals> = computed((): BudgetTotals => budgetTotals(this.rows()));
   readonly monthName: Signal<string> = computed((): string => monthName(this.selectedMonth()));
   readonly monthLabel: Signal<string> = computed((): string =>
     monthLabel(this.selectedMonth(), this.selectedYear()),
@@ -265,12 +263,21 @@ export class BudgetsComponent implements OnInit {
     this.saving.set(true);
     const month: number = this.selectedMonth();
     const year: number = this.selectedYear();
-    const calls: Observable<boolean>[] = items.map((item: Budget): Observable<boolean> =>
-      this.budgetApi.createBudget(item.category.id, item.amount, month, year).pipe(
+    const currentIds = new Map<number, number>(
+      this.budgets().map((b: Budget): [number, number] => [b.category.id, b.id]),
+    );
+    const calls: Observable<boolean>[] = items.map((item: Budget): Observable<boolean> => {
+      const existingId: number | undefined = currentIds.get(item.category.id);
+      // a category that already has a limit this month is updated by id, a missing one is created
+      const request: Observable<number> =
+        existingId !== undefined
+          ? this.budgetApi.updateBudget(existingId, item.amount)
+          : this.budgetApi.createBudget(item.category.id, item.amount, month, year);
+      return request.pipe(
         map((): boolean => true),
         catchError((): Observable<boolean> => of(false)),
-      ),
-    );
+      );
+    });
     forkJoin(calls)
       .pipe(
         takeUntilDestroyed(this.destroyRef),
@@ -341,8 +348,17 @@ export class BudgetsComponent implements OnInit {
     const row: BudgetRow | null = this.selectedRow();
     if (!row || this.saving()) return;
     this.saving.set(true);
-    this.budgetApi
-      .createBudget(row.status.category.id, amount, this.selectedMonth(), this.selectedYear())
+    // an existing budget is updated by id; the backend rejects a second create for the same month
+    const request: Observable<number> =
+      row.budgetId !== null
+        ? this.budgetApi.updateBudget(row.budgetId, amount)
+        : this.budgetApi.createBudget(
+            row.status.category.id,
+            amount,
+            this.selectedMonth(),
+            this.selectedYear(),
+          );
+    request
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize((): void => this.saving.set(false)),

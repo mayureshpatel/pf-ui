@@ -15,10 +15,12 @@
         <span>{{ group.label }}</span>
         <span
           class="tabular-nums"
-          [class.text-rose-700]="group.leftSubtotal < 0"
-          [class.dark:text-rose-400]="group.leftSubtotal < 0"
+          [class.text-rose-700]="group.key !== 'UNBUDGETED' && group.leftSubtotal < 0"
+          [class.dark:text-rose-400]="group.key !== 'UNBUDGETED' && group.leftSubtotal < 0"
         >
-          @if (group.leftSubtotal < 0) {
+          @if (group.key === 'UNBUDGETED') {
+            {{ group.spentSubtotal | formatCurrency }} spent
+          } @else if (group.leftSubtotal < 0) {
             {{ -group.leftSubtotal | formatCurrency }} over
           } @else {
             {{ group.leftSubtotal | formatCurrency }} left
@@ -52,33 +54,43 @@
                 <span class="block truncate font-medium text-surface-900 dark:text-surface-0">
                   {{ row.status.category.name }}
                 </span>
-                <span class="block text-sm text-muted-color tabular-nums">
-                  {{ row.status.spentAmount | formatCurrency }} of
-                  {{ row.status.budgetedAmount | formatCurrency }}
-                </span>
-                <span
-                  class="mt-1 block h-2 overflow-hidden rounded-full bg-surface-200 dark:bg-surface-700"
-                  aria-hidden="true"
-                >
-                  <span
-                    data-testid="budget-bar"
-                    class="block h-full rounded-full"
-                    [class]="barClass(group.key)"
-                    [style.width.%]="width(row)"
-                  ></span>
-                </span>
-              </span>
-              <span
-                class="text-sm font-semibold tabular-nums"
-                [class.text-rose-700]="left(row) < 0"
-                [class.dark:text-rose-400]="left(row) < 0"
-              >
-                @if (left(row) < 0) {
-                  {{ -left(row) | formatCurrency }} over
+                @if (isUnbudgeted(row)) {
+                  <span class="block text-sm text-muted-color tabular-nums">
+                    {{ row.status.spentAmount | formatCurrency }} spent
+                  </span>
                 } @else {
-                  {{ left(row) | formatCurrency }} left
+                  <span class="block text-sm text-muted-color tabular-nums">
+                    {{ row.status.spentAmount | formatCurrency }} of
+                    {{ row.status.budgetedAmount | formatCurrency }}
+                  </span>
+                  <span
+                    class="mt-1 block h-2 overflow-hidden rounded-full bg-surface-200 dark:bg-surface-700"
+                    aria-hidden="true"
+                  >
+                    <span
+                      data-testid="budget-bar"
+                      class="block h-full rounded-full"
+                      [class]="barClass(group.key)"
+                      [style.width.%]="width(row)"
+                    ></span>
+                  </span>
                 }
               </span>
+              @if (isUnbudgeted(row)) {
+                <span class="text-sm text-muted-color">No limit</span>
+              } @else {
+                <span
+                  class="text-sm font-semibold tabular-nums"
+                  [class.text-rose-700]="left(row) < 0"
+                  [class.dark:text-rose-400]="left(row) < 0"
+                >
+                  @if (left(row) < 0) {
+                    {{ -left(row) | formatCurrency }} over
+                  } @else {
+                    {{ left(row) | formatCurrency }} left
+                  }
+                </span>
+              }
             </button>
           </li>
         }

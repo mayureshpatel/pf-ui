@@ -5,7 +5,7 @@ import { toCents } from '@shared/utils/money.utils';
 /** A category at or above this share of its limit (and not over it) is "close". */
 export const CLOSE_THRESHOLD_PERCENT = 85;
 
-export type BudgetGroupKey = 'OVER' | 'CLOSE' | 'ON_TRACK';
+export type BudgetGroupKey = 'OVER' | 'CLOSE' | 'ON_TRACK' | 'UNBUDGETED';
 
 /** A status line joined with the id of its budget (null when it cannot be found). */
 export interface BudgetRow {
@@ -15,8 +15,10 @@ export interface BudgetRow {
 
 export interface BudgetRowGroup {
   key: BudgetGroupKey;
-  label: 'Over the limit' | 'Close to the limit' | 'On track';
+  label: 'Over the limit' | 'Close to the limit' | 'On track' | 'No limit set';
   leftSubtotal: number;
+  /** Total spent across the group (what the No limit set heading shows). */
+  spentSubtotal: number;
   rows: BudgetRow[];
 }
 
@@ -24,9 +26,21 @@ export interface BudgetTotals {
   budgeted: number;
   spent: number;
   left: number;
+  /** Spending in categories with no budget this month (kept out of the other totals). */
+  unbudgeted: number;
 }
 
 const cents = (value: number): number => Math.round(value * 100);
+
+/**
+ * A category that has spending this month but no budget: the status endpoint reports it with a
+ * limit of 0, which must not be read as a $0 budget.
+ *
+ * @param row - A status line joined with its budget id.
+ */
+export function isUnbudgeted(row: BudgetRow): boolean {
+  return row.budgetId === null && cents(row.status.budgetedAmount) === 0;
+}
 
 /**
  * Joins each status line with the id of the budget it came from, so a row can be removed.
@@ -73,27 +87,34 @@ const GROUP_LABELS: Record<BudgetGroupKey, BudgetRowGroup['label']> = {
   OVER: 'Over the limit',
   CLOSE: 'Close to the limit',
   ON_TRACK: 'On track',
+  UNBUDGETED: 'No limit set',
 };
 
 /**
- * Splits rows into Over, Close and On track (empty groups omitted), most used first inside a group,
- * then by name. A group's subtotal is what is left across it, in cents (negative when over).
+ * Splits rows into Over, Close, On track and No limit set (empty groups omitted), most used first
+ * inside a group, then by name (No limit set is ordered by what was spent). A group's subtotal is
+ * what is left across it, in cents (negative when over).
  *
  * @param rows - The month's rows.
  */
 export function groupBudgetRows(rows: BudgetRow[]): BudgetRowGroup[] {
-  const keys: BudgetGroupKey[] = ['OVER', 'CLOSE', 'ON_TRACK'];
+  const keys: BudgetGroupKey[] = ['OVER', 'CLOSE', 'ON_TRACK', 'UNBUDGETED'];
+  const name = (row: BudgetRow): string => row.status.category.name;
   return keys
     .map((key: BudgetGroupKey): BudgetRowGroup => {
       const members: BudgetRow[] = rows
-        .filter((row: BudgetRow): boolean => groupKeyOf(row.status) === key)
-        .sort(
-          (a: BudgetRow, b: BudgetRow): number =>
-            usedPercent(b.status) - usedPercent(a.status) ||
-            a.status.category.name.localeCompare(b.status.category.name, undefined, {
-              sensitivity: 'base',
-            }),
-        );
+        .filter((row: BudgetRow): boolean =>
+          key === 'UNBUDGETED'
+            ? isUnbudgeted(row)
+            : !isUnbudgeted(row) && groupKeyOf(row.status) === key,
+        )
+        .sort((a: BudgetRow, b: BudgetRow): number => {
+          const byUse: number =
+            key === 'UNBUDGETED'
+              ? b.status.spentAmount - a.status.spentAmount
+              : usedPercent(b.status) - usedPercent(a.status);
+          return byUse || name(a).localeCompare(name(b), undefined, { sensitivity: 'base' });
+        });
       return {
         key,
         label: GROUP_LABELS[key],
@@ -104,6 +125,9 @@ export function groupBudgetRows(rows: BudgetRow[]): BudgetRowGroup[] {
             0,
           ),
         ),
+        spentSubtotal: toCents(
+          members.reduce((sum: number, row: BudgetRow): number => sum + row.status.spentAmount, 0),
+        ),
         rows: members,
       };
     })
@@ -111,18 +135,25 @@ export function groupBudgetRows(rows: BudgetRow[]): BudgetRowGroup[] {
 }
 
 /**
- * Totals for the overview: what is budgeted, what is spent and what is left.
+ * Totals for the overview: what is budgeted, spent and left across budgeted categories, plus the
+ * spending in categories with no budget (reported on its own so it cannot make the month look over).
  *
- * @param statuses - The month's status lines.
+ * @param rows - The month's rows.
  */
-export function budgetTotals(statuses: BudgetStatus[]): BudgetTotals {
+export function budgetTotals(rows: BudgetRow[]): BudgetTotals {
+  const budgetedRows: BudgetRow[] = rows.filter((row: BudgetRow): boolean => !isUnbudgeted(row));
   const budgeted: number = toCents(
-    statuses.reduce((sum: number, s: BudgetStatus): number => sum + s.budgetedAmount, 0),
+    budgetedRows.reduce((sum: number, r: BudgetRow): number => sum + r.status.budgetedAmount, 0),
   );
   const spent: number = toCents(
-    statuses.reduce((sum: number, s: BudgetStatus): number => sum + s.spentAmount, 0),
+    budgetedRows.reduce((sum: number, r: BudgetRow): number => sum + r.status.spentAmount, 0),
   );
-  return { budgeted, spent, left: toCents(budgeted - spent) };
+  const unbudgeted: number = toCents(
+    rows
+      .filter(isUnbudgeted)
+      .reduce((sum: number, r: BudgetRow): number => sum + r.status.spentAmount, 0),
+  );
+  return { budgeted, spent, left: toCents(budgeted - spent), unbudgeted };
 }
 
 /**

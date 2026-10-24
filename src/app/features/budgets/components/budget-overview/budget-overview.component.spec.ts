@@ -6,8 +6,13 @@ describe('BudgetOverviewComponent', () => {
   let fixture: ComponentFixture<BudgetOverviewComponent>;
   let component: BudgetOverviewComponent;
 
-  function render(budgeted: number, spent: number, canCopy = true): void {
-    fixture.componentRef.setInput('totals', { budgeted, spent, left: budgeted - spent });
+  function render(budgeted: number, spent: number, canCopy = true, unbudgeted = 0): void {
+    fixture.componentRef.setInput('totals', {
+      budgeted,
+      spent,
+      left: budgeted - spent,
+      unbudgeted,
+    });
     fixture.componentRef.setInput('monthLabel', 'October 2026');
     fixture.componentRef.setInput('canCopy', canCopy);
     fixture.detectChanges();
@@ -53,6 +58,21 @@ describe('BudgetOverviewComponent', () => {
     expect(component.spentWidth()).toBe(100);
     render(0, 0);
     expect(component.spentWidth()).toBe(0);
+  });
+
+  it('should report spending without a limit on its own line, and omit the line when there is none', () => {
+    // act
+    render(100, 40, true, 30);
+
+    // assert & verify
+    expect(q('[data-testid="unbudgeted"]').textContent).toContain('$30.00');
+    expect(q('[data-testid="unbudgeted"]').textContent).toContain('no limit');
+
+    // act
+    render(100, 40, true, 0);
+
+    // assert & verify
+    expect(q('[data-testid="unbudgeted"]')).toBeNull();
   });
 
   it('should describe the bar in words', () => {

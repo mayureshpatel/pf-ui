@@ -14,7 +14,7 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { InputNumberModule } from 'primeng/inputnumber';
 import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
 import { toCents } from '@shared/utils/money.utils';
-import { BudgetRow } from '../../utils/budget-helpers';
+import { BudgetRow, isUnbudgeted } from '../../utils/budget-helpers';
 
 /** The panel's category mode: edit this month's limit, jump to the transactions, or remove it. */
 @Component({
@@ -37,6 +37,9 @@ export class BudgetCategoryViewComponent {
     amount: new FormControl<number | null>(null, [Validators.required, Validators.min(0)]),
   });
 
+  /** Whether this category has spending but no limit yet. */
+  readonly unbudgeted: Signal<boolean> = computed((): boolean => isUnbudgeted(this.row()));
+
   /** What is left (positive) or over (negative), in cents. */
   readonly left: Signal<number> = computed((): number =>
     toCents(this.row().status.budgetedAmount - this.row().status.spentAmount),
@@ -51,7 +54,9 @@ export class BudgetCategoryViewComponent {
     effect((): void => {
       this.categoryId();
       untracked((): void => {
-        this.form.reset({ amount: this.row().status.budgetedAmount });
+        this.form.reset({
+          amount: isUnbudgeted(this.row()) ? null : this.row().status.budgetedAmount,
+        });
       });
     });
   }

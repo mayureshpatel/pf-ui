@@ -6,6 +6,7 @@ import {
   copyPlan,
   groupBudgetRows,
   groupKeyOf,
+  isUnbudgeted,
   isSameMonth,
   monthLabel,
   shiftMonth,
@@ -123,12 +124,49 @@ describe('budget-helpers', () => {
   describe('budgetTotals', () => {
     it('should total budgeted, spent and left, and be zero for an empty month', () => {
       // assert & verify
-      expect(budgetTotals([status(1, 'A', 450, 512), status(2, 'B', 200, 184)])).toEqual({
-        budgeted: 650,
-        spent: 696,
-        left: -46,
-      });
-      expect(budgetTotals([])).toEqual({ budgeted: 0, spent: 0, left: 0 });
+      const rows = budgetRows(
+        [status(1, 'A', 450, 512), status(2, 'B', 200, 184)],
+        [budget(1, 1, 450), budget(2, 2, 200)],
+      );
+      expect(budgetTotals(rows)).toEqual({ budgeted: 650, spent: 696, left: -46, unbudgeted: 0 });
+      expect(budgetTotals([])).toEqual({ budgeted: 0, spent: 0, left: 0, unbudgeted: 0 });
+    });
+  });
+
+  describe('categories with spending but no budget', () => {
+    it('should recognise a row with no budget and no limit, but not a $0 budget or a missing id with a limit', () => {
+      // assert & verify
+      expect(isUnbudgeted({ status: status(1, 'A', 0, 120), budgetId: null })).toBe(true);
+      expect(isUnbudgeted({ status: status(1, 'A', 0, 120), budgetId: 5 })).toBe(false);
+      expect(isUnbudgeted({ status: status(1, 'A', 450, 120), budgetId: null })).toBe(false);
+    });
+
+    it('should list them last in a No limit set group with what was spent, most first', () => {
+      // arrange
+      const rows = budgetRows(
+        [status(1, 'Groceries', 450, 100), status(2, 'Gifts', 0, 30), status(3, 'Fuel', 0, 80)],
+        [budget(11, 1, 450)],
+      );
+
+      // act
+      const groups = groupBudgetRows(rows);
+
+      // assert & verify
+      expect(groups.map((g) => g.key)).toEqual(['ON_TRACK', 'UNBUDGETED']);
+      expect(groups[1].label).toBe('No limit set');
+      expect(groups[1].rows.map((r) => r.status.category.name)).toEqual(['Fuel', 'Gifts']);
+      expect(groups[1].spentSubtotal).toBe(110);
+    });
+
+    it('should leave them out of the budgeted, spent and left totals and report them separately', () => {
+      // arrange
+      const rows = budgetRows(
+        [status(1, 'Groceries', 450, 100), status(2, 'Gifts', 0, 30)],
+        [budget(11, 1, 450)],
+      );
+
+      // assert & verify
+      expect(budgetTotals(rows)).toEqual({ budgeted: 450, spent: 100, left: 350, unbudgeted: 30 });
     });
   });
 
