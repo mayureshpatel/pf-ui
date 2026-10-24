@@ -1,232 +1,166 @@
-<div class="w-full flex flex-col gap-4">
-  <!-- Page Header -->
-  <app-screen-toolbar class="mb-6">
+<div class="flex w-full flex-col gap-4">
+  <app-screen-toolbar [showDivider]="false">
     <div toolbarTitle>
-      <h1 class="text-4xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight">Categories</h1>
+      <h1 class="text-3xl font-bold tracking-tight text-surface-900 dark:text-surface-0">
+        Categories
+      </h1>
     </div>
-
-    <div toolbarActions>
-      <p-button
-        label="New Category"
-        icon="pi pi-plus"
-        (onClick)="openCreateDialog()"
-        severity="primary"
-        [raised]="true"
-      />
+    <div toolbarFilters>
+      <p-button label="Add category" icon="pi pi-plus" (onClick)="startAdd()" />
     </div>
   </app-screen-toolbar>
 
-  <!-- Categories Table -->
-  @if (!isEmpty()) {
-    <p-card class="overflow-hidden">
-      <p-table
-        [value]="categories()"
-        dataKey="parent.id"
-        [expandedRowKeys]="expandedRows()"
-        [loading]="loading()"
-        [paginator]="false"
-        [stripedRows]="true"
-        size="small"
-        [scrollable]="true"
-        scrollHeight="calc(100vh - 280px)"
-        [breakpoint]="'960px'"
-      >
-        <!-- Table Caption -->
-        <ng-template #caption>
-          <div class="flex flex-wrap justify-end gap-2">
-            <p-button label="Expand All" icon="pi pi-plus" [text]="true" (onClick)="expandAll()"/>
-            <p-button label="Collapse All" icon="pi pi-minus" [text]="true" (onClick)="collapseAll()"/>
-          </div>
-        </ng-template>
-
-        <!-- Table Header -->
-        <ng-template #header>
-          <tr>
-            <th id="indent-spacer" class="w-16"></th>
-            <th id="category-name" class="py-4 font-bold text-surface-700 dark:text-surface-200">Category</th>
-            <th id="usage" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-center w-37.5">Usage</th>
-            <th id="actions" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-center w-30">Actions</th>
-          </tr>
-        </ng-template>
-
-        <!-- Parent Row (2 Columns) -->
-        <ng-template #body let-group let-expanded="expanded">
-          <tr class="hover:bg-surface-100/50 dark:hover:bg-surface-800/50 transition-colors duration-200">
-            <!-- Expand/Name/Description -->
-            <td colspan="2" class="py-4 px-4">
-              <div class="flex items-center gap-4">
-                <!-- Row Expand Toggle -->
-                <div class="flex justify-center">
-                  @if (group.items.length > 0) {
-                    <p-button
-                      type="button"
-                      [pRowToggler]="group"
-                      [text]="true"
-                      severity="secondary"
-                      [rounded]="true"
-                      [icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'"
-                    />
-                  }
-                </div>
-
-                <!-- Icon -->
-                <div class="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm"
-                     [class]="group.parent.color + ' text-white'"
-                >
-                  <i [class]="'pi ' + (group.parent.icon || 'pi-tag') + ' text-lg'"
-                     [style.color]="group.parent.color"
-                  ></i>
-                </div>
-
-                <!-- Name & Description -->
-                <div class="flex flex-col">
-                  <span class="font-bold text-lg text-surface-900 dark:text-surface-0">{{ group.parent.name }}</span>
-                  <span class="text-xs font-bold text-muted-color uppercase tracking-tighter opacity-70">
-                    {{ group.parent.type }}
-                  </span>
-                </div>
-              </div>
-            </td>
-
-            <!-- Transaction Count -->
-            <td class="text-center py-4">
-              <button
-                (click)="viewTransactions(group.parent)"
-                class="flex items-center gap-2 mx-auto px-3 py-1 rounded-lg hover:bg-primary/10 text-primary font-bold transition-all group cursor-pointer"
-              >
-                <span class="font-mono text-lg">{{ group.parent.transactionCount }}</span>
-              </button>
-            </td>
-
-            <!-- Actions -->
-            <td class="text-center py-1 w-30">
-              <div class="flex justify-center gap-1">
-                <p-button
-                  icon="pi pi-pencil"
-                  [text]="true"
-                  [rounded]="true"
-                  severity="secondary"
-                  size="small"
-                  (onClick)="openEditDialog(group.parent)"
-                />
-                <p-button
-                  icon="pi pi-trash"
-                  [text]="true"
-                  [rounded]="true"
-                  severity="danger"
-                  size="small"
-                  (onClick)="deleteCategory(group.parent)"
-                  [disabled]="(group.parent.transactionCount || 0) > 0"
-                />
-              </div>
-            </td>
-          </tr>
-        </ng-template>
-
-        <!-- Child Rows -->
-        <ng-template #expandedrow let-group>
-          <tr>
-            <td colspan="4" class="p-0">
-              <div class="bg-surface-50/50 dark:bg-surface-800/50 pb-2">
-                <p-table [value]="group.items" [stripedRows]="false" size="small" class="w-full">
-                  <ng-template #body let-item>
-                    <tr class="hover:bg-surface-100/30 dark:hover:bg-surface-800/30 transition-colors duration-200 border-none!">
-                      <td class="w-16"></td>
-
-                      <!-- Name/Description -->
-                      <td class="py-3 px-4">
-                        <div class="flex items-center gap-4">
-                          <div class="w-8 h-8 rounded-lg flex items-center justify-center shadow-xs bg-surface-200 dark:bg-surface-700">
-                            <i [class]="'pi ' + (item.icon || 'pi-tag') + ' text-sm'"></i>
-                          </div>
-                          <div class="flex flex-col">
-                            <span class="text-surface-800 dark:text-surface-100 font-semibold">{{ item.name }}</span>
-                            <span class="text-xs font-bold text-muted-color uppercase opacity-60">
-                              {{ item.type }}
-                            </span>
-                          </div>
-                        </div>
-                      </td>
-
-                      <!-- Transaction Count -->
-                      <td class="text-center py-3 w-37.5">
-                        <button
-                          (click)="viewTransactions(item)"
-                          class="flex items-center gap-2 mx-auto px-3 py-1 rounded-lg hover:bg-primary/10 text-primary font-bold transition-all group cursor-pointer">
-                          <span class="font-mono text-sm">{{ item.transactionCount }}</span>
-                        </button>
-                      </td>
-
-                      <!-- Actions -->
-                      <td class="text-center py-1 w-30">
-                        <div class="flex justify-center gap-1">
-                          <p-button
-                            icon="pi pi-pencil"
-                            [text]="true"
-                            [rounded]="true"
-                            severity="secondary"
-                            size="small"
-                            (onClick)="openEditDialog(item)"
-                          />
-                          <p-button
-                            icon="pi pi-trash"
-                            [text]="true"
-                            [rounded]="true"
-                            severity="danger"
-                            size="small"
-                            (onClick)="deleteCategory(item)"
-                            [disabled]="(item.transactionCount || 0) > 0"
-                          />
-                        </div>
-                      </td>
-                    </tr>
-                  </ng-template>
-                </p-table>
-              </div>
-            </td>
-          </tr>
-        </ng-template>
-
-        <ng-template #emptymessage>
-          <tr>
-            <td colspan="4" class="text-center py-16 text-muted-color">
-              <i class="pi pi-search text-4xl mb-3 block opacity-20"></i>
-              No categories found matching your criteria.
-            </td>
-          </tr>
-        </ng-template>
-      </p-table>
-    </p-card>
-  } @else if (loadError()) {
-    <app-page-error-state message="Failed to load categories." (retry)="loadData()"/>
+  @if (loadError() && categories().length === 0) {
+    <app-page-error-state message="Failed to load categories." (retry)="loadData()" />
+  } @else if (loading() && !loadedOnce()) {
+    <div class="flex flex-col gap-4" aria-busy="true" role="status">
+      <span class="sr-only">Loading categories</span>
+      <p-skeleton height="3rem" borderRadius="1rem" />
+      <p-skeleton height="16rem" borderRadius="1rem" />
+    </div>
   } @else {
-    <div class="flex flex-col items-center justify-center min-h-[60vh] text-center animate-fade-in">
-      <div class="relative mb-8">
-        <div class="absolute -inset-4 bg-primary/10 rounded-full blur-2xl animate-pulse"></div>
-        <i class="pi pi-tags text-8xl text-primary/40 relative"></i>
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_26rem]">
+      <div class="flex min-w-0 flex-col gap-4">
+        @if (categories().length === 0) {
+          <div
+            class="rounded-2xl border border-surface-200 p-10 text-center dark:border-surface-800"
+          >
+            <p class="font-medium">No categories yet</p>
+            <p class="text-muted-color">
+              Create categories to organize your income and expenses. You can group them under
+              parent categories.
+            </p>
+          </div>
+        } @else {
+          <app-category-filters
+            [filter]="filter()"
+            [types]="types()"
+            [unusedCount]="stats().unused"
+            (filterChange)="setFilter($event)"
+          />
+          @if (visibleNodes().length === 0) {
+            <div
+              class="rounded-2xl border border-surface-200 p-10 text-center dark:border-surface-800"
+            >
+              <p class="mb-3 font-medium">No categories match these filters</p>
+              <p-button
+                data-testid="clear-filters"
+                label="Clear filters"
+                severity="secondary"
+                [outlined]="true"
+                (onClick)="clearFilters()"
+              />
+            </div>
+          } @else {
+            <app-category-tree
+              [nodes]="visibleNodes()"
+              [expandedIds]="expandedForTree()"
+              [selectedCategoryId]="selectedCategoryId()"
+              [tickable]="tickableIds()"
+              [ticked]="tickedIds()"
+              [showChecks]="showChecks()"
+              [loading]="loading()"
+              (openCategory)="openCategory($event)"
+              (toggleExpand)="toggleExpand($event)"
+              (toggleTick)="toggleTick($event)"
+              (expandAll)="expandAll()"
+              (collapseAll)="collapseAll()"
+            />
+          }
+        }
       </div>
-      <h2 class="text-3xl font-bold text-surface-900 dark:text-surface-0 mb-3">No categories yet</h2>
-      <p class="text-muted-color mb-8 max-w-lg leading-relaxed text-lg">
-        Create categories to organize your income and expenses.
-        You can group them under parent categories for better tracking.
-      </p>
-      <p-button
-        label="Create Your First Category"
-        icon="pi pi-plus"
-        (onClick)="openCreateDialog()"
-        severity="primary"
-        size="large"
-        [raised]="true"
-      />
+
+      <app-side-panel
+        class="order-first block lg:order-none"
+        [title]="panelTitle()"
+        [saving]="saving()"
+        [showClose]="panelMode() !== 'overview' && !onlyAddMode()"
+        [sheet]="panelMode() !== 'overview' && panelMode() !== 'selection'"
+        [moveFocus]="false"
+        [showFooter]="panelMode() === 'category' || panelMode() === 'add'"
+        [saveLabel]="panelMode() === 'add' ? 'Add category' : 'Save changes'"
+        [showDelete]="false"
+        (save)="onPanelSave()"
+        (closePanel)="onPanelClose()"
+      >
+        @switch (panelMode()) {
+          @case ('overview') {
+            <app-category-overview
+              [stats]="stats()"
+              (add)="startAdd()"
+              (reviewUnused)="setFilter({ type: 'ALL', unusedOnly: true, search: '' })"
+            />
+          }
+          @case ('category') {
+            @if (selectedCategory(); as category) {
+              <button type="button" class="mb-3 cursor-pointer text-sm underline" (click)="back()">
+                Back to overview
+              </button>
+              <app-category-edit-form
+                #editForm
+                [category]="category"
+                [categories]="categories()"
+                [saving]="saving()"
+                [deleteBlockedReason]="deleteBlockedReason()"
+                (save)="saveCategory($event)"
+                (remove)="deleteCategory()"
+                (viewTransactions)="viewTransactions()"
+              />
+              @if (!category.parent) {
+                <button
+                  type="button"
+                  class="mt-3 cursor-pointer text-sm underline"
+                  (click)="startAdd(category.id)"
+                >
+                  Add a subcategory to {{ category.name }}
+                </button>
+              }
+            } @else {
+              <p-skeleton height="8rem" borderRadius="1rem" />
+            }
+          }
+          @case ('add') {
+            @if (!onlyAddMode()) {
+              <button type="button" class="mb-3 cursor-pointer text-sm underline" (click)="back()">
+                Back
+              </button>
+            }
+            <app-category-edit-form
+              #editForm
+              [category]="null"
+              [categories]="categories()"
+              [defaultParentId]="addParentId()"
+              [saving]="saving()"
+              (save)="saveCategory($event)"
+            />
+          }
+          @case ('selection') {
+            <ul class="m-0 mb-4 list-none p-0 text-sm" data-testid="ticked-names">
+              @for (category of selectedCategories(); track category.id) {
+                <li class="py-0.5">{{ category.name }}</li>
+              }
+            </ul>
+            <div class="flex flex-col gap-2">
+              <button
+                type="button"
+                class="cursor-pointer rounded-lg border border-rose-300 px-3 py-2 text-sm font-medium text-rose-700 disabled:opacity-50 dark:text-rose-400"
+                [disabled]="saving()"
+                (click)="deleteSelected()"
+              >
+                Delete {{ selectedCategories().length }}
+                {{ selectedCategories().length === 1 ? 'category' : 'categories' }}
+              </button>
+              <button
+                type="button"
+                class="cursor-pointer rounded-lg px-3 py-2 text-sm font-medium underline"
+                (click)="clearSelection()"
+              >
+                Clear selection
+              </button>
+            </div>
+          }
+        }
+      </app-side-panel>
     </div>
   }
-
-  <!-- Form Drawer -->
-  <app-category-form-drawer
-    [(visible)]="showDialog"
-    [category]="selectedCategory()"
-    [categoryOptions]="allCategories()"
-    [saving]="loading()"
-    (save)="onSave($event)"
-  />
 </div>

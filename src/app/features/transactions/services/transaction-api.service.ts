@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { map, Observable } from 'rxjs';
 import { environment } from '@env';
 import {
   Transaction,
@@ -140,10 +140,24 @@ export class TransactionApiService {
   }
 
   /**
-   * Gets transaction counts grouped by category.
-   * @returns the categories with their transaction counts.
+   * Gets transaction counts grouped by category. The backend answers with
+   * `{ category, transactionCount }` rows; they are flattened here into categories that carry
+   * their own `transactionCount`, so callers can look them up by `id`.
+   * @returns the categories that have transactions, each with its count.
    */
   getCountsByCategory(): Observable<Category[]> {
-    return this.http.get<Category[]>(`${this.apiUrl}/count-by-category`, SKIP_TOAST_OPTIONS);
+    return this.http
+      .get<{ category: Category; transactionCount: number }[]>(
+        `${this.apiUrl}/count-by-category`,
+        SKIP_TOAST_OPTIONS,
+      )
+      .pipe(
+        map((rows: { category: Category; transactionCount: number }[]): Category[] =>
+          rows.map((row): Category => ({
+            ...row.category,
+            transactionCount: row.transactionCount,
+          })),
+        ),
+      );
   }
 }

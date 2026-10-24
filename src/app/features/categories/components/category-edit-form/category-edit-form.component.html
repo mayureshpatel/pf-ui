@@ -1,0 +1,110 @@
+<form (ngSubmit)="submit()" [formGroup]="form" class="flex flex-col gap-4">
+  <div class="flex flex-col gap-1">
+    <label for="category-name" class="text-sm font-medium">Name</label>
+    <input pInputText id="category-name" formControlName="name" class="w-full" />
+    @if (nameError(); as error) {
+      <small data-testid="name-error" class="text-rose-700 dark:text-rose-400">{{ error }}</small>
+    }
+  </div>
+
+  <div class="flex flex-col gap-1">
+    <label id="category-type-label" for="category-type" class="text-sm font-medium">Type</label>
+    <p-select
+      inputId="category-type"
+      ariaLabelledBy="category-type-label"
+      formControlName="type"
+      [options]="typeOptions"
+      optionLabel="label"
+      optionValue="value"
+      appendTo="body"
+    />
+  </div>
+
+  <div class="flex flex-col gap-1">
+    <label id="category-parent-label" for="category-parent" class="text-sm font-medium">
+      Parent
+    </label>
+    <p-select
+      inputId="category-parent"
+      ariaLabelledBy="category-parent-label"
+      formControlName="parentId"
+      [options]="parentSelectOptions()"
+      optionLabel="label"
+      optionValue="value"
+      placeholder="No parent"
+      [showClear]="true"
+      appendTo="body"
+    />
+  </div>
+
+  <fieldset class="m-0 flex flex-col gap-2 border-0 p-0">
+    <legend class="mb-1 text-sm font-medium">Icon</legend>
+    <div class="flex flex-wrap gap-1">
+      @for (icon of icons; track icon; let i = $index) {
+        <button
+          type="button"
+          class="flex size-9 cursor-pointer items-center justify-center rounded-lg border border-surface-300 dark:border-surface-700"
+          [attr.data-testid]="'icon-' + i"
+          [attr.aria-label]="iconLabel(icon)"
+          [attr.aria-pressed]="form.controls.icon.value === icon"
+          [class.bg-primary-100]="form.controls.icon.value === icon"
+          [class.dark:bg-primary-900/40]="form.controls.icon.value === icon"
+          (click)="selectIcon(icon)"
+        >
+          <i class="pi" [class]="icon" aria-hidden="true"></i>
+        </button>
+      }
+    </div>
+  </fieldset>
+
+  <fieldset class="m-0 flex flex-col gap-2 border-0 p-0">
+    <legend class="mb-1 text-sm font-medium">Color</legend>
+    <div class="flex flex-wrap gap-2">
+      @for (color of colors; track color; let i = $index) {
+        <button
+          type="button"
+          class="size-8 cursor-pointer rounded-full border-2"
+          [attr.data-testid]="'color-' + i"
+          [attr.aria-label]="colorNames[i]"
+          [attr.aria-pressed]="form.controls.color.value === color"
+          [style.background-color]="color"
+          [class]="
+            form.controls.color.value === color
+              ? 'border-surface-900 dark:border-surface-0'
+              : 'border-transparent'
+          "
+          (click)="selectColor(color)"
+        ></button>
+      }
+    </div>
+  </fieldset>
+
+  @if (errorMessage()) {
+    <p data-testid="form-error" class="text-sm text-rose-700 dark:text-rose-400">
+      {{ errorMessage() }}
+    </p>
+  }
+
+  @if (isEditMode()) {
+    <div class="flex flex-col gap-2">
+      <button
+        type="button"
+        class="cursor-pointer rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium dark:border-surface-700"
+        (click)="viewTransactions.emit()"
+      >
+        View transactions
+      </button>
+      <button
+        type="button"
+        class="cursor-pointer rounded-lg border border-rose-300 px-3 py-2 text-sm font-medium text-rose-700 disabled:cursor-not-allowed disabled:opacity-50 dark:text-rose-400"
+        [disabled]="deleteBlockedReason() !== null"
+        (click)="remove.emit()"
+      >
+        Delete category
+      </button>
+      @if (deleteBlockedReason(); as reason) {
+        <small data-testid="delete-reason" class="text-muted-color">{{ reason }}</small>
+      }
+    </div>
+  }
+</form>
