@@ -54,6 +54,33 @@ describe('CategoryEditFormComponent', () => {
     component = fixture.componentInstance;
   });
 
+  it('should fill its fields at init, before any effect or render could run after the user types', () => {
+    // arrange -- inputs set, but no change detection yet (no effect has run)
+    fixture.componentRef.setInput('category', groceries);
+    fixture.componentRef.setInput('categories', all);
+
+    // act
+    component.ngOnInit();
+
+    // assert & verify
+    expect(component.form.getRawValue().name).toBe('Groceries');
+    expect(component.form.getRawValue().parentId).toBe(1);
+  });
+
+  it('should not reset again after init when nothing relevant changed (typing survives the first render)', () => {
+    // arrange
+    fixture.componentRef.setInput('category', null);
+    fixture.componentRef.setInput('categories', all);
+    component.ngOnInit();
+    component.form.patchValue({ name: 'Typed early' });
+
+    // act -- the first render and its effects run now
+    fixture.detectChanges();
+
+    // assert & verify
+    expect(component.form.getRawValue().name).toBe('Typed early');
+  });
+
   it('should reset for another category but keep typing when the same category refreshes', () => {
     // arrange
     render(travel);

@@ -6,6 +6,7 @@ import {
   input,
   InputSignal,
   output,
+  OnInit,
   OutputEmitterRef,
   signal,
   Signal,
@@ -56,7 +57,7 @@ const notBlank = (control: AbstractControl): ValidationErrors | null =>
   templateUrl: './category-edit-form.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class CategoryEditFormComponent {
+export class CategoryEditFormComponent implements OnInit {
   /** The category being edited (null when adding one). */
   readonly category: InputSignal<Category | null> = input<Category | null>(null);
   /** Every category, flat, for the parent choices and the duplicate check. */
@@ -132,11 +133,29 @@ export class CategoryEditFormComponent {
     (): string => `${this.category()?.id ?? 'new'}:${this.defaultParentId() ?? ''}`,
   );
 
+  /** The key the form was last filled for; the effect only resets when it really changes. */
+  private filledFor: string | null = null;
+
   constructor() {
     effect((): void => {
-      this.formKey();
-      untracked((): void => this.reset());
+      const key: string = this.formKey();
+      if (key === this.filledFor) return;
+      untracked((): void => this.fill(key));
     });
+  }
+
+  /**
+   * Fills the form at init, synchronously and before the first render, so a user who types at once
+   * can never have their text wiped by an effect that runs a moment later.
+   */
+  ngOnInit(): void {
+    const key: string = this.formKey();
+    if (key !== this.filledFor) this.fill(key);
+  }
+
+  private fill(key: string): void {
+    this.filledFor = key;
+    this.reset();
   }
 
   private reset(): void {

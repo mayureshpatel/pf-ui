@@ -943,4 +943,43 @@ describe('CategoriesComponent', () => {
       expect(document.activeElement).toBe(aside());
     });
   });
+
+  describe('typing while a reload finishes', () => {
+    it('should keep what was typed in the add form when a reload completes', () => {
+      // arrange
+      component.startAdd();
+      fixture.detectChanges();
+      const form = fixture.debugElement.query(By.directive(CategoryEditFormComponent))
+        .componentInstance as CategoryEditFormComponent;
+      form.form.patchValue({ name: 'Half typed' });
+      form.form.markAsDirty();
+
+      // act -- the reload from an earlier save finishes now
+      loadWith(flat);
+      fixture.detectChanges();
+
+      // assert & verify
+      const after = fixture.debugElement.query(By.directive(CategoryEditFormComponent))
+        .componentInstance as CategoryEditFormComponent;
+      expect(after.form.getRawValue().name).toBe('Half typed');
+    });
+
+    it('should keep an open category form when a reload completes', () => {
+      // arrange
+      openByName('Travel');
+      fixture.detectChanges();
+      const form = fixture.debugElement.query(By.directive(CategoryEditFormComponent))
+        .componentInstance as CategoryEditFormComponent;
+      form.form.patchValue({ name: 'Trips' });
+
+      // act
+      loadWith(flat);
+      fixture.detectChanges();
+
+      // assert & verify
+      const after = fixture.debugElement.query(By.directive(CategoryEditFormComponent))
+        .componentInstance as CategoryEditFormComponent;
+      expect(after.form.getRawValue().name).toBe('Trips');
+    });
+  });
 });

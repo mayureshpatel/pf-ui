@@ -1,66 +1,64 @@
 import {expect, test} from '@playwright/test';
 
 /**
- * Covers PF-332: category CRUD through the real UI (category-form-drawer), including the
- * parent/subcategory hierarchy -- create a parent, create a child under it, confirm it renders
- * nested once expanded, then edit the child's name.
+ * Covers PF-332/PF-878: category CRUD through the real UI -- the tree beside an always-present
+ * panel (overview, category, add, selection), the parent/subcategory hierarchy, the search and
+ * Unused filters, and the tick-and-delete cleanup. Uses the shared dev user's cached session (not a
+ * new registration: registration is limited to 5 per minute per IP) and creates and removes only
+ * its own categories, never budgeting them.
  */
 test.describe('Categories', () => {
-  test('create a parent and child category, verify hierarchy, and edit', async ({page}) => {
-    const parentName = `E2E Category Parent ${Date.now()}`;
-    const childName = `E2E Category Child ${Date.now()}`;
+  test('create a parent and child, edit the child, then tick and delete both as unused', async ({page}) => {
+    const stamp = Date.now();
+    const parentName = `E2E Category Parent ${stamp}`;
+    const childName = `E2E Category Child ${stamp}`;
     const renamedChildName = `${childName} Renamed`;
 
     await page.goto('/categories');
+    const panel = page.getByRole('complementary');
+    await expect(panel).toHaveAccessibleName('Overview');
 
-    // Create parent category
-    await page.getByRole('button', {name: 'New Category'}).click();
-    const drawer = page.getByRole('complementary');
-    await expect(drawer.getByRole('heading', {name: 'Create Category'})).toBeVisible();
+    // Create the parent through the panel
+    await page.getByRole('button', {name: 'Add category'}).first().click();
+    await expect(panel).toHaveAccessibleName('Add category');
+    await panel.getByLabel('Name').fill(parentName);
+    await panel.getByRole('button', {name: 'Add category'}).click();
+    await expect(page.getByText('Category added')).toBeVisible();
+    await expect(panel).toHaveAccessibleName(parentName);
 
-    await drawer.locator('#name').fill(parentName);
-    await drawer.locator('#color-picker button').first().click();
-    await drawer.locator('#icon-picker button').first().click();
-    await drawer.getByRole('button', {name: 'Create Category'}).click();
-
-    await expect(page.getByText('Category created successfully')).toBeVisible();
-    await expect(drawer).toBeHidden();
-
-    const parentRow = page.getByRole('row', {name: new RegExp(parentName)});
-    await expect(parentRow).toBeVisible();
-    await expect(parentRow.getByText('EXPENSE')).toBeVisible();
-
-    // Create child category, nested under the parent just created
-    await page.getByRole('button', {name: 'New Category'}).click();
-    await expect(drawer.getByRole('heading', {name: 'Create Category'})).toBeVisible();
-
-    await drawer.locator('#name').fill(childName);
-    await drawer.getByText('None (Top Level)').click();
+    // Create the child under it
+    await page.getByRole('button', {name: 'Add category'}).first().click();
+    await panel.getByLabel('Name').fill(childName);
+    await panel.getByText('No parent').click();
     await page.getByRole('option', {name: parentName}).click();
-    await drawer.getByRole('button', {name: 'Create Category'}).click();
+    await panel.getByRole('button', {name: 'Add category'}).click();
+    await expect(page.getByText('Category added')).toBeVisible();
+    await expect(panel).toHaveAccessibleName(childName);
 
-    await expect(page.getByText('Category created successfully')).toBeVisible();
-
-    // Hierarchy: the child is collapsed by default -- not visible until the parent expands
-    await expect(page.getByText(childName)).not.toBeVisible();
-    await page.getByRole('button', {name: 'Expand All'}).click();
-
-    // PrimeNG's expanded-row wrapper <tr> (which contains the nested child table) also matches
-    // this role/name query via its descendant text -- the actual child row is the innermost match.
-    const childRow = page.getByRole('row', {name: new RegExp(childName)}).last();
+    // Find both with the search box; filtering shows the child under its parent
+    await page.getByLabel('Search categories').fill(String(stamp));
+    await expect(page.getByTestId('open-category').filter({hasText: parentName})).toBeVisible();
+    const childRow = page.getByTestId('open-category').filter({hasText: childName});
     await expect(childRow).toBeVisible();
-    await expect(childRow.getByText('EXPENSE')).toBeVisible();
 
-    // Edit the child's name
-    await childRow.locator('button:has(.pi-pencil)').click();
-    const editDrawer = page.getByRole('complementary');
-    await expect(editDrawer.getByRole('heading', {name: 'Edit Category'})).toBeVisible();
-    await expect(editDrawer.locator('#name')).toHaveValue(childName);
+    // Edit the child's name in place
+    await childRow.click();
+    await expect(panel).toHaveAccessibleName(childName);
+    await panel.getByLabel('Name').fill(renamedChildName);
+    await panel.getByRole('button', {name: 'Save changes'}).click();
+    await expect(page.getByText('Category updated')).toBeVisible();
+    await expect(page.getByTestId('open-category').filter({hasText: renamedChildName})).toBeVisible();
 
-    await editDrawer.locator('#name').fill(renamedChildName);
-    await editDrawer.getByRole('button', {name: 'Update Category'}).click();
+    // Clean up through the Unused pill: tick the child, then its parent, and delete them together
+    await page.getByRole('button', {name: /^Unused/}).click();
+    await page.getByLabel(`Select ${renamedChildName}`).check();
+    await page.getByLabel(`Select ${parentName}`).check();
+    await expect(panel).toHaveAccessibleName('2 selected');
+    await panel.getByRole('button', {name: 'Delete 2 categories'}).click();
+    await page.getByRole('alertdialog').getByRole('button', {name: 'Delete', exact: true}).click();
 
-    await expect(page.getByText('Category updated successfully')).toBeVisible();
-    await expect(page.getByRole('row', {name: new RegExp(renamedChildName)}).last()).toBeVisible();
+    await expect(page.getByText('Deleted 2 categories')).toBeVisible();
+    await expect(page.getByTestId('open-category').filter({hasText: String(stamp)})).toHaveCount(0);
+    await expect(panel).toHaveAccessibleName('Overview');
   });
 });
