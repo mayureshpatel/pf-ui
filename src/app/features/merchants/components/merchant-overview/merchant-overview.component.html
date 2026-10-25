@@ -1,0 +1,38 @@
+<div class="flex flex-col gap-4">
+  <div>
+    <p class="m-0 text-2xl font-bold tabular-nums">{{ merchantsText() }}</p>
+    @if (unlinkedText(); as unlinked) {
+      <p data-testid="unlinked-line" class="mt-2 text-sm text-muted-color">{{ unlinked }}</p>
+    } @else {
+      <div
+        data-testid="unlinked-skeleton"
+        class="mt-2 h-4 w-3/4 animate-pulse rounded bg-surface-200 dark:bg-surface-700"
+        aria-hidden="true"
+      ></div>
+    }
+    @if (showCreateHint()) {
+      <p data-testid="create-hint" class="mt-2 text-sm text-muted-color">
+        Create a merchant, then link the transaction descriptions that belong to it.
+      </p>
+    }
+  </div>
+
+  <div class="flex flex-col gap-2">
+    @if (canLink()) {
+      <button
+        type="button"
+        class="cursor-pointer rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium dark:border-surface-700"
+        (click)="linkDescriptions.emit()"
+      >
+        Link descriptions
+      </button>
+    }
+    <button
+      type="button"
+      class="cursor-pointer rounded-lg bg-primary-700 px-3 py-2 text-sm font-medium text-white hover:bg-primary-800"
+      (click)="add.emit()"
+    >
+      Add merchant
+    </button>
+  </div>
+</div>
