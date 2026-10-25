@@ -1,0 +1,135 @@
+<form (ngSubmit)="submit()" [formGroup]="form" class="flex flex-col gap-4">
+  <div class="flex flex-col gap-1">
+    <label id="recurring-merchant-label" for="recurring-merchant" class="text-sm font-medium">
+      Merchant
+    </label>
+    <p-select
+      inputId="recurring-merchant"
+      ariaLabelledBy="recurring-merchant-label"
+      formControlName="merchantId"
+      [options]="merchantChoices()"
+      optionLabel="name"
+      optionValue="id"
+      placeholder="Choose a merchant"
+      [filter]="true"
+      filterBy="name"
+      filterPlaceholder="Search merchants"
+      appendTo="body"
+      (onFilter)="onMerchantFilter($event.filter)"
+    />
+    @if (form.controls.merchantId.invalid && form.controls.merchantId.touched) {
+      <small data-testid="merchant-error" class="text-rose-700 dark:text-rose-400">
+        Choose a merchant.
+      </small>
+    }
+  </div>
+
+  <div class="flex flex-col gap-1">
+    <label id="recurring-account-label" for="recurring-account" class="text-sm font-medium">
+      Account
+    </label>
+    <p-select
+      inputId="recurring-account"
+      ariaLabelledBy="recurring-account-label"
+      formControlName="accountId"
+      [options]="accounts()"
+      optionLabel="name"
+      optionValue="id"
+      placeholder="Choose an account"
+      appendTo="body"
+    />
+    @if (form.controls.accountId.invalid && form.controls.accountId.touched) {
+      <small data-testid="account-error" class="text-rose-700 dark:text-rose-400">
+        Choose an account.
+      </small>
+    }
+  </div>
+
+  <div class="grid grid-cols-2 gap-3">
+    <div class="flex flex-col gap-1">
+      <label for="recurring-amount" class="text-sm font-medium">Amount</label>
+      <p-inputNumber
+        inputId="recurring-amount"
+        formControlName="amount"
+        mode="currency"
+        currency="USD"
+        placeholder="$0.00"
+      />
+      @if (form.controls.amount.invalid && form.controls.amount.touched) {
+        <small data-testid="amount-error" class="text-rose-700 dark:text-rose-400">
+          Enter an amount above $0.00.
+        </small>
+      }
+    </div>
+    <div class="flex flex-col gap-1">
+      <label id="recurring-frequency-label" for="recurring-frequency" class="text-sm font-medium">
+        Frequency
+      </label>
+      <p-select
+        inputId="recurring-frequency"
+        ariaLabelledBy="recurring-frequency-label"
+        formControlName="frequency"
+        [options]="frequencyOptions"
+        optionLabel="label"
+        optionValue="value"
+        appendTo="body"
+      />
+    </div>
+  </div>
+
+  <div class="flex flex-col gap-1">
+    <label for="recurring-next-date" class="text-sm font-medium">Next payment</label>
+    <p-datepicker
+      inputId="recurring-next-date"
+      formControlName="nextDate"
+      [showIcon]="true"
+      dateFormat="yy-mm-dd"
+      placeholder="YYYY-MM-DD"
+      appendTo="body"
+    />
+    @if (form.controls.nextDate.invalid && form.controls.nextDate.touched) {
+      <small data-testid="date-error" class="text-rose-700 dark:text-rose-400">
+        Choose a date.
+      </small>
+    }
+  </div>
+
+  @if (isEditMode()) {
+    @if (lastCharge(); as last) {
+      <p data-testid="last-charge" class="m-0 text-sm text-muted-color">
+        Last charged {{ last.date }}, {{ last.amount | currency }}
+      </p>
+    }
+    @if (priceNote(); as note) {
+      <div class="flex flex-col items-start gap-2">
+        <p data-testid="price-change" class="m-0 text-sm text-amber-700 dark:text-amber-400">
+          {{ note }}
+        </p>
+        <button
+          type="button"
+          class="cursor-pointer rounded-lg border border-surface-300 px-3 py-1.5 text-sm font-medium dark:border-surface-700"
+          (click)="updatePrice.emit()"
+        >
+          Update price
+        </button>
+      </div>
+    }
+
+    <div class="flex flex-col gap-2">
+      <button
+        type="button"
+        class="cursor-pointer rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium dark:border-surface-700"
+        (click)="togglePaused.emit()"
+      >
+        {{ item()?.active ? 'Pause' : 'Resume' }}
+      </button>
+      <button
+        type="button"
+        class="cursor-pointer rounded-lg border border-rose-300 px-3 py-2 text-sm font-medium text-rose-700 dark:text-rose-400"
+        (click)="deleteItem.emit()"
+      >
+        Delete
+      </button>
+    </div>
+  }
+</form>
