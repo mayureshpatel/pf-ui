@@ -257,6 +257,31 @@ describe('RecurringEditFormComponent', () => {
     expect(component.form.dirty).toBe(false);
   });
 
+  it('should show the saved values again when the same item reloads and the form is untouched', () => {
+    // arrange
+    render(netflix);
+
+    // act -- Update price saved 12 and the list reloaded the same item
+    render({ ...netflix, amount: 12, priceChange: null });
+
+    // assert & verify
+    expect(component.form.controls.amount.value).toBe(12);
+    expect(component.form.dirty).toBe(false);
+  });
+
+  it('should keep what the user typed when the same item reloads under unsaved edits', () => {
+    // arrange
+    render(netflix);
+    component.form.controls.amount.setValue(11);
+    component.form.controls.amount.markAsDirty();
+
+    // act
+    render({ ...netflix, amount: 12 });
+
+    // assert & verify
+    expect(component.form.controls.amount.value).toBe(11);
+  });
+
   it('should include the item merchant in the choices even when the search no longer lists it', () => {
     // act
     render(netflix, [merchants[1]]);

@@ -88,6 +88,9 @@ export interface RecurringSuggestion {
   priceChangedOn?: string | null;
   /** The detected name folded the way description links fold text; the dismissal key. */
   patternKey: string;
+  /** The merchant this pattern's text is already linked to, when there is one. */
+  linkedMerchantId?: number | null;
+  linkedMerchantName?: string | null;
 }
 
 /**

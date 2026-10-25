@@ -453,6 +453,60 @@ describe('RecurringComponent', () => {
       expect(mockToast.error).toHaveBeenCalledWith('That item no longer exists.');
     });
 
+    it('should show the saved amount in the form and clear the note after Update price', () => {
+      // arrange
+      component.openItem(netflix);
+      fixture.detectChanges();
+      mockApi.getAll.mockReturnValue(
+        of([{ ...netflix, amount: 12, priceChange: null }, rent, prime, gym]),
+      );
+
+      // act
+      component.updatePrice();
+      fixture.detectChanges();
+
+      // assert & verify
+      const form = fixture.debugElement.query(By.directive(RecurringEditFormComponent))
+        .componentInstance as RecurringEditFormComponent;
+      expect(form.form.controls.amount.value).toBe(12);
+      expect(fixture.nativeElement.querySelector('[data-testid="price-change"]')).toBeNull();
+    });
+
+    it('should save while the list is still reloading instead of dropping the click', () => {
+      // arrange
+      component.openItem(rent);
+      mockApi.getAll.mockReturnValue(new Subject<RecurringTransaction[]>());
+      component.loadItems();
+
+      // act
+      component.saveItem({
+        id: 2,
+        merchantId: 102,
+        accountId: 1,
+        amount: 1,
+        frequency: 'MONTHLY',
+        nextDate: '2026-11-01',
+        active: true,
+      });
+
+      // assert & verify
+      expect(mockApi.update).toHaveBeenCalledTimes(1);
+    });
+
+    it('should accept a pattern while the list is still reloading', () => {
+      // arrange
+      component.openReview();
+      component.choosePattern(hulu);
+      mockApi.getAll.mockReturnValue(new Subject<RecurringTransaction[]>());
+      component.loadItems();
+
+      // act
+      component.acceptPattern(accept());
+
+      // assert & verify
+      expect(mockApi.create).toHaveBeenCalledTimes(1);
+    });
+
     it('should block a second save, delete or accept while one is in flight', () => {
       // arrange
       mockApi.update.mockReturnValue(new Subject<number>());

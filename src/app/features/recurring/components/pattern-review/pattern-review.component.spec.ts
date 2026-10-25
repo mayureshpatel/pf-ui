@@ -168,6 +168,31 @@ describe('PatternReviewComponent', () => {
       expect(component.form.controls.merchantId.value).toBe(10);
     });
 
+    it('should preselect the merchant the detected text is already linked to, even when it is not in the list', () => {
+      // act
+      render({
+        selected: pattern('NETFLIX.COM 866-579', {
+          linkedMerchantId: 77,
+          linkedMerchantName: 'Streaming Co',
+        }),
+      });
+
+      // assert & verify
+      expect(component.form.controls.merchantId.value).toBe(77);
+      expect(component.merchantOptions().map((m) => m.id)).toContain(77);
+      expect(component.merchantOptions().find((m) => m.id === 77)?.name).toBe('Streaming Co');
+    });
+
+    it('should prefer the linked merchant over a merchant that merely has the same name', () => {
+      // act
+      render({
+        selected: pattern('Netflix', { linkedMerchantId: 77, linkedMerchantName: 'Streaming Co' }),
+      });
+
+      // assert & verify
+      expect(component.form.controls.merchantId.value).toBe(77);
+    });
+
     it('should offer to create a merchant with an editable name when none matches', () => {
       // act
       render({ selected: pattern('NETFLIX.COM 866') });

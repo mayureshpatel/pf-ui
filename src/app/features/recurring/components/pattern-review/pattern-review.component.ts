@@ -123,10 +123,24 @@ export class PatternReviewComponent implements OnInit {
   });
 
   readonly merchantOptions: Signal<{ id: number; name: string }[]> = computed(() => {
-    const name: string = this.selected()?.merchant?.name ?? '';
+    const pattern: RecurringSuggestion | null = this.selected();
+    const options: { id: number; name: string }[] = this.merchants().map((m: Merchant) => ({
+      id: m.id,
+      name: m.name,
+    }));
+    // the merchant this text is already linked to is always offered, even when the search missed it
+    if (
+      pattern?.linkedMerchantId != null &&
+      !options.some((o: { id: number }): boolean => o.id === pattern.linkedMerchantId)
+    ) {
+      options.push({
+        id: pattern.linkedMerchantId,
+        name: pattern.linkedMerchantName ?? 'Linked merchant',
+      });
+    }
     return [
-      ...this.merchants().map((m: Merchant) => ({ id: m.id, name: m.name })),
-      { id: CREATE_MERCHANT_ID, name: `Create "${name.trim()}"` },
+      ...options,
+      { id: CREATE_MERCHANT_ID, name: `Create "${(pattern?.merchant?.name ?? '').trim()}"` },
     ];
   });
 
@@ -160,7 +174,7 @@ export class PatternReviewComponent implements OnInit {
       (a: Account): boolean => a.id === pattern.accountId,
     );
     this.form.reset({
-      merchantId: match ? match.id : CREATE_MERCHANT_ID,
+      merchantId: pattern.linkedMerchantId ?? (match ? match.id : CREATE_MERCHANT_ID),
       newMerchantName: detected.trim(),
       accountId: accountKnown ? (pattern.accountId as number) : null,
       amount: pattern.amount,

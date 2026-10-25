@@ -351,7 +351,7 @@ export class RecurringComponent implements OnInit {
 
   /** Saves the item form: an update when an item is open, otherwise a create. */
   saveItem(value: RecurringFormValue): void {
-    if (this.saving() || this.loading()) return;
+    if (this.saving()) return;
     this.saving.set(true);
     if (value.id !== undefined) {
       const id: number = value.id;
@@ -418,7 +418,7 @@ export class RecurringComponent implements OnInit {
     patch: Partial<{ amount: number; active: boolean }>,
     message: string,
   ): void {
-    if (this.saving() || this.loading()) return;
+    if (this.saving()) return;
     this.saving.set(true);
     this.recurringApi
       .update({
@@ -447,7 +447,7 @@ export class RecurringComponent implements OnInit {
   /** Confirms, then deletes the selected item. */
   deleteItem(): void {
     const item: RecurringTransaction | null = this.selected();
-    if (!item || this.saving() || this.loading()) return;
+    if (!item || this.saving()) return;
     this.confirmationService.confirm({
       header: 'Delete recurring item?',
       message: `Stop tracking ${item.merchant.name}? Your past transactions are not affected.`,
@@ -482,7 +482,7 @@ export class RecurringComponent implements OnInit {
    * after a later step fails does not create it twice.
    */
   acceptPattern(acceptance: PatternAcceptance): void {
-    if (this.saving() || this.loading()) return;
+    if (this.saving()) return;
     this.saving.set(true);
     const key: string = acceptance.pattern.patternKey;
     this.merchantFor(acceptance, key)
@@ -537,7 +537,7 @@ export class RecurringComponent implements OnInit {
 
   /** Dismisses a pattern so it stops being suggested; it can be restored from the dismissed list. */
   dismissPattern(pattern: RecurringSuggestion): void {
-    if (this.saving() || this.loading()) return;
+    if (this.saving()) return;
     this.saving.set(true);
     const key: string = pattern.patternKey;
     this.recurringApi
@@ -570,7 +570,7 @@ export class RecurringComponent implements OnInit {
 
   /** Restores a dismissed pattern and detects patterns again so it can come back. */
   restorePattern(entry: DismissedPattern): void {
-    if (this.saving() || this.loading()) return;
+    if (this.saving()) return;
     this.saving.set(true);
     this.recurringApi
       .restore(entry.id)

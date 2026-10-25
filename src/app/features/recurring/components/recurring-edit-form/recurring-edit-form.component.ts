@@ -102,15 +102,29 @@ export class RecurringEditFormComponent implements OnInit {
     return change ? priceChangeText(change) : null;
   });
 
-  /** The item id (or `'new'`) the form was last filled for; it only refills when this changes. */
+  /** The item id (or `'new'`) the form was last filled for; it refills when this changes. */
   private filledFor: number | 'new' | null = null;
+  /** The saved values the form was last filled from: a reload that changes them refills an untouched form. */
+  private filledSignature = '';
 
   constructor() {
     effect((): void => {
       const key: number | 'new' = this.item()?.id ?? 'new';
-      if (key === this.filledFor) return;
+      const signature: string = this.signatureOf(this.item());
+      if (key === this.filledFor && (signature === this.filledSignature || this.form.dirty)) return;
       untracked((): void => this.fill(key));
     });
+  }
+
+  private signatureOf(item: RecurringTransaction | null): string {
+    return JSON.stringify([
+      item?.merchant?.id,
+      item?.account?.id,
+      item?.amount,
+      item?.frequency,
+      item?.nextDate,
+      item?.active,
+    ]);
   }
 
   /** Fills the form before the first render so early typing is never wiped by a later effect. */
@@ -121,6 +135,7 @@ export class RecurringEditFormComponent implements OnInit {
 
   private fill(key: number | 'new'): void {
     this.filledFor = key;
+    this.filledSignature = this.signatureOf(this.item());
     const item: RecurringTransaction | null = this.item();
     this.form.reset({
       merchantId: item?.merchant?.id ?? null,

@@ -1636,6 +1636,9 @@ export interface components {
             /** Format: date */
             priceChangedOn?: string;
             patternKey?: string;
+            /** Format: int64 */
+            linkedMerchantId?: number;
+            linkedMerchantName?: string;
         };
         DismissedPatternDto: {
             /** Format: int64 */
