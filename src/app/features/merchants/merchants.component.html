@@ -21,7 +21,7 @@
   } @else {
     <div class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_26rem]">
       <div class="flex min-w-0 flex-col gap-4">
-        @if (totalRecords() === 0 && !searching()) {
+        @if (totalRecords() === 0 && !dataSearching()) {
           <div
             class="rounded-2xl border border-surface-200 p-10 text-center dark:border-surface-800"
           >
@@ -46,7 +46,7 @@
             [totalRecords]="totalRecords()"
             [page]="page()"
             [pageSize]="pageSize"
-            [searching]="searching()"
+            [searching]="dataSearching()"
             (openMerchant)="openMerchant($event)"
             (pageChange)="setPage($event)"
             (clearSearch)="clearSearch()"

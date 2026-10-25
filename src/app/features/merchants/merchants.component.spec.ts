@@ -217,6 +217,70 @@ describe('MerchantsComponent', () => {
     });
   });
 
+  describe('after the review', () => {
+    it('should not drop into add mode, or lose unsaved edits, when a search with no matches is cleared', () => {
+      // arrange
+      vi.useFakeTimers();
+      component.openMerchant(amazon);
+      dirtyForm();
+      mockApi.getMerchants.mockReturnValue(of(page<Merchant>([], 0)));
+      component.onSearchInput('zzz');
+      vi.advanceTimersByTime(300);
+      fixture.detectChanges();
+
+      // act -- clear the box before the reload for the empty search comes back
+      component.onSearchInput('');
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.mode()).toBe('merchant');
+      expect(
+        fixture.nativeElement.querySelector('input[aria-label="Search merchants"]'),
+      ).not.toBeNull();
+      expect(fixture.nativeElement.textContent).not.toContain('No merchants yet');
+      vi.useRealTimers();
+    });
+
+    it('should leave the panel alone when a link batch finishes after the user has moved on', () => {
+      // arrange
+      const pending = new Subject<void>();
+      mockApi.addDescriptionLink.mockReturnValue(pending);
+      component.openMerchant(amazon);
+      component.openPicker(amazon, false);
+      component.onLink(['A']);
+      component.back();
+      component.back();
+      component.openMerchant(costco);
+
+      // act
+      pending.next();
+      pending.complete();
+
+      // assert & verify
+      expect(mockToast.success).toHaveBeenCalledWith('Linked 1 description');
+      expect(component.mode()).toBe('merchant');
+      expect(component.selected()?.id).toBe(2);
+    });
+
+    it('should not open the picker for a merchant created after the user pressed Back', () => {
+      // arrange
+      const pending = new Subject<number>();
+      mockApi.createMerchant.mockReturnValue(pending);
+      component.startAdd();
+      component.saveMerchant({ name: 'Target' });
+      component.back();
+
+      // act
+      pending.next(99);
+      pending.complete();
+
+      // assert & verify
+      expect(mockToast.success).toHaveBeenCalledWith('Merchant added');
+      expect(component.mode()).toBe('overview');
+      expect(component.selected()).toBeNull();
+    });
+  });
+
   describe('panel modes', () => {
     it('should open a merchant, load its links, and return on Back, Close and Escape', () => {
       // act

@@ -100,6 +100,8 @@ export class MerchantsComponent implements OnInit {
   /** The zero-based page shown. */
   readonly page: WritableSignal<number> = signal(0);
   readonly searchTerm: WritableSignal<string> = signal('');
+  /** The search the shown rows were loaded for; it lags {@link searchTerm} while a reload is pending. */
+  readonly dataSearch: WritableSignal<string> = signal('');
   readonly loading: WritableSignal<boolean> = signal(false);
   readonly loadError: WritableSignal<boolean> = signal(false);
   /** True once a load has succeeded; later reloads dim the list instead of replacing the page. */
@@ -130,17 +132,18 @@ export class MerchantsComponent implements OnInit {
 
   /** With no merchants the add form is the only useful mode, so it has no Back or Close. */
   readonly onlyAddMode: Signal<boolean> = computed(
-    (): boolean => this.totalRecords() === 0 && !this.searchTerm().trim() && this.mode() === 'add',
+    (): boolean => this.totalRecords() === 0 && !this.dataSearching() && this.mode() === 'add',
   );
   private readonly isEmpty: Signal<boolean> = computed(
     (): boolean =>
       this.loadedOnce() &&
       this.totalRecords() === 0 &&
-      !this.searchTerm().trim() &&
+      !this.dataSearching() &&
       !this.loading() &&
       !this.loadError(),
   );
-  readonly searching: Signal<boolean> = computed((): boolean => this.searchTerm().trim() !== '');
+  /** Whether the rows shown were loaded for a search (so an empty list means no matches, not no merchants). */
+  readonly dataSearching: Signal<boolean> = computed((): boolean => this.dataSearch() !== '');
 
   readonly panelTitle: Signal<string> = computed((): string => {
     switch (this.mode()) {
@@ -196,8 +199,9 @@ export class MerchantsComponent implements OnInit {
     const run: number = ++this.loadRun;
     this.loading.set(true);
     this.loadError.set(false);
+    const term: string = this.searchTerm().trim();
     this.loadSubscription = this.merchantApi
-      .getMerchants(this.searchTerm().trim() || null, { page: this.page(), size: PAGE_SIZE })
+      .getMerchants(term || null, { page: this.page(), size: PAGE_SIZE })
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize((): void => {
@@ -208,6 +212,7 @@ export class MerchantsComponent implements OnInit {
         next: (res: PageResponse<Merchant>): void => {
           this.merchants.set(res.content);
           this.totalRecords.set(res.page.totalElements);
+          this.dataSearch.set(term);
           this.loadedOnce.set(true);
           this.refreshSelected();
         },
@@ -216,6 +221,7 @@ export class MerchantsComponent implements OnInit {
           this.toast.error('Failed to load merchants');
           this.merchants.set([]);
           this.totalRecords.set(0);
+          this.dataSearch.set(term);
           this.loadError.set(true);
         },
       });
@@ -341,16 +347,20 @@ export class MerchantsComponent implements OnInit {
       .subscribe({
         next: (newId: number): void => {
           this.toast.success('Merchant added');
-          this.editForm()?.form.markAsPristine();
-          const created: Merchant = {
-            id: newId,
-            userId,
-            linkCount: 0,
-            ...this.asMerchantFields(value),
-          };
-          this.selected.set(created);
-          this.links.set([]);
-          this.showPicker(created, true);
+          // the user may have gone back while the save ran: only continue into the picker if the
+          // add form is still what they are looking at
+          if (this.mode() === 'add') {
+            this.editForm()?.form.markAsPristine();
+            const created: Merchant = {
+              id: newId,
+              userId,
+              linkCount: 0,
+              ...this.asMerchantFields(value),
+            };
+            this.selected.set(created);
+            this.links.set([]);
+            this.showPicker(created, true);
+          }
           this.loadMerchants();
           this.loadStats();
         },
@@ -496,16 +506,25 @@ export class MerchantsComponent implements OnInit {
         const failed = results.filter((r): boolean => !r.ok);
         this.loadMerchants();
         this.loadStats();
+        // the batch can finish after the user has left this picker (it runs one request at a time)
+        const stillHere: boolean =
+          this.mode() === 'picker' && this.pickerTarget()?.id === target.id;
         if (failed.length === 0) {
           this.toast.success(`Linked ${linked} ${linked === 1 ? 'description' : 'descriptions'}`);
-          this.selected.set(target);
-          this.go('merchant');
-          this.loadLinks(target.id);
+          if (stillHere) {
+            this.selected.set(target);
+            this.go('merchant');
+            this.loadLinks(target.id);
+          } else if (this.selected()?.id === target.id) {
+            this.loadLinks(target.id);
+          }
           return;
         }
         this.toast.error(`Linked ${linked}, ${failed.length} failed: ${failed[0].message}`);
-        this.pickerFailed.set(failed.map((r): string => r.description));
-        this.loadPickerRows(true);
+        if (stillHere) {
+          this.pickerFailed.set(failed.map((r): string => r.description));
+          this.loadPickerRows(true);
+        }
         if (this.selected()?.id === target.id) this.loadLinks(target.id);
       });
   }
