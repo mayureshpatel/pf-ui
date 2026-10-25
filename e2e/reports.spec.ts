@@ -1,37 +1,40 @@
 import {expect, test} from '@playwright/test';
-import {createTestAccount, createTestCategory, createTestTransaction, registerTestUser} from './helpers/api';
+import {
+  createTestAccount,
+  createTestAccountsBulk,
+  createTestCategory,
+  createTestMerchant,
+  createTestTransaction,
+  createTestTransactionsBulk,
+  registerTestUser
+} from './helpers/api';
 
 /**
- * Covers PF-336: selecting a date range via the shared date-range-filter, and each of the 4
- * current sub-reports (Categories, Merchants, Cash Flow -- "vendor-report" in the ticket's own
- * text is stale; the component itself is already named merchant-report, confirmed against the
- * live tree -- and Net Worth, PF-305) rendering real data for that range. Uses a brand-new
- * registered user so the report totals are exact -- Categories/Merchants/Cash Flow all share one
- * already-fetched transactions() signal, so one small, deliberately-chosen seed set drives every
- * assertion in this spec. Net Worth is independently backend-computed (PF-304's
- * `/reports/net-worth`, not a client-side aggregation of that same array) but starts from the
- * same account, so its balance is still exactly derivable from the same seed.
+ * Covers PF-886: the Reports explorer through the real UI -- group spending by category, drill to
+ * a subcategory, a merchant and the transactions behind the number, open them on the Transactions
+ * page, compare with an earlier period, share the state as a link, the tag double-count note, and
+ * the Net worth view. Uses brand-new registered users so every total is exact; read-only after
+ * seeding. Also keeps PF-823's guarantee that nothing is capped at 1,000 rows.
  */
-test.describe('Reports', () => {
+test.describe('Reports explorer', () => {
   test.use({storageState: {cookies: [], origins: []}});
 
-  test('date range filter and all 4 sub-reports render real seeded data', async ({page}) => {
+  const row = (page: import('@playwright/test').Page, name: string | RegExp) =>
+    page.locator('[data-row]', {hasText: name});
+
+  test('drill from a category to its transactions, compare, share, tags and net worth', async ({page}) => {
     await registerTestUser(page);
-
-    // createTestAccount seeds a $1,000 starting balance -- Net Worth's assertion below depends
-    // on this exact figure, not just the transaction totals the other 3 tabs check.
+    // createTestAccount seeds a $1,000 starting balance (the Net worth assertion depends on it)
     const account = await createTestAccount(page, 'E2E Reports Account');
-    const parentCategory = await createTestCategory(page, 'E2E Reports Parent');
-    const category = await createTestCategory(page, 'E2E Reports Category', parentCategory.id);
-
-    // Reports default to "Last 3 Months" -- dated today so they fall inside that window
-    // regardless of which day of the month the suite runs on.
+    const parent = await createTestCategory(page, 'E2E Reports Parent');
+    const category = await createTestCategory(page, 'E2E Reports Category', parent.id);
+    const merchant = await createTestMerchant(page, 'E2E Reports Merchant');
     const today = new Date().toISOString();
-    await createTestTransaction(page, account.id, category.id, 'E2E Reports Merchant', {
-      amount: 100, type: 'EXPENSE', transactionDate: today
+    await createTestTransaction(page, account.id, category.id, 'E2E Reports Purchase', {
+      amount: 100, type: 'EXPENSE', transactionDate: today, merchantId: merchant.id
     });
-    await createTestTransaction(page, account.id, category.id, 'E2E Reports Merchant', {
-      amount: 50, type: 'EXPENSE', transactionDate: today
+    await createTestTransaction(page, account.id, category.id, 'E2E Reports Purchase', {
+      amount: 50, type: 'EXPENSE', transactionDate: today, merchantId: merchant.id
     });
     await createTestTransaction(page, account.id, category.id, 'E2E Reports Income', {
       amount: 500, type: 'INCOME', transactionDate: today
@@ -39,48 +42,90 @@ test.describe('Reports', () => {
 
     await page.goto('/reports');
 
-    // Date range filter: explicitly select "This Month".
-    //
-    // Bug regression: this used to come back completely empty. reports.component.ts and
-    // date-range-filter.component.ts both built the range's end date via
-    // `date.toISOString().split('T')[0]` (UTC-based), which is correct in isolation, but
-    // loadTransactions() then re-parsed that string via `new Date(dateString)` -- always UTC
-    // midnight, regardless of local timezone -- and that Date was reformatted through the
-    // *correct* `toLocalDateString()` utility (built to fix this exact class of bug, PF-199) a
-    // second time. The round trip silently rolled "today" back to yesterday for any user in a
-    // negative UTC offset (the Americas), so a transaction dated "right now" fell outside every
-    // preset's own end boundary. Fixed in both files (and loadTransactions()'s parse) to use
-    // toLocalDateString()/fromLocalDateString() throughout instead of ever touching
-    // toISOString() or the bare Date(string) constructor for a local calendar date.
-    await page.getByRole('button', {name: 'This Month'}).click();
+    // 1. spending by category, this year: the parent holds both expenses
+    await expect(page.getByRole('heading', {name: 'Spending by category'})).toBeVisible();
+    await expect(row(page, parent.name)).toContainText('$150.00');
 
-    // Categories tab (default active)
-    const categoryRow = page.getByRole('row', {name: new RegExp(category.name)});
-    await expect(categoryRow).toBeVisible();
-    await expect(categoryRow.getByText('$150.00')).toBeVisible(); // total: 100 + 50
-    await expect(categoryRow.getByText('$75.00')).toBeVisible(); // avg: 150 / 2
+    // 2. drill into it: subcategories, with a breadcrumb and a chip
+    await row(page, parent.name).getByRole('button', {name: new RegExp(parent.name)}).first().click();
+    await expect(page.getByRole('heading', {name: `Spending by subcategory: ${parent.name}`})).toBeVisible();
+    await expect(page.getByRole('navigation', {name: 'Drill path'})).toContainText(parent.name);
+    await expect(row(page, category.name)).toContainText('$150.00');
 
-    // Merchants tab
-    await page.getByRole('tab', {name: 'Merchants'}).click();
-    // MerchantNameNormalizer doesn't preserve casing exactly (e.g. "E2E" -> "E2e").
-    const merchantRow = page.getByRole('row', {name: /E2E Reports Merchant/i});
-    await expect(merchantRow).toBeVisible();
-    await expect(merchantRow.getByText('$150.00')).toBeVisible();
-    await expect(merchantRow.getByText('2', {exact: true})).toBeVisible(); // txn count
+    // 3. drill into the subcategory: merchants; then into the merchant: the transactions
+    await row(page, category.name).getByRole('button', {name: new RegExp(category.name)}).first().click();
+    await expect(page.getByRole('heading', {name: /Spending by merchant/})).toBeVisible();
+    const merchantRow = row(page, merchant.name);
+    await expect(merchantRow).toContainText('$150.00');
+    await merchantRow.getByRole('button', {name: merchant.name}).first().click();
+    await expect(page.getByRole('heading', {name: /^Transactions:/})).toBeVisible();
+    const transactions = page.locator('app-transaction-list tbody tr');
+    await expect(transactions).toHaveCount(2);
+    await expect(transactions.filter({hasText: '$100.00'})).toHaveCount(1);
+    await expect(transactions.filter({hasText: '$50.00'})).toHaveCount(1);
 
-    // Cash Flow tab (income/expense report)
-    await page.getByRole('tab', {name: 'Cash Flow'}).click();
-    await expect(page.getByText('Monthly Performance')).toBeVisible();
-    const monthRow = page.getByRole('table').locator('tbody tr').first();
-    await expect(monthRow.getByText('$500.00')).toBeVisible(); // income
-    await expect(monthRow.getByText('$150.00')).toBeVisible(); // expenses
-    await expect(monthRow.getByText('$350.00')).toBeVisible(); // net savings: 500 - 150
+    // 4. the state is the URL: a fresh load of it shows the same place
+    const link = page.url();
+    expect(link).toContain('drill=');
+    await page.goto(link);
+    await expect(page.getByRole('heading', {name: /^Transactions:/})).toBeVisible();
+    await expect(page.locator('app-transaction-list tbody tr')).toHaveCount(2);
 
-    // Net Worth tab (PF-305): $1,000 starting balance + 500 income - 100 - 50 expenses = $1,350.
-    // The account and every seed transaction were created moments ago (this test run), so "This
-    // Month" produces exactly one backend data point -- its value is also the headline figure.
-    await page.getByRole('tab', {name: 'Net Worth'}).click();
+    // 5. open the same transactions on the Transactions page with the filters carried over
+    await page.getByRole('button', {name: 'Open in Transactions'}).click();
+    await expect(page).toHaveURL(/\/transactions\?.*categoryName=/);
+    await expect(page).toHaveURL(/merchant=/);
+    await page.goBack();
+
+    // 6. step back through the breadcrumb to the start
+    await page.getByRole('navigation', {name: 'Drill path'}).getByRole('button', {name: 'All spending'}).click();
+    await expect(page.getByRole('heading', {name: 'Spending by category'})).toBeVisible();
+
+    // 7. compare with the previous period: the parent had nothing before, so it reads as new
+    await page.locator('#explore-compare').click();
+    await page.getByRole('option', {name: 'Previous period'}).click();
+    await expect(page.getByText(/compared with previous period/)).toBeVisible();
+    await expect(row(page, parent.name)).toContainText('new');
+
+    // 8. a tag grouping says a transaction with two tags counts under both
+    await page.locator('#explore-group-by').click();
+    await page.getByRole('option', {name: 'Tag', exact: true}).click();
+    await expect(page.getByText(/appears under each of its tags/)).toBeVisible();
+
+    // 9. Net worth view (PF-305): $1,000 starting balance + 500 income - 100 - 50 = $1,350
+    await page.getByRole('button', {name: 'Net worth'}).click();
     await expect(page.getByText('Net Worth Over Time')).toBeVisible();
-    await expect(page.getByText('$1,350.00')).toBeVisible();
+    await expect(page.getByText('$1,350.00').first()).toBeVisible();
+  });
+
+  test('totals cover every transaction, not just the newest 1,000', async ({page}) => {
+    test.setTimeout(300_000);
+
+    await registerTestUser(page);
+    // spread across several accounts so the concurrent writes don't contend for one row
+    const accounts = await createTestAccountsBulk(page, 'PF-886 Cap Test Account', 20);
+    const parent = await createTestCategory(page, 'PF-886 Cap Test Parent');
+    const category = await createTestCategory(page, 'PF-886 Cap Test Category', parent.id);
+    const merchant = await createTestMerchant(page, 'PF-886 Cap Test Vendor');
+    const count = 1200;
+    await createTestTransactionsBulk(
+      page, accounts.map((a) => a.id), category.id, 'PF-886 Cap Test Purchase', count, 10, merchant.id
+    );
+
+    // one day per transaction, today back through `count - 1` days ago
+    const end = new Date();
+    const start = new Date(end);
+    start.setDate(start.getDate() - (count - 1));
+    const iso = (d: Date): string => d.toISOString().split('T')[0];
+    const range = `startDate=${iso(start)}&endDate=${iso(end)}&range=Custom`;
+
+    await page.goto(`/reports?measure=SPENDING&groupBy=CATEGORY&${range}`);
+    await expect(row(page, parent.name)).toContainText('$12,000.00');
+
+    // the merchant grouping also shows a count, the stronger check: 1000 vs 1,200 can't be mistaken
+    await page.goto(`/reports?measure=SPENDING&groupBy=MERCHANT&${range}`);
+    const merchantRow = row(page, merchant.name);
+    await expect(merchantRow).toContainText('$12,000.00');
+    await expect(merchantRow).toContainText('1200');
   });
 });

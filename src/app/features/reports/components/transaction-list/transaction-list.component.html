@@ -1,0 +1,87 @@
+<div
+  class="rounded-xl border border-surface-200 bg-surface-0 dark:border-surface-800 dark:bg-surface-900"
+  [attr.aria-busy]="loading()"
+  [class.opacity-60]="loading()"
+>
+  <div class="flex flex-wrap items-center justify-between gap-2 p-3">
+    <h3 class="m-0 text-sm font-semibold">Transactions behind this number</h3>
+    <div class="flex flex-col items-end gap-1">
+      <button
+        type="button"
+        class="cursor-pointer rounded-lg border border-surface-300 px-3 py-1 text-sm hover:bg-surface-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-surface-700 dark:hover:bg-surface-800"
+        [disabled]="!linkable().ok"
+        [attr.aria-describedby]="linkable().ok ? null : 'open-link-reason'"
+        (click)="openInTransactions.emit()"
+      >
+        Open in Transactions
+      </button>
+      @if (!linkable().ok) {
+        <p id="open-link-reason" class="m-0 text-xs text-muted-color">{{ linkable().reason }}</p>
+      }
+    </div>
+  </div>
+
+  @if (page(); as current) {
+    @if (current.content.length === 0) {
+      <p class="m-0 p-4 text-sm text-muted-color">No transactions match these filters.</p>
+    } @else {
+      <table class="w-full border-collapse text-sm">
+        <thead>
+          <tr class="bg-surface-50 text-left dark:bg-surface-800">
+            <th scope="col" class="px-3 py-2 font-semibold">Date</th>
+            <th scope="col" class="px-3 py-2 font-semibold">Description</th>
+            <th scope="col" class="hidden px-3 py-2 font-semibold sm:table-cell">Account</th>
+            <th scope="col" class="px-3 py-2 text-right font-semibold">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (tx of current.content; track tx.id) {
+            <tr class="border-t border-surface-200 dark:border-surface-800">
+              <td class="whitespace-nowrap px-3 py-2 text-muted-color">
+                {{ asDate(tx.date) | date: 'MMM d, y' }}
+              </td>
+              <td class="px-3 py-2">
+                @if (tx.merchantName) {
+                  <div class="font-medium">{{ tx.merchantName }}</div>
+                  <div class="text-xs text-muted-color">{{ tx.description }}</div>
+                } @else {
+                  <div>{{ tx.description }}</div>
+                }
+                @if (tx.categoryName) {
+                  <div class="text-xs text-muted-color">{{ tx.categoryName }}</div>
+                }
+              </td>
+              <td class="hidden px-3 py-2 sm:table-cell">{{ tx.accountName }}</td>
+              <td
+                class="px-3 py-2 text-right font-semibold tabular-nums"
+                [class.text-primary-700]="tx.type === 'INCOME'"
+                [class.dark:text-primary-400]="tx.type === 'INCOME'"
+              >
+                {{ tx.amount | currency }}
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      <div class="flex items-center justify-between p-3 text-sm">
+        <button
+          type="button"
+          class="cursor-pointer rounded-lg border border-surface-300 px-3 py-1 hover:bg-surface-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-surface-700 dark:hover:bg-surface-800"
+          [disabled]="current.page.number === 0"
+          (click)="pageChange.emit(current.page.number - 1)"
+        >
+          Previous
+        </button>
+        <span>Page {{ current.page.number + 1 }} of {{ current.page.totalPages }}</span>
+        <button
+          type="button"
+          class="cursor-pointer rounded-lg border border-surface-300 px-3 py-1 hover:bg-surface-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-surface-700 dark:hover:bg-surface-800"
+          [disabled]="current.page.number + 1 >= current.page.totalPages"
+          (click)="pageChange.emit(current.page.number + 1)"
+        >
+          Next
+        </button>
+      </div>
+    }
+  }
+</div>

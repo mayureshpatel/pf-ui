@@ -1,117 +1,112 @@
 import {expect, test} from '@playwright/test';
-import {createTestAccount, createTestTransaction, registerTestUser} from './helpers/api';
+import {
+  createTestAccount,
+  createTestMerchant,
+  createTestTransactionExact,
+  deleteTestMerchant
+} from './helpers/api';
 
 /**
- * Covers PF-335: creating a recurring transaction manually through the real UI, verifying it
- * appears in the list with the correct schedule, and the recurring-suggestions flow's primary
- * path -- accepting a detected pattern. Uses a brand-new registered user so pattern detection
- * only ever sees this test's own seeded data.
- *
- * recurring-form-dialog is a drawer (migrated from p-dialog by PF-281, prompted by the identical
- * bug PF-803 found and fixed in budget-form-dialog/category-rule-form-dialog); the suggestions
- * dialog itself has no formControlName/p-select, so it was never affected.
- *
- * There's no per-row "dismiss" in this UI, only "Accept" (per suggestion) and "Close" (the whole
- * dialog, declining every suggestion) -- covering Accept as the primary path per the AC.
- *
- * Merchants have no direct create endpoint; TransactionService.findOrCreateMerchant() derives one
- * from a transaction's description automatically, so seeding transactions is how test merchants
- * get created here.
+ * Covers PF-884: the Recurring page through the real UI -- the grouped list beside an always-present
+ * panel (overview, item, add, review). Uses the shared dev user's cached session (registration is
+ * limited to 5 per minute per IP) and creates and removes only its own data: a throwaway account,
+ * merchants and recurring items; the seeded transactions of the review test stay behind like every
+ * other spec's seed data.
  */
 test.describe('Recurring', () => {
-  test.use({storageState: {cookies: [], origins: []}});
-
-  test('create a recurring entry manually, then accept a detected suggestion', async ({page}) => {
-    await registerTestUser(page);
+  test('add an item by hand, pause and resume it, then delete it', async ({page}) => {
+    await page.goto('/recurring');
     const account = await createTestAccount(page, 'E2E Recurring Account');
+    const merchant = await createTestMerchant(page, 'E2E Recurring Merchant');
 
-    // Pattern detection needs >= 3 same-merchant, same-amount EXPENSE transactions at a stable
-    // ~monthly interval, all within the last 12 months. Three prior months, day 15, comfortably
-    // clears both the lookback window and the detector's day-gap stability tolerance.
-    //
-    // No timestamp suffix here (unlike every other test's naming, e.g. createTestAccount's own
-    // uniqueness suffix): MerchantNameNormalizer strips trailing numeric groups entirely, so a
-    // baked-in Date.now() never survives into the merchant's cleanName -- confirmed live, it
-    // doesn't serve the uniqueness purpose it would elsewhere. Harmless collision risk regardless,
-    // since every test run uses a brand-new registered user with no prior merchants.
+    try {
+      await page.reload();
+      const panel = page.getByRole('complementary');
+      await expect(panel).toHaveAccessibleName('Overview');
+
+      // Add through the panel
+      await page.getByRole('button', {name: 'Add recurring'}).first().click();
+      await expect(panel).toHaveAccessibleName('Add recurring');
+      await panel.getByText('Choose a merchant').click();
+      // the list shows the first merchants only; the filter searches them all
+      await page.locator('.p-select-filter').fill(merchant.name);
+      await page.getByRole('option', {name: merchant.name}).click();
+      await panel.getByText('Choose an account').click();
+      await page.getByRole('option', {name: account.name}).click();
+      await panel.getByRole('combobox', {name: 'Frequency'}).click();
+      await page.getByRole('option', {name: 'Weekly', exact: true}).click();
+      await panel.getByRole('spinbutton').fill('55');
+      // p-datepicker does not commit a typed value; use its calendar: next month, day 1
+      await panel.locator('#recurring-next-date').click();
+      await page.getByRole('button', {name: 'Next Month'}).click();
+      await page.locator('td.p-datepicker-day-cell:not(.p-datepicker-other-month)').getByText('1', {exact: true}).click();
+      await panel.getByRole('button', {name: 'Add recurring'}).click();
+
+      await expect(page.getByText('Recurring item added')).toBeVisible();
+      await expect(panel).toHaveAccessibleName(merchant.name);
+      const row = page.getByTestId('open-item').filter({hasText: merchant.name});
+      await expect(row).toContainText('$55.00');
+      await expect(page.getByTestId('group-header').filter({hasText: 'Weekly'})).toBeVisible();
+
+      // Pause moves it to Paused, Resume brings it back
+      await panel.getByRole('button', {name: 'Pause'}).click();
+      await expect(page.getByText('Paused', {exact: true}).first()).toBeVisible();
+      await expect(row).toContainText('Paused');
+      await panel.getByRole('button', {name: 'Resume'}).click();
+      await expect(page.getByText('Resumed')).toBeVisible();
+      await expect(row).not.toContainText('Paused');
+
+      // Delete
+      await panel.getByRole('button', {name: 'Delete'}).click();
+      await page.getByRole('alertdialog').getByRole('button', {name: 'Delete', exact: true}).click();
+      await expect(page.getByText('Recurring item deleted')).toBeVisible();
+      await expect(page.getByTestId('open-item').filter({hasText: merchant.name})).toHaveCount(0);
+      await expect(panel).toHaveAccessibleName('Overview');
+    } finally {
+      await deleteTestMerchant(page, merchant.id);
+    }
+  });
+
+  test('review a detected pattern, add it, then remove the item and its merchant', async ({page}) => {
+    await page.goto('/recurring');
+    const account = await createTestAccount(page, 'E2E Pattern Account');
+    const patternName = `E2E PATTERN ${Date.now()}`;
     const now = new Date();
-    const suggestionMerchantPrefix = 'E2E Suggestion Merchant';
+    // three monthly charges on the 15th, the latest about a month ago: a stable monthly pattern
     for (let monthsAgo = 3; monthsAgo >= 1; monthsAgo--) {
       const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - monthsAgo, 15)).toISOString();
-      await createTestTransaction(page, account.id, undefined, suggestionMerchantPrefix, {
-        amount: 75, type: 'EXPENSE', transactionDate: date
-      });
+      await createTestTransactionExact(page, account.id, patternName, {amount: 75, transactionDate: date});
     }
 
-    // A second, unrelated merchant for the manual-creation flow -- kept distinct from the
-    // suggestion merchant so accepting the suggestion later isn't affected by an already-active
-    // recurring entry on the same merchant (findSuggestions() excludes those).
-    await createTestTransaction(page, account.id, undefined, 'E2E Manual Merchant', {amount: 20});
+    await page.reload();
+    const panel = page.getByRole('complementary');
+    await expect(page.getByTestId('patterns-strip')).toBeVisible();
+    await page.getByTestId('patterns-strip').getByRole('button', {name: 'Review'}).click();
+    await expect(panel).toHaveAccessibleName('Patterns found');
 
-    await page.goto('/recurring');
+    await panel.getByTestId('pattern-row').filter({hasText: patternName}).click();
+    await expect(panel).toHaveAccessibleName(patternName);
+    // the detected text is turned into a new merchant, named by the user; keep it unique and cleanable
+    const merchantName = `E2E Pattern Merchant ${Date.now()}`;
+    await panel.getByLabel('New merchant name').fill(merchantName);
+    await panel.getByRole('button', {name: 'Add to recurring'}).click();
 
-    // Manual creation through the real UI
-    await page.getByRole('button', {name: 'New Recurring'}).click();
-    const drawer = page.getByRole('complementary');
-    await expect(drawer.getByText('Create Recurring Entry')).toBeVisible();
+    await expect(page.getByText('Added to recurring')).toBeVisible();
+    const row = page.getByTestId('open-item').filter({hasText: merchantName});
+    await expect(row).toContainText('$75.00');
+    await expect(page.getByTestId('group-header').filter({hasText: 'Monthly'})).toBeVisible();
 
-    await drawer.getByText('Search for a merchant').click();
-    await page.getByRole('option', {name: 'E2E Manual Merchant'}).click();
-    await drawer.getByRole('spinbutton').fill('55');
-    await drawer.getByText('How often?').click();
-    await page.getByRole('option', {name: 'Weekly', exact: true}).click();
-    await drawer.getByText('Select account').click();
-    await page.getByRole('option', {name: account.name}).click();
-    // p-datepicker doesn't commit a typed value to the form control on a plain .fill() -- drive
-    // its real calendar UI instead. Jumping to next month and picking day 1 sidesteps needing to
-    // know today's date within the current month (always in the future, always a real day, never
-    // an other-month overflow cell).
-    await drawer.locator('#nextDate input').click();
-    await page.getByRole('button', {name: 'Next Month'}).click();
-    await page.locator('td.p-datepicker-day-cell:not(.p-datepicker-other-month)').getByText('1', {exact: true}).click();
-    await drawer.getByRole('button', {name: 'Create Entry'}).click();
+    // Clean up: delete the item, then the merchant it created (its description link goes with it)
+    await row.click();
+    await panel.getByRole('button', {name: 'Delete'}).click();
+    await page.getByRole('alertdialog').getByRole('button', {name: 'Delete', exact: true}).click();
+    await expect(page.getByText('Recurring item deleted')).toBeVisible();
 
-    await expect(page.getByText('Recurring entry created')).toBeVisible();
-    await expect(drawer).toBeHidden();
-
-    // Case-insensitive: MerchantNameNormalizer doesn't preserve casing exactly (e.g. "E2E" -> "E2e").
-    const manualRow = page.getByRole('row', {name: /E2E Manual Merchant/i});
-    await expect(manualRow).toBeVisible();
-    await expect(manualRow.getByText('$55.00')).toBeVisible();
-    await expect(manualRow.getByText('Weekly')).toBeVisible();
-    await expect(manualRow.getByText('Active')).toBeVisible();
-
-    // Suggestions: accept the detected pattern (primary path -- no per-item dismiss exists, only
-    // Accept or closing the whole dialog)
-    await page.getByRole('button', {name: 'View Suggestions'}).click();
-    const suggestionsDialog = page.getByRole('dialog');
-    await expect(suggestionsDialog.getByText('Detected Recurring Patterns')).toBeVisible();
-
-    const suggestionRow = page.getByRole('row', {name: new RegExp(suggestionMerchantPrefix, 'i')});
-    await expect(suggestionRow).toBeVisible();
-    await expect(suggestionRow.getByText('$75.00')).toBeVisible();
-    await expect(suggestionRow.getByText('Monthly')).toBeVisible();
-
-    // The button's explicit ariaLabel overrides its accessible name -- "Accept" is only the
-    // visible label text, not what getByRole searches by.
-    await suggestionRow.getByRole('button', {name: 'Create recurring entry from this pattern'}).click();
-    await expect(suggestionsDialog).toBeHidden();
-
-    // Accepting pre-fills amount/frequency/date but not merchant -- the suggestion's merchant has
-    // no real id, only a display name, so it still needs a real selection to save. Account is
-    // left over from the manual-creation flow above (the drawer's underlying form instance isn't
-    // recreated between opens) and happens to already be correct, so no need to reselect it.
-    await expect(drawer.getByText('Create Recurring Entry')).toBeVisible();
-    await drawer.getByText('Search for a merchant').click();
-    await page.getByRole('option', {name: new RegExp(suggestionMerchantPrefix, 'i')}).click();
-    await drawer.getByRole('button', {name: 'Create Entry'}).click();
-
-    await expect(page.getByText('Recurring entry created')).toBeVisible();
-    await expect(drawer).toBeHidden();
-
-    const suggestionEntryRow = page.getByRole('row', {name: new RegExp(suggestionMerchantPrefix, 'i')});
-    await expect(suggestionEntryRow).toBeVisible();
-    await expect(suggestionEntryRow.getByText('$75.00')).toBeVisible();
-    await expect(suggestionEntryRow.getByText('Monthly')).toBeVisible();
+    await page.goto('/merchants');
+    await page.getByLabel('Search merchants').fill(merchantName);
+    await page.getByTestId('open-merchant').filter({hasText: merchantName}).click();
+    await page.getByRole('complementary').getByRole('button', {name: 'Delete merchant'}).click();
+    await page.getByRole('alertdialog').getByRole('button', {name: 'Delete', exact: true}).click();
+    await expect(page.getByText('Merchant deleted')).toBeVisible();
   });
 });

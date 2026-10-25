@@ -200,7 +200,7 @@ export async function createTestTransaction(
   accountId: number,
   categoryId: number | undefined,
   descriptionPrefix: string,
-  options?: {amount?: number; transactionDate?: string; type?: 'EXPENSE' | 'INCOME' | 'TRANSFER'}
+  options?: {amount?: number; transactionDate?: string; type?: 'EXPENSE' | 'INCOME' | 'TRANSFER'; merchantId?: number}
 ): Promise<{id: number; description: string}> {
   const token = await getAuthToken(page);
   const description = `${descriptionPrefix} ${Date.now()}`;
@@ -213,7 +213,8 @@ export async function createTestTransaction(
       amount: options?.amount ?? 42.5,
       transactionDate: options?.transactionDate ?? '2026-01-15T00:00:00Z',
       description,
-      type: options?.type ?? 'EXPENSE'
+      type: options?.type ?? 'EXPENSE',
+      merchantId: options?.merchantId
     }
   });
 
@@ -269,7 +270,8 @@ export async function createTestTransactionsBulk(
   categoryId: number,
   descriptionPrefix: string,
   count: number,
-  amount: number
+  amount: number,
+  merchantId?: number
 ): Promise<void> {
   const token = await getAuthToken(page);
   const today = new Date();
@@ -289,7 +291,8 @@ export async function createTestTransactionsBulk(
       amount,
       transactionDate: `${dateFor(dayIndex)}T00:00:00Z`,
       description: descriptionPrefix,
-      type: 'EXPENSE'
+      type: 'EXPENSE',
+      merchantId
     }
   });
 
@@ -311,4 +314,56 @@ export async function createTestTransactionsBulk(
       }
     }
   }
+}
+
+/**
+ * Creates a transaction whose description is exactly `description` (unlike {@link createTestTransaction},
+ * which suffixes a timestamp), so several calls form one recurring-detection group.
+ */
+export async function createTestTransactionExact(
+  page: Page,
+  accountId: number,
+  description: string,
+  options: {amount: number; transactionDate: string}
+): Promise<number> {
+  const token = await getAuthToken(page);
+  const response = await page.request.post(`${API_URL}/transactions`, {
+    headers: {Authorization: `Bearer ${token}`},
+    data: {accountId, amount: options.amount, transactionDate: options.transactionDate, description, type: 'EXPENSE'}
+  });
+
+  if (!response.ok()) {
+    throw new Error(`Failed to create test transaction: ${response.status()} ${await response.text()}`);
+  }
+  return (await response.json()) as number;
+}
+
+/**
+ * Creates a fresh, uniquely-named merchant via the real API, mirroring `createTestAccount`.
+ */
+export async function createTestMerchant(page: Page, namePrefix: string): Promise<{id: number; name: string}> {
+  const token = await getAuthToken(page);
+  const userId = await getAuthenticatedUserId(page);
+  const name = `${namePrefix} ${Date.now()}`;
+
+  const response = await page.request.post(`${API_URL}/merchants`, {
+    headers: {Authorization: `Bearer ${token}`},
+    data: {name, userId}
+  });
+
+  if (!response.ok()) {
+    throw new Error(`Failed to create test merchant: ${response.status()} ${await response.text()}`);
+  }
+  return {id: (await response.json()) as number, name};
+}
+
+/**
+ * Deletes a merchant by id via the real API (its description links go with it). Best effort: a
+ * failure here must never hide the test's own result, so it is swallowed.
+ */
+export async function deleteTestMerchant(page: Page, merchantId: number): Promise<void> {
+  const token = await getAuthToken(page);
+  await page.request
+    .delete(`${API_URL}/merchants/${merchantId}`, {headers: {Authorization: `Bearer ${token}`}})
+    .catch(() => undefined);
 }

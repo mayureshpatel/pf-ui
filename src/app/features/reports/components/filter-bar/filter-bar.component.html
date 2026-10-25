@@ -1,0 +1,144 @@
+<div class="flex flex-col gap-2">
+  <div class="flex flex-wrap items-center gap-2">
+    @for (chip of visibleChips(); track chip.id) {
+      <span
+        data-chip
+        class="inline-flex items-center gap-1 rounded-full border border-surface-300 bg-surface-0 py-0.5 pl-3 pr-1 text-sm dark:border-surface-700 dark:bg-surface-900"
+      >
+        <span class="chip-label">{{ chip.text }}</span>
+        <button
+          type="button"
+          class="flex size-6 cursor-pointer items-center justify-center rounded-full hover:bg-surface-100 dark:hover:bg-surface-800"
+          [attr.aria-label]="'Remove ' + chip.text"
+          (click)="remove(chip)"
+        >
+          <i class="pi pi-times text-xs" aria-hidden="true"></i>
+        </button>
+      </span>
+    }
+    @if (hiddenCount() > 0) {
+      <button
+        type="button"
+        class="cursor-pointer rounded-full border border-dashed border-surface-300 px-3 py-0.5 text-sm text-muted-color hover:bg-surface-100 dark:border-surface-700 dark:hover:bg-surface-800"
+        (click)="expanded.set(true)"
+      >
+        +{{ hiddenCount() }} more
+      </button>
+    }
+    <button
+      type="button"
+      id="add-filter"
+      class="cursor-pointer rounded-full border border-dashed border-surface-300 px-3 py-0.5 text-sm text-muted-color hover:bg-surface-100 dark:border-surface-700 dark:hover:bg-surface-800"
+      [attr.aria-expanded]="addOpen()"
+      (click)="toggleAdd()"
+    >
+      + Add filter
+    </button>
+    <span class="text-sm text-muted-color">{{ excludedText() }}</span>
+  </div>
+
+  @if (addOpen()) {
+    <div
+      class="flex flex-wrap items-center gap-2 rounded-lg border border-surface-300 p-3 dark:border-surface-700"
+    >
+      <p-select
+        id="add-kind"
+        ariaLabel="Filter by"
+        placeholder="Filter by"
+        [options]="kindOptions"
+        optionLabel="label"
+        optionValue="value"
+        [ngModel]="addKind()"
+        appendTo="body"
+        (onChange)="onKind($event.value)"
+      />
+      @switch (addKind()) {
+        @case ('account') {
+          <p-multiselect
+            id="add-value"
+            ariaLabel="Accounts"
+            placeholder="Choose accounts"
+            [options]="accounts()"
+            optionLabel="name"
+            optionValue="id"
+            [ngModel]="filters().accountIds"
+            appendTo="body"
+            (onChange)="addAccounts($event.value)"
+          />
+        }
+        @case ('category') {
+          <p-select
+            id="add-value"
+            ariaLabel="Category"
+            placeholder="Choose a category"
+            [options]="categoryOptions()"
+            optionLabel="label"
+            optionValue="value"
+            [filter]="true"
+            filterBy="label"
+            appendTo="body"
+            (onChange)="addCategory($event.value)"
+          />
+        }
+        @case ('merchant') {
+          <p-select
+            id="add-value"
+            ariaLabel="Merchant"
+            placeholder="Choose a merchant"
+            [options]="merchantOptions()"
+            optionLabel="label"
+            optionValue="value"
+            [filter]="true"
+            filterBy="label"
+            filterPlaceholder="Search merchants"
+            appendTo="body"
+            (onChange)="addMerchant($event.value)"
+            (onFilter)="merchantSearch.emit($event.filter)"
+          />
+        }
+        @case ('tag') {
+          <p-select
+            id="add-value"
+            ariaLabel="Tag"
+            placeholder="Choose a tag"
+            [options]="tagOptions()"
+            optionLabel="label"
+            optionValue="value"
+            appendTo="body"
+            (onChange)="addTag($event.value)"
+          />
+        }
+        @case ('amount') {
+          <label for="add-min" class="text-sm">Between</label>
+          <input
+            id="add-min"
+            type="number"
+            min="0"
+            inputmode="decimal"
+            class="w-28 rounded-md border border-surface-300 bg-surface-0 px-2 py-1 dark:border-surface-700 dark:bg-surface-900"
+            [value]="minDraft()"
+            (input)="minDraft.set($any($event.target).value)"
+          />
+          <label for="add-max" class="text-sm">and</label>
+          <input
+            id="add-max"
+            type="number"
+            min="0"
+            inputmode="decimal"
+            class="w-28 rounded-md border border-surface-300 bg-surface-0 px-2 py-1 dark:border-surface-700 dark:bg-surface-900"
+            [value]="maxDraft()"
+            (input)="maxDraft.set($any($event.target).value)"
+          />
+          <button
+            type="button"
+            id="add-apply"
+            class="cursor-pointer rounded-lg bg-primary-700 px-3 py-1 text-sm text-white hover:bg-primary-800"
+            (click)="applyAmount()"
+          >
+            Apply
+          </button>
+        }
+      }
+    </div>
+  }
+</div>

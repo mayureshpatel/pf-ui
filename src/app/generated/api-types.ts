@@ -340,6 +340,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/recurring/dismissals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List dismissed recurring patterns
+         * @description Returns the patterns the authenticated user dismissed from the detected-patterns review
+         */
+        get: operations["getDismissedPatterns"];
+        put?: never;
+        /**
+         * Dismiss a recurring pattern
+         * @description Stops a detected pattern from being suggested until it is restored
+         */
+        post: operations["dismissPattern"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/merchants/{id}/description-links": {
         parameters: {
             query?: never;
@@ -628,7 +652,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/reports/monthly": {
+    "/api/v1/reports/explore": {
         parameters: {
             query?: never;
             header?: never;
@@ -636,10 +660,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Monthly income vs. expense
-         * @description Monthly income/expense totals for the requested range, computed server-side over every matching transaction
+         * Explore spending and income
+         * @description Any measure by any grouping under stacked filters, with an optional comparison period; transfers and adjustments are excluded
          */
-        get: operations["getMonthlyReportData"];
+        get: operations["explore"];
         put?: never;
         post?: never;
         delete?: never;
@@ -648,7 +672,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/reports/merchants": {
+    "/api/v1/reports/explore/trend": {
         parameters: {
             query?: never;
             header?: never;
@@ -656,10 +680,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Merchant breakdown
-         * @description Spending by merchant for the requested range, computed server-side over every matching transaction
+         * Explore trend
+         * @description The chosen measure per day, week or month across the period, under the same filters as the explorer
          */
-        get: operations["getMerchantReportData"];
+        get: operations["exploreTrend"];
         put?: never;
         post?: never;
         delete?: never;
@@ -668,7 +692,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/reports/categories": {
+    "/api/v1/reports/explore/transactions": {
         parameters: {
             query?: never;
             header?: never;
@@ -676,10 +700,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Category breakdown
-         * @description Spending by category for the requested range, computed server-side over every matching transaction
+         * Explore transactions
+         * @description The transactions behind an explorer number, newest first, under the same filters
          */
-        get: operations["getCategoryReportData"];
+        get: operations["exploreTransactions"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1003,6 +1027,26 @@ export interface paths {
          * @description Deletes a recurring transaction owned by the authenticated user
          */
         delete: operations["deleteRecurringTransaction"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/recurring/dismissals/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Restore a dismissed pattern
+         * @description Removes a dismissal so the pattern can be suggested again
+         */
+        delete: operations["restoreDismissedPattern"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1367,6 +1411,10 @@ export interface components {
             /** Format: int64 */
             merchantId: number;
         };
+        DismissPatternRequest: {
+            patternKey: string;
+            name: string;
+        };
         MerchantCreateRequest: {
             /** Format: int64 */
             userId: number;
@@ -1516,28 +1564,94 @@ export interface components {
             date?: string;
             netWorth?: number;
         };
-        MonthlyReportDataDto: {
-            /** Format: int32 */
-            year?: number;
-            /** Format: int32 */
-            month?: number;
-            income?: number;
-            expense?: number;
-        };
-        MerchantReportDataDto: {
+        ExploreRequest: {
+            /** @enum {string} */
+            measure: "SPENDING" | "INCOME" | "NET" | "SAVINGS_RATE" | "COUNT" | "AVERAGE";
+            /** @enum {string} */
+            side?: "SPENDING" | "INCOME";
+            /** @enum {string} */
+            groupBy: "CATEGORY" | "SUBCATEGORY" | "MERCHANT" | "ACCOUNT" | "TAG" | "MONTH" | "WEEK" | "DAY_OF_WEEK" | "DAY";
+            /** Format: date */
+            startDate: string;
+            /** Format: date */
+            endDate: string;
+            /** @enum {string} */
+            compare?: "NONE" | "PREVIOUS_PERIOD" | "SAME_DAYS_LAST_YEAR";
+            accountIds?: number[];
             /** Format: int64 */
-            representativeMerchantId?: number;
-            displayName?: string;
+            categoryId?: number;
+            uncategorized?: boolean;
+            /** Format: int64 */
+            merchantId?: number;
+            noMerchant?: boolean;
+            /** Format: int64 */
+            tagId?: number;
+            noTag?: boolean;
+            minAmount?: number;
+            maxAmount?: number;
+        };
+        ExploreResultDto: {
+            rows?: components["schemas"]["ExploreRowDto"][];
             total?: number;
+            comparisonTotal?: number;
+            /** Format: int64 */
+            totalCount?: number;
+            /** Format: int64 */
+            excludedCount?: number;
+            /** Format: date */
+            comparisonStart?: string;
+            /** Format: date */
+            comparisonEnd?: string;
+            comparisonLabel?: string;
+            inProgress?: boolean;
+        };
+        ExploreRowDto: {
+            key?: string;
+            label?: string;
+            value?: number;
+            comparisonValue?: number;
             /** Format: int64 */
             count?: number;
-            categories?: string[];
         };
-        CategoryReportDataDto: {
-            category?: components["schemas"]["CategoryDto"];
-            total?: number;
+        ExploreScopeRequest: {
+            /** @enum {string} */
+            measure: "SPENDING" | "INCOME" | "NET" | "SAVINGS_RATE" | "COUNT" | "AVERAGE";
+            /** @enum {string} */
+            side?: "SPENDING" | "INCOME";
+            /** Format: date */
+            startDate: string;
+            /** Format: date */
+            endDate: string;
+            /** @enum {string} */
+            compare?: "NONE" | "PREVIOUS_PERIOD" | "SAME_DAYS_LAST_YEAR";
+            accountIds?: number[];
             /** Format: int64 */
-            count?: number;
+            categoryId?: number;
+            uncategorized?: boolean;
+            /** Format: int64 */
+            merchantId?: number;
+            noMerchant?: boolean;
+            /** Format: int64 */
+            tagId?: number;
+            noTag?: boolean;
+            minAmount?: number;
+            maxAmount?: number;
+        };
+        Bucket: {
+            /** Format: date */
+            start?: string;
+            value?: number;
+            partial?: boolean;
+        };
+        ExploreTrendDto: {
+            current?: components["schemas"]["Bucket"][];
+            comparison?: components["schemas"]["Bucket"][];
+        };
+        PriceChangeDto: {
+            previousAmount?: number;
+            newAmount?: number;
+            /** Format: date */
+            since?: string;
         };
         RecurringTransactionDto: {
             /** Format: int64 */
@@ -1554,6 +1668,13 @@ export interface components {
             /** Format: date */
             nextDate?: string;
             active?: boolean;
+            /** Format: date */
+            lastChargeDate?: string;
+            lastChargeAmount?: number;
+            /** Format: date */
+            projectedNextDate?: string;
+            overdue?: boolean;
+            priceChange?: components["schemas"]["PriceChangeDto"];
         };
         RecurringSuggestionDto: {
             merchant?: components["schemas"]["MerchantDto"];
@@ -1568,6 +1689,24 @@ export interface components {
             occurrenceCount?: number;
             /** Format: double */
             confidenceScore?: number;
+            /** Format: int64 */
+            accountId?: number;
+            accountName?: string;
+            previousAmount?: number;
+            /** Format: date */
+            priceChangedOn?: string;
+            patternKey?: string;
+            /** Format: int64 */
+            linkedMerchantId?: number;
+            linkedMerchantName?: string;
+        };
+        DismissedPatternDto: {
+            /** Format: int64 */
+            id?: number;
+            patternKey?: string;
+            name?: string;
+            /** Format: date-time */
+            dismissedAt?: string;
         };
         MerchantDescriptionLinkDto: {
             /** Format: int64 */
@@ -2528,6 +2667,50 @@ export interface operations {
             };
         };
     };
+    getDismissedPatterns: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dismissed patterns returned (possibly empty) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DismissedPatternDto"][];
+                };
+            };
+        };
+    };
+    dismissPattern: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DismissPatternRequest"];
+            };
+        };
+        responses: {
+            /** @description Pattern dismissed; the dismissal id is returned */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": number;
+                };
+            };
+        };
+    };
     getDescriptionLinks: {
         parameters: {
             query?: never;
@@ -2980,11 +3163,10 @@ export interface operations {
             };
         };
     };
-    getMonthlyReportData: {
+    explore: {
         parameters: {
             query: {
-                startDate: string;
-                endDate: string;
+                request: components["schemas"]["ExploreRequest"];
             };
             header?: never;
             path?: never;
@@ -2992,22 +3174,30 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Monthly breakdown returned (possibly empty) */
+            /** @description Explorer result returned */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["MonthlyReportDataDto"][];
+                    "*/*": components["schemas"]["ExploreResultDto"];
+                };
+            };
+            /** @description The measure cannot be grouped that way (net and savings rate group by time only) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ExploreResultDto"];
                 };
             };
         };
     };
-    getMerchantReportData: {
+    exploreTrend: {
         parameters: {
             query: {
-                startDate: string;
-                endDate: string;
+                request: components["schemas"]["ExploreScopeRequest"];
             };
             header?: never;
             path?: never;
@@ -3015,22 +3205,23 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Merchant breakdown returned (possibly empty) */
+            /** @description Trend returned */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["MerchantReportDataDto"][];
+                    "*/*": components["schemas"]["ExploreTrendDto"];
                 };
             };
         };
     };
-    getCategoryReportData: {
+    exploreTransactions: {
         parameters: {
             query: {
-                startDate: string;
-                endDate: string;
+                request: components["schemas"]["ExploreScopeRequest"];
+                page?: number;
+                size?: number;
             };
             header?: never;
             path?: never;
@@ -3038,13 +3229,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Category breakdown returned (possibly empty) */
+            /** @description Transactions returned */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["CategoryReportDataDto"][];
+                    "*/*": components["schemas"]["PagedModel"];
                 };
             };
         };
@@ -3456,6 +3647,33 @@ export interface operations {
                 content: {
                     "*/*": number;
                 };
+            };
+        };
+    };
+    restoreDismissedPattern: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dismissal removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The dismissal does not exist or is not the user's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

@@ -1,0 +1,131 @@
+<section aria-label="Explorer controls" class="flex flex-col gap-3">
+  <div class="flex flex-wrap items-center gap-2">
+    <div
+      role="group"
+      aria-label="Measure"
+      class="inline-flex overflow-hidden rounded-lg border border-surface-300 dark:border-surface-700"
+    >
+      @for (measure of measures; track measure) {
+        <button
+          type="button"
+          class="cursor-pointer border-r border-surface-300 px-3 py-1.5 text-sm last:border-r-0 dark:border-surface-700"
+          [class]="
+            state().measure === measure
+              ? 'bg-primary-700 text-white hover:bg-primary-800'
+              : 'bg-surface-0 hover:bg-surface-100 dark:bg-surface-900 dark:hover:bg-surface-800'
+          "
+          [attr.aria-pressed]="state().measure === measure"
+          (click)="onMeasure(measure)"
+        >
+          {{ measureLabels[measure] }}
+        </button>
+      }
+    </div>
+
+    @if (state().measure === 'COUNT' || state().measure === 'AVERAGE') {
+      <div
+        role="group"
+        aria-label="Count and average look at"
+        class="inline-flex overflow-hidden rounded-lg border border-surface-300 dark:border-surface-700"
+      >
+        @for (side of sides; track side) {
+          <button
+            type="button"
+            class="cursor-pointer border-r border-surface-300 px-3 py-1.5 text-sm last:border-r-0 dark:border-surface-700"
+            [class]="
+              state().side === side
+                ? 'bg-primary-700 text-white hover:bg-primary-800'
+                : 'bg-surface-0 hover:bg-surface-100 dark:bg-surface-900 dark:hover:bg-surface-800'
+            "
+            [attr.aria-pressed]="state().side === side"
+            (click)="onSide(side)"
+          >
+            {{ measureLabels[side] }}
+          </button>
+        }
+      </div>
+    }
+
+    <label for="explore-group-by" class="text-sm text-muted-color">grouped by</label>
+    <p-select
+      id="explore-group-by"
+      inputId="explore-group-by-input"
+      [options]="groupByOptions()"
+      optionLabel="label"
+      optionValue="value"
+      optionDisabled="disabled"
+      [ngModel]="state().groupBy"
+      [attr.aria-describedby]="groupByHint() ? 'explore-group-by-hint' : null"
+      appendTo="body"
+      (onChange)="onGroupBy($event.value)"
+    >
+      <ng-template #item let-option>
+        <span [attr.title]="option.reason">{{ option.label }}</span>
+      </ng-template>
+    </p-select>
+    @if (groupByHint(); as hint) {
+      <p id="explore-group-by-hint" class="sr-only">{{ hint }}</p>
+    }
+
+    <p-select
+      id="explore-range"
+      inputId="explore-range-input"
+      ariaLabel="Date range"
+      [options]="rangeOptions"
+      optionLabel="label"
+      optionValue="value"
+      [ngModel]="rangeKey()"
+      appendTo="body"
+      (onChange)="onRange($event.value)"
+    />
+    <p-select
+      id="explore-compare"
+      inputId="explore-compare-input"
+      ariaLabel="Compare with"
+      [options]="compareOptions"
+      optionLabel="label"
+      optionValue="value"
+      [ngModel]="state().compare"
+      appendTo="body"
+      (onChange)="onCompare($event.value)"
+    />
+  </div>
+
+  @if (rangeKey() === 'custom') {
+    <div class="flex flex-wrap items-center gap-2 text-sm">
+      <label for="explore-start">From</label>
+      <input
+        pInputText
+        id="explore-start"
+        type="date"
+        [value]="draftStart() || state().startDate"
+        (change)="onDate('start', $any($event.target).value)"
+      />
+      <label for="explore-end">to</label>
+      <input
+        pInputText
+        id="explore-end"
+        type="date"
+        [value]="draftEnd() || state().endDate"
+        (change)="onDate('end', $any($event.target).value)"
+      />
+    </div>
+  }
+
+  @if (note(); as message) {
+    <p role="status" class="m-0 text-sm text-primary-700 dark:text-primary-400">{{ message }}</p>
+  }
+
+  <div class="flex flex-wrap items-center gap-2 text-sm">
+    <span class="text-muted-color">Start from</span>
+    @for (view of startViews; track view.key) {
+      <button
+        type="button"
+        class="cursor-pointer rounded-full border border-surface-300 px-3 py-1 hover:bg-surface-100 dark:border-surface-700 dark:hover:bg-surface-800"
+        (click)="onStartView(view)"
+      >
+        {{ view.label }}
+      </button>
+    }
+  </div>
+</section>

@@ -1,41 +1,23 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
-import { map, Observable } from 'rxjs';
+import { Observable } from 'rxjs';
 import { environment } from '@env';
 import {
-  CategoryReportData,
-  MerchantReportData,
-  MonthlyReportData,
+  ExploreResult,
+  ExploreState,
+  ExploreTransaction,
+  ExploreTrend,
   NetWorthDataPoint,
 } from '../models/reports.model';
+import { PageResponse } from '@models/transaction.model';
+import { toApiParams } from '../utils/explore-state';
 import { SKIP_GENERIC_ERROR_TOAST } from '@core/auth/error.interceptor';
-import { Category } from '@models/category.model';
 
 const SKIP_TOAST_CONTEXT = new HttpContext().set(SKIP_GENERIC_ERROR_TOAST, true);
 
 /**
- * Raw shape of a `/reports/categories` row, matching `CategoryReportDataDto` field-for-field.
- * `category` is never null -- the backing query only ever includes categorized transactions,
- * matching the old client-side aggregateByCategory()'s own `&& txn.category` check.
- */
-interface CategoryReportDataResponse {
-  category: Category;
-  total: number;
-  count: number;
-}
-
-/** Raw shape of a `/reports/monthly` row, matching `MonthlyReportDataDto` field-for-field. */
-interface MonthlyReportDataResponse {
-  year: number;
-  month: number;
-  income: number;
-  expense: number;
-}
-
-/**
- * Client for the backend's dedicated report endpoints (`ReportController`, PF-304+). Categories,
- * Merchants, and Cash Flow are all aggregated server-side (PF-823) -- no row cap, unlike the old
- * client-side aggregation approach this replaced.
+ * Client for the backend's report endpoints (`ReportController`): the explorer's groups, trend and
+ * transactions (PF-886), all aggregated server-side with no row cap, and the net worth series.
  */
 @Injectable({
   providedIn: 'root',
@@ -63,72 +45,49 @@ export class ReportApiService {
   }
 
   /**
-   * Gets the Categories tab's spending breakdown for the given range, aggregated server-side over
-   * every matching transaction.
-   * @param startDate the first date to include (ISO date, inclusive)
-   * @param endDate the last date to include (ISO date, inclusive)
-   * @returns one entry per category with spend in range, highest total first
+   * Runs the explorer: the measure by the grouping under the filters, with the comparison if asked.
+   * @param state the explorer state
+   * @returns the groups, totals and comparison
    */
-  getCategoryBreakdown(startDate: string, endDate: string): Observable<CategoryReportData[]> {
-    const params: HttpParams = new HttpParams().set('startDate', startDate).set('endDate', endDate);
-
-    return this.http
-      .get<CategoryReportDataResponse[]>(`${this.apiUrl}/categories`, {
-        params,
-        context: SKIP_TOAST_CONTEXT,
-      })
-      .pipe(
-        map((rows: CategoryReportDataResponse[]): CategoryReportData[] =>
-          rows.map((row: CategoryReportDataResponse): CategoryReportData => ({
-            category: row.category,
-            total: row.total,
-            count: row.count,
-            avgTransaction: row.count > 0 ? row.total / row.count : 0,
-          })),
-        ),
-      );
-  }
-
-  /**
-   * Gets the Merchants tab's spending breakdown for the given range, aggregated server-side over
-   * every matching transaction.
-   * @param startDate the first date to include (ISO date, inclusive)
-   * @param endDate the last date to include (ISO date, inclusive)
-   * @returns one entry per merchant with spend in range, highest total first
-   */
-  getMerchantBreakdown(startDate: string, endDate: string): Observable<MerchantReportData[]> {
-    const params: HttpParams = new HttpParams().set('startDate', startDate).set('endDate', endDate);
-
-    return this.http.get<MerchantReportData[]>(`${this.apiUrl}/merchants`, {
-      params,
+  explore(state: ExploreState): Observable<ExploreResult> {
+    return this.http.get<ExploreResult>(`${this.apiUrl}/explore`, {
+      params: new HttpParams({ fromObject: toApiParams(state) }),
       context: SKIP_TOAST_CONTEXT,
     });
   }
 
   /**
-   * Gets the Cash Flow tab's monthly income/expense breakdown for the given range, aggregated
-   * server-side over every matching transaction.
-   * @param startDate the first date to include (ISO date, inclusive)
-   * @param endDate the last date to include (ISO date, inclusive)
-   * @returns one entry per month with matching activity, oldest first
+   * Gets the measure per day, week or month across the period, under the same filters.
+   * @param state the explorer state
+   * @returns the current buckets and the comparison buckets
    */
-  getMonthlyBreakdown(startDate: string, endDate: string): Observable<MonthlyReportData[]> {
-    const params: HttpParams = new HttpParams().set('startDate', startDate).set('endDate', endDate);
+  trend(state: ExploreState): Observable<ExploreTrend> {
+    const params: Record<string, string> = toApiParams(state);
+    delete params['groupBy'];
+    return this.http.get<ExploreTrend>(`${this.apiUrl}/explore/trend`, {
+      params: new HttpParams({ fromObject: params }),
+      context: SKIP_TOAST_CONTEXT,
+    });
+  }
 
-    return this.http
-      .get<MonthlyReportDataResponse[]>(`${this.apiUrl}/monthly`, {
-        params,
-        context: SKIP_TOAST_CONTEXT,
-      })
-      .pipe(
-        map((rows: MonthlyReportDataResponse[]): MonthlyReportData[] =>
-          rows.map((row: MonthlyReportDataResponse): MonthlyReportData => ({
-            month: `${row.year}-${String(row.month).padStart(2, '0')}`,
-            income: row.income,
-            expense: row.expense,
-            netSavings: row.income - row.expense,
-          })),
-        ),
-      );
+  /**
+   * Gets a page of the transactions behind the number, newest first.
+   * @param state the explorer state
+   * @param page the zero-based page
+   * @param size the page size (the server caps it at 100)
+   * @returns the page of transactions
+   */
+  transactions(
+    state: ExploreState,
+    page: number,
+    size: number,
+  ): Observable<PageResponse<ExploreTransaction>> {
+    const params: Record<string, string> = toApiParams(state);
+    delete params['groupBy'];
+    delete params['compare'];
+    return this.http.get<PageResponse<ExploreTransaction>>(`${this.apiUrl}/explore/transactions`, {
+      params: new HttpParams({ fromObject: { ...params, page: String(page), size: String(size) } }),
+      context: SKIP_TOAST_CONTEXT,
+    });
   }
 }
