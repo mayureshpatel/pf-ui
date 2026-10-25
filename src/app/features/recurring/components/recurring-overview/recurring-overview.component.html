@@ -1,0 +1,58 @@
+<div class="flex flex-col gap-4">
+  @if (totals().services === 0) {
+    <p class="m-0 text-lg font-semibold">Nothing tracked yet.</p>
+  } @else {
+    <div>
+      <p class="m-0 text-2xl font-bold tabular-nums">
+        You pay about {{ totals().monthly | currency }} / month
+      </p>
+      <p class="mt-1 text-sm text-muted-color tabular-nums">
+        {{ totals().yearly | currency }} a year, across {{ servicesLabel(totals().services) }}
+      </p>
+    </div>
+  }
+
+  @if (comingUp().length > 0) {
+    <section>
+      <h3 class="m-0 mb-1 text-sm font-medium">Coming up</h3>
+      <ul class="m-0 list-none p-0 text-sm">
+        @for (item of comingUp(); track item.id) {
+          <li class="py-0.5">{{ dateOf(item) }} · {{ item.merchant.name }}</li>
+        }
+      </ul>
+    </section>
+  }
+
+  @if (priceChanges().length > 0) {
+    <section>
+      <h3 class="m-0 mb-1 text-sm font-medium">Price changes</h3>
+      <ul class="m-0 list-none p-0 text-sm text-amber-700 dark:text-amber-400">
+        @for (item of priceChanges(); track item.id) {
+          <li class="py-0.5">
+            {{ item.merchant.name }}: {{ item.priceChange?.previousAmount | currency }} to
+            {{ item.priceChange?.newAmount | currency }}
+          </li>
+        }
+      </ul>
+    </section>
+  }
+
+  <div class="flex flex-col gap-2">
+    @if (patternCount() > 0) {
+      <button
+        type="button"
+        class="cursor-pointer rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium dark:border-surface-700"
+        (click)="reviewPatterns.emit()"
+      >
+        Review patterns
+      </button>
+    }
+    <button
+      type="button"
+      class="cursor-pointer rounded-lg bg-primary-700 px-3 py-2 text-sm font-medium text-white hover:bg-primary-800"
+      (click)="add.emit()"
+    >
+      Add recurring
+    </button>
+  </div>
+</div>
