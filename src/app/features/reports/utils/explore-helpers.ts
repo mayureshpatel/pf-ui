@@ -150,17 +150,34 @@ interface Applied {
   step: DrillStep;
 }
 
+/** The filter keys each kind of drill step sets, so stepping back knows what to put back. */
+const TOUCHED: Record<DrillFilterKey, (keyof ExploreFilters)[]> = {
+  categoryId: ['categoryId', 'categoryName'],
+  uncategorized: ['uncategorized'],
+  merchantId: ['merchantId', 'merchantName'],
+  noMerchant: ['noMerchant'],
+  accountIds: ['accountIds'],
+  tagId: ['tagId'],
+  noTag: ['noTag'],
+  period: [],
+};
+
 function applyRow(state: ExploreState, row: ExploreRow): Applied {
   const filters: ExploreFilters = { ...state.filters };
   let period: Period | null = state.period;
   const groupBy: GroupBy = state.groupBy;
   const id: number | null = row.key === null ? null : Number(row.key);
-  const step = (filterKey: DrillFilterKey, value: DrillStep['value']): DrillStep => ({
-    groupBy,
-    filterKey,
-    label: row.label,
-    value,
-  });
+  const step = (
+    filterKey: DrillFilterKey,
+    value: DrillStep['value'],
+    label: string = row.label,
+  ): DrillStep => {
+    const before: Partial<ExploreFilters> = {};
+    TOUCHED[filterKey].forEach((key) => {
+      if (state.filters[key] !== undefined) Object.assign(before, { [key]: state.filters[key] });
+    });
+    return { groupBy, filterKey, label, value, before };
+  };
 
   switch (groupBy) {
     case 'CATEGORY':
@@ -168,6 +185,19 @@ function applyRow(state: ExploreState, row: ExploreRow): Applied {
       if (id === null) {
         filters.uncategorized = true;
         return { filters, period, step: step('uncategorized', true) };
+      }
+      if (groupBy === 'CATEGORY' && state.filters.categoryId !== undefined) {
+        // the only parent row shown under a category filter is that filter's own family: clicking it
+        // may narrow the view but must never widen a subcategory filter to its whole parent
+        return {
+          filters,
+          period,
+          step: step(
+            'categoryId',
+            state.filters.categoryId,
+            state.filters.categoryName ?? row.label,
+          ),
+        };
       }
       filters.categoryId = id;
       filters.categoryName = row.label;
@@ -205,8 +235,10 @@ function applyMode(state: ExploreState, row: ExploreRow, mode: RowMode): Explore
   const drillAfter: DrillStep[] = [...state.drill, step];
   // an uncategorized row has no subcategories to look at, so it goes straight to merchants
   const from: GroupBy = step.filterKey === 'uncategorized' ? 'SUBCATEGORY' : state.groupBy;
-  const next: GroupBy | 'TRANSACTIONS' | null =
+  let next: GroupBy | 'TRANSACTIONS' | null =
     mode === 'drill' ? nextGrouping(from, drillAfter) : null;
+  // net and savings rate only make sense over time: past a time row there is nothing to group by
+  if (next && next !== 'TRANSACTIONS' && !isAllowed(state.measure, next).ok) next = 'TRANSACTIONS';
   return {
     ...state,
     filters,
@@ -259,14 +291,22 @@ function restore(filters: ExploreFilters, key: DrillFilterKey, kept: DrillStep[]
 /**
  * Goes back to the crumb at `index` (0 is the start): the later steps go, the filters they added are
  * restored from earlier steps or cleared, and the grouping returns to the one the first removed step
- * was made in. Filters added from the menu rather than by drilling are untouched.
+ * was made in. Each removed step puts back what its filters held before it (menu filters included).
  */
 export function stepBack(state: ExploreState, index: number): ExploreState {
   if (index < 0 || index >= state.drill.length) return state;
   const kept: DrillStep[] = state.drill.slice(0, index);
   const removed: DrillStep[] = state.drill.slice(index);
   const filters: ExploreFilters = { ...state.filters };
-  new Set(removed.map((s) => s.filterKey)).forEach((key) => restore(filters, key, kept));
+  [...removed].reverse().forEach((step: DrillStep) => {
+    if (step.before === undefined) {
+      restore(filters, step.filterKey, kept);
+      return;
+    }
+    TOUCHED[step.filterKey].forEach((key) => delete filters[key]);
+    if (step.filterKey === 'accountIds') filters.accountIds = [];
+    Object.assign(filters, step.before);
+  });
   const lastPeriod: DrillStep | undefined = [...kept]
     .reverse()
     .find((s) => s.filterKey === 'period');
@@ -527,9 +567,11 @@ export function granularityOf(starts: string[]): Granularity {
   if (starts.length < 2) {
     return starts.length === 1 && !starts[0].endsWith('-01') ? 'day' : 'month';
   }
-  const gap: number =
+  // rounded: local midnights are 23 or 25 hours apart across a daylight saving change
+  const gap: number = Math.round(
     (fromLocalDateString(starts[1]).getTime() - fromLocalDateString(starts[0]).getTime()) /
-    86_400_000;
+      86_400_000,
+  );
   return gap <= 1 ? 'day' : gap <= 7 ? 'week' : 'month';
 }
 

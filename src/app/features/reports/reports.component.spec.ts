@@ -139,9 +139,14 @@ describe('ReportsComponent', () => {
         {
           provide: CategoryApiService,
           useValue: {
-            getCategories: vi
-              .fn()
-              .mockReturnValue(of([{ id: 5, name: 'Food', parent: null }] as Category[])),
+            getCategories: vi.fn().mockReturnValue(
+              of([
+                { id: 5, name: 'Food', parent: null },
+                { id: 8, name: 'Groceries', parent: { id: 5 } },
+                { id: 10, name: 'Gas', parent: { id: 6 } },
+                { id: 11, name: 'Gas & Electric', parent: { id: 6 } },
+              ] as Category[]),
+            ),
           },
         },
         {
@@ -520,7 +525,7 @@ describe('ReportsComponent', () => {
   it('should enable Open in Transactions only when the filters fit and map them', async () => {
     // arrange
     await create();
-    component.onFiltersChange({ accountIds: [1], categoryId: 5, categoryName: 'Food' });
+    component.onFiltersChange({ accountIds: [1], categoryId: 8, categoryName: 'Groceries' });
     component.onStateChange({ groupBy: 'MERCHANT' });
     component.onOpenTransactions(row('9', 'Whole Foods', 50));
     await settle();
@@ -532,7 +537,7 @@ describe('ReportsComponent', () => {
     // act
     const enabled = !open().disabled;
     component.openInTransactions();
-    component.onFiltersChange({ accountIds: [1, 2], categoryId: 5, categoryName: 'Food' });
+    component.onFiltersChange({ accountIds: [1, 2], categoryId: 8, categoryName: 'Groceries' });
     await settle();
 
     // assert & verify
@@ -542,7 +547,7 @@ describe('ReportsComponent', () => {
       expect.objectContaining({
         queryParams: expect.objectContaining({
           accountId: '1',
-          categoryName: 'Food',
+          categoryName: 'Groceries',
           merchant: 'Whole Foods',
           type: 'EXPENSE',
         }),
@@ -688,7 +693,7 @@ describe('ReportsComponent', () => {
 
     // assert & verify
     expect(component.accounts()).toHaveLength(1);
-    expect(component.categories()).toHaveLength(1);
+    expect(component.categories()).toHaveLength(4);
     expect(component.tags()).toHaveLength(1);
     expect(component.merchants()).toHaveLength(1);
     expect(merchantApi.getMerchants).toHaveBeenLastCalledWith(
@@ -710,5 +715,77 @@ describe('ReportsComponent', () => {
     expect(component.tags()).toEqual([]);
     expect(component.result()?.rows).toHaveLength(2);
     expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  it('should not offer Open in Transactions for a whole category group or an ambiguous name', async () => {
+    // arrange
+    await create();
+    const linkable = () => component['linkable']();
+
+    // act
+    component.onFiltersChange({ accountIds: [], categoryId: 5, categoryName: 'Food' });
+    const parent = linkable();
+    component.onFiltersChange({ accountIds: [], categoryId: 10, categoryName: 'Gas' });
+    const similar = linkable();
+    component.onFiltersChange({ accountIds: [], categoryId: 8, categoryName: 'Groceries' });
+    const fine = linkable();
+    component.onOpenTransactions(row('5', 'Food', 1));
+    component.openInTransactions();
+    router.navigate.mockClear();
+    component.onFiltersChange({ accountIds: [], categoryId: 5, categoryName: 'Food' });
+    component.openInTransactions();
+
+    // assert & verify
+    expect(parent.ok).toBe(false);
+    expect(parent.reason).toContain('whole category group');
+    expect(similar.ok).toBe(false);
+    expect(similar.reason).toContain('similar names');
+    expect(fine.ok).toBe(true);
+    expect(router.navigate).not.toHaveBeenCalledWith(['/transactions'], expect.anything());
+  });
+
+  it('should push a history entry for a drill so Back steps out, and replace for other changes', async () => {
+    // arrange
+    await create();
+    router.navigate.mockClear();
+
+    // act
+    component.onDrill(row('5', 'Food', 400));
+    await settle();
+    const afterDrill = router.navigate.mock.calls.at(-1)![1];
+    component.onStateChange({ compare: 'PREVIOUS_PERIOD' });
+    await settle();
+    const afterCompare = router.navigate.mock.calls.at(-1)![1];
+
+    // assert & verify
+    expect(afterDrill?.replaceUrl).toBe(false);
+    expect(afterCompare?.replaceUrl).toBe(true);
+  });
+
+  it('should step back one level on Escape, but not while typing or with nothing to step back', async () => {
+    // arrange
+    await create();
+    component.onDrill(row('5', 'Food', 400));
+    component.onDrill(row('8', 'Groceries', 300));
+    await settle();
+    const press = (target: EventTarget): void => {
+      target.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    };
+
+    // act
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+    press(input);
+    const whileTyping = component.state().drill.length;
+    press(document.body);
+    const afterOne = component.state().drill.length;
+    press(document.body);
+    press(document.body);
+    input.remove();
+
+    // assert & verify
+    expect(whileTyping).toBe(2);
+    expect(afterOne).toBe(1);
+    expect(component.state().drill).toEqual([]);
   });
 });

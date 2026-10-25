@@ -14,12 +14,14 @@ const CATEGORY_STEP: DrillStep = {
   filterKey: 'categoryId',
   label: 'Food',
   value: 5,
+  before: {},
 };
 const PERIOD_STEP: DrillStep = {
   groupBy: 'WEEK',
   filterKey: 'period',
   label: 'Week of Mar 9',
   value: '2026-03-10..2026-03-16',
+  before: {},
 };
 
 const FULL: ExploreState = {
@@ -187,7 +189,7 @@ describe('explore state', () => {
     it('should drop a malformed drill path and non-numeric ids with a note', () => {
       // act
       const { state, note } = fromQueryParams(
-        { drill: ['CATEGORY|categoryId'], categoryId: 'abc', accountIds: '1,x' },
+        { drill: ['CATEGORY|categoryId|5'], categoryId: 'abc', accountIds: '1,x' },
         TODAY,
       );
 
@@ -200,7 +202,7 @@ describe('explore state', () => {
 
     it('should read a single drill value as a one-step path', () => {
       // act
-      const { state } = fromQueryParams({ drill: 'CATEGORY|categoryId|5|Food' }, TODAY);
+      const { state } = fromQueryParams({ drill: 'CATEGORY|categoryId|5|%7B%7D|Food' }, TODAY);
 
       // assert & verify
       expect(state.drill).toEqual([CATEGORY_STEP]);

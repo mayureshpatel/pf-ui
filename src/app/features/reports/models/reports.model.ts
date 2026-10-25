@@ -83,6 +83,8 @@ export interface DrillStep {
   filterKey: DrillFilterKey;
   label: string;
   value: number | string | true;
+  /** What the filters this step touched held before it, so stepping back can put them back. */
+  before?: Partial<ExploreFilters>;
 }
 
 export interface ExploreState {

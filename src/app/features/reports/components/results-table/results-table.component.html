@@ -125,7 +125,7 @@
                 role="menu"
                 tabindex="-1"
                 class="absolute right-0 top-full z-20 m-0 min-w-64 list-none rounded-lg border border-surface-200 bg-surface-0 p-1 shadow-lg dark:border-surface-700 dark:bg-surface-900"
-                (keydown.escape)="openMenu.set(null)"
+                (keydown.escape)="openMenu.set(null); $event.stopPropagation()"
               >
                 <li role="none">
                   <button

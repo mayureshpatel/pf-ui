@@ -142,7 +142,7 @@ describe('explore helpers', () => {
       expect(next.groupBy).toBe('SUBCATEGORY');
       expect(next.leaf).toBe(false);
       expect(next.drill).toEqual([
-        { groupBy: 'CATEGORY', filterKey: 'categoryId', label: 'Food', value: 5 },
+        { groupBy: 'CATEGORY', filterKey: 'categoryId', label: 'Food', value: 5, before: {} },
       ]);
     });
 
@@ -720,6 +720,78 @@ describe('explore helpers', () => {
       const flags = drill({ ...base(), groupBy: 'TAG' }, row(null, 'No tag'));
       expect(reconcileDrill({ ...flags, filters: { accountIds: [] } }).drill).toEqual([]);
       expect(reconcileDrill(flags)).toBe(flags);
+    });
+  });
+
+  describe('review fixes (PF-886)', () => {
+    it('should not drill into a grouping the measure does not allow', () => {
+      // arrange
+      const net: ExploreState = { ...base(), measure: 'NET', groupBy: 'MONTH' };
+      const savings: ExploreState = { ...base(), measure: 'SAVINGS_RATE', groupBy: 'WEEK' };
+
+      // act
+      const fromNet = drill(net, row('2026-03-01', 'Mar 2026'));
+      const fromSavings = drill(savings, row('2026-03-02', 'Week of Mar 2'));
+
+      // assert & verify
+      expect(fromNet.leaf).toBe(true);
+      expect(fromNet.groupBy).toBe('MONTH');
+      expect(fromNet.period?.start).toBe('2026-03-01');
+      expect(fromSavings.leaf).toBe(true);
+      expect(fromSavings.groupBy).toBe('WEEK');
+    });
+
+    it('should bring back menu filters that a drill replaced when stepping back', () => {
+      // arrange
+      const uncategorized = applyStartView(
+        base(),
+        startViews.find((v) => v.key === 'uncategorized')!,
+      );
+      const drilled = drill(drill(uncategorized, row('9', 'Amazon')), row(null, 'Uncategorized'));
+      const accounts: ExploreState = {
+        ...base(),
+        groupBy: 'ACCOUNT',
+        filters: { accountIds: [1, 2] },
+      };
+      const food: ExploreState = {
+        ...base(),
+        filters: { accountIds: [], categoryId: 5, categoryName: 'Food' },
+      };
+
+      // act
+      const backToStart = stepBack(drilled, 0);
+      const backFromAccount = stepBack(drill(accounts, row('1', 'Checking')), 0);
+      const backFromFood = stepBack(drill(food, row('5', 'Food')), 0);
+
+      // assert & verify
+      expect(backToStart.filters.uncategorized).toBe(true);
+      expect(backFromAccount.filters.accountIds).toEqual([1, 2]);
+      expect(backFromFood.filters.categoryId).toBe(5);
+      expect(backFromFood.filters.categoryName).toBe('Food');
+    });
+
+    it('should never widen a narrower category filter when its parent row is clicked', () => {
+      // arrange
+      const groceries: ExploreState = {
+        ...base(),
+        filters: { accountIds: [], categoryId: 8, categoryName: 'Groceries' },
+      };
+
+      // act
+      const next = drill(groceries, row('5', 'Food'));
+
+      // assert & verify
+      expect(next.filters.categoryId).toBe(8);
+      expect(next.filters.categoryName).toBe('Groceries');
+      expect(next.drill).toHaveLength(1);
+      expect(next.drill[0].label).toBe('Groceries');
+      expect(stepBack(next, 0).filters.categoryId).toBe(8);
+    });
+
+    it('should read day, week and month buckets across a daylight saving change', () => {
+      // assert & verify -- 25 and 169 hours between local midnights
+      expect(granularityOf(['2026-11-01', '2026-11-02'])).toBe('day');
+      expect(granularityOf(['2026-10-27', '2026-11-03'])).toBe('week');
     });
   });
 });

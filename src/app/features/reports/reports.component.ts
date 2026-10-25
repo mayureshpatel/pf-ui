@@ -109,6 +109,7 @@ type View = 'explorer' | 'networth';
     TrendChartComponent,
   ],
   templateUrl: './reports.component.html',
+  host: { '(document:keydown.escape)': 'onEscape($event)' },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ReportsComponent {
@@ -153,6 +154,8 @@ export class ReportsComponent {
   private loadRun = 0;
   /** The URL parameters last written or read, so the URL effect doesn't echo what it just read. */
   private urlKey = '';
+  /** The next URL write adds a history entry (a drill) rather than replacing the current one. */
+  private pushNext = false;
 
   protected readonly groupLabel: Signal<string> = computed(
     (): string => GROUP_LABELS[this.state().groupBy],
@@ -202,9 +205,41 @@ export class ReportsComponent {
   protected readonly biggest: Signal<ExploreRow | null> = computed((): ExploreRow | null =>
     biggestRow(this.result()?.rows ?? [], this.state().compare),
   );
-  protected readonly linkable: Signal<{ ok: boolean; reason?: string }> = computed(() =>
-    isTransactionsLinkable(this.state().filters, this.state().measure),
-  );
+  /**
+   * Whether the Transactions page can show the same transactions. Beyond the filters it can't express,
+   * it matches category and merchant names loosely (a substring), so a parent category, or a name
+   * contained in another's, would open a different set than the one behind the number.
+   */
+  protected readonly linkable: Signal<{ ok: boolean; reason?: string }> = computed(() => {
+    const base = isTransactionsLinkable(this.state().filters, this.state().measure);
+    if (!base.ok) return base;
+    const f: ExploreFilters = this.state().filters;
+    const no = (reason: string): { ok: boolean; reason: string } => ({
+      ok: false,
+      reason: `The Transactions page can't ${reason}.`,
+    });
+    const contains = (names: string[], name: string | undefined): boolean =>
+      !!name && names.some((other: string) => other.toLowerCase().includes(name.toLowerCase()));
+    if (f.categoryId !== undefined) {
+      const categories: Category[] = this.categories();
+      if (categories.some((c: Category) => c.parent?.id === f.categoryId)) {
+        return no('open a whole category group, only a single subcategory');
+      }
+      const others: string[] = categories
+        .filter((c: Category) => c.id !== f.categoryId)
+        .map((c) => c.name);
+      if (contains(others, f.categoryName))
+        return no('tell this category apart from others with similar names');
+    }
+    if (f.merchantId !== undefined) {
+      const others: string[] = this.merchants()
+        .filter((m: Merchant) => m.id !== f.merchantId)
+        .map((m: Merchant) => m.name);
+      if (contains(others, f.merchantName))
+        return no('tell this merchant apart from others with similar names');
+    }
+    return base;
+  });
   protected readonly trimEmptyTrend: Signal<boolean> = computed(
     (): boolean => this.state().rangeLabel === 'All time',
   );
@@ -287,6 +322,7 @@ export class ReportsComponent {
   onDrill(row: ExploreRow): void {
     const next: ExploreState = drill(this.state(), row);
     if (next === this.state()) return;
+    this.pushNext = true;
     this.announcement.set(
       next.leaf
         ? `Showing the transactions for ${row.label}`
@@ -299,6 +335,7 @@ export class ReportsComponent {
   onFilterOnly(row: ExploreRow): void {
     const next: ExploreState = filterOnly(this.state(), row);
     if (next === this.state()) return;
+    this.pushNext = true;
     this.announcement.set(`Filtered to ${row.label}`);
     this.commit(next);
   }
@@ -306,6 +343,7 @@ export class ReportsComponent {
   onOpenTransactions(row: ExploreRow): void {
     const next: ExploreState = openTransactions(this.state(), row);
     if (next === this.state()) return;
+    this.pushNext = true;
     this.announcement.set(`Showing the transactions for ${row.label}`);
     this.commit(next);
     this.focusHeading();
@@ -315,6 +353,7 @@ export class ReportsComponent {
   onStepBack(index: number): void {
     const next: ExploreState = stepBack(this.state(), index);
     if (next === this.state()) return;
+    this.pushNext = true;
     this.announcement.set(
       `Showing ${this.measureLabel().toLowerCase()} by ${GROUP_LABELS[next.groupBy].toLowerCase()}`,
     );
@@ -330,6 +369,19 @@ export class ReportsComponent {
     this.commit(
       selectPeriod(this.state(), bucket.start, granularity, bucketLabel(bucket.start, granularity)),
     );
+  }
+
+  /** Escape steps back one level, unless it is closing something or the user is typing. */
+  onEscape(event: Event): void {
+    const target: HTMLElement | null = event.target instanceof HTMLElement ? event.target : null;
+    if (this.view() !== 'explorer' || this.state().drill.length === 0) return;
+    if (
+      target?.closest(
+        'input, textarea, select, [role="combobox"], [role="menu"], [aria-expanded="true"]',
+      )
+    )
+      return;
+    this.onStepBack(this.state().drill.length - 1);
   }
 
   clearFilters(): void {
@@ -399,7 +451,9 @@ export class ReportsComponent {
 
   /** Opens the transactions behind the number on the Transactions page, with the same filters. */
   openInTransactions(): void {
-    const queryParams: Params | null = toTransactionsQuery(this.state());
+    const queryParams: Params | null = this.linkable().ok
+      ? toTransactionsQuery(this.state())
+      : null;
     if (queryParams) {
       void this.router.navigate(['/transactions'], { queryParams });
     }
@@ -487,7 +541,9 @@ export class ReportsComponent {
     const key: string = JSON.stringify(params);
     if (key === this.urlKey) return;
     this.urlKey = key;
-    void this.router.navigate([], { queryParams: params, replaceUrl: true });
+    const replaceUrl = !this.pushNext;
+    this.pushNext = false;
+    void this.router.navigate([], { queryParams: params, replaceUrl });
   }
 
   /** Follows the URL when it changes underneath (back and forward), ignoring what we wrote ourselves. */

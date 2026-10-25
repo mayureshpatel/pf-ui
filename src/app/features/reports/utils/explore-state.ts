@@ -82,7 +82,13 @@ export function effectiveDates(state: ExploreState): { startDate: string; endDat
 }
 
 const encodeStep = (step: DrillStep): string =>
-  `${step.groupBy}|${step.filterKey}|${String(step.value)}|${step.label}`;
+  [
+    step.groupBy,
+    step.filterKey,
+    String(step.value),
+    step.before === undefined ? '' : encodeURIComponent(JSON.stringify(step.before)),
+    step.label,
+  ].join('|');
 
 /**
  * The state as URL query parameters. Defaults are left out so links stay short; the measure, grouping
@@ -167,9 +173,17 @@ function parseAmount(raw: unknown, problems: string[]): number | undefined {
 
 function parseStep(entry: string): DrillStep | null {
   const parts: string[] = entry.split('|');
-  if (parts.length < 4) return null;
-  const [groupBy, filterKey, rawValue] = parts;
-  const label: string = parts.slice(3).join('|');
+  if (parts.length < 5) return null;
+  const [groupBy, filterKey, rawValue, rawBefore] = parts;
+  const label: string = parts.slice(4).join('|');
+  let before: DrillStep['before'];
+  if (rawBefore !== '') {
+    try {
+      before = JSON.parse(decodeURIComponent(rawBefore)) as DrillStep['before'];
+    } catch {
+      return null;
+    }
+  }
   if (
     !GROUP_BYS.includes(groupBy as GroupBy) ||
     !DRILL_KEYS.includes(filterKey as DrillFilterKey)
@@ -188,7 +202,9 @@ function parseStep(entry: string): DrillStep | null {
     if (!rawValue.includes('..')) return null;
     value = rawValue;
   }
-  return { groupBy: groupBy as GroupBy, filterKey: key, label, value };
+  return before === undefined
+    ? { groupBy: groupBy as GroupBy, filterKey: key, label, value }
+    : { groupBy: groupBy as GroupBy, filterKey: key, label, value, before };
 }
 
 function parseDrill(raw: unknown, problems: string[]): DrillStep[] {
