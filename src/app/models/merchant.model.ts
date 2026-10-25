@@ -9,6 +9,7 @@
  * @property state - The merchant's state/province, if given.
  * @property postalCode - The merchant's postal code, if given.
  * @property country - The merchant's country, if given.
+ * @property linkCount - How many transaction descriptions are linked to the merchant.
  */
 export interface Merchant {
   id: number;
@@ -18,6 +19,7 @@ export interface Merchant {
   state: string | null;
   postalCode: string | null;
   country: string | null;
+  linkCount?: number;
 }
 
 /**
@@ -60,4 +62,20 @@ export interface MerchantDescriptionLink {
   id: number;
   merchantId: number;
   description: string;
+}
+
+/**
+ * One distinct transaction description in the user's history, as offered by the description
+ * picker. Descriptions differing only in case or spacing are one row.
+ *
+ * @property description - The most common raw spelling.
+ * @property transactionCount - How many of the user's transactions use it.
+ * @property merchantId - The merchant it is linked to, or null when unlinked.
+ * @property merchantName - That merchant's name, or null when unlinked.
+ */
+export interface TransactionDescription {
+  description: string;
+  transactionCount: number;
+  merchantId: number | null;
+  merchantName: string | null;
 }

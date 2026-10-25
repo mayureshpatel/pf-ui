@@ -1,151 +1,151 @@
-<div class="w-full flex flex-col gap-4">
-  <!-- Page Header -->
-  <app-screen-toolbar class="mb-6">
+<div class="flex w-full flex-col gap-4">
+  <app-screen-toolbar [showDivider]="false">
     <div toolbarTitle>
-      <h1 class="text-4xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight">Merchants</h1>
+      <h1 class="text-3xl font-bold tracking-tight text-surface-900 dark:text-surface-0">
+        Merchants
+      </h1>
     </div>
-
     <div toolbarFilters>
-      <p-iconfield>
-        <p-inputicon class="pi pi-search"/>
-        <input
-          pInputText
-          type="text"
-          placeholder="Search merchants..."
-          [ngModel]="searchTerm()"
-          (ngModelChange)="onSearchInput($event)"
-        />
-      </p-iconfield>
-    </div>
-
-    <div toolbarActions>
-      <p-button
-        label="New Merchant"
-        icon="pi pi-plus"
-        (onClick)="openCreateDialog()"
-        severity="primary"
-        [raised]="true"
-        size="small"
-      />
+      <p-button label="Add merchant" icon="pi pi-plus" (onClick)="startAdd()" />
     </div>
   </app-screen-toolbar>
 
-  @if (loadError()) {
-    <app-page-error-state message="Failed to load merchants." (retry)="loadData()"/>
-  } @else if (!isEmpty()) {
-    <p-card class="overflow-hidden">
-      <p-table
-        [value]="merchants()"
-        [loading]="loading()"
-        [lazy]="true"
-        [lazyLoadOnInit]="false"
-        (onLazyLoad)="onPageChange($event)"
-        [totalRecords]="totalRecords()"
-        [paginator]="totalRecords() > 20"
-        [first]="page() * 20"
-        [rows]="20"
-        [stripedRows]="true"
-        size="small"
-        [breakpoint]="'960px'"
-      >
-        <ng-template #header>
-          <tr>
-            <th id="merchant-name" class="py-4 font-bold text-surface-700 dark:text-surface-200">Name</th>
-            <th id="merchant-city" class="py-4 font-bold text-surface-700 dark:text-surface-200">City</th>
-            <th id="merchant-state" class="py-4 font-bold text-surface-700 dark:text-surface-200">State</th>
-            <th id="merchant-country" class="py-4 font-bold text-surface-700 dark:text-surface-200">Country</th>
-            <th id="merchant-actions" class="py-4 font-bold text-surface-700 dark:text-surface-200">Actions</th>
-          </tr>
-        </ng-template>
+  @if (loadError() && merchants().length === 0) {
+    <app-page-error-state message="Failed to load merchants." (retry)="loadMerchants()" />
+  } @else if (loading() && !loadedOnce()) {
+    <div class="flex flex-col gap-4" aria-busy="true" role="status">
+      <span class="sr-only">Loading merchants</span>
+      <p-skeleton height="3rem" borderRadius="1rem" />
+      <p-skeleton height="16rem" borderRadius="1rem" />
+    </div>
+  } @else {
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_26rem]">
+      <div class="flex min-w-0 flex-col gap-4">
+        @if (totalRecords() === 0 && !dataSearching()) {
+          <div
+            class="rounded-2xl border border-surface-200 p-10 text-center dark:border-surface-800"
+          >
+            <p class="font-medium">No merchants yet</p>
+            <p class="text-muted-color">
+              Create a merchant, then link the transaction descriptions that belong to it.
+            </p>
+          </div>
+        } @else {
+          <input
+            type="search"
+            class="w-full rounded-lg border border-surface-300 bg-surface-0 px-3 py-2 text-sm dark:border-surface-700 dark:bg-surface-900"
+            aria-label="Search merchants"
+            placeholder="Search by name or city"
+            [value]="searchTerm()"
+            (input)="onSearchInput($any($event.target).value)"
+          />
+          <app-merchant-list
+            [merchants]="merchants()"
+            [selectedId]="selected()?.id ?? null"
+            [loading]="loading()"
+            [totalRecords]="totalRecords()"
+            [page]="page()"
+            [pageSize]="pageSize"
+            [searching]="dataSearching()"
+            (openMerchant)="openMerchant($event)"
+            (pageChange)="setPage($event)"
+            (clearSearch)="clearSearch()"
+          />
+        }
+      </div>
 
-        <ng-template #body let-merchant>
-          <tr class="hover:bg-surface-100/50 dark:hover:bg-surface-800/50 transition-colors duration-200">
-            <td class="py-4 px-4">
-              <span class="font-semibold text-surface-900 dark:text-surface-0">{{ merchant.name }}</span>
-            </td>
-            <td class="px-4 text-surface-600 dark:text-surface-300">{{ merchant.city || '—' }}</td>
-            <td class="px-4 text-surface-600 dark:text-surface-300">{{ merchant.state || '—' }}</td>
-            <td class="px-4 text-surface-600 dark:text-surface-300">{{ merchant.country || '—' }}</td>
-            <td class="px-4">
-              <div class="flex gap-1">
-                <p-button
-                  icon="pi pi-link"
-                  [text]="true"
-                  [rounded]="true"
-                  severity="secondary"
-                  (onClick)="openLinksDialog(merchant)"
-                  pTooltip="Manage Linked Descriptions"
-                  ariaLabel="Manage Linked Descriptions"
-                  tooltipPosition="top"
-                />
-                <p-button
-                  icon="pi pi-pencil"
-                  [text]="true"
-                  [rounded]="true"
-                  severity="secondary"
-                  (onClick)="openEditDialog(merchant)"
-                  pTooltip="Edit Merchant"
-                  ariaLabel="Edit Merchant"
-                  tooltipPosition="top"
-                />
-                <p-button
-                  icon="pi pi-trash"
-                  [text]="true"
-                  [rounded]="true"
-                  severity="danger"
-                  (onClick)="deleteMerchant(merchant)"
-                  pTooltip="Delete Merchant"
-                  ariaLabel="Delete Merchant"
-                  tooltipPosition="top"
+      <app-side-panel
+        class="order-first block lg:order-none"
+        [title]="panelTitle()"
+        [saving]="saving()"
+        [showClose]="mode() !== 'overview' && !onlyAddMode()"
+        [sheet]="mode() !== 'overview'"
+        [moveFocus]="false"
+        [showFooter]="mode() === 'merchant' || mode() === 'add'"
+        [saveLabel]="mode() === 'add' ? 'Add merchant' : 'Save changes'"
+        [showDelete]="false"
+        (save)="onPanelSave()"
+        (closePanel)="onPanelClose()"
+      >
+        @switch (mode()) {
+          @case ('overview') {
+            <app-merchant-overview
+              [merchantCount]="totalRecords()"
+              [unlinkedCount]="unlinkedCount()"
+              [hasTransactions]="hasTransactions()"
+              (add)="startAdd()"
+              (linkDescriptions)="openPicker()"
+            />
+          }
+          @case ('merchant') {
+            @if (selected(); as merchant) {
+              <button type="button" class="mb-3 cursor-pointer text-sm underline" (click)="back()">
+                Back to overview
+              </button>
+              <app-merchant-edit-form
+                #editForm
+                [merchant]="merchant"
+                [links]="links()"
+                (save)="saveMerchant($event)"
+                (removeLink)="removeLink($event)"
+                (openPicker)="openPicker(merchant, false)"
+                (viewTransactions)="viewTransactions()"
+                (deleteMerchant)="deleteMerchant()"
+              />
+            } @else {
+              <p-skeleton height="8rem" borderRadius="1rem" />
+            }
+          }
+          @case ('add') {
+            @if (!onlyAddMode()) {
+              <button type="button" class="mb-3 cursor-pointer text-sm underline" (click)="back()">
+                Back
+              </button>
+            }
+            <app-merchant-edit-form #editForm [merchant]="null" (save)="saveMerchant($event)" />
+          }
+          @case ('picker') {
+            @if (pickerTarget(); as target) {
+              <app-description-picker
+                [targetName]="target.name"
+                [targetId]="target.id"
+                [rows]="pickerRows()"
+                [totalRecords]="pickerTotal()"
+                [loading]="pickerLoading()"
+                [linking]="linking()"
+                [failed]="pickerFailed()"
+                [initialUnlinkedOnly]="pickerUnlinkedOnly()"
+                (searchChange)="onPickerSearch($event)"
+                (unlinkedOnlyChange)="onPickerToggle($event)"
+                (showMore)="onPickerShowMore()"
+                (link)="onLink($event)"
+                (back)="back()"
+              />
+            } @else {
+              <button type="button" class="mb-3 cursor-pointer text-sm underline" (click)="back()">
+                Back to overview
+              </button>
+              <div class="flex flex-col gap-1">
+                <label id="link-target-label" for="link-target" class="text-sm font-medium">
+                  Link to
+                </label>
+                <p-select
+                  inputId="link-target"
+                  ariaLabelledBy="link-target-label"
+                  [options]="targetOptions()"
+                  optionLabel="name"
+                  [filter]="true"
+                  filterBy="name"
+                  placeholder="Choose a merchant"
+                  appendTo="body"
+                  (onFilter)="onTargetFilter($event.filter)"
+                  (onChange)="chooseTarget($event.value)"
                 />
               </div>
-            </td>
-          </tr>
-        </ng-template>
-
-        <ng-template #emptymessage>
-          <tr>
-            <td colspan="5" class="text-center py-16 text-muted-color">
-              @if (noSearchResults()) {
-                <i class="pi pi-search text-4xl mb-3 block opacity-20"></i>
-                No merchants found matching "{{ searchTerm() }}".
-              }
-            </td>
-          </tr>
-        </ng-template>
-      </p-table>
-    </p-card>
-  } @else {
-    <div class="flex flex-col items-center justify-center min-h-[60vh] text-center animate-fade-in">
-      <div class="relative mb-8">
-        <div class="absolute -inset-4 bg-primary/10 rounded-full blur-2xl animate-pulse"></div>
-        <i class="pi pi-shop text-8xl text-primary/40 relative"></i>
-      </div>
-      <h2 class="text-3xl font-bold text-surface-900 dark:text-surface-0 mb-3">No merchants yet</h2>
-      <p class="text-muted-color mb-8 max-w-lg leading-relaxed text-lg">
-        Add the vendors you shop at so you can assign them to transactions -- future imports of the
-        same description will match automatically from then on.
-      </p>
-      <p-button
-        label="Add Your First Merchant"
-        icon="pi pi-plus"
-        (onClick)="openCreateDialog()"
-        severity="primary"
-        [raised]="true"
-      />
+            }
+          }
+        }
+      </app-side-panel>
     </div>
-  }
-
-  <app-merchant-form-dialog
-    [(visible)]="showDialog"
-    [merchant]="selectedMerchant()"
-    (save)="onSave()"
-  />
-
-  @if (linksMerchant()) {
-    <app-merchant-description-links-dialog
-      [(visible)]="showLinksDialog"
-      [merchant]="linksMerchant()!"
-    />
   }
 </div>

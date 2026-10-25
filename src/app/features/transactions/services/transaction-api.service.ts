@@ -12,6 +12,7 @@ import {
   TransferSuggestion,
 } from '@models/transaction.model';
 import { Category } from '@models/category.model';
+import { TransactionDescription } from '@models/merchant.model';
 import { toLocalDateString } from '@shared/utils/transaction.utils';
 import { SKIP_GENERIC_ERROR_TOAST } from '@core/auth/error.interceptor';
 
@@ -159,5 +160,33 @@ export class TransactionApiService {
           })),
         ),
       );
+  }
+
+  /**
+   * Gets a page of the user's distinct transaction descriptions, each with how many transactions
+   * use it and the merchant it is linked to, for the merchants page's link picker.
+   * @param params the optional search text, whether to list only unlinked descriptions, and paging.
+   * @returns the requested page of descriptions.
+   */
+  getDescriptions(params: {
+    search?: string;
+    unlinkedOnly?: boolean;
+    page: number;
+    size: number;
+  }): Observable<PageResponse<TransactionDescription>> {
+    let httpParams: HttpParams = new HttpParams()
+      .set('page', params.page.toString())
+      .set('size', params.size.toString());
+    const search: string = params.search?.trim() ?? '';
+    if (search) {
+      httpParams = httpParams.set('search', search);
+    }
+    if (params.unlinkedOnly) {
+      httpParams = httpParams.set('unlinkedOnly', 'true');
+    }
+    return this.http.get<PageResponse<TransactionDescription>>(`${this.apiUrl}/descriptions`, {
+      params: httpParams,
+      ...SKIP_TOAST_OPTIONS,
+    });
   }
 }

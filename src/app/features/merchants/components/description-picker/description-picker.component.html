@@ -1,0 +1,96 @@
+<div class="flex flex-col gap-3">
+  <button
+    type="button"
+    class="cursor-pointer self-start text-sm text-primary-700 underline dark:text-primary-400"
+    (click)="back.emit()"
+  >
+    Back to {{ targetName() }}
+  </button>
+
+  <p class="m-0 text-sm text-muted-color">
+    Choose the transaction descriptions that belong to {{ targetName() }}.
+  </p>
+
+  <input
+    type="search"
+    class="w-full rounded-lg border border-surface-300 bg-surface-0 px-3 py-2 text-sm dark:border-surface-700 dark:bg-surface-900"
+    aria-label="Search descriptions"
+    placeholder="Search descriptions"
+    [value]="search()"
+    (input)="onSearch($any($event.target).value)"
+  />
+
+  <button
+    type="button"
+    class="cursor-pointer self-start rounded-full border px-3 py-1 text-sm"
+    [attr.aria-pressed]="unlinkedOnly()"
+    [class]="
+      unlinkedOnly()
+        ? 'border-primary-700 bg-primary-700 text-white'
+        : 'border-surface-300 dark:border-surface-700'
+    "
+    (click)="toggleUnlinkedOnly()"
+  >
+    Unlinked only
+  </button>
+
+  <div
+    [attr.aria-busy]="loading() ? 'true' : null"
+    [class]="loading() && rows().length > 0 ? 'pointer-events-none opacity-60' : ''"
+  >
+    @if (rows().length === 0 && !loading()) {
+      <p class="m-0 py-4 text-center text-sm text-muted-color">{{ emptyMessage() }}</p>
+    } @else {
+      <ul class="m-0 flex list-none flex-col gap-1 p-0">
+        @for (row of rows(); track row.description) {
+          <li
+            data-testid="description-row"
+            class="flex items-start gap-2 rounded-lg border border-surface-200 px-2 py-2 dark:border-surface-700"
+          >
+            <input
+              type="checkbox"
+              class="mt-1 size-4 cursor-pointer"
+              [checked]="ticked().has(row.description)"
+              [disabled]="alreadyLinkedHere(row)"
+              [attr.aria-label]="'Select ' + row.description"
+              (change)="toggleTick(row.description)"
+            />
+            <span class="min-w-0 flex-1">
+              <span class="block break-words font-mono text-xs">{{ row.description }}</span>
+              <span class="block text-xs tabular-nums text-muted-color">{{ usage(row) }}</span>
+              @if (alreadyLinkedHere(row)) {
+                <span class="block text-xs text-muted-color">
+                  Already linked to {{ row.merchantName }}
+                </span>
+              } @else if (moving(row)) {
+                <span class="block text-xs text-amber-700 dark:text-amber-400">
+                  Linked to {{ row.merchantName }}; linking moves it
+                </span>
+              }
+            </span>
+          </li>
+        }
+      </ul>
+    }
+  </div>
+
+  @if (canShowMore()) {
+    <button
+      type="button"
+      class="cursor-pointer self-start rounded-lg border border-surface-300 px-3 py-1.5 text-sm dark:border-surface-700"
+      [disabled]="loading()"
+      (click)="showMore.emit()"
+    >
+      Show more
+    </button>
+  }
+
+  <button
+    type="button"
+    class="cursor-pointer rounded-lg bg-primary-700 px-3 py-2 text-sm font-medium text-white hover:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-50"
+    [disabled]="tickedCount() === 0 || linking()"
+    (click)="submit()"
+  >
+    {{ linkLabel() }}
+  </button>
+</div>

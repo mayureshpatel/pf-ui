@@ -1,0 +1,83 @@
+<form (ngSubmit)="submit()" [formGroup]="form" class="flex flex-col gap-4">
+  <div class="flex flex-col gap-1">
+    <label for="merchant-name" class="text-sm font-medium">Name</label>
+    <input pInputText id="merchant-name" formControlName="name" class="w-full" />
+    @if (nameError(); as error) {
+      <small data-testid="name-error" class="text-rose-700 dark:text-rose-400">{{ error }}</small>
+    }
+  </div>
+
+  <div class="grid grid-cols-[1fr_5rem] gap-3">
+    <div class="flex flex-col gap-1">
+      <label for="merchant-city" class="text-sm font-medium">City</label>
+      <input pInputText id="merchant-city" formControlName="city" class="w-full" />
+    </div>
+    <div class="flex flex-col gap-1">
+      <label for="merchant-state" class="text-sm font-medium">State</label>
+      <input pInputText id="merchant-state" formControlName="state" class="w-full" />
+    </div>
+  </div>
+
+  <div class="grid grid-cols-2 gap-3">
+    <div class="flex flex-col gap-1">
+      <label for="merchant-postal-code" class="text-sm font-medium">Postal code</label>
+      <input pInputText id="merchant-postal-code" formControlName="postalCode" class="w-full" />
+    </div>
+    <div class="flex flex-col gap-1">
+      <label for="merchant-country" class="text-sm font-medium">Country</label>
+      <input pInputText id="merchant-country" formControlName="country" class="w-full" />
+    </div>
+  </div>
+
+  @if (isEditMode()) {
+    <section data-testid="linked-descriptions" class="flex flex-col gap-2">
+      <h3 class="m-0 text-sm font-medium">Linked descriptions</h3>
+      @if (links().length === 0) {
+        <p class="m-0 text-sm text-muted-color">No descriptions linked yet.</p>
+      } @else {
+        <ul class="m-0 flex list-none flex-col gap-1 p-0">
+          @for (link of links(); track link.id) {
+            <li
+              data-testid="linked-description"
+              class="flex items-center justify-between gap-2 rounded-lg border border-surface-200 bg-surface-50 px-2 py-1 dark:border-surface-700 dark:bg-surface-800"
+            >
+              <span class="min-w-0 break-words font-mono text-xs">{{ link.description }}</span>
+              <button
+                type="button"
+                class="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-lg text-muted-color"
+                [attr.aria-label]="'Remove link to ' + link.description"
+                (click)="removeLink.emit(link)"
+              >
+                <i class="pi pi-times" aria-hidden="true"></i>
+              </button>
+            </li>
+          }
+        </ul>
+      }
+      <button
+        type="button"
+        class="cursor-pointer rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium dark:border-surface-700"
+        (click)="openPicker.emit()"
+      >
+        Link descriptions
+      </button>
+    </section>
+
+    <div class="flex flex-col gap-2">
+      <button
+        type="button"
+        class="cursor-pointer rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium dark:border-surface-700"
+        (click)="viewTransactions.emit()"
+      >
+        View transactions
+      </button>
+      <button
+        type="button"
+        class="cursor-pointer rounded-lg border border-rose-300 px-3 py-2 text-sm font-medium text-rose-700 dark:text-rose-400"
+        (click)="deleteMerchant.emit()"
+      >
+        Delete merchant
+      </button>
+    </div>
+  }
+</form>

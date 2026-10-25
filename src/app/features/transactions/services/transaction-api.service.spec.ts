@@ -86,4 +86,32 @@ describe('TransactionApiService', () => {
       expect(result[0].name).toBe('Groceries');
     });
   });
+
+  describe('getDescriptions', () => {
+    it('should send search, unlinkedOnly, page and size and omit empty ones', () => {
+      // arrange & act
+      service
+        .getDescriptions({ search: 'cost', unlinkedOnly: true, page: 2, size: 20 })
+        .subscribe();
+
+      // assert & verify
+      const req = httpMock.expectOne((r) => r.url === `${apiUrl}/descriptions`);
+      expect(req.request.params.get('search')).toBe('cost');
+      expect(req.request.params.get('unlinkedOnly')).toBe('true');
+      expect(req.request.params.get('page')).toBe('2');
+      expect(req.request.params.get('size')).toBe('20');
+      req.flush({ content: [], page: { totalElements: 0, totalPages: 0, number: 2, size: 20 } });
+    });
+
+    it('should leave out a blank search and unlinkedOnly when false', () => {
+      // arrange & act
+      service.getDescriptions({ search: '  ', page: 0, size: 1 }).subscribe();
+
+      // assert & verify
+      const req = httpMock.expectOne((r) => r.url === `${apiUrl}/descriptions`);
+      expect(req.request.params.has('search')).toBe(false);
+      expect(req.request.params.has('unlinkedOnly')).toBe(false);
+      req.flush({ content: [], page: { totalElements: 0, totalPages: 0, number: 0, size: 1 } });
+    });
+  });
 });

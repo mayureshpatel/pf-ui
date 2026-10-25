@@ -568,6 +568,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/transactions/descriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List transaction descriptions
+         * @description Paginated distinct transaction descriptions with usage counts and the merchant each is linked to
+         */
+        get: operations["getDescriptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/transactions/count-by-category": {
         parameters: {
             query?: never;
@@ -1286,6 +1306,8 @@ export interface components {
             state?: string;
             postalCode?: string;
             country?: string;
+            /** Format: int32 */
+            linkCount?: number;
         };
         SaveTransactionRequest: {
             transactions: components["schemas"]["TransactionDto"][];
@@ -2887,6 +2909,30 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["CategoryDto"][];
+                };
+            };
+        };
+    };
+    getDescriptions: {
+        parameters: {
+            query: {
+                search?: string;
+                unlinkedOnly?: boolean;
+                pageable: components["schemas"]["Pageable"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page of descriptions returned */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PagedModel"];
                 };
             };
         };
