@@ -34,6 +34,31 @@ export interface RecurringTransaction {
   nextDate: string;
   active: boolean;
   lastDate?: string;
+  /** The newest real charge matched to this item (by merchant or linked description). */
+  lastChargeDate?: string | null;
+  lastChargeAmount?: number | null;
+  /** Where the next charge is expected, rolled forward from the last real charge. */
+  projectedNextDate?: string | null;
+  /** True when that expected date has already passed. */
+  overdue?: boolean;
+  /** Set when the newest real charge no longer costs what is stored. */
+  priceChange?: PriceChange | null;
+}
+
+/** A tracked item whose real charges differ from its stored amount. */
+export interface PriceChange {
+  previousAmount: number;
+  newAmount: number;
+  /** Date of the first charge in the unbroken run at the new amount. */
+  since: string;
+}
+
+/** A recurring pattern the user dismissed from the review. */
+export interface DismissedPattern {
+  id: number;
+  patternKey: string;
+  name: string;
+  dismissedAt: string;
 }
 
 /**
@@ -55,6 +80,14 @@ export interface RecurringSuggestion {
   nextDate: string;
   occurrenceCount: number;
   confidenceScore: number;
+  /** The account the pattern's newest charge came from. */
+  accountId?: number | null;
+  accountName?: string | null;
+  /** The price before the latest unbroken run at the current amount, when it changed. */
+  previousAmount?: number | null;
+  priceChangedOn?: string | null;
+  /** The detected name folded the way description links fold text; the dismissal key. */
+  patternKey: string;
 }
 
 /**

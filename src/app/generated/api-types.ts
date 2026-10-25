@@ -340,6 +340,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/recurring/dismissals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List dismissed recurring patterns
+         * @description Returns the patterns the authenticated user dismissed from the detected-patterns review
+         */
+        get: operations["getDismissedPatterns"];
+        put?: never;
+        /**
+         * Dismiss a recurring pattern
+         * @description Stops a detected pattern from being suggested until it is restored
+         */
+        post: operations["dismissPattern"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/merchants/{id}/description-links": {
         parameters: {
             query?: never;
@@ -1008,6 +1032,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/recurring/dismissals/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Restore a dismissed pattern
+         * @description Removes a dismissal so the pattern can be suggested again
+         */
+        delete: operations["restoreDismissedPattern"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/merchants/{id}": {
         parameters: {
             query?: never;
@@ -1367,6 +1411,10 @@ export interface components {
             /** Format: int64 */
             merchantId: number;
         };
+        DismissPatternRequest: {
+            patternKey: string;
+            name: string;
+        };
         MerchantCreateRequest: {
             /** Format: int64 */
             userId: number;
@@ -1539,6 +1587,12 @@ export interface components {
             /** Format: int64 */
             count?: number;
         };
+        PriceChangeDto: {
+            previousAmount?: number;
+            newAmount?: number;
+            /** Format: date */
+            since?: string;
+        };
         RecurringTransactionDto: {
             /** Format: int64 */
             id?: number;
@@ -1554,6 +1608,13 @@ export interface components {
             /** Format: date */
             nextDate?: string;
             active?: boolean;
+            /** Format: date */
+            lastChargeDate?: string;
+            lastChargeAmount?: number;
+            /** Format: date */
+            projectedNextDate?: string;
+            overdue?: boolean;
+            priceChange?: components["schemas"]["PriceChangeDto"];
         };
         RecurringSuggestionDto: {
             merchant?: components["schemas"]["MerchantDto"];
@@ -1568,6 +1629,21 @@ export interface components {
             occurrenceCount?: number;
             /** Format: double */
             confidenceScore?: number;
+            /** Format: int64 */
+            accountId?: number;
+            accountName?: string;
+            previousAmount?: number;
+            /** Format: date */
+            priceChangedOn?: string;
+            patternKey?: string;
+        };
+        DismissedPatternDto: {
+            /** Format: int64 */
+            id?: number;
+            patternKey?: string;
+            name?: string;
+            /** Format: date-time */
+            dismissedAt?: string;
         };
         MerchantDescriptionLinkDto: {
             /** Format: int64 */
@@ -2528,6 +2604,50 @@ export interface operations {
             };
         };
     };
+    getDismissedPatterns: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dismissed patterns returned (possibly empty) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DismissedPatternDto"][];
+                };
+            };
+        };
+    };
+    dismissPattern: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DismissPatternRequest"];
+            };
+        };
+        responses: {
+            /** @description Pattern dismissed; the dismissal id is returned */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": number;
+                };
+            };
+        };
+    };
     getDescriptionLinks: {
         parameters: {
             query?: never;
@@ -3456,6 +3576,33 @@ export interface operations {
                 content: {
                     "*/*": number;
                 };
+            };
+        };
+    };
+    restoreDismissedPattern: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dismissal removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The dismissal does not exist or is not the user's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

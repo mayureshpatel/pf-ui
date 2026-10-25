@@ -164,6 +164,7 @@ describe('RecurringFormDialogComponent', () => {
         nextDate: '2026-06-15',
         occurrenceCount: 3,
         confidenceScore: 0.9,
+        patternKey: 'netflix',
       };
       fixture.componentRef.setInput('suggestion', sug);
 

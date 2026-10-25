@@ -3,6 +3,7 @@ import { HttpClient, HttpContext } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '@env';
 import {
+  DismissedPattern,
   RecurringSuggestion,
   RecurringTransaction,
   RecurringTransactionCreateRequest,
@@ -44,19 +45,19 @@ export class RecurringApiService {
   /**
    * Creates a new recurring transaction record.
    * @param request - The payload containing merchant, account, amount, and frequency details.
-   * @returns An observable of the newly created transaction.
+   * @returns An observable of the new record's id.
    */
-  create(request: RecurringTransactionCreateRequest): Observable<RecurringTransaction> {
-    return this.http.post<RecurringTransaction>(this.apiUrl, request);
+  create(request: RecurringTransactionCreateRequest): Observable<number> {
+    return this.http.post<number>(this.apiUrl, request, SKIP_TOAST_OPTIONS);
   }
 
   /**
    * Updates an existing recurring transaction record.
    * @param request - The updated transaction details, including the record ID.
-   * @returns An observable of the updated transaction record.
+   * @returns An observable of the number of rows updated.
    */
-  update(request: RecurringTransactionUpdateRequest): Observable<RecurringTransaction> {
-    return this.http.put<RecurringTransaction>(this.apiUrl, request);
+  update(request: RecurringTransactionUpdateRequest): Observable<number> {
+    return this.http.put<number>(this.apiUrl, request, SKIP_TOAST_OPTIONS);
   }
 
   /**
@@ -66,5 +67,35 @@ export class RecurringApiService {
    */
   delete(id: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`, SKIP_TOAST_OPTIONS);
+  }
+
+  /**
+   * Lists the patterns the user dismissed from the review, newest first.
+   * @returns An observable array of dismissed patterns.
+   */
+  getDismissed(): Observable<DismissedPattern[]> {
+    return this.http.get<DismissedPattern[]>(`${this.apiUrl}/dismissals`, SKIP_TOAST_OPTIONS);
+  }
+
+  /**
+   * Dismisses a detected pattern so it is no longer suggested (dismissing it twice is harmless).
+   * @param patternKey - The pattern's key as reported by the suggestion.
+   * @param name - The detected name, kept so the dismissed list is readable.
+   * @returns An observable of the dismissal id.
+   */
+  dismiss(patternKey: string, name: string): Observable<number> {
+    return this.http.post<number>(
+      `${this.apiUrl}/dismissals`,
+      { patternKey, name },
+      SKIP_TOAST_OPTIONS,
+    );
+  }
+
+  /**
+   * Restores a dismissed pattern so it can be suggested again.
+   * @param id - The dismissal id.
+   */
+  restore(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/dismissals/${id}`, SKIP_TOAST_OPTIONS);
   }
 }
