@@ -123,6 +123,22 @@ describe('recurring helpers', () => {
     });
   });
 
+  describe('comingUp and overdue items', () => {
+    it('should leave out overdue items: their date has passed, so nothing is coming up for them', () => {
+      // arrange
+      const items = [
+        item(1, 'Late', 1, 'MONTHLY', '2026-10-01', {
+          overdue: true,
+          projectedNextDate: '2026-10-28',
+        }),
+        item(2, 'On time', 1, 'MONTHLY', '2026-11-03'),
+      ];
+
+      // act & assert & verify
+      expect(comingUp(items).map((i) => i.merchant.name)).toEqual(['On time']);
+    });
+  });
+
   describe('confidenceLabel', () => {
     it('should call 70 and above High and anything lower Medium', () => {
       expect(confidenceLabel(100)).toBe('High');

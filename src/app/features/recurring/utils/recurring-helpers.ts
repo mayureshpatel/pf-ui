@@ -124,14 +124,14 @@ export function totals(items: RecurringTransaction[]): RecurringTotals {
 }
 
 /**
- * The next few charges by date.
- * @param items the tracked items; paused ones are ignored.
+ * The next few charges by date. Paused items and overdue ones (whose date has already passed) are left out.
+ * @param items the tracked items.
  * @param limit how many to return.
  * @returns the soonest items.
  */
 export function comingUp(items: RecurringTransaction[], limit = 3): RecurringTransaction[] {
   return items
-    .filter((i: RecurringTransaction): boolean => i.active)
+    .filter((i: RecurringTransaction): boolean => i.active && !i.overdue)
     .sort(byNextDate)
     .slice(0, limit);
 }
