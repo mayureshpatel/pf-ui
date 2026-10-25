@@ -6,8 +6,8 @@
   [draggable]="false"
   [resizable]="false"
   [style]="{ width: '500px' }"
-  class="p-fluid">
-
+  class="p-fluid"
+>
   <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-6 py-4">
     @if (errorMessage()) {
       <p-message severity="error" variant="simple" class="w-full animate-fade-in">
@@ -16,7 +16,10 @@
     }
 
     <div class="flex flex-col gap-2">
-      <label for="merchant-name" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
+      <label
+        for="merchant-name"
+        class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200"
+      >
         Name
       </label>
       <input
@@ -35,43 +38,74 @@
 
     <div class="grid grid-cols-2 gap-4">
       <div class="flex flex-col gap-2">
-        <label for="merchant-city" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
+        <label
+          for="merchant-city"
+          class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200"
+        >
           City
         </label>
-        <input pInputText id="merchant-city" formControlName="city" placeholder="Optional" class="w-full" />
+        <input
+          pInputText
+          id="merchant-city"
+          formControlName="city"
+          placeholder="Optional"
+          class="w-full"
+        />
       </div>
       <div class="flex flex-col gap-2">
-        <label for="merchant-state" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
+        <label
+          for="merchant-state"
+          class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200"
+        >
           State
         </label>
-        <input pInputText id="merchant-state" formControlName="state" placeholder="Optional" class="w-full" />
+        <input
+          pInputText
+          id="merchant-state"
+          formControlName="state"
+          placeholder="Optional"
+          class="w-full"
+        />
       </div>
     </div>
 
     <div class="grid grid-cols-2 gap-4">
       <div class="flex flex-col gap-2">
-        <label for="merchant-postal-code" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
+        <label
+          for="merchant-postal-code"
+          class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200"
+        >
           Postal Code
         </label>
-        <input pInputText id="merchant-postal-code" formControlName="postalCode" placeholder="Optional" class="w-full" />
+        <input
+          pInputText
+          id="merchant-postal-code"
+          formControlName="postalCode"
+          placeholder="Optional"
+          class="w-full"
+        />
       </div>
       <div class="flex flex-col gap-2">
-        <label for="merchant-country" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
+        <label
+          for="merchant-country"
+          class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200"
+        >
           Country
         </label>
-        <input pInputText id="merchant-country" formControlName="country" placeholder="Optional" class="w-full" />
+        <input
+          pInputText
+          id="merchant-country"
+          formControlName="country"
+          placeholder="Optional"
+          class="w-full"
+        />
       </div>
     </div>
   </form>
 
   <ng-template #footer>
     <div class="flex justify-end gap-3 pt-4 border-t border-surface-100 dark:border-surface-800">
-      <p-button
-        label="Cancel"
-        [text]="true"
-        severity="secondary"
-        (onClick)="onHide()"
-      />
+      <p-button label="Cancel" [text]="true" severity="secondary" (onClick)="onHide()" />
       <p-button
         label="Save"
         icon="pi pi-check"

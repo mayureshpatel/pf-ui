@@ -6,8 +6,8 @@
   [draggable]="false"
   [resizable]="false"
   [style]="{ width: '500px' }"
-  class="p-fluid">
-
+  class="p-fluid"
+>
   <div class="flex flex-col gap-4 py-2">
     <p class="text-sm text-muted-color">
       Future imports whose description exactly matches one of these will assign
@@ -19,14 +19,18 @@
       <div class="py-8 text-center text-sm text-muted-color">Loading...</div>
     } @else if (links().length === 0) {
       <div class="py-8 text-center text-sm text-muted-color">
-        No linked descriptions yet. Assigning this merchant to a transaction links it
-        automatically, or add one directly below.
+        No linked descriptions yet. Assigning this merchant to a transaction links it automatically,
+        or add one directly below.
       </div>
     } @else {
       <ul class="flex flex-col gap-1 max-h-64 overflow-y-auto">
         @for (link of links(); track link.id) {
-          <li class="flex items-center justify-between gap-2 px-3 py-2 rounded-lg hover:bg-surface-100/50 dark:hover:bg-surface-800/50 transition-colors duration-200">
-            <span class="text-sm font-mono text-surface-700 dark:text-surface-200 truncate">{{ link.description }}</span>
+          <li
+            class="flex items-center justify-between gap-2 px-3 py-2 rounded-lg hover:bg-surface-100/50 dark:hover:bg-surface-800/50 transition-colors duration-200"
+          >
+            <span class="text-sm font-mono text-surface-700 dark:text-surface-200 truncate">{{
+              link.description
+            }}</span>
             <p-button
               icon="pi pi-trash"
               [text]="true"
