@@ -8,6 +8,10 @@ import {
 import { defaultState } from './explore-state';
 import {
   applyStartView,
+  bucketLabel,
+  formatMeasure,
+  granularityOf,
+  isAdditive,
   changeText,
   drill,
   filterOnly,
@@ -564,6 +568,45 @@ describe('explore helpers', () => {
         ['Last 12 months', '2025-10-26', '2026-10-25'],
         ['All time', '2000-01-01', '2026-10-25'],
       ]);
+    });
+  });
+
+  describe('formatMeasure', () => {
+    it('should format dollars, a savings rate, a count and an empty value', () => {
+      // assert & verify
+      expect(formatMeasure('SPENDING', 1234.5)).toBe('$1,234.50');
+      expect(formatMeasure('NET', -50)).toBe('-$50.00');
+      expect(formatMeasure('SAVINGS_RATE', 24.55)).toBe('24.6%');
+      expect(formatMeasure('SAVINGS_RATE', -12)).toBe('-12%');
+      expect(formatMeasure('COUNT', 1204)).toBe('1,204');
+      expect(formatMeasure('AVERAGE', null)).toBe('—');
+    });
+
+    it('should say which measures can be added up', () => {
+      // assert & verify
+      expect(['SPENDING', 'INCOME', 'NET', 'COUNT'].every((m) => isAdditive(m as Measure))).toBe(
+        true,
+      );
+      expect(isAdditive('SAVINGS_RATE')).toBe(false);
+      expect(isAdditive('AVERAGE')).toBe(false);
+    });
+  });
+
+  describe('granularityOf and bucketLabel', () => {
+    it('should read day, week and month buckets from their spacing', () => {
+      // assert & verify
+      expect(granularityOf(['2026-03-01', '2026-03-02'])).toBe('day');
+      expect(granularityOf(['2026-03-02', '2026-03-09'])).toBe('week');
+      expect(granularityOf(['2026-03-01', '2026-04-01'])).toBe('month');
+      expect(granularityOf(['2026-03-01'])).toBe('month');
+      expect(granularityOf(['2026-03-12'])).toBe('day');
+    });
+
+    it('should name a bucket', () => {
+      // assert & verify
+      expect(bucketLabel('2026-03-12', 'day')).toBe('Mar 12');
+      expect(bucketLabel('2026-03-09', 'week')).toBe('Week of Mar 9');
+      expect(bucketLabel('2026-03-01', 'month')).toBe('Mar 2026');
     });
   });
 });

@@ -463,3 +463,51 @@ export function rangePresets(today: Date = new Date()): RangePreset[] {
     preset('all-time', 'All time', new Date(2000, 0, 1), today),
   ];
 }
+
+const MONEY = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+const WHOLE = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
+
+/** A measure's value for display: dollars, a percentage for the savings rate, a count, or a dash when empty. */
+export function formatMeasure(measure: Measure, value: number | null | undefined): string {
+  if (value === null || value === undefined) return '—';
+  switch (measure) {
+    case 'SAVINGS_RATE':
+      return `${trimmed(value).replace(/^/, value < 0 ? '-' : '')}%`;
+    case 'COUNT':
+      return WHOLE.format(value);
+    default:
+      return MONEY.format(value);
+  }
+}
+
+/** Whether the measure's per-row values can be added up (a rate or an average cannot). */
+export const isAdditive = (measure: Measure): boolean =>
+  measure !== 'SAVINGS_RATE' && measure !== 'AVERAGE';
+
+export type Granularity = 'day' | 'week' | 'month';
+
+/** Day, week or month buckets, read off the spacing of the first two bucket starts. */
+export function granularityOf(starts: string[]): Granularity {
+  if (starts.length < 2) {
+    return starts.length === 1 && !starts[0].endsWith('-01') ? 'day' : 'month';
+  }
+  const gap: number =
+    (fromLocalDateString(starts[1]).getTime() - fromLocalDateString(starts[0]).getTime()) /
+    86_400_000;
+  return gap <= 1 ? 'day' : gap <= 7 ? 'week' : 'month';
+}
+
+/** A bucket's name: "Mar 12", "Week of Mar 9" or "Mar 2026". */
+export function bucketLabel(start: string, granularity: Granularity): string {
+  const date: Date = fromLocalDateString(start);
+  const format = (options: Intl.DateTimeFormatOptions): string =>
+    date.toLocaleDateString('en-US', options);
+  switch (granularity) {
+    case 'day':
+      return format({ month: 'short', day: 'numeric' });
+    case 'week':
+      return `Week of ${format({ month: 'short', day: 'numeric' })}`;
+    default:
+      return format({ month: 'short', year: 'numeric' });
+  }
+}

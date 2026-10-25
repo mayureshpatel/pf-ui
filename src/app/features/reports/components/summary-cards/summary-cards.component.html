@@ -1,0 +1,46 @@
+<div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+  <section
+    class="rounded-xl border border-surface-200 bg-surface-0 p-4 dark:border-surface-800 dark:bg-surface-900"
+  >
+    <h3 class="m-0 text-sm font-normal text-muted-color">{{ measureLabel() }}</h3>
+    <p class="m-0 text-2xl font-bold tabular-nums">{{ totalText() }}</p>
+    @if (noSavingsRate()) {
+      <p class="m-0 text-sm text-muted-color">
+        No income in this period, so there is no savings rate.
+      </p>
+    } @else if (totalChange(); as change) {
+      <p class="m-0 text-sm" [attr.data-tone]="change.tone" [class]="toneClass(change.tone)">
+        {{ change.text }} vs {{ comparisonLabel() }}
+      </p>
+    }
+  </section>
+
+  <section
+    class="rounded-xl border border-surface-200 bg-surface-0 p-4 dark:border-surface-800 dark:bg-surface-900"
+  >
+    <h3 class="m-0 text-sm font-normal text-muted-color">{{ biggestTitle() }}</h3>
+    @if (biggest(); as row) {
+      <p class="m-0 text-2xl font-bold">{{ row.label }}</p>
+      <p class="m-0 text-sm tabular-nums">
+        {{ biggestDetail() }}
+        @if (biggestChange(); as change) {
+          <span [attr.data-tone]="change.tone" [class]="toneClass(change.tone)">
+            {{ change.text }}
+          </span>
+        }
+      </p>
+    } @else {
+      <p class="m-0 text-2xl font-bold">—</p>
+    }
+  </section>
+
+  <section
+    class="rounded-xl border border-surface-200 bg-surface-0 p-4 dark:border-surface-800 dark:bg-surface-900"
+  >
+    <h3 class="m-0 text-sm font-normal text-muted-color">Transactions</h3>
+    <p class="m-0 text-2xl font-bold tabular-nums">{{ countText() }}</p>
+    @if (averageText(); as average) {
+      <p class="m-0 text-sm tabular-nums text-muted-color">Average {{ average }}</p>
+    }
+  </section>
+</div>
