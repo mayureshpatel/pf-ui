@@ -692,6 +692,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/reports/explore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Explore spending and income
+         * @description Any measure by any grouping under stacked filters, with an optional comparison period; transfers and adjustments are excluded
+         */
+        get: operations["explore"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/explore/trend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Explore trend
+         * @description The chosen measure per day, week or month across the period, under the same filters as the explorer
+         */
+        get: operations["exploreTrend"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/explore/transactions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Explore transactions
+         * @description The transactions behind an explorer number, newest first, under the same filters
+         */
+        get: operations["exploreTransactions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/reports/categories": {
         parameters: {
             query?: never;
@@ -1580,6 +1640,89 @@ export interface components {
             /** Format: int64 */
             count?: number;
             categories?: string[];
+        };
+        ExploreRequest: {
+            /** @enum {string} */
+            measure: "SPENDING" | "INCOME" | "NET" | "SAVINGS_RATE" | "COUNT" | "AVERAGE";
+            /** @enum {string} */
+            side?: "SPENDING" | "INCOME";
+            /** @enum {string} */
+            groupBy: "CATEGORY" | "SUBCATEGORY" | "MERCHANT" | "ACCOUNT" | "TAG" | "MONTH" | "WEEK" | "DAY_OF_WEEK" | "DAY";
+            /** Format: date */
+            startDate: string;
+            /** Format: date */
+            endDate: string;
+            /** @enum {string} */
+            compare?: "NONE" | "PREVIOUS_PERIOD" | "SAME_DAYS_LAST_YEAR";
+            accountIds?: number[];
+            /** Format: int64 */
+            categoryId?: number;
+            uncategorized?: boolean;
+            /** Format: int64 */
+            merchantId?: number;
+            noMerchant?: boolean;
+            /** Format: int64 */
+            tagId?: number;
+            noTag?: boolean;
+            minAmount?: number;
+            maxAmount?: number;
+        };
+        ExploreResultDto: {
+            rows?: components["schemas"]["ExploreRowDto"][];
+            total?: number;
+            comparisonTotal?: number;
+            /** Format: int64 */
+            totalCount?: number;
+            /** Format: int64 */
+            excludedCount?: number;
+            /** Format: date */
+            comparisonStart?: string;
+            /** Format: date */
+            comparisonEnd?: string;
+            comparisonLabel?: string;
+            inProgress?: boolean;
+        };
+        ExploreRowDto: {
+            key?: string;
+            label?: string;
+            value?: number;
+            comparisonValue?: number;
+            /** Format: int64 */
+            count?: number;
+        };
+        ExploreScopeRequest: {
+            /** @enum {string} */
+            measure: "SPENDING" | "INCOME" | "NET" | "SAVINGS_RATE" | "COUNT" | "AVERAGE";
+            /** @enum {string} */
+            side?: "SPENDING" | "INCOME";
+            /** Format: date */
+            startDate: string;
+            /** Format: date */
+            endDate: string;
+            /** @enum {string} */
+            compare?: "NONE" | "PREVIOUS_PERIOD" | "SAME_DAYS_LAST_YEAR";
+            accountIds?: number[];
+            /** Format: int64 */
+            categoryId?: number;
+            uncategorized?: boolean;
+            /** Format: int64 */
+            merchantId?: number;
+            noMerchant?: boolean;
+            /** Format: int64 */
+            tagId?: number;
+            noTag?: boolean;
+            minAmount?: number;
+            maxAmount?: number;
+        };
+        Bucket: {
+            /** Format: date */
+            start?: string;
+            value?: number;
+            partial?: boolean;
+        };
+        ExploreTrendDto: {
+            current?: components["schemas"]["Bucket"][];
+            comparison?: components["schemas"]["Bucket"][];
         };
         CategoryReportDataDto: {
             category?: components["schemas"]["CategoryDto"];
@@ -3145,6 +3288,83 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["MerchantReportDataDto"][];
+                };
+            };
+        };
+    };
+    explore: {
+        parameters: {
+            query: {
+                request: components["schemas"]["ExploreRequest"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Explorer result returned */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ExploreResultDto"];
+                };
+            };
+            /** @description The measure cannot be grouped that way (net and savings rate group by time only) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ExploreResultDto"];
+                };
+            };
+        };
+    };
+    exploreTrend: {
+        parameters: {
+            query: {
+                request: components["schemas"]["ExploreScopeRequest"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Trend returned */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ExploreTrendDto"];
+                };
+            };
+        };
+    };
+    exploreTransactions: {
+        parameters: {
+            query: {
+                request: components["schemas"]["ExploreScopeRequest"];
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Transactions returned */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PagedModel"];
                 };
             };
         };

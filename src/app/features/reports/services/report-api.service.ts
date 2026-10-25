@@ -4,10 +4,16 @@ import { map, Observable } from 'rxjs';
 import { environment } from '@env';
 import {
   CategoryReportData,
+  ExploreResult,
+  ExploreState,
+  ExploreTransaction,
+  ExploreTrend,
   MerchantReportData,
   MonthlyReportData,
   NetWorthDataPoint,
 } from '../models/reports.model';
+import { PageResponse } from '@models/transaction.model';
+import { toApiParams } from '../utils/explore-state';
 import { SKIP_GENERIC_ERROR_TOAST } from '@core/auth/error.interceptor';
 import { Category } from '@models/category.model';
 
@@ -61,6 +67,55 @@ export class ReportApiService {
       context: SKIP_TOAST_CONTEXT,
     });
   }
+
+  /**
+   * Runs the explorer: the measure by the grouping under the filters, with the comparison if asked.
+   * @param state the explorer state
+   * @returns the groups, totals and comparison
+   */
+  explore(state: ExploreState): Observable<ExploreResult> {
+    return this.http.get<ExploreResult>(`${this.apiUrl}/explore`, {
+      params: new HttpParams({ fromObject: toApiParams(state) }),
+      context: SKIP_TOAST_CONTEXT,
+    });
+  }
+
+  /**
+   * Gets the measure per day, week or month across the period, under the same filters.
+   * @param state the explorer state
+   * @returns the current buckets and the comparison buckets
+   */
+  trend(state: ExploreState): Observable<ExploreTrend> {
+    const params: Record<string, string> = toApiParams(state);
+    delete params['groupBy'];
+    return this.http.get<ExploreTrend>(`${this.apiUrl}/explore/trend`, {
+      params: new HttpParams({ fromObject: params }),
+      context: SKIP_TOAST_CONTEXT,
+    });
+  }
+
+  /**
+   * Gets a page of the transactions behind the number, newest first.
+   * @param state the explorer state
+   * @param page the zero-based page
+   * @param size the page size (the server caps it at 100)
+   * @returns the page of transactions
+   */
+  transactions(
+    state: ExploreState,
+    page: number,
+    size: number,
+  ): Observable<PageResponse<ExploreTransaction>> {
+    const params: Record<string, string> = toApiParams(state);
+    delete params['groupBy'];
+    delete params['compare'];
+    return this.http.get<PageResponse<ExploreTransaction>>(`${this.apiUrl}/explore/transactions`, {
+      params: new HttpParams({ fromObject: { ...params, page: String(page), size: String(size) } }),
+      context: SKIP_TOAST_CONTEXT,
+    });
+  }
+
+  // the three methods below serve the old tabs and go with them (PF-886)
 
   /**
    * Gets the Categories tab's spending breakdown for the given range, aggregated server-side over
