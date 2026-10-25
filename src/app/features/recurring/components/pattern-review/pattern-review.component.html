@@ -1,0 +1,189 @@
+@if (selected(); as pattern) {
+  <div class="flex flex-col gap-4">
+    <button
+      type="button"
+      class="cursor-pointer self-start text-sm text-primary-700 underline dark:text-primary-400"
+      (click)="backToList.emit()"
+    >
+      Back to patterns
+    </button>
+
+    <form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-4">
+      <div class="flex flex-col gap-1">
+        <label id="pattern-merchant-label" for="pattern-merchant" class="text-sm font-medium">
+          Merchant
+        </label>
+        <p-select
+          inputId="pattern-merchant"
+          ariaLabelledBy="pattern-merchant-label"
+          formControlName="merchantId"
+          [options]="merchantOptions()"
+          optionLabel="name"
+          optionValue="id"
+          placeholder="Choose a merchant"
+          [filter]="true"
+          filterBy="name"
+          filterPlaceholder="Search merchants"
+          appendTo="body"
+          (onFilter)="onMerchantFilter($event.filter)"
+        />
+      </div>
+
+      @if (creating()) {
+        <div class="flex flex-col gap-1">
+          <label for="pattern-new-merchant" class="text-sm font-medium">New merchant name</label>
+          <input
+            pInputText
+            id="pattern-new-merchant"
+            formControlName="newMerchantName"
+            class="w-full"
+          />
+          <small class="text-muted-color">
+            Created as a merchant, and "{{ pattern.merchant.name }}" is linked to it.
+          </small>
+        </div>
+      } @else {
+        <small class="text-muted-color">
+          "{{ pattern.merchant.name }}" will be linked to this merchant.
+        </small>
+      }
+
+      <div class="flex flex-col gap-1">
+        <label id="pattern-account-label" for="pattern-account" class="text-sm font-medium">
+          Account
+        </label>
+        <p-select
+          inputId="pattern-account"
+          ariaLabelledBy="pattern-account-label"
+          formControlName="accountId"
+          [options]="accounts()"
+          optionLabel="name"
+          optionValue="id"
+          placeholder="Choose an account"
+          appendTo="body"
+        />
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div class="flex flex-col gap-1">
+          <label for="pattern-amount" class="text-sm font-medium">Amount</label>
+          <p-inputNumber
+            inputId="pattern-amount"
+            formControlName="amount"
+            mode="currency"
+            currency="USD"
+          />
+        </div>
+        <div class="flex flex-col gap-1">
+          <label id="pattern-frequency-label" for="pattern-frequency" class="text-sm font-medium">
+            Frequency
+          </label>
+          <p-select
+            inputId="pattern-frequency"
+            ariaLabelledBy="pattern-frequency-label"
+            formControlName="frequency"
+            [options]="frequencyOptions"
+            optionLabel="label"
+            optionValue="value"
+            appendTo="body"
+          />
+        </div>
+      </div>
+
+      @if (pattern.previousAmount != null && pattern.priceChangedOn) {
+        <p data-testid="amount-history" class="m-0 text-sm text-muted-color">
+          Was {{ pattern.previousAmount | currency }} before
+          {{ historyDate(pattern.priceChangedOn) }}
+        </p>
+      }
+
+      <div class="flex flex-col gap-1">
+        <label for="pattern-next-date" class="text-sm font-medium">Next payment</label>
+        <p-datepicker
+          inputId="pattern-next-date"
+          formControlName="nextDate"
+          [showIcon]="true"
+          dateFormat="yy-mm-dd"
+          placeholder="YYYY-MM-DD"
+          appendTo="body"
+        />
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <button
+          type="submit"
+          class="cursor-pointer rounded-lg bg-primary-700 px-3 py-2 text-sm font-medium text-white hover:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-50"
+          [disabled]="!canSubmit() || saving()"
+        >
+          Add to recurring
+        </button>
+        <button
+          type="button"
+          class="cursor-pointer rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium dark:border-surface-700"
+          [disabled]="saving()"
+          (click)="dismiss.emit(pattern)"
+        >
+          Dismiss
+        </button>
+      </div>
+    </form>
+  </div>
+} @else {
+  <div class="flex flex-col gap-3">
+    @if (patterns().length === 0) {
+      <p class="m-0 text-sm text-muted-color">No patterns found.</p>
+    } @else {
+      <ul class="m-0 flex list-none flex-col gap-1 p-0">
+        @for (pattern of patterns(); track pattern.patternKey) {
+          <li>
+            <button
+              type="button"
+              data-testid="pattern-row"
+              class="flex w-full cursor-pointer items-center gap-3 rounded-lg border border-surface-200 px-3 py-2 text-left dark:border-surface-700"
+              (click)="choose.emit(pattern)"
+            >
+              <span class="min-w-0 flex-1">
+                <span class="block truncate font-medium">{{ pattern.merchant.name }}</span>
+                <span class="block text-sm text-muted-color">
+                  {{ frequencyLabel(pattern) }} · last {{ pattern.amount | currency }} · seen
+                  {{ pattern.occurrenceCount }} times
+                </span>
+              </span>
+              <span class="shrink-0 text-sm text-muted-color">{{ confidence(pattern) }}</span>
+            </button>
+          </li>
+        }
+      </ul>
+    }
+
+    @if (dismissed().length > 0) {
+      <button
+        type="button"
+        class="cursor-pointer self-start text-sm underline"
+        [attr.aria-expanded]="showDismissed()"
+        (click)="showDismissed.set(!showDismissed())"
+      >
+        Dismissed ({{ dismissed().length }})
+      </button>
+      @if (showDismissed()) {
+        <ul class="m-0 flex list-none flex-col gap-1 p-0">
+          @for (entry of dismissed(); track entry.id) {
+            <li
+              class="flex items-center justify-between gap-2 rounded-lg border border-surface-200 px-3 py-2 dark:border-surface-700"
+            >
+              <span class="min-w-0 truncate text-sm">{{ entry.name }}</span>
+              <button
+                type="button"
+                class="cursor-pointer text-sm underline"
+                [attr.aria-label]="'Restore ' + entry.name"
+                (click)="restore.emit(entry)"
+              >
+                Restore
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    }
+  </div>
+}
