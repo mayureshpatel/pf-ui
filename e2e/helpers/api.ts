@@ -200,7 +200,7 @@ export async function createTestTransaction(
   accountId: number,
   categoryId: number | undefined,
   descriptionPrefix: string,
-  options?: {amount?: number; transactionDate?: string; type?: 'EXPENSE' | 'INCOME' | 'TRANSFER'}
+  options?: {amount?: number; transactionDate?: string; type?: 'EXPENSE' | 'INCOME' | 'TRANSFER'; merchantId?: number}
 ): Promise<{id: number; description: string}> {
   const token = await getAuthToken(page);
   const description = `${descriptionPrefix} ${Date.now()}`;
@@ -213,7 +213,8 @@ export async function createTestTransaction(
       amount: options?.amount ?? 42.5,
       transactionDate: options?.transactionDate ?? '2026-01-15T00:00:00Z',
       description,
-      type: options?.type ?? 'EXPENSE'
+      type: options?.type ?? 'EXPENSE',
+      merchantId: options?.merchantId
     }
   });
 
@@ -269,7 +270,8 @@ export async function createTestTransactionsBulk(
   categoryId: number,
   descriptionPrefix: string,
   count: number,
-  amount: number
+  amount: number,
+  merchantId?: number
 ): Promise<void> {
   const token = await getAuthToken(page);
   const today = new Date();
@@ -289,7 +291,8 @@ export async function createTestTransactionsBulk(
       amount,
       transactionDate: `${dateFor(dayIndex)}T00:00:00Z`,
       description: descriptionPrefix,
-      type: 'EXPENSE'
+      type: 'EXPENSE',
+      merchantId
     }
   });
 

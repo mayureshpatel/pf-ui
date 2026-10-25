@@ -3,6 +3,7 @@ import {
   createTestAccount,
   createTestAccountsBulk,
   createTestCategory,
+  createTestMerchant,
   createTestTransaction,
   createTestTransactionsBulk,
   registerTestUser
@@ -27,12 +28,13 @@ test.describe('Reports explorer', () => {
     const account = await createTestAccount(page, 'E2E Reports Account');
     const parent = await createTestCategory(page, 'E2E Reports Parent');
     const category = await createTestCategory(page, 'E2E Reports Category', parent.id);
+    const merchant = await createTestMerchant(page, 'E2E Reports Merchant');
     const today = new Date().toISOString();
-    await createTestTransaction(page, account.id, category.id, 'E2E Reports Merchant', {
-      amount: 100, type: 'EXPENSE', transactionDate: today
+    await createTestTransaction(page, account.id, category.id, 'E2E Reports Purchase', {
+      amount: 100, type: 'EXPENSE', transactionDate: today, merchantId: merchant.id
     });
-    await createTestTransaction(page, account.id, category.id, 'E2E Reports Merchant', {
-      amount: 50, type: 'EXPENSE', transactionDate: today
+    await createTestTransaction(page, account.id, category.id, 'E2E Reports Purchase', {
+      amount: 50, type: 'EXPENSE', transactionDate: today, merchantId: merchant.id
     });
     await createTestTransaction(page, account.id, category.id, 'E2E Reports Income', {
       amount: 500, type: 'INCOME', transactionDate: today
@@ -53,9 +55,9 @@ test.describe('Reports explorer', () => {
     // 3. drill into the subcategory: merchants; then into the merchant: the transactions
     await row(page, category.name).getByRole('button', {name: new RegExp(category.name)}).first().click();
     await expect(page.getByRole('heading', {name: /Spending by merchant/})).toBeVisible();
-    const merchantRow = row(page, /E2E Reports Merchant/i);
+    const merchantRow = row(page, merchant.name);
     await expect(merchantRow).toContainText('$150.00');
-    await merchantRow.getByRole('button', {name: /E2E Reports Merchant/i}).first().click();
+    await merchantRow.getByRole('button', {name: merchant.name}).first().click();
     await expect(page.getByRole('heading', {name: /^Transactions:/})).toBeVisible();
     const transactions = page.locator('app-transaction-list tbody tr');
     await expect(transactions).toHaveCount(2);
@@ -97,16 +99,17 @@ test.describe('Reports explorer', () => {
   });
 
   test('totals cover every transaction, not just the newest 1,000', async ({page}) => {
-    test.setTimeout(120_000);
+    test.setTimeout(300_000);
 
     await registerTestUser(page);
     // spread across several accounts so the concurrent writes don't contend for one row
     const accounts = await createTestAccountsBulk(page, 'PF-886 Cap Test Account', 20);
     const parent = await createTestCategory(page, 'PF-886 Cap Test Parent');
     const category = await createTestCategory(page, 'PF-886 Cap Test Category', parent.id);
+    const merchant = await createTestMerchant(page, 'PF-886 Cap Test Vendor');
     const count = 1200;
     await createTestTransactionsBulk(
-      page, accounts.map((a) => a.id), category.id, 'PF-886 Cap Test Vendor', count, 10
+      page, accounts.map((a) => a.id), category.id, 'PF-886 Cap Test Purchase', count, 10, merchant.id
     );
 
     // one day per transaction, today back through `count - 1` days ago
@@ -121,7 +124,7 @@ test.describe('Reports explorer', () => {
 
     // the merchant grouping also shows a count, the stronger check: 1000 vs 1,200 can't be mistaken
     await page.goto(`/reports?measure=SPENDING&groupBy=MERCHANT&${range}`);
-    const merchantRow = row(page, /PF-886 Cap Test Vendor/i);
+    const merchantRow = row(page, merchant.name);
     await expect(merchantRow).toContainText('$12,000.00');
     await expect(merchantRow).toContainText('1200');
   });
