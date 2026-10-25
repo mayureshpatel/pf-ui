@@ -1,0 +1,22 @@
+<nav aria-label="Drill path">
+  <ol class="m-0 flex list-none flex-wrap items-center gap-1 p-0 text-sm">
+    @for (crumb of crumbs(); track $index; let last = $last) {
+      <li class="flex items-center gap-1">
+        @if (last) {
+          <span aria-current="page" class="font-semibold text-primary-700 dark:text-primary-400">
+            {{ crumb }}
+          </span>
+        } @else {
+          <button
+            type="button"
+            class="cursor-pointer text-muted-color underline hover:text-color"
+            (click)="stepBack.emit($index)"
+          >
+            {{ crumb }}
+          </button>
+          <span aria-hidden="true" class="text-muted-color">&rsaquo;</span>
+        }
+      </li>
+    }
+  </ol>
+</nav>

@@ -1,6 +1,7 @@
 import { Params } from '@angular/router';
 import { fromLocalDateString, toLocalDateString } from '@shared/utils/transaction.utils';
 import {
+  Compare,
   DrillFilterKey,
   DrillStep,
   ExploreFilters,
@@ -13,6 +14,33 @@ import {
 import { effectiveDates, TIME_GROUPINGS, TIME_ONLY_MEASURES } from './explore-state';
 
 export const OTHER_KEY = '__other__';
+
+export const MEASURE_LABELS: Record<Measure, string> = {
+  SPENDING: 'Spending',
+  INCOME: 'Income',
+  NET: 'Net',
+  SAVINGS_RATE: 'Savings rate',
+  COUNT: 'Count',
+  AVERAGE: 'Average',
+};
+
+export const GROUP_LABELS: Record<GroupBy, string> = {
+  CATEGORY: 'Category',
+  SUBCATEGORY: 'Subcategory',
+  MERCHANT: 'Merchant',
+  ACCOUNT: 'Account',
+  TAG: 'Tag',
+  MONTH: 'Month',
+  WEEK: 'Week',
+  DAY_OF_WEEK: 'Day of week',
+  DAY: 'Day',
+};
+
+export const COMPARE_LABELS: Record<Compare, string> = {
+  NONE: 'No comparison',
+  PREVIOUS_PERIOD: 'Previous period',
+  SAME_DAYS_LAST_YEAR: 'Same days last year',
+};
 
 const NET_REASON = 'Net is income minus spending, so it only makes sense over time.';
 const SAVINGS_RATE_REASON =
