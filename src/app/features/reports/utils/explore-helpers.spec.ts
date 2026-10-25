@@ -8,6 +8,11 @@ import {
 import { defaultState } from './explore-state';
 import {
   applyStartView,
+  reconcileDrill,
+  biggestRow,
+  rangeText,
+  rootCrumb,
+  selectPeriod,
   bucketLabel,
   formatMeasure,
   granularityOf,
@@ -607,6 +612,114 @@ describe('explore helpers', () => {
       expect(bucketLabel('2026-03-12', 'day')).toBe('Mar 12');
       expect(bucketLabel('2026-03-09', 'week')).toBe('Week of Mar 9');
       expect(bucketLabel('2026-03-01', 'month')).toBe('Mar 2026');
+    });
+  });
+
+  describe('selectPeriod', () => {
+    it('should filter to a bucket without changing the grouping', () => {
+      // act
+      const month = selectPeriod(base(), '2026-03-01', 'month', 'Mar 2026');
+      const week = selectPeriod(base(), '2026-03-09', 'week', 'Week of Mar 9');
+      const day = selectPeriod(base(), '2026-03-12', 'day', 'Mar 12');
+
+      // assert & verify
+      expect(month.period).toEqual({ start: '2026-03-01', end: '2026-03-31', label: 'Mar 2026' });
+      expect(month.groupBy).toBe('CATEGORY');
+      expect(month.leaf).toBe(false);
+      expect(month.drill).toEqual([
+        {
+          groupBy: 'CATEGORY',
+          filterKey: 'period',
+          label: 'Mar 2026',
+          value: '2026-03-01..2026-03-31',
+        },
+      ]);
+      expect(week.period?.end).toBe('2026-03-15');
+      expect(day.period).toEqual({ start: '2026-03-12', end: '2026-03-12', label: 'Mar 12' });
+    });
+
+    it('should stay inside the range and an earlier period', () => {
+      // arrange
+      const clipped = { ...base(), startDate: '2026-03-15', endDate: '2026-03-20' };
+
+      // act
+      const next = selectPeriod(clipped, '2026-03-01', 'month', 'Mar 2026');
+
+      // assert & verify
+      expect(next.period).toEqual({ start: '2026-03-15', end: '2026-03-20', label: 'Mar 2026' });
+    });
+  });
+
+  describe('rangeText', () => {
+    it('should name the real dates and stop at today for a period in progress', () => {
+      // assert & verify
+      expect(rangeText('2026-01-01', '2026-12-31', TODAY)).toBe('Jan 1 to Oct 25, 2026');
+      expect(rangeText('2026-03-01', '2026-03-31', TODAY)).toBe('Mar 1 to Mar 31, 2026');
+      expect(rangeText('2025-11-01', '2026-02-28', TODAY)).toBe('Nov 1, 2025 to Feb 28, 2026');
+    });
+  });
+
+  describe('rootCrumb', () => {
+    it('should name the start of the path for the measure', () => {
+      // assert & verify
+      expect(rootCrumb('SPENDING', 'SPENDING')).toBe('All spending');
+      expect(rootCrumb('INCOME', 'SPENDING')).toBe('All income');
+      expect(rootCrumb('COUNT', 'INCOME')).toBe('All income');
+      expect(rootCrumb('AVERAGE', 'SPENDING')).toBe('All spending');
+      expect(rootCrumb('NET', 'SPENDING')).toBe('All activity');
+    });
+  });
+
+  describe('biggestRow', () => {
+    const data = [
+      row('1', 'Rent', 500, 500),
+      row('2', 'Food', 400, 300),
+      row('3', 'Fun', 100, 10),
+      row('4', 'Gas', 50, 90),
+    ];
+
+    it('should pick the biggest increase when comparing', () => {
+      // assert & verify
+      expect(biggestRow(data, 'SAME_DAYS_LAST_YEAR')?.label).toBe('Food');
+    });
+
+    it('should pick the top row when not comparing, and nothing when nothing grew', () => {
+      // assert & verify
+      expect(biggestRow(data, 'NONE')?.label).toBe('Rent');
+      expect(biggestRow([row('1', 'Rent', 5, 9)], 'PREVIOUS_PERIOD')).toBeNull();
+      expect(biggestRow([], 'NONE')).toBeNull();
+    });
+  });
+
+  describe('reconcileDrill', () => {
+    it('should drop drill steps whose filter was edited away and keep the rest', () => {
+      // arrange
+      const deep = drill(drill(base(), row('5', 'Food')), row('8', 'Groceries'));
+
+      // act
+      const kept = reconcileDrill(deep);
+      const edited = reconcileDrill({ ...deep, filters: { accountIds: [] } });
+      const changed = reconcileDrill({
+        ...deep,
+        filters: { accountIds: [], categoryId: 99, categoryName: 'Other' },
+      });
+
+      // assert & verify
+      expect(kept).toBe(deep);
+      expect(edited.drill).toEqual([]);
+      expect(changed.drill).toEqual([]);
+    });
+
+    it('should keep a step for the last value of a key, and period steps while the period holds', () => {
+      // arrange
+      const inMarch = selectPeriod(base(), '2026-03-01', 'month', 'Mar 2026');
+
+      // act & assert & verify
+      expect(reconcileDrill(inMarch)).toBe(inMarch);
+      expect(reconcileDrill({ ...inMarch, period: null }).drill).toEqual([]);
+      const flags = drill({ ...base(), groupBy: 'TAG' }, row(null, 'No tag'));
+      expect(reconcileDrill({ ...flags, filters: { accountIds: [] } }).drill).toEqual([]);
+      expect(reconcileDrill(flags)).toBe(flags);
     });
   });
 });

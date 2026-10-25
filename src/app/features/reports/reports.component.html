@@ -1,61 +1,213 @@
-<div class="w-full flex flex-col gap-4">
-  <!-- Header with Date Range Filter -->
-  <app-screen-toolbar [showDivider]="false" class="mb-6">
+<div class="flex w-full flex-col gap-4">
+  <app-screen-toolbar [showDivider]="false" class="mb-2">
     <div toolbarTitle>
-      <h1 class="text-4xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight">Reports</h1>
-      <p class="text-muted-color mt-1 text-lg italic">Strategic Financial Analytics</p>
+      <h1 class="text-4xl font-extrabold tracking-tight text-surface-900 dark:text-surface-0">
+        Reports
+      </h1>
+      <p class="mt-1 text-lg italic text-muted-color">
+        Explore where your money comes from and goes
+      </p>
     </div>
 
     <div toolbarFilters>
-      <app-date-range-filter [(dateRange)]="dateRange"/>
+      <div
+        role="group"
+        aria-label="Report view"
+        class="inline-flex overflow-hidden rounded-lg border border-surface-300 dark:border-surface-700"
+      >
+        <button
+          type="button"
+          class="cursor-pointer border-r border-surface-300 px-4 py-1.5 text-sm dark:border-surface-700"
+          [class]="
+            view() === 'explorer'
+              ? 'bg-primary-700 text-white hover:bg-primary-800'
+              : 'bg-surface-0 hover:bg-surface-100 dark:bg-surface-900 dark:hover:bg-surface-800'
+          "
+          [attr.aria-pressed]="view() === 'explorer'"
+          (click)="setView('explorer')"
+        >
+          Explorer
+        </button>
+        <button
+          type="button"
+          class="cursor-pointer px-4 py-1.5 text-sm"
+          [class]="
+            view() === 'networth'
+              ? 'bg-primary-700 text-white hover:bg-primary-800'
+              : 'bg-surface-0 hover:bg-surface-100 dark:bg-surface-900 dark:hover:bg-surface-800'
+          "
+          [attr.aria-pressed]="view() === 'networth'"
+          (click)="setView('networth')"
+        >
+          Net worth
+        </button>
+      </div>
     </div>
+
+    @if (view() === 'explorer') {
+      <div toolbarActions class="flex items-center gap-2">
+        <button
+          type="button"
+          class="cursor-pointer rounded-lg border border-surface-300 px-3 py-1.5 text-sm hover:bg-surface-100 dark:border-surface-700 dark:hover:bg-surface-800"
+          (click)="copyLink()"
+        >
+          <i class="pi pi-link mr-1" aria-hidden="true"></i>Copy link
+        </button>
+        <button
+          type="button"
+          class="cursor-pointer rounded-lg border border-surface-300 px-3 py-1.5 text-sm hover:bg-surface-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-surface-700 dark:hover:bg-surface-800"
+          [disabled]="!result()"
+          (click)="exportCsv()"
+        >
+          <i class="pi pi-download mr-1" aria-hidden="true"></i>Export CSV
+        </button>
+      </div>
+    }
   </app-screen-toolbar>
 
-  <!-- Tabs with Report Components -->
-  <p-tabs [(value)]="activeTabIndex" class="card-soft">
-    <p-tablist class="bg-transparent border-none">
-      <p-tab [value]="0">
-        <div class="flex items-center gap-2">
-          <i class="pi pi-tags"></i>
-          <span class="font-bold">Categories</span>
-        </div>
-      </p-tab>
-      <p-tab [value]="1">
-        <div class="flex items-center gap-2">
-          <i class="pi pi-shop"></i>
-          <span class="font-bold">Merchants</span>
-        </div>
-      </p-tab>
-      <p-tab [value]="2">
-        <div class="flex items-center gap-2">
-          <i class="pi pi-chart-line"></i>
-          <span class="font-bold">Cash Flow</span>
-        </div>
-      </p-tab>
-      <p-tab [value]="3">
-        <div class="flex items-center gap-2">
-          <i class="pi pi-wallet"></i>
-          <span class="font-bold">Net Worth</span>
-        </div>
-      </p-tab>
-    </p-tablist>
+  @if (view() === 'networth') {
+    <div class="flex flex-col gap-4">
+      <app-date-range-filter
+        [dateRange]="dateRange()"
+        (dateRangeChange)="onNetWorthRange($event)"
+      />
+      <app-net-worth-report [dateRange]="dateRange()" />
+    </div>
+  } @else {
+    @if (note(); as message) {
+      <p
+        role="status"
+        class="m-0 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200"
+      >
+        {{ message }}
+      </p>
+    }
 
-    <p-tabpanels class="bg-transparent px-0 py-6">
-      <p-tabpanel [value]="0">
-        <app-category-report [dateRange]="dateRange()"/>
-      </p-tabpanel>
+    <button
+      type="button"
+      class="cursor-pointer self-start rounded-lg border border-surface-300 px-3 py-1.5 text-sm sm:hidden dark:border-surface-700"
+      [attr.aria-expanded]="controlsOpen()"
+      aria-controls="explorer-settings"
+      (click)="controlsOpen.set(!controlsOpen())"
+    >
+      Filters and settings
+    </button>
 
-      <p-tabpanel [value]="1">
-        <app-merchant-report [dateRange]="dateRange()"/>
-      </p-tabpanel>
+    <div
+      id="explorer-settings"
+      class="flex-col gap-3 sm:flex"
+      [class]="controlsOpen() ? 'flex' : 'hidden'"
+    >
+      <app-explorer-controls [state]="state()" (stateChange)="onStateChange($event)" />
+      <app-filter-bar
+        [filters]="state().filters"
+        [drill]="state().drill"
+        [excluded]="result()?.excludedCount ?? 0"
+        [accounts]="accounts()"
+        [categories]="categories()"
+        [merchants]="merchants()"
+        [tags]="tags()"
+        (filtersChange)="onFiltersChange($event)"
+        (removeDrill)="onStepBack($event)"
+        (merchantSearch)="onMerchantSearch($event)"
+      />
+    </div>
 
-      <p-tabpanel [value]="2">
-        <app-income-expense-report [dateRange]="dateRange()"/>
-      </p-tabpanel>
+    <div class="flex flex-col gap-1">
+      <app-drill-breadcrumb [crumbs]="crumbs()" (stepBack)="onStepBack($event)" />
+      <h2
+        id="results-heading"
+        #heading
+        tabindex="-1"
+        class="m-0 text-xl font-semibold outline-none"
+      >
+        {{ headingText() }}
+      </h2>
+      <p class="m-0 text-sm text-muted-color">
+        {{ rangeLine() }}
+        @if (result()?.comparisonLabel; as label) {
+          <span> · compared with {{ label }}</span>
+        }
+        @if (result()?.inProgress) {
+          <span> · this period is still in progress</span>
+        }
+      </p>
+    </div>
 
-      <p-tabpanel [value]="3">
-        <app-net-worth-report [dateRange]="dateRange()"/>
-      </p-tabpanel>
-    </p-tabpanels>
-  </p-tabs>
+    <p class="sr-only" aria-live="polite">{{ announcement() }}</p>
+
+    @if (!loadedOnce() && loading()) {
+      <div class="flex flex-col gap-3" aria-busy="true">
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <p-skeleton height="6rem" borderRadius="0.75rem" />
+          <p-skeleton height="6rem" borderRadius="0.75rem" />
+          <p-skeleton height="6rem" borderRadius="0.75rem" />
+        </div>
+        <p-skeleton height="9rem" borderRadius="0.75rem" />
+        <p-skeleton height="16rem" borderRadius="0.75rem" />
+      </div>
+    } @else if (loadError()) {
+      <app-page-error-state message="Failed to load this report." (retry)="retry()" />
+    } @else if (result(); as current) {
+      @if (current.rows.length === 0 && !state().leaf) {
+        <div
+          class="flex flex-col items-center gap-2 rounded-xl border border-surface-200 p-8 text-center dark:border-surface-800"
+        >
+          @if (hasFilters()) {
+            <p class="m-0 font-semibold">Nothing matches these filters</p>
+            <button
+              type="button"
+              class="cursor-pointer rounded-lg bg-primary-700 px-4 py-2 text-sm text-white hover:bg-primary-800"
+              (click)="clearFilters()"
+            >
+              Clear filters
+            </button>
+          } @else {
+            <p class="m-0 font-semibold">{{ emptyText() }}</p>
+            <p class="m-0 text-sm text-muted-color">Try a different range.</p>
+          }
+        </div>
+      } @else {
+        <app-summary-cards
+          [result]="current"
+          [measure]="state().measure"
+          [compare]="state().compare"
+          [biggest]="biggest()"
+        />
+        <app-trend-chart
+          [trend]="trend()"
+          [measure]="state().measure"
+          [loading]="loading()"
+          [trimEmpty]="trimEmptyTrend()"
+          (selectBucket)="onSelectBucket($event)"
+        />
+        @if (state().leaf) {
+          <app-transaction-list
+            [page]="leafPage()"
+            [linkable]="linkable()"
+            [loading]="loading()"
+            (pageChange)="onPageChange($event)"
+            (openInTransactions)="openInTransactions()"
+          />
+        } @else {
+          <app-results-table
+            [rows]="current.rows"
+            [measure]="state().measure"
+            [sort]="state().sort"
+            [search]="search()"
+            [expandedOther]="expandedOther()"
+            [loading]="loading()"
+            [groupBy]="state().groupBy"
+            [groupLabel]="groupLabel()"
+            (drill)="onDrill($event)"
+            (filterOnly)="onFilterOnly($event)"
+            (openTransactions)="onOpenTransactions($event)"
+            (sortChange)="onSortChange($event)"
+            (searchChange)="search.set($event)"
+            (toggleOther)="expandedOther.set(!expandedOther())"
+          />
+        }
+      }
+    }
+  }
 </div>

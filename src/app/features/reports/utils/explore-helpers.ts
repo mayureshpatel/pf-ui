@@ -10,6 +10,7 @@ import {
   GroupBy,
   Measure,
   Period,
+  Side,
 } from '../models/reports.model';
 import { effectiveDates, TIME_GROUPINGS, TIME_ONLY_MEASURES } from './explore-state';
 
@@ -92,20 +93,55 @@ const parsePeriodValue = (step: DrillStep): Period => {
   return { start, end, label: step.label };
 };
 
-/** The window a month, week or day row stands for, kept inside the range (and period) already chosen. */
-function periodOf(state: ExploreState, key: string, label: string): Period {
-  const bounds = effectiveDates(state);
-  const rowEnd: string =
-    state.groupBy === 'MONTH'
-      ? lastDayOfMonth(key)
-      : state.groupBy === 'WEEK'
-        ? addDays(key, 6)
-        : key;
+/** The window a month, week or day stands for, kept inside the bounds already chosen. */
+function windowOf(
+  bounds: { startDate: string; endDate: string },
+  granularity: Granularity,
+  start: string,
+  label: string,
+): Period {
+  const end: string =
+    granularity === 'month'
+      ? lastDayOfMonth(start)
+      : granularity === 'week'
+        ? addDays(start, 6)
+        : start;
   return {
-    start: key > bounds.startDate ? key : bounds.startDate,
-    end: rowEnd < bounds.endDate ? rowEnd : bounds.endDate,
+    start: start > bounds.startDate ? start : bounds.startDate,
+    end: end < bounds.endDate ? end : bounds.endDate,
     label,
   };
+}
+
+const GRANULARITY_OF: Partial<Record<GroupBy, Granularity>> = {
+  MONTH: 'month',
+  WEEK: 'week',
+  DAY: 'day',
+};
+
+/** The window a month, week or day row stands for, kept inside the range (and period) already chosen. */
+function periodOf(state: ExploreState, key: string, label: string): Period {
+  return windowOf(effectiveDates(state), GRANULARITY_OF[state.groupBy] ?? 'day', key, label);
+}
+
+/**
+ * Click a trend bar: filter to its day, week or month without changing the grouping. Recorded as a drill
+ * step so stepping back removes it like any other.
+ */
+export function selectPeriod(
+  state: ExploreState,
+  start: string,
+  granularity: Granularity,
+  label: string,
+): ExploreState {
+  const period: Period = windowOf(effectiveDates(state), granularity, start, label);
+  const step: DrillStep = {
+    groupBy: state.groupBy,
+    filterKey: 'period',
+    label,
+    value: `${period.start}..${period.end}`,
+  };
+  return { ...state, period, drill: [...state.drill, step], leaf: false };
 }
 
 interface Applied {
@@ -510,4 +546,83 @@ export function bucketLabel(start: string, granularity: Granularity): string {
     default:
       return format({ month: 'short', year: 'numeric' });
   }
+}
+
+const SHORT_DAY: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+
+/** "Jan 1 to Oct 25, 2026": the real dates, ending at today for a period still in progress. */
+export function rangeText(startDate: string, endDate: string, today: Date = new Date()): string {
+  const last: string = endDate > toLocalDateString(today) ? toLocalDateString(today) : endDate;
+  const from: Date = fromLocalDateString(startDate);
+  const to: Date = fromLocalDateString(last);
+  const withYear = (d: Date): string =>
+    d.toLocaleDateString('en-US', { ...SHORT_DAY, year: 'numeric' });
+  const sameYear: boolean = from.getFullYear() === to.getFullYear();
+  const fromText: string = sameYear ? from.toLocaleDateString('en-US', SHORT_DAY) : withYear(from);
+  return `${fromText} to ${withYear(to)}`;
+}
+
+/** The first crumb: where the drill starts. */
+export function rootCrumb(measure: Measure, side: Side): string {
+  const looksAt: Side | null =
+    measure === 'INCOME'
+      ? 'INCOME'
+      : measure === 'SPENDING'
+        ? 'SPENDING'
+        : measure === 'COUNT' || measure === 'AVERAGE'
+          ? side
+          : null;
+  if (looksAt === null) return 'All activity';
+  return looksAt === 'INCOME' ? 'All income' : 'All spending';
+}
+
+/** The row to feature on the summary: the biggest increase when comparing (if anything grew), else the top row. */
+export function biggestRow(rows: ExploreRow[], compare: Compare): ExploreRow | null {
+  if (compare === 'NONE') return rows[0] ?? null;
+  let best: ExploreRow | null = null;
+  let bestDelta = 0;
+  for (const row of rows) {
+    const delta: number = (row.value ?? 0) - (row.comparisonValue ?? 0);
+    if (row.comparisonValue !== null && delta > bestDelta) {
+      best = row;
+      bestDelta = delta;
+    }
+  }
+  return best;
+}
+
+/** Whether a drill step's filter is still in effect on the state. */
+function stepHolds(step: DrillStep, state: ExploreState): boolean {
+  const f: ExploreFilters = state.filters;
+  switch (step.filterKey) {
+    case 'categoryId':
+      return f.categoryId === step.value;
+    case 'merchantId':
+      return f.merchantId === step.value;
+    case 'tagId':
+      return f.tagId === step.value;
+    case 'accountIds':
+      return f.accountIds.length === 1 && f.accountIds[0] === step.value;
+    case 'uncategorized':
+    case 'noMerchant':
+    case 'noTag':
+      return f[step.filterKey] === true;
+    default:
+      return state.period !== null;
+  }
+}
+
+/**
+ * Drops the drill steps whose filter was since edited away (from the filter menu), so the chips and
+ * breadcrumb never describe a filter that isn't applied. The latest step on a filter decides: while it
+ * holds, the earlier steps on it (Food before Groceries) stay as history. Returns the same state when
+ * nothing changed.
+ */
+export function reconcileDrill(state: ExploreState): ExploreState {
+  const latest = new Map<DrillFilterKey, DrillStep>();
+  state.drill.forEach((step: DrillStep) => latest.set(step.filterKey, step));
+  const drill: DrillStep[] = state.drill.filter((step: DrillStep) =>
+    stepHolds(latest.get(step.filterKey) as DrillStep, state),
+  );
+  return drill.length === state.drill.length ? state : { ...state, drill };
 }
