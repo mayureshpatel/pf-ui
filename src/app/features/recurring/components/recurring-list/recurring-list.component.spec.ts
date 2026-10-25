@@ -73,6 +73,16 @@ describe('RecurringListComponent', () => {
     expect(headers[1]).toContain('2 paused');
   });
 
+  it('should keep the paused count dark enough to read on the group header (contrast)', () => {
+    // act
+    render([item(1, 'Gym', 40, 'MONTHLY', day(11, 5), { active: false })]);
+
+    // assert & verify
+    const count = all('[data-testid="group-header"] span')[0];
+    expect(count.className).toContain('text-surface-600');
+    expect(count.className).not.toContain('text-muted-color');
+  });
+
   it('should show the merchant, amount, next date and account on each row, soonest first', () => {
     // act
     render(monthlyItems);

@@ -16,7 +16,9 @@
         @if (group.monthlyTotal !== null) {
           <span class="tabular-nums">{{ group.monthlyTotal | currency }} / mo</span>
         } @else {
-          <span class="text-muted-color">{{ pausedLabel(group.items.length) }}</span>
+          <span class="text-surface-600 dark:text-surface-300">{{
+            pausedLabel(group.items.length)
+          }}</span>
         }
       </div>
       <ul class="m-0 list-none p-0">
