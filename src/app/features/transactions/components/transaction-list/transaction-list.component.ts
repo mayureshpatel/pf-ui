@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   input,
   InputSignal,
   output,
@@ -89,6 +90,11 @@ export class TransactionListComponent {
       this.transactions().length > 0 && this.transactions().every((t) => this.isSelected(t.id)),
   );
 
+  /** Some, but not all, of the rows on this page are selected (the header checkbox goes mixed). */
+  readonly someSelected: Signal<boolean> = computed(
+    (): boolean => !this.allSelected() && this.transactions().some((t) => this.isSelected(t.id)),
+  );
+
   readonly skeletonRows: number[] = [0, 1, 2, 3, 4, 5, 6, 7];
 
   /** The sortable columns currently shown (Description hides in compact mode). */
@@ -102,6 +108,21 @@ export class TransactionListComponent {
   );
 
   private lastClickedIndex: number | null = null;
+  private readonly currency: FormatCurrencyPipe = new FormatCurrencyPipe();
+
+  constructor() {
+    // the anchor is an index into the loaded page, so a new page, sort or filter invalidates it
+    effect((): void => {
+      this.transactions();
+      this.lastClickedIndex = null;
+    });
+  }
+
+  /** Accessible name of a row checkbox: enough to tell rows with the same merchant apart. */
+  rowLabel(txn: Transaction): string {
+    const name: string = txn.merchant?.name ?? txn.description;
+    return `Select ${name}, ${this.currency.transform(txn.amount)}, ${txn.date.substring(0, 10)}`;
+  }
 
   isSelected(id: number): boolean {
     return this.selectedIds().includes(id);

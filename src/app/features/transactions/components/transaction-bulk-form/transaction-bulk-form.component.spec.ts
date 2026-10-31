@@ -104,6 +104,54 @@ describe('TransactionBulkFormComponent', () => {
     });
   });
 
+  // PF-869
+  describe("keeping the user's choices", () => {
+    it('should keep a chosen category, merchant and description when the selection changes', () => {
+      // arrange
+      component.form.patchValue({
+        updateCategory: true,
+        category: rent,
+        updateMerchant: true,
+        merchant: costco,
+        updateDescription: true,
+        description: 'Monthly',
+      });
+
+      // act -- the user ticks another row while the form is open
+      fixture.componentRef.setInput('transactions', [{ id: 1 }, { id: 2 }] as Transaction[]);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.form.getRawValue()).toEqual({
+        updateCategory: true,
+        category: rent,
+        updateMerchant: true,
+        merchant: costco,
+        updateDescription: true,
+        description: 'Monthly',
+      });
+      expect(component.transactionCount()).toBe(2);
+    });
+  });
+
+  describe('large batch warning', () => {
+    it('should state the size of the batch and not claim it is queued for background work', () => {
+      // act
+      fixture.componentRef.setInput(
+        'transactions',
+        Array.from({ length: 51 }, (_, i) => ({ id: i }) as Transaction),
+      );
+      fixture.detectChanges();
+
+      // assert & verify -- the update is applied straight away, not queued
+      const text: string = fixture.nativeElement.textContent;
+      expect(text).toContain('Large batch');
+      expect(text).toContain('51 transactions');
+      expect(text).not.toContain('background');
+      expect(text).not.toContain('queued');
+    });
+  });
+
   describe('transactionCount / isLargeUpdate', () => {
     it('should count the current transaction batch', () => {
       fixture.componentRef.setInput('transactions', [

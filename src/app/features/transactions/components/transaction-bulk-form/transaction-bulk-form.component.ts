@@ -2,7 +2,6 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
-  effect,
   inject,
   input,
   InputSignal,
@@ -10,7 +9,6 @@ import {
   OutputEmitterRef,
   Signal,
   signal,
-  untracked,
   WritableSignal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -153,15 +151,6 @@ export class TransactionBulkFormComponent {
           })),
         );
       });
-
-    /**
-     * Effect to handle dialog reset logic.
-     */
-    // a different selection starts from a clean form
-    effect((): void => {
-      this.transactions();
-      untracked((): void => this.resetForm());
-    });
   }
 
   /**
@@ -250,20 +239,6 @@ export class TransactionBulkFormComponent {
       merchant: v.merchant ?? undefined,
       updateDescription: v.updateDescription,
       description: v.description?.trim(),
-    });
-  }
-
-  /**
-   * Resets the dialog state.
-   */
-  private resetForm(): void {
-    this.form.reset({
-      updateCategory: false,
-      category: null,
-      updateMerchant: false,
-      merchant: null,
-      updateDescription: false,
-      description: '',
     });
   }
 }
