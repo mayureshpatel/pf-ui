@@ -1,5 +1,5 @@
 import * as path from 'path';
-import {expect, test} from '@playwright/test';
+import {expect, test} from './fixtures/test';
 import {createTestAccount} from './helpers/api';
 
 const FIXTURE = path.resolve(__dirname, 'fixtures/standard-transactions.csv');

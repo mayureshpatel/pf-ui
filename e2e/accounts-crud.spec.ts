@@ -1,5 +1,6 @@
-import {expect, test} from '@playwright/test';
+import {expect, test} from './fixtures/test';
 import {createTestCategory, createTestTransaction, findAccountByName} from './helpers/api';
+import {trackByName} from './helpers/cleanup';
 
 /**
  * Covers PF-338: account CRUD through the real UI (create, edit, delete -- including the app's
@@ -27,6 +28,7 @@ test.describe('Accounts Core CRUD', () => {
     await drawer.getByRole('button', {name: 'Add account'}).click();
 
     await expect(page.getByText('Account created successfully')).toBeVisible();
+    await trackByName(page, 'account', accountName);
     // The panel stays open on the new account's summary.
     await expect(drawer.getByRole('heading', {name: accountName})).toBeVisible();
     await expect(drawer.getByTestId('balance')).toContainText('$500.00');
@@ -73,6 +75,7 @@ test.describe('Accounts Core CRUD', () => {
     await drawer.getByRole('spinbutton').fill('100');
     await drawer.getByRole('button', {name: 'Add account'}).click();
     await expect(page.getByText('Account created successfully')).toBeVisible();
+    await trackByName(page, 'account', accountName);
 
     const row = page.getByTestId('open-account').filter({hasText: accountName});
     await expect(row).toBeVisible();

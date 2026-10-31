@@ -1,4 +1,4 @@
-import {expect, test} from '@playwright/test';
+import {expect, test} from './fixtures/test';
 import {createTestAccount, createTestCategory, createTestTransaction, registerTestUser} from './helpers/api';
 
 /**

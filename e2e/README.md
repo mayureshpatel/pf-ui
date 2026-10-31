@@ -39,3 +39,15 @@ Optional env vars:
   Every test starts already authenticated via `playwright.config.ts`'s `use.storageState`.
 - `harness.smoke.spec.ts` — proves the harness itself works (auth caching + route guards).
   Business-flow coverage lives in other spec files, not here.
+
+## Cleaning up after tests
+Specs import `test` and `expect` from `./fixtures/test`, not `@playwright/test`. That `test` deletes whatever
+a test created after it ends, pass or fail: every `createTestX` helper in `helpers/api.ts` records what it
+creates, and rows made through the UI are recorded with `trackByName(page, 'account' | 'merchant' | 'tag', name)`
+right after the UI step. Deletion order is transactions (everything on a tracked account), budgets, tags,
+categories (newest first), merchants, accounts. Users made with `registerTestUser` are not cleaned up (they are
+separate users).
+
+`python3 e2e/leftovers.py` prints the E2E user's account/category/tag/merchant/transaction counts; run it before
+and after a suite and the numbers must match. `--dry-run` lists the rows whose names start with `E2E` and
+`--apply` deletes them (the one-time cleanup of leftovers from before this fixture existed).
