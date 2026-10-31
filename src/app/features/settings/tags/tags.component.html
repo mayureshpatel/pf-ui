@@ -1,131 +1,165 @@
-<div class="w-full flex flex-col gap-4">
-  <!-- Page Header -->
-  <app-screen-toolbar class="mb-6">
+<div class="flex w-full flex-col gap-4">
+  <app-screen-toolbar [showDivider]="false">
     <div toolbarTitle>
-      <h1 class="text-4xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight">Tags</h1>
-      <p class="text-muted-color mt-1 text-lg italic">Label your transactions, your way</p>
+      <h2 class="text-2xl font-semibold tracking-tight text-surface-900 dark:text-surface-0">
+        Tags
+      </h2>
     </div>
-
-    <div toolbarActions class="flex gap-3">
-      <p-button
-        label="New Tag"
-        icon="pi pi-plus"
-        (onClick)="openCreateDialog()"
-        severity="primary"
-        [raised]="true"
-      />
+    <div toolbarActions class="flex gap-2">
+      <button
+        type="button"
+        class="cursor-pointer rounded-lg bg-primary-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-800 disabled:opacity-50"
+        (click)="startAdd()"
+      >
+        <i class="pi pi-plus mr-1" aria-hidden="true"></i>Add tag
+      </button>
     </div>
   </app-screen-toolbar>
 
-  <!-- Tag List -->
-  @if (!isEmpty()) {
-    <p-card class="overflow-hidden card-soft">
-      <p-table
-        [value]="tags()"
-        [loading]="loading()"
-        [rowHover]="true"
-        [stripedRows]="true"
-        size="small"
-        responsiveLayout="stack"
-        [breakpoint]="'960px'">
-
-        <ng-template #header>
-          <tr>
-            <th id="tag-name" class="py-4 font-bold text-surface-700 dark:text-surface-200">Tag</th>
-            <th id="tag-color" class="py-4 font-bold text-surface-700 dark:text-surface-200">Color</th>
-            <th id="tag-actions" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-center w-32">
-              Actions
-            </th>
-          </tr>
-        </ng-template>
-
-        <ng-template #body let-tag>
-          <tr class="hover:bg-surface-100/50 dark:hover:bg-surface-800/30 transition-colors duration-200">
-            <!-- Tag Pill -->
-            <td class="py-4">
-              <span
-                class="px-3 py-1 rounded-full text-xs font-bold text-white inline-block"
-                [style.background-color]="tag.color || '#94a3b8'"
+  @if (loadError() && tags().length === 0) {
+    <app-page-error-state message="Failed to load tags." (retry)="loadTags()" />
+  } @else if (loading() && !loadedOnce()) {
+    <div class="flex flex-col gap-4" aria-busy="true" role="status">
+      <span class="sr-only">Loading tags</span>
+      <p-skeleton height="3rem" borderRadius="1rem" />
+      <p-skeleton height="14rem" borderRadius="1rem" />
+    </div>
+  } @else {
+    <div class="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_24rem]">
+      <div
+        class="flex min-w-0 flex-col gap-3"
+        [attr.aria-busy]="loading()"
+        [class.opacity-60]="loading()"
+      >
+        @if (tags().length === 0) {
+          <div
+            class="rounded-2xl border border-surface-200 p-10 text-center dark:border-surface-800"
+          >
+            <p class="font-medium">No tags yet</p>
+            <p class="text-muted-color">
+              Tags let you group and find transactions by whatever matters to you, independent of
+              category.
+            </p>
+          </div>
+        } @else {
+          <label for="tags-search" class="sr-only">Search tags</label>
+          <input
+            id="tags-search"
+            type="search"
+            placeholder="Search tags"
+            class="w-full rounded-lg border border-surface-300 bg-surface-0 px-3 py-2 text-sm dark:border-surface-700 dark:bg-surface-900"
+            [value]="search()"
+            (input)="search.set($any($event.target).value)"
+          />
+          @if (visibleTags().length === 0) {
+            <div
+              class="rounded-2xl border border-surface-200 p-10 text-center dark:border-surface-800"
+            >
+              <p class="mb-3 font-medium">No tags match</p>
+              <button
+                type="button"
+                class="cursor-pointer rounded-lg border border-surface-300 px-3 py-1.5 text-sm hover:bg-surface-100 disabled:opacity-50 dark:border-surface-700 dark:hover:bg-surface-800"
+                (click)="clearSearch()"
               >
-                {{ tag.name }}
-              </span>
-            </td>
-
-            <!-- Color Swatch -->
-            <td>
-              <div class="flex items-center gap-2">
-                <div
-                  class="w-5 h-5 rounded-full shadow-xs ring-1 ring-surface-200 dark:ring-surface-700"
-                  [style.background-color]="tag.color || '#94a3b8'"
-                ></div>
-                <span class="font-mono text-xs text-muted-color uppercase">{{ tag.color || '—' }}</span>
-              </div>
-            </td>
-
-            <!-- Inline Actions -->
-            <td class="text-center">
-              <div class="flex justify-center gap-1">
-                <p-button
-                  icon="pi pi-pencil"
-                  [text]="true"
-                  [rounded]="true"
-                  severity="secondary"
-                  (onClick)="openEditDialog(tag)"
-                  pTooltip="Rename or recolor this tag"
-                  ariaLabel="Edit tag"
-                />
-                <p-button
-                  icon="pi pi-trash"
-                  [text]="true"
-                  [rounded]="true"
-                  severity="danger"
-                  (onClick)="deleteTag(tag)"
-                  pTooltip="Permanently delete this tag"
-                  ariaLabel="Delete tag"
-                />
-              </div>
-            </td>
-          </tr>
-        </ng-template>
-
-        <ng-template #emptymessage>
-          <tr>
-            <td colspan="3" class="text-center py-16 text-muted-color italic">
-              No tags found.
-            </td>
-          </tr>
-        </ng-template>
-      </p-table>
-    </p-card>
-  } @else if (loadError()) {
-    <app-page-error-state message="Failed to load tags." (retry)="loadTags()"/>
-  } @else if (!loading()) {
-    <!-- Hero State -->
-    <div class="flex flex-col items-center justify-center min-h-[60vh] text-center animate-fade-in">
-      <div class="relative mb-8">
-        <div class="absolute -inset-4 bg-primary/10 rounded-full blur-2xl animate-pulse"></div>
-        <i class="pi pi-hashtag text-8xl text-primary/40 relative"></i>
+                Clear search
+              </button>
+            </div>
+          } @else {
+            <ul class="m-0 flex list-none flex-col gap-2 p-0">
+              @for (tag of visibleTags(); track tag.id) {
+                <li>
+                  <button
+                    type="button"
+                    data-tag-row
+                    class="flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl border p-3 text-left"
+                    [class]="
+                      selectedTagId() === tag.id
+                        ? 'border-primary-700 bg-primary-50 dark:border-primary-400 dark:bg-primary-950'
+                        : 'border-surface-200 bg-surface-0 hover:bg-surface-50 dark:border-surface-800 dark:bg-surface-900 dark:hover:bg-surface-800'
+                    "
+                    [attr.aria-current]="selectedTagId() === tag.id ? 'true' : null"
+                    (click)="openTag(tag)"
+                  >
+                    <span
+                      data-tag-name
+                      class="max-w-full truncate rounded-full px-3 py-1 text-xs font-bold"
+                      [style.background-color]="color(tag)"
+                      [style.color]="textColor(tag)"
+                    >
+                      {{ tag.name }}
+                    </span>
+                    <span class="shrink-0 font-mono text-xs uppercase text-muted-color">{{
+                      tag.color || ''
+                    }}</span>
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+        }
       </div>
-      <h2 class="text-3xl font-bold text-surface-900 dark:text-surface-0 mb-3">No tags yet</h2>
-      <p class="text-muted-color mb-8 max-w-lg leading-relaxed text-lg">
-        Create your own labels to group and find transactions by whatever matters to you --
-        independent of category.
-      </p>
-      <p-button
-        label="Create Your First Tag"
-        icon="pi pi-plus"
-        (onClick)="openCreateDialog()"
-        severity="primary"
-        size="large"
-        [raised]="true"
-      />
+
+      <app-side-panel
+        class="order-first block xl:order-none"
+        [title]="panelTitle()"
+        [saving]="saving()"
+        [showClose]="panelMode() !== 'overview' && !onlyAddMode()"
+        [sheet]="panelMode() !== 'overview' && !onlyAddMode()"
+        [moveFocus]="false"
+        [showFooter]="panelMode() !== 'overview'"
+        [saveLabel]="panelMode() === 'add' ? 'Add tag' : 'Save changes'"
+        [showDelete]="false"
+        (save)="onPanelSave()"
+        (closePanel)="onPanelClose()"
+      >
+        @switch (panelMode()) {
+          @case ('overview') {
+            <div class="flex flex-col gap-3 text-sm">
+              <p class="m-0 text-lg font-semibold tabular-nums">
+                {{ tags().length }} {{ tags().length === 1 ? 'tag' : 'tags' }}
+              </p>
+              <p class="m-0 text-muted-color">
+                Tags group transactions independently of category. Add them to a transaction from
+                the Transactions page.
+              </p>
+              <div>
+                <button
+                  type="button"
+                  class="cursor-pointer rounded-lg bg-primary-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-800 disabled:opacity-50"
+                  (click)="startAdd()"
+                >
+                  <i class="pi pi-plus mr-1" aria-hidden="true"></i>Add tag
+                </button>
+              </div>
+            </div>
+          }
+          @case ('tag') {
+            @if (selectedTag(); as tag) {
+              <button type="button" class="mb-3 cursor-pointer text-sm underline" (click)="back()">
+                Back to overview
+              </button>
+              <app-tag-edit-form
+                #tagForm
+                [tag]="tag"
+                [saving]="saving()"
+                (save)="saveTag($event)"
+                (remove)="deleteSelected()"
+                (viewTransactions)="viewTransactions()"
+              />
+            } @else {
+              <p-skeleton height="8rem" borderRadius="1rem" />
+            }
+          }
+          @case ('add') {
+            @if (!onlyAddMode()) {
+              <button type="button" class="mb-3 cursor-pointer text-sm underline" (click)="back()">
+                Back
+              </button>
+            }
+            <app-tag-edit-form #tagForm [tag]="null" [saving]="saving()" (save)="saveTag($event)" />
+          }
+        }
+      </app-side-panel>
     </div>
   }
-
-  <!-- Dialog -->
-  <app-tag-form-dialog
-    [(visible)]="showDialog"
-    [tag]="selectedTag()"
-    (save)="onTagSaved()"
-  />
 </div>

@@ -1,0 +1,22 @@
+<nav aria-label="Settings sections">
+  <ul class="m-0 flex list-none flex-wrap gap-2 p-0 lg:flex-col lg:flex-nowrap">
+    @for (item of items; track item.key) {
+      <li class="shrink-0">
+        <button
+          type="button"
+          class="flex w-full cursor-pointer items-center gap-2 rounded-full border px-4 py-2 text-left text-sm lg:rounded-xl"
+          [class]="
+            section() === item.key
+              ? 'border-primary-700 bg-primary-50 font-semibold text-primary-700 dark:border-primary-400 dark:bg-primary-950 dark:text-primary-400'
+              : 'border-surface-200 bg-surface-0 hover:bg-surface-100 dark:border-surface-700 dark:bg-surface-900 dark:hover:bg-surface-800'
+          "
+          [attr.aria-current]="section() === item.key ? 'page' : null"
+          (click)="sectionChange.emit(item.key)"
+        >
+          <i class="pi" [class]="item.icon" aria-hidden="true"></i>
+          {{ item.label }}
+        </button>
+      </li>
+    }
+  </ul>
+</nav>

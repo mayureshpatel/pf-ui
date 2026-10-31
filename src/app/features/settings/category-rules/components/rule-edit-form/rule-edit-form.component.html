@@ -1,0 +1,117 @@
+<form (ngSubmit)="submit()" [formGroup]="form" class="flex flex-col gap-4">
+  <div class="flex flex-col gap-1">
+    <label for="rule-keywords" class="text-sm font-medium">Keywords</label>
+    <input
+      pInputText
+      id="rule-keywords"
+      formControlName="keywordsInput"
+      class="w-full"
+      placeholder="netflix, spotify"
+      aria-describedby="rule-keywords-help"
+    />
+    <small id="rule-keywords-help" class="text-muted-color">
+      Separate several with commas. A transaction matches when its description contains one.
+    </small>
+    @if (keywordsError(); as error) {
+      <small class="text-rose-700 dark:text-rose-400">{{ error }}</small>
+    }
+  </div>
+
+  <div class="flex flex-col gap-1">
+    <label id="rule-match-label" for="rule-match" class="text-sm font-medium">Match</label>
+    <p-select
+      inputId="rule-match"
+      ariaLabelledBy="rule-match-label"
+      formControlName="matchType"
+      [options]="matchTypeOptions"
+      optionLabel="label"
+      optionValue="value"
+      appendTo="body"
+    />
+    <small class="text-muted-color">With one keyword, both choices behave the same.</small>
+  </div>
+
+  <div class="flex flex-col gap-1">
+    <label id="rule-category-label" for="rule-category" class="text-sm font-medium">Category</label>
+    <p-select
+      inputId="rule-category"
+      ariaLabelledBy="rule-category-label"
+      formControlName="category"
+      [options]="choices()"
+      [group]="true"
+      [filter]="true"
+      filterBy="name"
+      dataKey="id"
+      optionLabel="name"
+      optionGroupLabel="parent.name"
+      optionGroupChildren="items"
+      placeholder="Choose a category"
+      appendTo="body"
+    />
+    @if (categoryError(); as error) {
+      <small class="text-rose-700 dark:text-rose-400">{{ error }}</small>
+    }
+  </div>
+
+  <div class="flex flex-col gap-1">
+    <label for="rule-priority" class="text-sm font-medium">Priority</label>
+    <p-inputnumber
+      inputId="rule-priority"
+      formControlName="priority"
+      [min]="0"
+      [fluid]="true"
+      [useGrouping]="false"
+      aria-describedby="rule-priority-help"
+    />
+    <small id="rule-priority-help" class="text-muted-color">
+      When several rules match, the highest number wins.
+    </small>
+    @if (priorityError(); as error) {
+      <small class="text-rose-700 dark:text-rose-400">{{ error }}</small>
+    }
+  </div>
+
+  <div class="grid grid-cols-2 gap-3">
+    <div class="flex min-w-0 flex-col gap-1">
+      <label for="rule-min" class="text-sm font-medium">Minimum amount</label>
+      <p-inputnumber
+        inputId="rule-min"
+        formControlName="minAmount"
+        mode="currency"
+        currency="USD"
+        [min]="0"
+        [fluid]="true"
+        placeholder="No minimum"
+      />
+    </div>
+    <div class="flex min-w-0 flex-col gap-1">
+      <label for="rule-max" class="text-sm font-medium">Maximum amount</label>
+      <p-inputnumber
+        inputId="rule-max"
+        formControlName="maxAmount"
+        mode="currency"
+        currency="USD"
+        [min]="0"
+        [fluid]="true"
+        placeholder="No maximum"
+      />
+    </div>
+    @if (amountError(); as error) {
+      <small class="col-span-2 text-rose-700 dark:text-rose-400">{{ error }}</small>
+    }
+  </div>
+
+  @if (errorMessage(); as message) {
+    <p role="alert" class="m-0 text-sm text-rose-700 dark:text-rose-400">{{ message }}</p>
+  }
+
+  @if (isEditMode()) {
+    <button
+      type="button"
+      class="cursor-pointer self-start rounded-lg border border-rose-300 px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-400 dark:hover:bg-rose-950"
+      (click)="remove.emit()"
+    >
+      Delete rule
+    </button>
+  }
+</form>
