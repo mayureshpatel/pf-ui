@@ -6,7 +6,7 @@
       <span
         data-testid="kept-amount"
         class="text-4xl font-bold tracking-tight tabular-nums"
-        [class]="isNegative() ? 'text-rose-600 dark:text-rose-400' : 'text-primary'"
+        [class]="isNegative() ? 'text-rose-600 dark:text-rose-400' : 'text-primary-700 dark:text-primary-400'"
       >
         {{ kept() | formatCurrency }}
       </span>
@@ -16,7 +16,7 @@
         [class]="
           savingsRate() < 0 && income() > 0
             ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
-            : 'bg-primary/10 text-primary'
+            : 'bg-primary/10 text-primary-700 dark:text-primary-400'
         "
       >
         {{ rateLabel() }}

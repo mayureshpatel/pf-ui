@@ -57,6 +57,28 @@ describe('YtdSummaryComponent', () => {
     });
   });
 
+  // PF-862: the net-savings label and amount used bare `text-primary` (about 2.5:1 on white).
+  describe('net savings colour', () => {
+    function netSavingsElements(): HTMLElement[] {
+      const label: HTMLElement | undefined = Array.from<HTMLElement>(
+        fixture.nativeElement.querySelectorAll('span'),
+      ).find((el) => el.textContent?.trim() === 'Net savings');
+      return [label as HTMLElement, label?.nextElementSibling as HTMLElement];
+    }
+
+    it('should colour the label and amount with the AA shade pair', () => {
+      // act
+      setInputs(2026, 12000, 8000, 33.3);
+
+      // assert & verify
+      for (const el of netSavingsElements()) {
+        expect(el.classList.contains('text-primary-700')).toBe(true);
+        expect(el.classList.contains('dark:text-primary-400')).toBe(true);
+        expect(el.classList.contains('text-primary')).toBe(false);
+      }
+    });
+  });
+
   describe('savingsRateStyles', () => {
     it('should use the emerald (strong) tier at 20% or above', () => {
       // act
