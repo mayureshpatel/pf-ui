@@ -197,4 +197,16 @@ describe('MerchantListComponent', () => {
     // assert & verify
     expect(fixture.nativeElement.querySelector('[data-testid="range"]')).toBeNull();
   });
+
+  // PF-883: colour is not the only cue for the open row
+  it('should mark only the selected row with aria-current', () => {
+    // act
+    render({ selectedId: 2 });
+
+    // assert & verify
+    const current = Array.from<HTMLElement>(
+      fixture.nativeElement.querySelectorAll('[data-testid="open-merchant"]'),
+    ).map((b) => b.getAttribute('aria-current'));
+    expect(current).toEqual([null, 'true', null]);
+  });
 });

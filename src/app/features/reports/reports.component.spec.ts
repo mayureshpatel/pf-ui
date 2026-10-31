@@ -837,6 +837,97 @@ describe('ReportsComponent', () => {
     expect(router.navigate).not.toHaveBeenCalledWith(['/transactions'], expect.anything());
   });
 
+  // PF-888
+  it('should check merchant ambiguity against every merchant, not just the ones loaded for the filter', async () => {
+    // arrange -- only "Whole Foods" is in the loaded list, but "Whole Foods Market" exists too
+    await create();
+    const merchantApi = TestBed.inject(MerchantApiService) as unknown as Mocked<
+      Pick<MerchantApiService, 'getMerchants'>
+    >;
+    merchantApi.getMerchants.mockImplementation(((term: string | null) =>
+      of({
+        content: (term === 'Whole Foods'
+          ? [
+              { id: 9, name: 'Whole Foods' },
+              { id: 12, name: 'Whole Foods Market' },
+            ]
+          : [{ id: 9, name: 'Whole Foods' }]) as Merchant[],
+        page: { totalElements: 2, totalPages: 1, number: 0, size: 20 },
+      })) as never);
+
+    // act
+    component.onFiltersChange({ accountIds: [], merchantId: 9, merchantName: 'Whole Foods' });
+    await settle();
+
+    // assert & verify
+    const linkable = component['linkable']();
+    expect(linkable.ok).toBe(false);
+    expect(linkable.reason).toContain('similar names');
+  });
+
+  it('should still offer Open in Transactions for a merchant whose name is unique', async () => {
+    // arrange
+    await create();
+
+    // act
+    component.onFiltersChange({ accountIds: [], merchantId: 9, merchantName: 'Whole Foods' });
+    await settle();
+
+    // assert & verify
+    expect(component['linkable']().ok).toBe(true);
+  });
+
+  it('should show an inline retry, not nothing, when the trend fails to load', async () => {
+    // arrange
+    api.trend.mockReturnValue(throwError(() => new Error('down')));
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    // act
+    await create();
+
+    // assert & verify -- the rest of the report is still there
+    expect(fixture.nativeElement.querySelector('[data-testid="trend-failed"]')).toBeTruthy();
+    expect(text()).toContain("Couldn't load the trend");
+    expect(text()).toContain('Food');
+
+    // act -- retry succeeds
+    api.trend.mockReturnValue(of(trend));
+    (
+      fixture.nativeElement.querySelector(
+        '[data-testid="trend-failed"] button',
+      ) as HTMLButtonElement
+    ).click();
+    await settle();
+
+    // assert & verify
+    expect(fixture.nativeElement.querySelector('[data-testid="trend-failed"]')).toBeNull();
+    expect(api.trend).toHaveBeenCalledTimes(2);
+  });
+
+  it('should show an inline retry when the transactions page fails to load at the leaf', async () => {
+    // arrange
+    await create();
+    api.transactions.mockReturnValue(throwError(() => new Error('down')));
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    // act
+    component.onOpenTransactions(row('5', 'Food', 400));
+    await settle();
+
+    // assert & verify
+    expect(fixture.nativeElement.querySelector('[data-testid="leaf-failed"]')).toBeTruthy();
+    expect(text()).toContain("Couldn't load the transactions");
+  });
+
+  it('should drop a drill step from the link that has no matching filter, with a note', async () => {
+    // act
+    await create({ drill: ['CATEGORY|categoryId|5|%7B%7D|Food'] });
+
+    // assert & verify
+    expect(component.state().drill).toEqual([]);
+    expect(component.note()).toContain('drill');
+  });
+
   it('should push a history entry for a drill so Back steps out, and replace for other changes', async () => {
     // arrange
     await create();

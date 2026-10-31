@@ -61,6 +61,7 @@ import {
   filterOnly,
   GROUP_LABELS,
   Granularity,
+  hydrateState,
   granularityOf,
   isAllowed,
   isTransactionsLinkable,
@@ -73,13 +74,7 @@ import {
   stepBack,
   toTransactionsQuery,
 } from './utils/explore-helpers';
-import {
-  defaultState,
-  effectiveDates,
-  fromQueryParams,
-  TIME_GROUPINGS,
-  toQueryParams,
-} from './utils/explore-state';
+import { defaultState, effectiveDates, TIME_GROUPINGS, toQueryParams } from './utils/explore-state';
 
 const LOOKUP_PAGE_SIZE = 20;
 const LEAF_PAGE_SIZE = 20;
@@ -135,6 +130,9 @@ export class ReportsComponent {
   readonly result: WritableSignal<ExploreResult | null> = signal(null);
   readonly trend: WritableSignal<ExploreTrend | null> = signal(null);
   readonly leafPage: WritableSignal<PageResponse<ExploreTransaction> | null> = signal(null);
+  /** The trend, or the page of transactions, failed to load though the groups did. */
+  readonly trendFailed: WritableSignal<boolean> = signal(false);
+  readonly leafFailed: WritableSignal<boolean> = signal(false);
   readonly leafIndex: WritableSignal<number> = signal(0);
   readonly loading: WritableSignal<boolean> = signal(false);
   readonly loadError: WritableSignal<boolean> = signal(false);
@@ -152,11 +150,18 @@ export class ReportsComponent {
   readonly categories: WritableSignal<Category[]> = signal([]);
   readonly tags: WritableSignal<Tag[]> = signal([]);
   readonly merchants: WritableSignal<Merchant[]> = signal([]);
+  /**
+   * Merchants whose name matches the merchant being filtered on, looked up for that name alone, so
+   * the ambiguity check sees every similar name and not only the ones in the filter's list. Null
+   * until answered.
+   */
+  private readonly similarMerchants: WritableSignal<Merchant[] | null> = signal(null);
 
   private readonly heading: Signal<ElementRef<HTMLElement> | undefined> =
     viewChild<ElementRef<HTMLElement>>('heading');
   private loadSubscription: Subscription | null = null;
   private merchantSubscription: Subscription | null = null;
+  private similarSubscription: Subscription | null = null;
   private loadRun = 0;
   /** The URL parameters last written or read, so the URL effect doesn't echo what it just read. */
   private urlKey = '';
@@ -234,7 +239,7 @@ export class ReportsComponent {
         return no('tell this category apart from others with similar names');
     }
     if (f.merchantId !== undefined) {
-      const others: string[] = this.merchants()
+      const others: string[] = (this.similarMerchants() ?? this.merchants())
         .filter((m: Merchant) => m.id !== f.merchantId)
         .map((m: Merchant) => m.name);
       if (contains(others, f.merchantName))
@@ -267,7 +272,7 @@ export class ReportsComponent {
   });
 
   constructor() {
-    const { state, note } = fromQueryParams(this.route.snapshot.queryParams);
+    const { state, note } = hydrateState(this.route.snapshot.queryParams);
     this.state.set(state);
     this.view.set(this.route.snapshot.queryParams['view'] === 'networth' ? 'networth' : 'explorer');
     this.netWorthParams.set(nwOnly(this.route.snapshot.queryParams));
@@ -279,6 +284,11 @@ export class ReportsComponent {
     effect((): void => {
       const params: Params = this.urlParams();
       untracked((): void => this.writeUrl(params));
+    });
+
+    effect((): void => {
+      const name: string | undefined = this.state().filters.merchantName;
+      untracked((): void => this.loadSimilarMerchants(name));
     });
 
     this.route.queryParams
@@ -510,6 +520,9 @@ export class ReportsComponent {
           this.result.set(result);
           this.trend.set(trend);
           this.leafPage.set(leaf);
+          // a part that failed to load comes back null; the rest of the report is still good
+          this.trendFailed.set(trend === null);
+          this.leafFailed.set(state.leaf && leaf === null);
           this.loadedOnce.set(true);
         },
         error: (error: unknown): void => {
@@ -517,6 +530,8 @@ export class ReportsComponent {
           this.result.set(null);
           this.trend.set(null);
           this.leafPage.set(null);
+          this.trendFailed.set(false);
+          this.leafFailed.set(false);
           this.loadError.set(true);
         },
       });
@@ -559,7 +574,7 @@ export class ReportsComponent {
       this.view.set(view);
       return;
     }
-    const { state, note } = fromQueryParams(params);
+    const { state, note } = hydrateState(params);
     const index: number = this.pageFrom(params);
     const incoming: string = JSON.stringify({
       ...toQueryParams(state),
@@ -598,6 +613,21 @@ export class ReportsComponent {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({ next: (data: Tag[]): void => this.tags.set(data), error: soft('tags') });
     this.loadMerchants(null);
+  }
+
+  /** Looks up the merchants whose name contains the filtered merchant's name (see `similarMerchants`). */
+  private loadSimilarMerchants(name: string | undefined): void {
+    this.similarSubscription?.unsubscribe();
+    this.similarMerchants.set(null);
+    if (!name) return;
+    this.similarSubscription = this.merchantApi
+      .getMerchants(name, { page: 0, size: LOOKUP_PAGE_SIZE })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res: PageResponse<Merchant>): void => this.similarMerchants.set(res.content),
+        error: (error: unknown): void =>
+          console.error('Failed to look up similar merchants:', error),
+      });
   }
 
   private loadMerchants(term: string | null): void {

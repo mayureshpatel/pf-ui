@@ -10,4 +10,12 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
   templateUrl: './app.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class App {}
+export class App {
+  /**
+   * PrimeNG's confirm dialog sets role="alertdialog" on its always-present `<p-dialog>` host as
+   * well as on the visible container, and only the container is named (aria-labelledby the
+   * header). The host is a plain wrapper, so strip its role; otherwise it is an unnamed dialog
+   * (Lighthouse `aria-dialog-name`) on every page.
+   */
+  protected readonly confirmDialogPt = { host: { role: 'presentation' } };
+}

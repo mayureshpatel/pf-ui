@@ -17,8 +17,10 @@ import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { vi, Mock, Mocked } from 'vitest';
 import {
+  PageResponse,
   Transaction,
   TransactionCreateRequest,
+  TransactionFilter,
   TransactionFormSaveEvent,
   TransactionUpdateRequest,
 } from '@models/transaction.model';
@@ -67,6 +69,13 @@ describe('TransactionsComponent', () => {
   let mockConfirmationService: { confirm: Mock<(confirmation: Confirmation) => void> };
   let mockRouter: Mocked<Pick<Router, 'navigate'>>;
   let mockActivatedRoute: MockActivatedRoute;
+
+  /**
+   * The list loads (page size above 1). A period-only page that comes back empty also sends a
+   * one-row probe for "does anything exist" (PF-867), which is not a reload.
+   */
+  const listLoads = (): unknown[][] =>
+    mockTransactionApi.getTransactions.mock.calls.filter(([, paging]) => paging.size !== 1);
 
   beforeEach(async () => {
     mockTransactionApi = {
@@ -226,7 +235,7 @@ describe('TransactionsComponent', () => {
       // assert & verify
       expect(mockToast.success).toHaveBeenCalledWith('Transaction created');
       expect(component.panelMode()).toBe('closed');
-      expect(mockTransactionApi.getTransactions).toHaveBeenCalledTimes(2); // initial load + reload
+      expect(listLoads()).toHaveLength(2); // initial load + reload
     });
 
     it('should toast an error and leave the panel open when create fails', () => {
@@ -629,7 +638,7 @@ describe('TransactionsComponent', () => {
       expect(mockToast.success).toHaveBeenCalledWith('Updated 2 transactions');
       expect(component.panelMode()).toBe('closed');
       expect(component.selectedTransactions()).toEqual([]);
-      expect(mockTransactionApi.getTransactions).toHaveBeenCalledTimes(2); // initial load + post-save reload
+      expect(listLoads()).toHaveLength(2); // initial load + post-save reload
       expect(component.bulkSaving()).toBe(false);
     });
 
@@ -697,7 +706,7 @@ describe('TransactionsComponent', () => {
 
       // assert & verify
       expect(mockTransactionApi.deleteTransaction).toHaveBeenCalledWith(txnToDelete.id);
-      expect(mockTransactionApi.getTransactions).toHaveBeenCalledTimes(2); // initial load + post-delete reload
+      expect(listLoads()).toHaveLength(2); // initial load + post-delete reload
       expect(component.transactions()).toEqual([remainingTxn]);
       expect(component.transactions().some((t) => t.id === txnToDelete.id)).toBe(false);
     });
@@ -731,7 +740,7 @@ describe('TransactionsComponent', () => {
 
       // assert & verify
       expect(mockToast.error).toHaveBeenCalledWith('Failed to delete transaction.');
-      expect(mockTransactionApi.getTransactions).toHaveBeenCalledTimes(1); // no reload attempted
+      expect(listLoads()).toHaveLength(1); // no reload attempted
       expect(component.transactions()).toEqual([]);
     });
   });
@@ -751,7 +760,7 @@ describe('TransactionsComponent', () => {
       expect(mockTransactionApi.markAsTransfer).toHaveBeenCalledWith([1, 2]);
       expect(mockToast.success).toHaveBeenCalledWith('2 transactions marked as transfer');
       expect(component.selectedTransactions()).toEqual([]);
-      expect(mockTransactionApi.getTransactions).toHaveBeenCalledTimes(2); // initial load + post-mark reload
+      expect(listLoads()).toHaveLength(2); // initial load + post-mark reload
     });
 
     it('should do nothing when no transactions are selected', () => {
@@ -797,7 +806,7 @@ describe('TransactionsComponent', () => {
       expect(mockTransactionApi.unmarkAsTransfer).toHaveBeenCalledWith([1, 2]);
       expect(mockToast.success).toHaveBeenCalledWith('2 transactions unmarked as transfer');
       expect(component.selectedTransactions()).toEqual([]);
-      expect(mockTransactionApi.getTransactions).toHaveBeenCalledTimes(2); // initial load + post-unmark reload
+      expect(listLoads()).toHaveLength(2); // initial load + post-unmark reload
     });
 
     it('should do nothing when no transactions are selected', () => {
@@ -1393,6 +1402,25 @@ describe('TransactionsComponent', () => {
     });
 
     describe('tabs', () => {
+      // PF-868: the review tabs control one panel, named by whichever tab is active
+      it('should wrap the list area in a tabpanel labelled by the active tab', () => {
+        // act
+        openAt({});
+        const panel = (): HTMLElement =>
+          fixture.nativeElement.querySelector('[role="tabpanel"]') as HTMLElement;
+
+        // assert & verify
+        expect(panel().id).toBe('transactions-tabpanel');
+        expect(panel().getAttribute('aria-labelledby')).toBe('transaction-tab-all');
+
+        // act
+        component.onTabChange('NEEDS_CATEGORY');
+        fixture.detectChanges();
+
+        // assert & verify
+        expect(panel().getAttribute('aria-labelledby')).toBe('transaction-tab-needs-category');
+      });
+
       it('should leave other filters alone when All is clicked while already on All', () => {
         // arrange
         openAt({});
@@ -1427,6 +1455,143 @@ describe('TransactionsComponent', () => {
 
         // assert & verify
         expect(fixture.nativeElement.textContent).toContain('No transactions yet');
+      });
+
+      // PF-867: the default This month is a date range, which is not a "filter" in the user's
+      // mind. An empty result has to be told apart from "nothing exists", so the page asks once
+      // for any transaction at all.
+      describe('when only the period is applied (PF-867)', () => {
+        const sampleTransaction = {
+          id: 7,
+          account: { id: 1, name: 'Checking' },
+          category: null,
+          amount: 10,
+          date: '2026-03-01',
+          description: 'March coffee',
+          type: 'EXPENSE',
+          merchant: null,
+          tags: [],
+        } as unknown as Transaction;
+
+        const page = (
+          content: Transaction[],
+          totalElements: number,
+        ): PageResponse<Transaction> => ({
+          content,
+          page: { totalElements, totalPages: 1, number: 0, size: 20 },
+        });
+
+        /** Opens the bare page; the API answers empty for any dated request, `anywhere` for the rest. */
+        const openWithHistory = (anywhere: Transaction[]): void => {
+          vi.useFakeTimers({ toFake: ['Date'] });
+          vi.setSystemTime(new Date(2026, 9, 17));
+          mockActivatedRoute.snapshot.queryParams = {};
+          mockTransactionApi.getTransactions.mockImplementation((filter: TransactionFilter) =>
+            of(filter.startDate ? page([], 0) : page(anywhere, anywhere.length)),
+          );
+          fixture = TestBed.createComponent(TransactionsComponent);
+          component = fixture.componentInstance;
+          fixture.detectChanges();
+        };
+
+        it('should show the "yet" state with Add and Import CSV for a user with no transactions at all', () => {
+          // act
+          openWithHistory([]);
+
+          // assert & verify
+          const root: HTMLElement = fixture.nativeElement;
+          expect(root.textContent).toContain('No transactions yet');
+          expect(root.textContent).toContain('Add transaction');
+          expect(root.textContent).toContain('Import CSV');
+          expect(root.textContent).not.toContain('match these filters');
+          expect(root.querySelector('[data-testid="empty-clear-filters"]')).toBeNull();
+        });
+
+        it('should name the period and offer Show all time when older transactions exist', () => {
+          // act
+          openWithHistory([sampleTransaction]);
+
+          // assert & verify
+          const root: HTMLElement = fixture.nativeElement;
+          expect(root.textContent).toContain('No transactions in October yet');
+          expect(root.textContent).not.toContain('No transactions yet');
+          expect(root.querySelector('[data-testid="empty-show-all-time"]')).toBeTruthy();
+        });
+
+        it('should widen to all time and list the older transactions when Show all time is clicked', () => {
+          // arrange
+          openWithHistory([sampleTransaction]);
+
+          // act
+          (
+            fixture.nativeElement.querySelector(
+              '[data-testid="empty-show-all-time"] button',
+            ) as HTMLButtonElement
+          ).click();
+          fixture.detectChanges();
+
+          // assert & verify
+          expect(component.state().filter.startDate).toBeUndefined();
+          expect(component.transactions()).toEqual([sampleTransaction]);
+        });
+
+        it('should ask for one transaction with no filters to find out', () => {
+          // act
+          openWithHistory([]);
+
+          // assert & verify
+          const calls = mockTransactionApi.getTransactions.mock.calls;
+          expect(calls.some(([filter, paging]) => !filter.startDate && paging.size === 1)).toBe(
+            true,
+          );
+        });
+
+        it('should not make that extra request when another filter is applied', () => {
+          // act
+          openAt({ description: 'zzz' });
+
+          // assert & verify
+          expect(component.emptyKind()).toBe('filtered');
+          expect(component.anyTransactionsExist()).toBeNull();
+        });
+      });
+
+      // PF-869: a failed reload must not leave the old rows (and their selection) on screen
+      // under the new filter
+      it('should drop the old rows and selection, and show the error state, when a filter change fails to load', () => {
+        // arrange -- a page of two rows with one selected
+        const rows = [
+          {
+            id: 1,
+            description: 'A',
+            date: '2026-10-02',
+            amount: 1,
+            type: 'EXPENSE',
+            account: { id: 1, name: 'C' },
+          },
+          {
+            id: 2,
+            description: 'B',
+            date: '2026-10-03',
+            amount: 2,
+            type: 'EXPENSE',
+            account: { id: 1, name: 'C' },
+          },
+        ] as unknown as Transaction[];
+        openAt({}, rows);
+        component.selectedTransactions.set([rows[0]]);
+        expect(component.transactions()).toHaveLength(2);
+        mockTransactionApi.getTransactions.mockReturnValue(throwError(() => new Error('down')));
+
+        // act
+        component.onFilterChange({ description: 'zzz' });
+        fixture.detectChanges();
+
+        // assert & verify
+        expect(component.transactions()).toEqual([]);
+        expect(component.selectedTransactions()).toEqual([]);
+        expect(component.totalRecords()).toBe(0);
+        expect(fixture.nativeElement.querySelector('app-page-error-state')).toBeTruthy();
       });
 
       it('should show the error state with retry when loading fails with nothing to show', () => {

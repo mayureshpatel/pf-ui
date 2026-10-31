@@ -3,6 +3,7 @@ import {
   Component,
   computed,
   effect,
+  OnInit,
   input,
   InputSignal,
   output,
@@ -24,7 +25,7 @@ import { BudgetRow, isUnbudgeted } from '../../utils/budget-helpers';
   templateUrl: './budget-category-view.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class BudgetCategoryViewComponent {
+export class BudgetCategoryViewComponent implements OnInit {
   readonly row: InputSignal<BudgetRow> = input.required<BudgetRow>();
   readonly monthName: InputSignal<string> = input.required<string>();
   readonly saving: InputSignal<boolean> = input<boolean>(false);
@@ -54,14 +55,31 @@ export class BudgetCategoryViewComponent {
     (): string => `${this.row().status.category.id}:${this.row().budgetId ?? 'none'}`,
   );
 
+  /** The key the form was last filled for; the effect only resets when it really changes. */
+  private filledFor: string | null = null;
+
   constructor() {
     effect((): void => {
-      this.formKey();
-      untracked((): void => {
-        this.form.reset({
-          amount: isUnbudgeted(this.row()) ? null : this.row().status.budgetedAmount,
-        });
-      });
+      const key: string = this.formKey();
+      // the fill at init already covered this key; only a different category or budget refills
+      if (key === this.filledFor) return;
+      untracked((): void => this.fill(key));
+    });
+  }
+
+  /**
+   * Fills the limit at init, synchronously and before the first render, so a limit typed at once
+   * can never be replaced by an effect that runs a moment later.
+   */
+  ngOnInit(): void {
+    const key: string = this.formKey();
+    if (key !== this.filledFor) this.fill(key);
+  }
+
+  private fill(key: string): void {
+    this.filledFor = key;
+    this.form.reset({
+      amount: isUnbudgeted(this.row()) ? null : this.row().status.budgetedAmount,
     });
   }
 

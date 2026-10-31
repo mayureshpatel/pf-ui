@@ -210,4 +210,41 @@ describe('AccountReconcileFormComponent', () => {
     fixture.detectChanges();
     expect(component.form.value.targetBalance).toBeNull();
   });
+
+  // PF-880
+  describe('init and the first render', () => {
+    it('should not reset again on the first render (typing survives it)', () => {
+      // arrange
+      component.ngOnInit();
+      component.form.controls.targetBalance.setValue(150);
+
+      // act -- the first render and its effects run now
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.form.controls.targetBalance.value).toBe(150);
+    });
+
+    it('should start empty at init', () => {
+      // act
+      component.ngOnInit();
+
+      // assert & verify
+      expect(component.form.controls.targetBalance.value).toBeNull();
+      expect(component.errorMessage()).toBeNull();
+    });
+
+    it('should still reset when another account is shown', () => {
+      // arrange
+      fixture.detectChanges();
+      component.form.controls.targetBalance.setValue(150);
+
+      // act
+      fixture.componentRef.setInput('account', { ...mockAccount, id: 2 });
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.form.controls.targetBalance.value).toBeNull();
+    });
+  });
 });

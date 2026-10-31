@@ -504,4 +504,105 @@ describe('TagsComponent', () => {
     expect(document.activeElement).toBe(rows()[0]);
     fixture.nativeElement.remove();
   });
+
+  // PF-890
+  describe('after the review', () => {
+    const openFirst = async (): Promise<void> => {
+      rows()[0].focus();
+      rows()[0].click();
+      await settle();
+    };
+
+    it('should ask for the tag list without the generic error toast', async () => {
+      // act
+      await create();
+
+      // assert & verify
+      expect(api.getTags).toHaveBeenCalledWith(true);
+    });
+
+    it('should keep the open form, with a retry line, when a reload fails', async () => {
+      // arrange
+      await create();
+      await openFirst();
+      api.getTags.mockReturnValue(throwError(() => new Error('down')));
+
+      // act
+      component.loadTags();
+      await settle();
+
+      // assert & verify
+      expect(fixture.nativeElement.querySelector('app-tag-edit-form')).toBeTruthy();
+      expect(fixture.nativeElement.querySelector('app-page-error-state')).toBeNull();
+      expect(rows()).toHaveLength(3);
+      expect(fixture.nativeElement.querySelector('[data-testid="reload-failed"]')).toBeTruthy();
+    });
+
+    it('should say the tag is gone, then switch to Add, when a reload comes back empty', async () => {
+      // arrange
+      await create();
+      await openFirst();
+      api.getTags.mockReturnValue(of([]));
+
+      // act
+      component.loadTags();
+      await settle();
+
+      // assert & verify
+      expect(toast.info).toHaveBeenCalledWith('That tag no longer exists.');
+      expect(component['panelMode']()).toBe('add');
+    });
+
+    it('should put focus on the panel after a delete, not on the row that is about to vanish', async () => {
+      // arrange
+      await create();
+      await openFirst();
+      const reload = new Subject<Tag[]>();
+      api.getTags.mockReturnValue(reload);
+      button('Delete tag')!.click();
+      confirmation.confirm.mock.calls[0][0].accept!();
+
+      // act
+      await settle();
+      reload.next([trip, work]);
+      reload.complete();
+      await settle();
+
+      // assert & verify
+      const panel = fixture.nativeElement.querySelector('app-side-panel') as HTMLElement;
+      expect(document.activeElement).not.toBe(document.body);
+      expect(panel.contains(document.activeElement)).toBe(true);
+    });
+
+    it('should close the panel on Escape', async () => {
+      // arrange
+      await create();
+      await openFirst();
+      expect(component['panelMode']()).toBe('tag');
+
+      // act
+      (fixture.nativeElement.querySelector('app-side-panel aside') as HTMLElement).dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+      );
+      await settle();
+
+      // assert & verify
+      expect(component['panelMode']()).toBe('overview');
+    });
+
+    it('should show the add form above the empty list on a phone, with no Back or Close', async () => {
+      // arrange
+      api.getTags.mockReturnValue(of([]));
+
+      // act
+      await create();
+
+      // assert & verify
+      const panel = fixture.nativeElement.querySelector('app-side-panel') as HTMLElement;
+      expect(panel.className).toContain('order-first');
+      expect(text()).toContain('No tags yet');
+      expect(button('Back')).toBeUndefined();
+      expect(button('Close')).toBeUndefined();
+    });
+  });
 });

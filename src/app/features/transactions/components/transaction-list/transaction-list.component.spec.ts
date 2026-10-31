@@ -154,6 +154,81 @@ describe('TransactionListComponent', () => {
     expect(changed).toHaveBeenLastCalledWith([1, 2, 3]);
   });
 
+  // PF-868
+  describe('selection accessibility', () => {
+    it('should show the header checkbox as indeterminate when only part of the page is selected', () => {
+      // act
+      render([txn({ id: 1 }), txn({ id: 2 }), txn({ id: 3 })], { selectedIds: [1] });
+
+      // assert & verify
+      const header = all<HTMLInputElement>('[data-testid="header-checkbox"]')[0];
+      expect(header.indeterminate).toBe(true);
+      expect(header.checked).toBe(false);
+    });
+
+    it('should show the header checkbox as plain checked when everything is selected, and plain unchecked when nothing is', () => {
+      // act
+      render([txn({ id: 1 }), txn({ id: 2 })], { selectedIds: [1, 2] });
+      const header = all<HTMLInputElement>('[data-testid="header-checkbox"]')[0];
+
+      // assert & verify
+      expect(header.indeterminate).toBe(false);
+      expect(header.checked).toBe(true);
+
+      // act
+      render([txn({ id: 1 }), txn({ id: 2 })], { selectedIds: [] });
+
+      // assert & verify
+      expect(header.indeterminate).toBe(false);
+      expect(header.checked).toBe(false);
+    });
+
+    it('should label each row checkbox with the merchant, amount and date so rows can be told apart', () => {
+      // act
+      render([
+        txn({
+          id: 1,
+          amount: 4.5,
+          date: '2026-10-03T00:00:00Z',
+          merchant: { id: 2, name: 'Starbucks' } as never,
+        }),
+        txn({
+          id: 2,
+          amount: 6.25,
+          date: '2026-10-05T00:00:00Z',
+          merchant: { id: 2, name: 'Starbucks' } as never,
+        }),
+      ]);
+
+      // assert & verify
+      const labels = all<HTMLInputElement>('[data-testid="row-checkbox"]').map((b) =>
+        b.getAttribute('aria-label'),
+      );
+      expect(labels).toEqual([
+        'Select Starbucks, $4.50, 2026-10-03',
+        'Select Starbucks, $6.25, 2026-10-05',
+      ]);
+      expect(new Set(labels).size).toBe(2);
+    });
+
+    it('should forget the shift-click anchor when the page of rows changes', () => {
+      // arrange -- click row 1 on the first page
+      render([txn({ id: 1 }), txn({ id: 2 }), txn({ id: 3 }), txn({ id: 4 })]);
+      const changed = vi.fn();
+      component.selectionChange.subscribe(changed);
+      all<HTMLInputElement>('[data-testid="row-checkbox"]')[0].click();
+
+      // act -- a different page arrives, then the first click on it is a shift-click
+      render([txn({ id: 11 }), txn({ id: 12 }), txn({ id: 13 }), txn({ id: 14 })]);
+      all<HTMLInputElement>('[data-testid="row-checkbox"]')[2].dispatchEvent(
+        new MouseEvent('click', { shiftKey: true, bubbles: true }),
+      );
+
+      // assert & verify -- only the clicked row, not a range from a row never clicked here
+      expect(changed).toHaveBeenLastCalledWith([13]);
+    });
+  });
+
   it('should toggle sort direction on an active header and start descending on a new one', () => {
     // arrange
     render([txn({ id: 1 })], { sort: 'amount,desc' });

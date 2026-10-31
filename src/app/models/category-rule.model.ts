@@ -30,7 +30,7 @@ export interface CategoryRule {
   keywords: string[];
   matchType: MatchType;
   priority: number;
-  category: Category;
+  category: Category | null;
   minAmount: number | null;
   maxAmount: number | null;
 }

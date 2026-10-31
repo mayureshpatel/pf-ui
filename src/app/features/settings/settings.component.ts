@@ -6,8 +6,9 @@ import {
   signal,
   WritableSignal,
 } from '@angular/core';
+import { Location } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Params, Router } from '@angular/router';
+import { ActivatedRoute, NavigationEnd, NavigationStart, Params, Router } from '@angular/router';
 import { ConfirmationService } from 'primeng/api';
 import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen-toolbar';
 import { AppearanceSettingsComponent } from './components/appearance-settings/appearance-settings.component';
@@ -43,12 +44,31 @@ export class SettingsComponent {
   private readonly confirmation: ConfirmationService = inject(ConfirmationService);
   private readonly guard: SettingsGuard = inject(SettingsGuard);
   private readonly destroyRef: DestroyRef = inject(DestroyRef);
+  private readonly location: Location = inject(Location);
+
+  /** The id of the navigation that is on screen, to tell Back from Forward. */
+  private currentNavigationId = 0;
+  /** Which way the browser's last Back or Forward button moved, or null for anything else. */
+  private lastPop: 'back' | 'forward' | null = null;
 
   readonly section: WritableSignal<SettingsSection> = signal(
     sectionFromParam(this.route.snapshot.queryParams['section']),
   );
 
   constructor() {
+    this.router.events.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((event): void => {
+      if (event instanceof NavigationEnd) {
+        this.currentNavigationId = event.id;
+      } else if (event instanceof NavigationStart) {
+        const restored: number | undefined = event.restoredState?.navigationId;
+        this.lastPop =
+          event.navigationTrigger === 'popstate' && restored !== undefined
+            ? restored < this.currentNavigationId
+              ? 'back'
+              : 'forward'
+            : null;
+      }
+    });
     this.route.queryParams
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((params: Params): void => this.followUrl(params));
@@ -90,13 +110,25 @@ export class SettingsComponent {
     if (next === this.section()) return;
     this.askIfDirty(
       (): void => this.section.set(next),
-      (): void => {
-        void this.router.navigate([], {
-          queryParams: { section: this.section() },
-          replaceUrl: true,
-        });
-      },
+      (): void => this.undoPop(),
     );
+  }
+
+  /**
+   * Puts the history back after Back or Forward was refused: steps the browser the other way, so the
+   * entries stay as they were. Without a known direction, rewrites the URL in place.
+   */
+  private undoPop(): void {
+    if (this.lastPop === 'back') {
+      this.location.forward();
+    } else if (this.lastPop === 'forward') {
+      this.location.back();
+    } else {
+      void this.router.navigate([], {
+        queryParams: { section: this.section() },
+        replaceUrl: true,
+      });
+    }
   }
 
   private askIfDirty(proceed: () => void, keep?: () => void): void {

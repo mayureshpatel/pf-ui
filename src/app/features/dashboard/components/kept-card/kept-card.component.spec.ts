@@ -75,6 +75,36 @@ describe('KeptCardComponent', () => {
     });
   });
 
+  // PF-862: bare `text-primary` is Aura's primary.500 (#10b981), about 2.5:1 on white. The
+  // positive amount and pill use the AA shade in light mode and the lighter one in dark mode.
+  describe('AA contrast shades for positive text', () => {
+    beforeEach(() => {
+      setInputs({
+        income: 6400,
+        expense: 4558,
+        previousIncome: 6000,
+        previousExpense: 4400,
+        savingsRate: 28.8,
+      });
+    });
+
+    it('should colour the positive kept amount with the AA shade pair', () => {
+      // assert & verify
+      const classes: DOMTokenList = query('[data-testid="kept-amount"]').classList;
+      expect(classes.contains('text-primary-700')).toBe(true);
+      expect(classes.contains('dark:text-primary-400')).toBe(true);
+      expect(classes.contains('text-primary')).toBe(false);
+    });
+
+    it('should colour the positive savings-rate pill with the AA shade pair', () => {
+      // assert & verify
+      const classes: DOMTokenList = query('[data-testid="kept-rate"]').classList;
+      expect(classes.contains('text-primary-700')).toBe(true);
+      expect(classes.contains('dark:text-primary-400')).toBe(true);
+      expect(classes.contains('text-primary')).toBe(false);
+    });
+  });
+
   describe('savings rate pill and bar', () => {
     it('should not show a negative savings rate in the healthy colour', () => {
       // act
