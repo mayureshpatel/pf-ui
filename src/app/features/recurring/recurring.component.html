@@ -149,7 +149,7 @@
                 #review
                 [patterns]="patterns()"
                 [dismissed]="dismissed()"
-                [merchants]="merchants()"
+                [merchants]="patternMerchants()"
                 [accounts]="accounts()"
                 [selected]="null"
                 [saving]="saving()"
@@ -163,14 +163,14 @@
               #review
               [patterns]="patterns()"
               [dismissed]="dismissed()"
-              [merchants]="merchants()"
+              [merchants]="patternMerchants()"
               [accounts]="accounts()"
               [selected]="selectedPattern()"
               [saving]="saving()"
               (backToList)="back()"
               (add)="acceptPattern($event)"
               (dismiss)="dismissPattern($event)"
-              (merchantFilter)="onMerchantFilter($event)"
+              (merchantFilter)="onPatternMerchantFilter($event)"
             />
           }
         }
