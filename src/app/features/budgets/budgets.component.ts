@@ -50,7 +50,7 @@ import {
 } from './utils/budget-helpers';
 
 /** What the docked panel is showing. */
-export type BudgetPanelMode = 'overview' | 'category' | 'add';
+type BudgetPanelMode = 'overview' | 'category' | 'add';
 
 /**
  * The Budgets page: a month's categories in three groups beside an always-present panel. The panel
@@ -125,6 +125,12 @@ export class BudgetsComponent implements OnInit {
   );
   readonly availableCategories: Signal<Category[]> = computed((): Category[] =>
     unbudgetedCategories(this.categories(), this.budgets()),
+  );
+  /** Whether the panel shows its Save button: not on the overview, nor on an add form with nothing left to add. */
+  readonly showPanelFooter: Signal<boolean> = computed(
+    (): boolean =>
+      this.panelMode() !== 'overview' &&
+      !(this.panelMode() === 'add' && this.availableCategories().length === 0),
   );
   /** Whether the Copy dialog is showing. */
   readonly copyDialogVisible: WritableSignal<boolean> = signal(false);
@@ -276,6 +282,11 @@ export class BudgetsComponent implements OnInit {
     const currentIds = new Map<number, number>(
       this.budgets().map((b: Budget): [number, number] => [b.category.id, b.id]),
     );
+    // what each request does, so the toast can say how many limits were added and how many updated
+    const kinds: ('added' | 'updated')[] = items.map((item: Budget): 'added' | 'updated' =>
+      currentIds.has(item.category.id) ? 'updated' : 'added',
+    );
+    const limits = (count: number): string => `${count} ${count === 1 ? 'limit' : 'limits'}`;
     const calls: Observable<boolean>[] = items.map((item: Budget): Observable<boolean> => {
       const existingId: number | undefined = currentIds.get(item.category.id);
       // a category that already has a limit this month is updated by id, a missing one is created
@@ -294,13 +305,20 @@ export class BudgetsComponent implements OnInit {
         finalize((): void => this.saving.set(false)),
       )
       .subscribe((results: boolean[]): void => {
-        const added: number = results.filter(Boolean).length;
-        const failed: number = results.length - added;
-        const noun: string = added === 1 ? 'limit' : 'limits';
+        const done = (kind: 'added' | 'updated'): number =>
+          results.filter((ok: boolean, i: number): boolean => ok && kinds[i] === kind).length;
+        const failed: number = results.filter((ok: boolean): boolean => !ok).length;
+        const parts: string[] = [];
+        if (done('added') > 0) parts.push(`Added ${limits(done('added'))}`);
+        if (done('updated') > 0) {
+          parts.push(`${parts.length === 0 ? 'Updated' : 'updated'} ${limits(done('updated'))}`);
+        }
         if (failed === 0) {
-          this.toast.success(`Added ${added} ${noun}`);
+          this.toast.success(parts.join(', '));
         } else {
-          this.toast.error(`Added ${added} ${noun}, ${failed} failed`);
+          this.toast.error(
+            [...(parts.length > 0 ? parts : ['No limits copied']), `${failed} failed`].join(', '),
+          );
         }
         this.loadMonth();
       });
@@ -378,13 +396,14 @@ export class BudgetsComponent implements OnInit {
       )
       .subscribe({
         next: (): void => {
-          this.toast.success('Budget updated');
+          this.toast.success(row.budgetId !== null ? 'Budget updated' : 'Budget added');
           this.categoryView()?.form.markAsPristine();
           this.loadMonth();
         },
         error: (error: HttpErrorResponse): void => {
           console.error('Error saving budget:', error);
           this.toast.error(error.error?.detail || 'Failed to save budget');
+          this.reloadIfBudgetExists(error);
         },
       });
   }
@@ -410,8 +429,19 @@ export class BudgetsComponent implements OnInit {
         error: (error: HttpErrorResponse): void => {
           console.error('Error adding budget:', error);
           this.toast.error(error.error?.detail || 'Failed to add budget');
+          this.reloadIfBudgetExists(error);
         },
       });
+  }
+
+  /**
+   * "A budget already exists" means the server has a budget this page never saw (another tab, or a
+   * stale list), so reload the month: the next save then finds its id and updates it.
+   */
+  private reloadIfBudgetExists(error: HttpErrorResponse): void {
+    if (String(error.error?.detail ?? '').includes('already exists')) {
+      this.loadMonth();
+    }
   }
 
   /** Confirms, then removes the selected category's budget for this month. */

@@ -283,7 +283,7 @@ describe('BudgetsComponent', () => {
   });
 
   describe('save limit', () => {
-    it('should upsert once, toast, reload and stay on the category', () => {
+    it('should update an existing budget by id once, toast, reload and stay on the category', () => {
       // arrange
       component.openCategory(component.rows()[0]);
       mockBudgetApi.getBudgetStatus.mockClear();
@@ -297,6 +297,64 @@ describe('BudgetsComponent', () => {
       expect(mockToast.success).toHaveBeenCalledWith('Budget updated');
       expect(mockBudgetApi.getBudgetStatus).toHaveBeenCalledTimes(1);
       expect(component.panelMode()).toBe('category');
+    });
+
+    // PF-877
+    describe('a category with no budget yet', () => {
+      const travelRow = (): void => {
+        mockBudgetApi.getBudgetStatus.mockReturnValue(of([...statuses, status(travel, 0, 30)]));
+        component.loadMonth();
+        component.openCategory(component.rows().find((r) => r.status.category.id === 4)!);
+      };
+
+      it('should create the budget and say "Budget added"', () => {
+        // arrange
+        travelRow();
+
+        // act
+        component.saveLimit(100);
+
+        // assert & verify
+        expect(mockBudgetApi.createBudget).toHaveBeenCalledWith(4, 100, 10, 2026);
+        expect(mockToast.success).toHaveBeenCalledWith('Budget added');
+        expect(mockToast.success).not.toHaveBeenCalledWith('Budget updated');
+      });
+
+      it('should reload the month on a "budget already exists" error so the next save updates by id', () => {
+        // arrange -- the budget exists on the server but this page never saw its id
+        travelRow();
+        mockBudgetApi.createBudget.mockReturnValue(
+          throwError(() => ({
+            error: {
+              detail: 'A budget already exists for this category in the specified month and year.',
+            },
+          })),
+        );
+        mockBudgetApi.getBudgetStatus.mockClear();
+
+        // act
+        component.saveLimit(100);
+
+        // assert & verify
+        expect(mockToast.error).toHaveBeenCalledWith(
+          'A budget already exists for this category in the specified month and year.',
+        );
+        expect(mockBudgetApi.getBudgetStatus).toHaveBeenCalledTimes(1);
+      });
+
+      it('should not reload after some other failure', () => {
+        // arrange
+        travelRow();
+        mockBudgetApi.createBudget.mockReturnValue(throwError(() => ({ error: {} })));
+        mockBudgetApi.getBudgetStatus.mockClear();
+
+        // act
+        component.saveLimit(100);
+
+        // assert & verify
+        expect(mockToast.error).toHaveBeenCalledWith('Failed to save budget');
+        expect(mockBudgetApi.getBudgetStatus).not.toHaveBeenCalled();
+      });
     });
 
     it('should ignore a second save while the first is in flight', () => {
@@ -583,7 +641,22 @@ describe('BudgetsComponent', () => {
       expect(mockBudgetApi.updateBudget).toHaveBeenCalledTimes(1);
       expect(mockBudgetApi.updateBudget).toHaveBeenCalledWith(12, 180);
       expect(mockBudgetApi.deleteBudget).not.toHaveBeenCalled();
-      expect(mockToast.success).toHaveBeenCalledWith('Added 2 limits');
+      expect(mockToast.success).toHaveBeenCalledWith('Added 1 limit, updated 1 limit');
+    });
+
+    it('should count overwrites in the toast: "Updated N limits" when nothing new is added', () => {
+      // arrange -- last month has only a differing limit for a category that already has one
+      mockBudgetApi.getBudgets.mockImplementation((month: number) =>
+        of(month === 10 ? thisMonth : [budget(22, dining, 180, 9)]),
+      );
+      component.loadMonth();
+
+      // act
+      component.runCopy('replace');
+
+      // assert & verify
+      expect(mockBudgetApi.createBudget).not.toHaveBeenCalled();
+      expect(mockToast.success).toHaveBeenCalledWith('Updated 1 limit');
     });
 
     it('should report a partial failure, still reload and not claim full success', () => {
@@ -631,6 +704,55 @@ describe('BudgetsComponent', () => {
 
   describe('layout and states', () => {
     const aside = (): HTMLElement => fixture.nativeElement.querySelector('app-side-panel aside');
+
+    // PF-877
+    it('should put the panel before the list in the page so a phone reads in the order it shows', () => {
+      // assert & verify
+      const panel: Node = fixture.nativeElement.querySelector('app-side-panel');
+      const list: Node = fixture.nativeElement.querySelector('app-budget-list');
+      expect(panel.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('should give the month arrows a hover and a dark-mode style', () => {
+      // assert & verify
+      for (const label of ['Previous month', 'Next month']) {
+        const arrow: HTMLElement = fixture.nativeElement.querySelector(`[aria-label="${label}"]`);
+        expect(arrow.classList.contains('hover:bg-surface-100')).toBe(true);
+        expect(arrow.classList.contains('dark:hover:bg-surface-800')).toBe(true);
+      }
+    });
+
+    it('should hide the add form footer button when every category already has a budget', () => {
+      // arrange
+      mockBudgetApi.getBudgets.mockImplementation(() =>
+        of(allCategories.map((c, i) => budget(30 + i, c, 10))),
+      );
+      component.loadMonth();
+      const footerButtons = (): string[] =>
+        Array.from<HTMLElement>(
+          fixture.nativeElement.querySelectorAll('app-side-panel aside button'),
+        ).map((b) => b.textContent?.trim() ?? '');
+
+      // act
+      component.startAdd();
+      fixture.detectChanges();
+
+      // assert & verify -- nothing to save, so no Add budget button in the panel
+      expect(component.panelMode()).toBe('add');
+      expect(footerButtons()).not.toContain('Add budget');
+    });
+
+    it('should still show the add form footer button while some category has no budget', () => {
+      // act
+      component.startAdd();
+      fixture.detectChanges();
+
+      // assert & verify
+      const labels = Array.from<HTMLElement>(
+        fixture.nativeElement.querySelectorAll('app-side-panel aside button'),
+      ).map((b) => b.textContent?.trim());
+      expect(labels).toContain('Add budget');
+    });
 
     it('should always render the panel, showing the overview with what is left to spend', () => {
       // assert & verify

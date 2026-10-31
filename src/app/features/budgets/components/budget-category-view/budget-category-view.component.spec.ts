@@ -167,4 +167,14 @@ describe('BudgetCategoryViewComponent', () => {
     // assert & verify
     expect(component.form.controls.amount.value).toBe(300);
   });
+
+  it('should give the Remove budget button a dark-mode border', () => {
+    // arrange
+    render(row(1, 450, 100, 11));
+
+    // assert & verify (PF-877)
+    const classes = button('Remove budget')!.classList;
+    expect(classes.contains('border-rose-300')).toBe(true);
+    expect(classes.contains('dark:border-rose-800')).toBe(true);
+  });
 });

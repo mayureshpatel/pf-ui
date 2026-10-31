@@ -99,4 +99,28 @@ describe('BudgetCopyDialogComponent', () => {
     // assert & verify
     expect(button('Replace all')?.disabled).toBe(true);
   });
+
+  // PF-877: PrimeNG focuses the first enabled control in the dialog when it opens (its animation-end
+  // hook, which does not run in jsdom; the e2e spec checks the real focus). So the order of the
+  // buttons is what decides the default focus: Fill gaps first.
+  describe('default focus target', () => {
+    const firstEnabled = (): string | undefined =>
+      document.body
+        .querySelector<HTMLButtonElement>('.p-dialog-content button:not([disabled])')
+        ?.textContent?.trim();
+
+    it('should be Fill gaps when there are limits to add', () => {
+      // assert & verify
+      expect(firstEnabled()).toBe('Fill gaps');
+    });
+
+    it('should fall to Replace all, not Cancel, when there is nothing to add but something to overwrite', () => {
+      // act
+      host.addCount.set(0);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(firstEnabled()).toBe('Replace all');
+    });
+  });
 });
