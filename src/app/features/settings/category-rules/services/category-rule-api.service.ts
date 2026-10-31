@@ -5,6 +5,7 @@ import { environment } from '@env';
 import {
   CategoryRule,
   CategoryRuleCreateRequest,
+  CategoryRuleUpdateRequest,
   RuleChangePreview,
 } from '@models/category-rule.model';
 import { AuthService } from '@core/auth/auth.service';
@@ -41,6 +42,16 @@ export class CategoryRuleApiService {
     const userId: number | undefined = this.authService.user()?.id;
 
     return this.http.post<number>(this.apiUrl, { ...data, userId });
+  }
+
+  /**
+   * Updates an existing rule. The rule's id travels in the body (`PUT /category-rules`); the server
+   * takes the owner from the session.
+   * @param data - The rule's id and its full new configuration.
+   * @returns the rule's id.
+   */
+  updateRule(data: CategoryRuleUpdateRequest): Observable<number> {
+    return this.http.put<number>(this.apiUrl, data, SKIP_TOAST_OPTIONS);
   }
 
   /**
