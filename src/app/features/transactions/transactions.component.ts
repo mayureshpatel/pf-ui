@@ -40,6 +40,7 @@ import { TransactionApiService } from './services/transaction-api.service';
 import { TransactionUrlStateService } from './services/transaction-url-state.service';
 import { DashboardApiService } from '@features/dashboard/services/dashboard-api.service';
 import { ActionItem, ActionType } from '@models/dashboard.model';
+import { isSameTransactionState } from './utils/transaction-state';
 import {
   describeEmptyPeriod,
   hasAnyFilter,
@@ -425,6 +426,11 @@ export class TransactionsComponent implements OnInit {
         error: (err: unknown): void => {
           console.error('Failed to load transactions:', err);
           this.toast.error('Failed to refresh ledger.');
+          // the old rows belong to the old filter, so do not leave them under the new filter
+          // chips; with nothing to show the page falls back to the error state with a retry
+          this.transactions.set([]);
+          this.totalRecords.set(0);
+          this.selectedTransactions.set([]);
           this.loadError.set(true);
         },
       });
@@ -467,7 +473,7 @@ export class TransactionsComponent implements OnInit {
       : hydrated;
     const currentState: TransactionState = this.state();
 
-    if (JSON.stringify(newState) !== JSON.stringify(currentState)) {
+    if (!isSameTransactionState(newState, currentState)) {
       this.state.set(newState);
     }
   }

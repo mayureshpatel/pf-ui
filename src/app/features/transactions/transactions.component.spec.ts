@@ -1556,6 +1556,44 @@ describe('TransactionsComponent', () => {
         });
       });
 
+      // PF-869: a failed reload must not leave the old rows (and their selection) on screen
+      // under the new filter
+      it('should drop the old rows and selection, and show the error state, when a filter change fails to load', () => {
+        // arrange -- a page of two rows with one selected
+        const rows = [
+          {
+            id: 1,
+            description: 'A',
+            date: '2026-10-02',
+            amount: 1,
+            type: 'EXPENSE',
+            account: { id: 1, name: 'C' },
+          },
+          {
+            id: 2,
+            description: 'B',
+            date: '2026-10-03',
+            amount: 2,
+            type: 'EXPENSE',
+            account: { id: 1, name: 'C' },
+          },
+        ] as unknown as Transaction[];
+        openAt({}, rows);
+        component.selectedTransactions.set([rows[0]]);
+        expect(component.transactions()).toHaveLength(2);
+        mockTransactionApi.getTransactions.mockReturnValue(throwError(() => new Error('down')));
+
+        // act
+        component.onFilterChange({ description: 'zzz' });
+        fixture.detectChanges();
+
+        // assert & verify
+        expect(component.transactions()).toEqual([]);
+        expect(component.selectedTransactions()).toEqual([]);
+        expect(component.totalRecords()).toBe(0);
+        expect(fixture.nativeElement.querySelector('app-page-error-state')).toBeTruthy();
+      });
+
       it('should show the error state with retry when loading fails with nothing to show', () => {
         // arrange
         openAt({});

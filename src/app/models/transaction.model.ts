@@ -22,12 +22,12 @@ import { components } from '../generated/api-types';
 export interface Transaction {
   id: number;
   account: Account;
-  category: Category;
+  category: Category | null;
   amount: number;
   date: string;
   description: string;
   type: TransactionType;
-  merchant: Merchant;
+  merchant: Merchant | null;
   postDate?: string;
   tags: Tag[];
 }

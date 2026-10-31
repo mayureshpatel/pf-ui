@@ -42,8 +42,8 @@
                     <span [class]="schedule(item).late ? 'text-amber-700 dark:text-amber-400' : ''">
                       {{ schedule(item).text }}
                     </span>
-                    @if (item.account?.name) {
-                      · {{ item.account.name }}
+                    @if (item.account?.name; as accountName) {
+                      · {{ accountName }}
                     }
                   </span>
                   @if (priceChange(item); as change) {

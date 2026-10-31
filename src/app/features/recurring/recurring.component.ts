@@ -419,6 +419,11 @@ export class RecurringComponent implements OnInit {
     message: string,
   ): void {
     if (this.saving()) return;
+    // account_id is nullable in the database, but an update needs one
+    if (!item.account) {
+      this.toast.error('This item has no account yet. Edit it and choose one first.');
+      return;
+    }
     this.saving.set(true);
     this.recurringApi
       .update({

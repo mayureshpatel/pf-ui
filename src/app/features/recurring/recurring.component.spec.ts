@@ -425,6 +425,21 @@ describe('RecurringComponent', () => {
       expect(mockToast.success).toHaveBeenCalledWith('Resumed');
     });
 
+    // PF-869: account_id is nullable in the database, and an update request needs an account
+    it('should not send an update for an item that has no account, and say why', () => {
+      // arrange
+      component.openItem({ ...rent, account: null });
+
+      // act
+      component.togglePaused();
+
+      // assert & verify
+      expect(mockApi.update).not.toHaveBeenCalled();
+      expect(mockToast.error).toHaveBeenCalledWith(
+        'This item has no account yet. Edit it and choose one first.',
+      );
+    });
+
     it('should delete after confirmation and return to the overview', () => {
       // arrange
       component.openItem(rent);
