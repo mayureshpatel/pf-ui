@@ -110,6 +110,29 @@ describe('RecurringListComponent', () => {
     expect(line.className).toContain('text-amber-700');
   });
 
+  it('should not show a price change line on a paused row', () => {
+    // act
+    render([
+      item(1, 'Gym', 12, 'MONTHLY', day(11, 5), {
+        active: false,
+        priceChange: { previousAmount: 10, newAmount: 12, since: day(9, 3) },
+      }),
+    ]);
+
+    // assert & verify (PF-885)
+    expect(all('[data-testid="price-change"]')).toHaveLength(0);
+  });
+
+  it('should mark the selected row with aria-current besides its colour', () => {
+    // act
+    render(monthlyItems, { selectedId: 2 });
+
+    // assert & verify (PF-885)
+    const buttons = all('[data-testid="open-item"]');
+    expect(buttons[0].getAttribute('aria-current')).toBe('true');
+    expect(buttons[1].getAttribute('aria-current')).toBeNull();
+  });
+
   it('should show Expected instead of a next date when the charge is overdue', () => {
     // act
     render([

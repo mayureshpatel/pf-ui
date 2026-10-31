@@ -97,7 +97,7 @@ describe('RecurringOverviewComponent', () => {
     });
 
     // assert & verify
-    expect(text()).toContain('Netflix: $10.00 to $12.00');
+    expect(text()).toContain('Netflix: $10.00 to $12.00 since Sep 3');
   });
 
   it('should show Review patterns only when patterns were found', () => {
