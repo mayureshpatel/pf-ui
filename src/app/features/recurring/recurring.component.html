@@ -19,6 +19,9 @@
       <p-skeleton height="16rem" borderRadius="1rem" />
     </div>
   } @else {
+    @if (!patternsLoaded()) {
+      <div data-testid="patterns-strip-placeholder" aria-hidden="true" class="h-11"></div>
+    }
     @if (patternsLoaded() && patterns().length > 0) {
       <div
         data-testid="patterns-strip"
@@ -149,7 +152,7 @@
                 #review
                 [patterns]="patterns()"
                 [dismissed]="dismissed()"
-                [merchants]="merchants()"
+                [merchants]="patternMerchants()"
                 [accounts]="accounts()"
                 [selected]="null"
                 [saving]="saving()"
@@ -163,14 +166,14 @@
               #review
               [patterns]="patterns()"
               [dismissed]="dismissed()"
-              [merchants]="merchants()"
+              [merchants]="patternMerchants()"
               [accounts]="accounts()"
               [selected]="selectedPattern()"
               [saving]="saving()"
               (backToList)="back()"
               (add)="acceptPattern($event)"
               (dismiss)="dismissPattern($event)"
-              (merchantFilter)="onMerchantFilter($event)"
+              (merchantFilter)="onPatternMerchantFilter($event)"
             />
           }
         }

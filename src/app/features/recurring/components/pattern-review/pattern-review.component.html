@@ -62,6 +62,9 @@
           placeholder="Choose an account"
           appendTo="body"
         />
+        @if (accountHint(); as hint) {
+          <small id="pattern-account-hint" class="text-muted-color">{{ hint }}</small>
+        }
       </div>
 
       <div class="grid grid-cols-2 gap-3">
@@ -114,6 +117,7 @@
           type="submit"
           class="cursor-pointer rounded-lg bg-primary-700 px-3 py-2 text-sm font-medium text-white hover:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-50"
           [disabled]="!canSubmit() || saving()"
+          [attr.aria-describedby]="accountHint() ? 'pattern-account-hint' : null"
         >
           Add to recurring
         </button>

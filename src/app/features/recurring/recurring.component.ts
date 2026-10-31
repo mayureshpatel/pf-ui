@@ -60,6 +60,9 @@ export type RecurringPanelMode = 'overview' | 'item' | 'add' | 'review' | 'revie
 
 const MERCHANT_PAGE_SIZE = 20;
 
+const foldName = (value: string | null | undefined): string =>
+  (value ?? '').trim().replace(/\s+/g, ' ').toLowerCase();
+
 /**
  * The Recurring page: the tracked items grouped by how often they are paid, beside an always-present
  * panel. The panel shows an overview by default, an editor for the selected item, the add form, or
@@ -97,6 +100,8 @@ export class RecurringComponent implements OnInit {
   readonly dismissed: WritableSignal<DismissedPattern[]> = signal([]);
   readonly accounts: WritableSignal<Account[]> = signal([]);
   readonly merchants: WritableSignal<Merchant[]> = signal([]);
+  /** The merchants offered in the pattern review; kept apart so searching there never narrows the edit form's list. */
+  readonly patternMerchants: WritableSignal<Merchant[]> = signal([]);
 
   readonly loading: WritableSignal<boolean> = signal(false);
   readonly loadError: WritableSignal<boolean> = signal(false);
@@ -165,10 +170,14 @@ export class RecurringComponent implements OnInit {
   private loadRun = 0;
   private patternsSubscription: Subscription | null = null;
   private merchantSubscription: Subscription | null = null;
+  private patternMerchantSubscription: Subscription | null = null;
   /** An item just created: select it and open it once the reloaded list contains it. */
   private pendingSelectId: number | null = null;
   /** Merchants created for a pattern whose accept failed later, so a retry does not create another. */
-  private readonly createdMerchants: Map<string, number> = new Map<string, number>();
+  private readonly createdMerchants: Map<string, { id: number; name: string }> = new Map<
+    string,
+    { id: number; name: string }
+  >();
 
   constructor() {
     effect((): void => {
@@ -210,6 +219,7 @@ export class RecurringComponent implements OnInit {
           this.toast.error('Failed to load recurring items');
           this.items.set([]);
           this.loadError.set(true);
+          this.pendingSelectId = null;
         },
       });
   }
@@ -252,14 +262,16 @@ export class RecurringComponent implements OnInit {
       });
   }
 
-  private loadMerchantOptions(term: string | null, then?: () => void): void {
-    this.merchantSubscription?.unsubscribe();
-    this.merchantSubscription = this.merchantApi
+  private loadMerchantOptions(term: string | null, forPatterns = false, then?: () => void): void {
+    const target: WritableSignal<Merchant[]> = forPatterns ? this.patternMerchants : this.merchants;
+    if (forPatterns) this.patternMerchantSubscription?.unsubscribe();
+    else this.merchantSubscription?.unsubscribe();
+    const subscription: Subscription = this.merchantApi
       .getMerchants(term, { page: 0, size: MERCHANT_PAGE_SIZE })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res: PageResponse<Merchant>): void => {
-          this.merchants.set(res.content);
+          target.set(res.content);
           then?.();
         },
         error: (err: unknown): void => {
@@ -267,6 +279,8 @@ export class RecurringComponent implements OnInit {
           then?.();
         },
       });
+    if (forPatterns) this.patternMerchantSubscription = subscription;
+    else this.merchantSubscription = subscription;
   }
 
   /** Narrows the merchant choice as the user types in a merchant search. */
@@ -274,12 +288,17 @@ export class RecurringComponent implements OnInit {
     this.loadMerchantOptions(term.trim() || null);
   }
 
+  /** Narrows the merchant choice in the pattern review, apart from the edit form's list. */
+  onPatternMerchantFilter(term: string): void {
+    this.loadMerchantOptions(term.trim() || null, true);
+  }
+
   /** Shows an item in the panel. */
   openItem(item: RecurringTransaction): void {
     if (this.mode() === 'item' && this.selected()?.id === item.id) return;
     this.confirmDiscardIfDirty((): void => {
       this.selected.set(item);
-      this.selectedPattern.set(null);
+      this.clearPattern();
       this.go('item');
     });
   }
@@ -289,7 +308,7 @@ export class RecurringComponent implements OnInit {
     if (this.mode() === 'add') return;
     this.confirmDiscardIfDirty((): void => {
       this.selected.set(null);
-      this.selectedPattern.set(null);
+      this.clearPattern();
       this.go('add');
     });
   }
@@ -299,7 +318,7 @@ export class RecurringComponent implements OnInit {
     if (this.mode() === 'review' || this.mode() === 'review-form') return;
     this.confirmDiscardIfDirty((): void => {
       this.selected.set(null);
-      this.selectedPattern.set(null);
+      this.clearPattern();
       this.go('review');
       if (!this.patternsLoaded()) this.loadPatterns();
     });
@@ -310,7 +329,7 @@ export class RecurringComponent implements OnInit {
    * the form can preselect an existing merchant instead of proposing a duplicate.
    */
   choosePattern(pattern: RecurringSuggestion): void {
-    this.loadMerchantOptions(pattern.merchant.name.trim() || null, (): void => {
+    this.loadMerchantOptions(pattern.merchant.name.trim() || null, true, (): void => {
       if (this.mode() !== 'review' && this.mode() !== 'review-form') return;
       this.selectedPattern.set(pattern);
       this.go('review-form');
@@ -323,7 +342,7 @@ export class RecurringComponent implements OnInit {
     if (mode === 'overview') return;
     this.confirmDiscardIfDirty((): void => {
       if (mode === 'review-form') {
-        this.selectedPattern.set(null);
+        this.clearPattern();
         this.go('review');
       } else {
         this.closePanel();
@@ -334,7 +353,7 @@ export class RecurringComponent implements OnInit {
   /** Returns to the overview with nothing selected, without asking. */
   closePanel(moveFocus = true): void {
     this.selected.set(null);
-    this.selectedPattern.set(null);
+    this.clearPattern();
     this.go('overview', moveFocus);
   }
 
@@ -493,9 +512,7 @@ export class RecurringComponent implements OnInit {
     this.merchantFor(acceptance, key)
       .pipe(
         switchMap((merchantId: number) =>
-          this.merchantApi
-            .addDescriptionLink(merchantId, acceptance.pattern.merchant.name)
-            .pipe(map((): number => merchantId)),
+          this.linkIfNeeded(merchantId, acceptance).pipe(map((): number => merchantId)),
         ),
         switchMap((merchantId: number) =>
           this.recurringApi.create({
@@ -529,15 +546,48 @@ export class RecurringComponent implements OnInit {
 
   private merchantFor(acceptance: PatternAcceptance, key: string): Observable<number> {
     if (acceptance.merchantId !== null) {
+      this.dropCreatedMerchant(key);
       return of(acceptance.merchantId);
     }
-    const existing: number | undefined = this.createdMerchants.get(key);
-    if (existing !== undefined) {
-      return of(existing);
+    const name: string = acceptance.newMerchantName ?? '';
+    const existing = this.createdMerchants.get(key);
+    if (existing && foldName(existing.name) === foldName(name)) {
+      return of(existing.id);
     }
+    // the user changed the name since the failed attempt: that merchant is no longer wanted
+    this.dropCreatedMerchant(key);
     return this.merchantApi
-      .createMerchant({ userId: this.userId(), name: acceptance.newMerchantName ?? '' })
-      .pipe(tap((id: number): void => void this.createdMerchants.set(key, id)));
+      .createMerchant({ userId: this.userId(), name })
+      .pipe(tap((id: number): void => void this.createdMerchants.set(key, { id, name })));
+  }
+
+  /** Links the detected text to the merchant unless that is just the merchant's own name. */
+  private linkIfNeeded(merchantId: number, acceptance: PatternAcceptance): Observable<void> {
+    const merchantName: string =
+      acceptance.merchantId !== null
+        ? (acceptance.merchantName ?? '')
+        : (acceptance.newMerchantName ?? '');
+    const detected: string = acceptance.pattern.merchant.name;
+    if (foldName(merchantName) === foldName(detected)) {
+      return of(undefined);
+    }
+    return this.merchantApi.addDescriptionLink(merchantId, detected);
+  }
+
+  /** Leaves the pattern form, deleting a merchant created for it that was never used. */
+  private clearPattern(): void {
+    const key: string | undefined = this.selectedPattern()?.patternKey;
+    if (key !== undefined) this.dropCreatedMerchant(key);
+    this.selectedPattern.set(null);
+  }
+
+  private dropCreatedMerchant(key: string): void {
+    const created = this.createdMerchants.get(key);
+    if (!created) return;
+    this.createdMerchants.delete(key);
+    this.merchantApi.deleteMerchant(created.id).subscribe({
+      error: (err: unknown): void => console.error('Failed to remove an unused merchant:', err),
+    });
   }
 
   /** Dismisses a pattern so it stops being suggested; it can be restored from the dismissed list. */

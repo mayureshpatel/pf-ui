@@ -29,6 +29,11 @@ export class RecurringOverviewComponent {
   readonly add: OutputEmitterRef<void> = output<void>();
   readonly reviewPatterns: OutputEmitterRef<void> = output<void>();
 
+  /** The day a price change took effect, such as "Sep 3". */
+  sinceOf(item: RecurringTransaction): string {
+    return item.priceChange ? shortDate(item.priceChange.since) : '';
+  }
+
   dateOf(item: RecurringTransaction): string {
     return shortDate(nextDateOf(item));
   }

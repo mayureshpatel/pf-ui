@@ -193,6 +193,20 @@ describe('PatternReviewComponent', () => {
       expect(component.form.controls.merchantId.value).toBe(77);
     });
 
+    it('should keep the preselected merchant offered when a search matches nothing', () => {
+      // arrange
+      render({ selected: pattern('Netflix') });
+      expect(component.form.controls.merchantId.value).toBe(10);
+
+      // act -- the host narrows the list to nothing
+      fixture.componentRef.setInput('merchants', []);
+      fixture.detectChanges();
+
+      // assert & verify (PF-885)
+      expect(component.merchantOptions().find((m) => m.id === 10)?.name).toBe('Netflix');
+      expect(component.form.controls.merchantId.value).toBe(10);
+    });
+
     it('should offer to create a merchant with an editable name when none matches', () => {
       // act
       render({ selected: pattern('NETFLIX.COM 866') });
@@ -270,6 +284,26 @@ describe('PatternReviewComponent', () => {
 
       // assert & verify
       expect(added).toEqual([]);
+    });
+
+    it('should say why Add to recurring is disabled when the pattern account is gone', () => {
+      // act
+      render({ selected: pattern('Netflix', { accountId: 99 }) });
+
+      // assert & verify (PF-885)
+      const hint = fixture.nativeElement.querySelector('#pattern-account-hint') as HTMLElement;
+      expect(text(hint)).toContain('not in your accounts');
+      expect(button('Add to recurring')?.getAttribute('aria-describedby')).toBe(
+        'pattern-account-hint',
+      );
+
+      // act
+      component.form.controls.accountId.setValue(1);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(fixture.nativeElement.querySelector('#pattern-account-hint')).toBeNull();
+      expect(button('Add to recurring')?.getAttribute('aria-describedby')).toBeNull();
     });
 
     it('should disable Add to recurring while the form is invalid or a save is running', () => {

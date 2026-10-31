@@ -97,7 +97,10 @@ describe('RecurringComponent', () => {
   >;
   let mockAccounts: Mocked<Pick<AccountApiService, 'getAccounts'>>;
   let mockMerchants: Mocked<
-    Pick<MerchantApiService, 'getMerchants' | 'createMerchant' | 'addDescriptionLink'>
+    Pick<
+      MerchantApiService,
+      'getMerchants' | 'createMerchant' | 'addDescriptionLink' | 'deleteMerchant'
+    >
   >;
   let mockToast: Mocked<Pick<ToastService, 'success' | 'error'>>;
   let mockConfirmation: { confirm: Mock<(confirmation: Confirmation) => void> };
@@ -118,6 +121,7 @@ describe('RecurringComponent', () => {
   const accept = (over: Partial<PatternAcceptance> = {}): PatternAcceptance => ({
     pattern: hulu,
     merchantId: 12,
+    merchantName: 'Streaming Co',
     newMerchantName: null,
     accountId: 2,
     amount: 17.99,
@@ -142,6 +146,7 @@ describe('RecurringComponent', () => {
       getMerchants: vi.fn().mockReturnValue(of(page(merchantList))),
       createMerchant: vi.fn().mockReturnValue(of(99)),
       addDescriptionLink: vi.fn().mockReturnValue(of(undefined)),
+      deleteMerchant: vi.fn().mockReturnValue(of(undefined)),
     };
     mockToast = { success: vi.fn(), error: vi.fn() };
     mockConfirmation = { confirm: vi.fn() };
@@ -170,6 +175,24 @@ describe('RecurringComponent', () => {
       expect(component.groups().map((g) => g.key)).toEqual(['MONTHLY', 'YEARLY', 'PAUSED']);
       expect(component.totals().services).toBe(3);
       expect(fixture.nativeElement.textContent).toContain('You pay about');
+    });
+
+    it('should hold the strip space while patterns load so the page does not shift', () => {
+      // act
+      component.patternsLoaded.set(false);
+      fixture.detectChanges();
+
+      // assert & verify (PF-885)
+      const root: HTMLElement = fixture.nativeElement;
+      expect(root.querySelector('[data-testid="patterns-strip"]')).toBeNull();
+      expect(root.querySelector('[data-testid="patterns-strip-placeholder"]')).not.toBeNull();
+
+      // act
+      component.patternsLoaded.set(true);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(root.querySelector('[data-testid="patterns-strip-placeholder"]')).toBeNull();
     });
 
     it('should show the strip only when patterns exist', () => {
@@ -327,6 +350,29 @@ describe('RecurringComponent', () => {
 
       // assert & verify
       expect(component.mode()).toBe('add');
+    });
+
+    it('should not open a just-added item over a later add form when the reload failed', () => {
+      // arrange
+      mockApi.getAll.mockReturnValueOnce(throwError(() => new Error('down')));
+      component.startAdd();
+      component.saveItem({
+        merchantId: 10,
+        accountId: 1,
+        amount: 80,
+        frequency: 'MONTHLY',
+        nextDate: '2026-11-20',
+        active: true,
+      });
+      mockApi.getAll.mockReturnValue(of([...items, item(55, 'Gas', 80, 'MONTHLY', '2026-11-20')]));
+      component.startAdd();
+
+      // act -- a later, successful reload
+      component.loadItems();
+
+      // assert & verify (PF-885)
+      expect(component.mode()).toBe('add');
+      expect(component.selected()).toBeNull();
     });
 
     it('should add an item and open it', () => {
@@ -541,9 +587,12 @@ describe('RecurringComponent', () => {
       component.saveItem(value);
       component.togglePaused();
       component.deleteItem();
+      component.acceptPattern(accept());
 
       // assert & verify
       expect(mockApi.update).toHaveBeenCalledTimes(1);
+      expect(mockApi.create).not.toHaveBeenCalled();
+      expect(mockMerchants.addDescriptionLink).not.toHaveBeenCalled();
       expect(mockConfirmation.confirm).not.toHaveBeenCalled();
     });
   });
@@ -639,6 +688,99 @@ describe('RecurringComponent', () => {
       // assert & verify
       expect(mockMerchants.createMerchant).toHaveBeenCalledTimes(1);
       expect(mockApi.create).toHaveBeenCalledWith(expect.objectContaining({ merchantId: 99 }));
+    });
+
+    describe('retries and leftovers (PF-885)', () => {
+      const failLinkOnce = (): void => {
+        mockMerchants.addDescriptionLink.mockReturnValueOnce(
+          throwError(() => ({ error: { detail: 'Too long.' } })),
+        );
+      };
+      const createAcceptance = (name: string): PatternAcceptance =>
+        accept({ pattern: planetFit, merchantId: null, merchantName: null, newMerchantName: name });
+
+      it('should create a new merchant and remove the old one when the retry changes the name', () => {
+        // arrange
+        failLinkOnce();
+        component.openReview();
+        component.choosePattern(planetFit);
+        component.acceptPattern(createAcceptance('Planet Fit'));
+        mockMerchants.createMerchant.mockReturnValueOnce(of(100));
+
+        // act
+        component.acceptPattern(createAcceptance('Planet Fitness'));
+
+        // assert & verify
+        expect(mockMerchants.createMerchant).toHaveBeenCalledTimes(2);
+        expect(mockMerchants.deleteMerchant).toHaveBeenCalledWith(99);
+        expect(mockApi.create).toHaveBeenCalledWith(expect.objectContaining({ merchantId: 100 }));
+      });
+
+      it('should drop the created merchant when the retry picks another merchant', () => {
+        // arrange
+        failLinkOnce();
+        component.openReview();
+        component.choosePattern(planetFit);
+        component.acceptPattern(createAcceptance('Planet Fit'));
+
+        // act
+        component.acceptPattern(accept({ pattern: planetFit, merchantId: 12 }));
+
+        // assert & verify
+        expect(mockMerchants.deleteMerchant).toHaveBeenCalledWith(99);
+        expect(mockApi.create).toHaveBeenCalledWith(expect.objectContaining({ merchantId: 12 }));
+      });
+
+      it('should remove an unused created merchant when the user leaves the form', () => {
+        // arrange
+        failLinkOnce();
+        component.openReview();
+        component.choosePattern(planetFit);
+        component.acceptPattern(createAcceptance('Planet Fit'));
+
+        // act
+        component.back();
+
+        // assert & verify
+        expect(mockMerchants.deleteMerchant).toHaveBeenCalledWith(99);
+      });
+
+      it('should not store a description link that only repeats the merchant name', () => {
+        // act
+        component.openReview();
+        component.choosePattern(hulu);
+        component.acceptPattern(accept({ merchantName: ' hulu ' }));
+
+        // assert & verify
+        expect(mockMerchants.addDescriptionLink).not.toHaveBeenCalled();
+        expect(mockApi.create).toHaveBeenCalledWith(expect.objectContaining({ merchantId: 12 }));
+      });
+
+      it('should not store a link for a new merchant named exactly like the detected text', () => {
+        // act
+        component.openReview();
+        component.choosePattern(planetFit);
+        component.acceptPattern(createAcceptance('planet fit #4471'));
+
+        // assert & verify
+        expect(mockMerchants.addDescriptionLink).not.toHaveBeenCalled();
+        expect(mockApi.create).toHaveBeenCalledWith(expect.objectContaining({ merchantId: 99 }));
+      });
+
+      it('should keep the pattern review merchants apart from the edit form search', () => {
+        // arrange
+        component.openReview();
+        component.choosePattern(hulu);
+        const forPatterns = component.patternMerchants();
+        mockMerchants.getMerchants.mockReturnValue(of(page([{ id: 77, name: 'Zed' } as Merchant])));
+
+        // act
+        component.onMerchantFilter('zed');
+
+        // assert & verify
+        expect(component.merchants().map((m) => m.id)).toEqual([77]);
+        expect(component.patternMerchants()).toBe(forPatterns);
+      });
     });
 
     it('should ignore a finished accept after the user went back', () => {
