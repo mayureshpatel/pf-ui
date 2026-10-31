@@ -31,6 +31,7 @@
             <button
               type="button"
               data-testid="open-merchant"
+              [attr.aria-current]="selectedId() === merchant.id ? 'true' : null"
               class="flex w-full min-w-0 cursor-pointer items-center gap-3 px-4 py-3 text-left"
               (click)="openMerchant.emit(merchant)"
             >
