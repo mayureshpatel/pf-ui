@@ -1,0 +1,77 @@
+<form (ngSubmit)="submit()" [formGroup]="form" class="flex flex-col gap-4">
+  <div class="flex justify-center">
+    <span
+      class="max-w-full truncate rounded-full px-3 py-1 text-xs font-bold text-white"
+      [style.background-color]="previewColor()"
+    >
+      {{ previewName() }}
+    </span>
+  </div>
+
+  <div class="flex flex-col gap-1">
+    <label for="tag-name" class="text-sm font-medium">Name</label>
+    <input pInputText id="tag-name" formControlName="name" class="w-full" />
+    @if (nameError(); as error) {
+      <small class="text-rose-700 dark:text-rose-400">{{ error }}</small>
+    }
+  </div>
+
+  <fieldset class="m-0 flex flex-col gap-2 border-0 p-0">
+    <legend class="mb-1 text-sm font-medium">Color</legend>
+    <div class="flex flex-wrap gap-2">
+      @for (swatch of swatches; track swatch; let i = $index) {
+        <button
+          type="button"
+          class="size-8 cursor-pointer rounded-full border-2"
+          [attr.data-swatch]="i"
+          [attr.aria-label]="swatchNames[i]"
+          [attr.aria-pressed]="isSwatchSelected(swatch)"
+          [style.background-color]="swatch"
+          [class]="
+            isSwatchSelected(swatch)
+              ? 'border-surface-900 dark:border-surface-0'
+              : 'border-transparent'
+          "
+          (click)="selectSwatch(swatch)"
+        ></button>
+      }
+    </div>
+    <div class="flex items-center gap-2">
+      <label for="tag-color" class="text-sm text-muted-color">Hex</label>
+      <span aria-hidden="true">#</span>
+      <input
+        pInputText
+        id="tag-color"
+        formControlName="color"
+        maxlength="6"
+        class="w-28 font-mono"
+      />
+    </div>
+    @if (colorError(); as error) {
+      <small class="text-rose-700 dark:text-rose-400">{{ error }}</small>
+    }
+  </fieldset>
+
+  @if (errorMessage(); as message) {
+    <p role="alert" class="m-0 text-sm text-rose-700 dark:text-rose-400">{{ message }}</p>
+  }
+
+  @if (isEditMode()) {
+    <div class="flex flex-wrap gap-2">
+      <button
+        type="button"
+        class="cursor-pointer rounded-lg border border-surface-300 px-3 py-1.5 text-sm hover:bg-surface-100 dark:border-surface-700 dark:hover:bg-surface-800"
+        (click)="viewTransactions.emit()"
+      >
+        View transactions
+      </button>
+      <button
+        type="button"
+        class="cursor-pointer rounded-lg border border-rose-300 px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-400 dark:hover:bg-rose-950"
+        (click)="remove.emit()"
+      >
+        Delete tag
+      </button>
+    </div>
+  }
+</form>
