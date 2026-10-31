@@ -8,7 +8,7 @@
       {{ measureLabel() }} by {{ granularity() }}
     </h3>
     <div class="flex h-28 items-end gap-1">
-      @for (bar of bars(); track bar.bucket.start) {
+      @for (bar of bars(); track bar.bucket.start; let i = $index) {
         <div class="relative flex h-full flex-1 items-end">
           @if (bar.comparisonHeight !== null) {
             <span
@@ -34,6 +34,9 @@
             [attr.data-partial]="bar.bucket.partial ? '' : null"
             [attr.aria-label]="bar.ariaLabel"
             [attr.title]="bar.ariaLabel"
+            [attr.tabindex]="i === tabStop() ? 0 : -1"
+            (focus)="onBarFocus(i)"
+            (keydown)="onBarKeydown($event, i)"
             (click)="selectBucket.emit(bar.bucket)"
           ></button>
         </div>

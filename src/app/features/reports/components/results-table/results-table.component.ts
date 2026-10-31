@@ -1,7 +1,11 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  afterNextRender,
   computed,
+  ElementRef,
+  inject,
+  Injector,
   input,
   InputSignal,
   output,
@@ -26,6 +30,8 @@ import {
 import { TIME_GROUPINGS } from '../../utils/explore-state';
 
 const TOP_ROWS = 10;
+/** How long a touch is held before it opens the row menu. */
+const LONG_PRESS_MS = 500;
 
 interface RowView {
   row: ExploreRow;
@@ -48,7 +54,10 @@ interface RowView {
   standalone: true,
   imports: [FormsModule, SelectModule],
   templateUrl: './results-table.component.html',
-  host: { '(document:click)': 'onDocumentClick($event)' },
+  host: {
+    '(document:click)': 'onDocumentClick($event)',
+    '(document:pointerdown)': 'onDocumentPointerDown()',
+  },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ResultsTableComponent {
@@ -161,16 +170,112 @@ export class ResultsTableComponent {
     this.searchChange.emit(value);
   }
 
+  private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
+  private readonly injector: Injector = inject(Injector);
+  private pressTimer: ReturnType<typeof setTimeout> | null = null;
+  /** A long press just opened the menu, so the click that follows the lift must be ignored. */
+  private longPressed = false;
+
   protected toggleMenu(id: string): void {
-    this.openMenu.update((open: string | null) => (open === id ? null : id));
+    if (this.openMenu() === id) {
+      this.openMenu.set(null);
+      return;
+    }
+    this.show(id);
+  }
+
+  /** Opens a row's menu and moves focus to its first item. */
+  private show(id: string): void {
+    this.openMenu.set(id);
+    afterNextRender(
+      (): void => this.host.nativeElement.querySelector<HTMLElement>('[role="menuitem"]')?.focus(),
+      { injector: this.injector },
+    );
+  }
+
+  /** Right-click on a row opens its menu instead of the browser's. */
+  protected onContextMenu(event: Event, id: string): void {
+    if (!this.drillable()) return;
+    event.preventDefault();
+    this.show(id);
+  }
+
+  /** A held touch (about half a second, not moved) opens the menu. */
+  protected onPointerDown(event: Event, id: string): void {
+    this.longPressed = false;
+    this.cancelPress();
+    if (!this.drillable() || (event as PointerEvent).pointerType !== 'touch') return;
+    this.pressTimer = setTimeout((): void => {
+      this.pressTimer = null;
+      this.longPressed = true;
+      this.show(id);
+    }, LONG_PRESS_MS);
+  }
+
+  protected cancelPress(): void {
+    if (this.pressTimer !== null) clearTimeout(this.pressTimer);
+    this.pressTimer = null;
+  }
+
+  /** Arrow keys, Home and End move between the items; Escape closes and returns to the button. */
+  protected onMenuKeydown(event: KeyboardEvent): void {
+    const menu = event.currentTarget as HTMLElement;
+    const items: HTMLElement[] = Array.from(
+      menu.querySelectorAll<HTMLElement>('[role="menuitem"]'),
+    );
+    const at: number = items.indexOf(document.activeElement as HTMLElement);
+    let next: number;
+    switch (event.key) {
+      case 'ArrowDown':
+        next = (at + 1) % items.length;
+        break;
+      case 'ArrowUp':
+        next = (at - 1 + items.length) % items.length;
+        break;
+      case 'Home':
+        next = 0;
+        break;
+      case 'End':
+        next = items.length - 1;
+        break;
+      case 'Escape': {
+        event.stopPropagation();
+        const button = menu.closest('[data-menu-root]')?.querySelector<HTMLElement>('[data-menu]');
+        this.openMenu.set(null);
+        button?.focus();
+        return;
+      }
+      default:
+        return;
+    }
+    event.preventDefault();
+    items[next]?.focus();
+  }
+
+  /** The text colour of a change, by whether it is good or bad news. */
+  protected toneClass(tone: Tone): string {
+    return tone === 'bad'
+      ? 'text-amber-700 dark:text-amber-400'
+      : tone === 'good'
+        ? 'text-primary-700 dark:text-primary-400'
+        : 'text-muted-color';
   }
 
   protected act(action: 'drill' | 'filterOnly' | 'openTransactions', row: ExploreRow): void {
+    // the click that follows a long press lifting is not a tap on the row
+    if (this.longPressed) return;
     this.openMenu.set(null);
     this[action].emit(row);
   }
 
+  /** Any new press starts afresh: a click is only the tail of a long press until the next one. */
+  protected onDocumentPointerDown(): void {
+    this.longPressed = false;
+  }
+
   protected onDocumentClick(event: Event): void {
+    // the click that follows a long press lifting would otherwise close the menu it just opened
+    if (this.longPressed) return;
     if (this.openMenu() && !(event.target as Element | null)?.closest('[data-menu-root]')) {
       this.openMenu.set(null);
     }
