@@ -148,6 +148,49 @@ describe('DashboardComponent', () => {
     });
   });
 
+  // PF-861: the range strings are the user's local calendar days, whatever the timezone. These
+  // clocks are built from local components, so the cases only differ from a UTC-based
+  // conversion when the suite runs in a zone behind UTC (evening case) or ahead of it (midnight
+  // case); run the suite under TZ=America/New_York and TZ=Europe/Helsinki to cover both.
+  describe('periodRange local calendar days (PF-861)', () => {
+    it('should end THIS_MONTH on the local date in the evening, not the next UTC day', () => {
+      // arrange -- 21:00 local on Oct 16, 2026 (already Oct 17 in UTC when the zone is UTC-4)
+      setUp(new Date(2026, 9, 16, 21, 0));
+      fixture.detectChanges();
+
+      // act
+      component.selectedPreset.set('THIS_MONTH');
+
+      // assert & verify
+      expect(component.periodRange()).toEqual({ start: '2026-10-01', end: '2026-10-16' });
+    });
+
+    it('should cover the whole previous month for LAST_MONTH just after local midnight', () => {
+      // arrange -- 00:30 local on Oct 15, 2026 (still Oct 14 in UTC when the zone is UTC+2)
+      setUp(new Date(2026, 9, 15, 0, 30));
+      fixture.detectChanges();
+
+      // act
+      component.selectedPreset.set('LAST_MONTH');
+
+      // assert & verify
+      expect(component.periodRange()).toEqual({ start: '2026-09-01', end: '2026-09-30' });
+    });
+
+    it('should start THIS_YEAR on Jan 1 and LAST_YEAR on its own Jan 1 just after local midnight', () => {
+      // arrange
+      setUp(new Date(2026, 9, 15, 0, 30));
+      fixture.detectChanges();
+
+      // act & assert
+      component.selectedPreset.set('THIS_YEAR');
+      expect(component.periodRange()).toEqual({ start: '2026-01-01', end: '2026-10-15' });
+
+      component.selectedPreset.set('LAST_YEAR');
+      expect(component.periodRange()).toEqual({ start: '2025-01-01', end: '2025-12-31' });
+    });
+  });
+
   describe('loadAllData', () => {
     beforeEach(() => {
       setUp(new Date(2026, 5, 15));
