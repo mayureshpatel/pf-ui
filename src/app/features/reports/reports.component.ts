@@ -31,17 +31,18 @@ import { ToastService } from '@core/services/toast.service';
 import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen-toolbar';
 import { PageErrorStateComponent } from '@shared/components/page-error-state/page-error-state.component';
 import { downloadCsv, toCsv } from '@shared/utils/csv.utils';
-import { DateRangeFilterComponent } from './components/date-range-filter/date-range-filter.component';
 import { DrillBreadcrumbComponent } from './components/drill-breadcrumb/drill-breadcrumb.component';
 import { ExplorerControlsComponent } from './components/explorer-controls/explorer-controls.component';
 import { FilterBarComponent } from './components/filter-bar/filter-bar.component';
-import { NetWorthReportComponent } from './components/net-worth-report/net-worth-report.component';
+import {
+  NetWorthParamsChange,
+  NetWorthViewComponent,
+} from './components/net-worth-view/net-worth-view.component';
 import { ResultsTableComponent } from './components/results-table/results-table.component';
 import { SummaryCardsComponent } from './components/summary-cards/summary-cards.component';
 import { TransactionListComponent } from './components/transaction-list/transaction-list.component';
 import { TrendChartComponent } from './components/trend-chart/trend-chart.component';
 import {
-  DateRange,
   ExploreFilters,
   ExploreResult,
   ExploreRow,
@@ -85,6 +86,10 @@ const LEAF_PAGE_SIZE = 20;
 
 type View = 'explorer' | 'networth';
 
+/** Only the net worth view's own URL parameters. */
+const nwOnly = (params: Params): Params =>
+  Object.fromEntries(Object.entries(params).filter(([key]) => key.startsWith('nw')));
+
 /**
  * The Reports page: a drill-down explorer over the user's income and spending (measure x grouping x
  * stacked filters, comparison, trend, transactions at the bottom) and, until it is rebuilt, the old Net
@@ -98,11 +103,10 @@ type View = 'explorer' | 'networth';
     SkeletonModule,
     ScreenToolbarComponent,
     PageErrorStateComponent,
-    DateRangeFilterComponent,
     DrillBreadcrumbComponent,
     ExplorerControlsComponent,
     FilterBarComponent,
-    NetWorthReportComponent,
+    NetWorthViewComponent,
     ResultsTableComponent,
     SummaryCardsComponent,
     TransactionListComponent,
@@ -126,6 +130,8 @@ export class ReportsComponent {
 
   readonly state: WritableSignal<ExploreState> = signal(defaultState());
   readonly view: WritableSignal<View> = signal('explorer');
+  /** The net worth view's own URL parameters (`nw*`); kept while the explorer is showing. */
+  readonly netWorthParams: WritableSignal<Params> = signal({});
   readonly result: WritableSignal<ExploreResult | null> = signal(null);
   readonly trend: WritableSignal<ExploreTrend | null> = signal(null);
   readonly leafPage: WritableSignal<PageResponse<ExploreTransaction> | null> = signal(null);
@@ -163,10 +169,6 @@ export class ReportsComponent {
   protected readonly measureLabel: Signal<string> = computed(
     (): string => MEASURE_LABELS[this.state().measure],
   );
-  protected readonly dateRange: Signal<DateRange> = computed((): DateRange => {
-    const s: ExploreState = this.state();
-    return { startDate: s.startDate, endDate: s.endDate, label: s.rangeLabel };
-  });
   protected readonly rangeLine: Signal<string> = computed((): string => {
     const { startDate, endDate } = effectiveDates(this.state());
     return rangeText(startDate, endDate);
@@ -268,6 +270,7 @@ export class ReportsComponent {
     const { state, note } = fromQueryParams(this.route.snapshot.queryParams);
     this.state.set(state);
     this.view.set(this.route.snapshot.queryParams['view'] === 'networth' ? 'networth' : 'explorer');
+    this.netWorthParams.set(nwOnly(this.route.snapshot.queryParams));
     this.leafIndex.set(this.pageFrom(this.route.snapshot.queryParams));
     this.note.set(note);
     // an invalid URL is rewritten with what was actually applied; a valid one is left alone
@@ -411,12 +414,10 @@ export class ReportsComponent {
     if (view === 'explorer') this.load();
   }
 
-  onNetWorthRange(range: DateRange): void {
-    this.onStateChange({
-      startDate: range.startDate,
-      endDate: range.endDate,
-      rangeLabel: range.label ?? 'Custom',
-    });
+  /** The net worth view changed its state: put its parameters in the URL (a drill adds a history entry). */
+  onNetWorthParams(change: NetWorthParamsChange): void {
+    if (change.push) this.pushNext = true;
+    this.netWorthParams.set(change.params);
   }
 
   /** Narrows the merchant choice as the user types in the merchant filter's search. */
@@ -531,8 +532,9 @@ export class ReportsComponent {
   }
 
   private urlParams(): Params {
+    // only the active view's parameters are written; the other view's state stays in memory
+    if (this.view() === 'networth') return { view: 'networth', ...this.netWorthParams() };
     const params: Params = toQueryParams(this.state());
-    if (this.view() === 'networth') params['view'] = 'networth';
     if (this.state().leaf && this.leafIndex() > 0) params['page'] = String(this.leafIndex());
     return params;
   }
@@ -548,12 +550,19 @@ export class ReportsComponent {
 
   /** Follows the URL when it changes underneath (back and forward), ignoring what we wrote ourselves. */
   private followUrl(params: Params): void {
-    const { state, note } = fromQueryParams(params);
     const view: View = params['view'] === 'networth' ? 'networth' : 'explorer';
+    if (view === 'networth') {
+      const nw: Params = nwOnly(params);
+      if (JSON.stringify({ view, ...nw }) === JSON.stringify(this.urlParams())) return;
+      this.urlKey = JSON.stringify({ view, ...nw });
+      this.netWorthParams.set(nw);
+      this.view.set(view);
+      return;
+    }
+    const { state, note } = fromQueryParams(params);
     const index: number = this.pageFrom(params);
     const incoming: string = JSON.stringify({
       ...toQueryParams(state),
-      ...(view === 'networth' ? { view: 'networth' } : {}),
       ...(state.leaf && index > 0 ? { page: String(index) } : {}),
     });
     if (incoming === JSON.stringify(this.urlParams())) return;

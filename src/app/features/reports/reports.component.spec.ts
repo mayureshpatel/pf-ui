@@ -73,7 +73,9 @@ const page = (items: ExploreTransaction[]): PageResponse<ExploreTransaction> => 
 describe('ReportsComponent', () => {
   let fixture: ComponentFixture<ReportsComponent>;
   let component: ReportsComponent;
-  let api: Mocked<Pick<ReportApiService, 'explore' | 'trend' | 'transactions' | 'getNetWorth'>>;
+  let api: Mocked<
+    Pick<ReportApiService, 'explore' | 'trend' | 'transactions' | 'getNetWorthBreakdown'>
+  >;
   let router: Mocked<Pick<Router, 'navigate' | 'createUrlTree' | 'serializeUrl'>>;
   let toast: Mocked<Pick<ToastService, 'success' | 'error'>>;
   let queryParams: Subject<Params>;
@@ -112,7 +114,17 @@ describe('ReportsComponent', () => {
       explore: vi.fn().mockReturnValue(of(result())),
       trend: vi.fn().mockReturnValue(of(trend)),
       transactions: vi.fn().mockReturnValue(of(page([tx(1)]))),
-      getNetWorth: vi.fn().mockReturnValue(of([])),
+      getNetWorthBreakdown: vi.fn().mockReturnValue(
+        of({
+          points: [],
+          opening: null,
+          asOf: '2026-10-31',
+          summary: null,
+          moved: null,
+          comparison: null,
+          groups: [],
+        }),
+      ),
     };
 
     await TestBed.configureTestingModule({
@@ -134,6 +146,7 @@ describe('ReportsComponent', () => {
           provide: AccountApiService,
           useValue: {
             getAccounts: vi.fn().mockReturnValue(of([{ id: 1, name: 'Checking' }] as Account[])),
+            getAccountTypes: vi.fn().mockReturnValue(of([])),
           },
         },
         {
@@ -650,7 +663,7 @@ describe('ReportsComponent', () => {
     await settle();
 
     // assert & verify
-    expect(fixture.debugElement.query(By.css('app-net-worth-report'))).not.toBeNull();
+    expect(fixture.debugElement.query(By.css('app-net-worth-view'))).not.toBeNull();
     expect(fixture.debugElement.query(By.css('app-explorer-controls'))).toBeNull();
     expect(router.navigate).toHaveBeenLastCalledWith(
       [],
@@ -665,6 +678,86 @@ describe('ReportsComponent', () => {
     // assert & verify
     expect(component.view()).toBe('networth');
     expect(api.explore).not.toHaveBeenCalled();
+  });
+
+  // PF-887
+  it('should render the net worth view only for the net worth switch', async () => {
+    // arrange
+    await create();
+    expect(fixture.debugElement.query(By.css('app-net-worth-view'))).toBeNull();
+
+    // act
+    component.setView('networth');
+    await settle();
+
+    // assert & verify
+    expect(fixture.debugElement.query(By.css('app-net-worth-view'))).not.toBeNull();
+    expect(fixture.debugElement.query(By.css('app-explorer-controls'))).toBeNull();
+  });
+
+  it("should write only the active view's parameters", async () => {
+    // arrange
+    await create({ view: 'networth' });
+
+    // act
+    component.onNetWorthParams({
+      params: { nwMeasure: 'ASSETS', nwStart: '2026-01-01' },
+      push: false,
+    });
+    await settle();
+
+    // assert & verify
+    const queryParams = router.navigate.mock.calls.at(-1)![1]!.queryParams!;
+    expect(queryParams).toMatchObject({
+      view: 'networth',
+      nwMeasure: 'ASSETS',
+      nwStart: '2026-01-01',
+    });
+    expect(queryParams['measure']).toBeUndefined();
+    expect(queryParams['groupBy']).toBeUndefined();
+  });
+
+  it('should keep the net worth state when switching to the explorer and back', async () => {
+    // arrange
+    await create({ view: 'networth', nwMeasure: 'DEBTS' });
+
+    // act
+    component.setView('explorer');
+    await settle();
+    const explorerParams = router.navigate.mock.calls.at(-1)![1]!.queryParams!;
+    component.setView('networth');
+    await settle();
+    const backParams = router.navigate.mock.calls.at(-1)![1]!.queryParams!;
+
+    // assert & verify
+    expect(explorerParams['measure']).toBe('SPENDING');
+    expect(explorerParams['nwMeasure']).toBeUndefined();
+    expect(backParams).toMatchObject({ view: 'networth', nwMeasure: 'DEBTS' });
+  });
+
+  it('should push a history entry for a net worth drill', async () => {
+    // arrange
+    await create({ view: 'networth' });
+    router.navigate.mockClear();
+
+    // act
+    component.onNetWorthParams({ params: { nwType: 'SAVINGS' }, push: true });
+    await settle();
+
+    // assert & verify
+    expect(router.navigate.mock.calls.at(-1)![1]?.replaceUrl).toBe(false);
+  });
+
+  it('should follow the net worth parameters when the URL changes underneath', async () => {
+    // arrange
+    await create({ view: 'networth' });
+
+    // act
+    queryParams.next({ view: 'networth', nwMeasure: 'ASSETS' });
+    await settle();
+
+    // assert & verify
+    expect(component.netWorthParams()).toEqual({ nwMeasure: 'ASSETS' });
   });
 
   it('should page the transaction list', async () => {

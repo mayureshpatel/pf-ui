@@ -1,0 +1,121 @@
+<div class="flex flex-col gap-4" [attr.aria-busy]="loading()">
+  <app-net-worth-controls
+    [state]="state()"
+    [accounts]="accounts()"
+    [types]="types()"
+    (stateChange)="onState($event)"
+  />
+
+  @if (note(); as message) {
+    <p
+      role="status"
+      class="m-0 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200"
+    >
+      {{ message }}
+    </p>
+  }
+
+  @if (loadError()) {
+    <app-page-error-state message="Failed to load net worth." (retry)="load()" />
+  } @else if (!loadedOnce()) {
+    <div class="flex flex-col gap-3" aria-busy="true">
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <p-skeleton height="6rem" borderRadius="0.75rem" />
+        <p-skeleton height="6rem" borderRadius="0.75rem" />
+        <p-skeleton height="6rem" borderRadius="0.75rem" />
+        <p-skeleton height="6rem" borderRadius="0.75rem" />
+      </div>
+      <p-skeleton height="16rem" borderRadius="0.75rem" />
+      <p-skeleton height="12rem" borderRadius="0.75rem" />
+    </div>
+  } @else if (breakdown(); as data) {
+    @if (data.points.length === 0 || (data.groups.length === 0 && !filtered())) {
+      <div
+        class="flex flex-col items-center gap-2 rounded-xl border border-surface-200 p-8 text-center dark:border-surface-800"
+      >
+        <p class="m-0 font-semibold">No accounts yet</p>
+        <p class="m-0 text-sm text-muted-color">Add an account to see your net worth here.</p>
+        <button
+          type="button"
+          class="cursor-pointer rounded-lg bg-primary-700 px-4 py-2 text-sm text-white hover:bg-primary-800"
+          (click)="addAccount()"
+        >
+          Go to Accounts
+        </button>
+      </div>
+    } @else if (data.groups.length === 0) {
+      <div
+        class="flex flex-col items-center gap-2 rounded-xl border border-surface-200 p-8 text-center dark:border-surface-800"
+      >
+        <p class="m-0 font-semibold">No accounts match these filters</p>
+        <button
+          type="button"
+          class="cursor-pointer rounded-lg bg-primary-700 px-4 py-2 text-sm text-white hover:bg-primary-800"
+          (click)="clearFilters()"
+        >
+          Clear filters
+        </button>
+      </div>
+    } @else {
+      <div class="flex flex-col gap-4" [class.opacity-60]="loading()">
+        <app-net-worth-cards
+          [summary]="data.summary"
+          [opening]="data.opening"
+          [comparison]="data.comparison"
+          [compareMode]="state().compare"
+        />
+        <app-net-worth-moved [moved]="data.moved" [compareLabel]="compareLabel()" />
+        <app-net-worth-chart
+          [points]="data.points"
+          [measure]="state().measure"
+          [month]="state().month"
+          (monthSelect)="onMonth($event)"
+        />
+
+        @if (state().typeCode !== null || state().accountId !== null) {
+          <nav aria-label="Drill path" class="flex flex-wrap items-center gap-1 text-sm">
+            <button
+              type="button"
+              class="cursor-pointer border-0 bg-transparent p-0 text-primary-700 underline dark:text-primary-400"
+              (click)="onState({ typeCode: null, accountId: null })"
+            >
+              All account types
+            </button>
+            @if (typeLabel(); as label) {
+              <span aria-hidden="true">&rsaquo;</span>
+              <button
+                type="button"
+                class="cursor-pointer border-0 bg-transparent p-0 text-primary-700 underline dark:text-primary-400"
+                [attr.aria-current]="state().accountId === null ? 'page' : null"
+                (click)="onState({ accountId: null })"
+              >
+                {{ label }}
+              </button>
+            }
+            @if (selectedAccount(); as account) {
+              <span aria-hidden="true">&rsaquo;</span>
+              <span aria-current="page" class="font-semibold">{{ account.label }}</span>
+            }
+          </nav>
+        }
+
+        <app-net-worth-table
+          [groups]="data.groups"
+          [groupBy]="groupBy()"
+          [totalAssets]="data.summary.assets"
+          [compareLabel]="compareLabel()"
+          (openGroup)="onOpenGroup($event)"
+        />
+
+        @if (selectedAccount(); as account) {
+          <app-net-worth-story
+            [group]="account"
+            [state]="state()"
+            (openExplorer)="onExplorer($event)"
+            (openAccounts)="onAccounts($event)"
+          />
+        }
+      </div>
+    }
+  }
+</div>
