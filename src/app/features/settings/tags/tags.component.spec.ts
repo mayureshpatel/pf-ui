@@ -158,6 +158,26 @@ describe('TagsComponent', () => {
     expect(guard.dirty()).toBe(false);
   });
 
+  it('should keep the tag open after saving when the server answers an update with no id', async () => {
+    // arrange
+    await create();
+    rows()[1].click();
+    await settle();
+    api.updateTag.mockReturnValue(of(undefined as unknown as number));
+    makeDirty();
+
+    // act
+    component.onPanelSave();
+    await settle();
+    component.loadTags();
+    await settle();
+
+    // assert & verify
+    expect(component['selectedTagId']()).toBe(1);
+    expect(component['panelMode']()).toBe('tag');
+    expect(toast.info).not.toHaveBeenCalled();
+  });
+
   it('should add a tag for the user, open it and say so', async () => {
     // arrange
     await create();

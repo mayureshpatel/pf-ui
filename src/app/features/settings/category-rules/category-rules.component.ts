@@ -257,7 +257,9 @@ export class CategoryRulesComponent implements OnInit {
         finalize((): void => this.saving.set(false)),
       )
       .subscribe({
-        next: (id: number): void => {
+        next: (created: number | null | undefined): void => {
+          // an update answers with no id, so the open rule's own id stays selected
+          const id: number = 'id' in request ? request.id : (created as number);
           this.ruleForm()?.form.markAsPristine();
           this.toast.success(editing ? 'Rule saved' : 'Rule added');
           this.loadRules((): void => {

@@ -204,6 +204,26 @@ describe('CategoryRulesComponent', () => {
     expect(guard.dirty()).toBe(false);
   });
 
+  it('should keep the rule open after saving when the server answers an update with no id', async () => {
+    // arrange
+    await create();
+    rows()[0].click();
+    await settle();
+    api.updateRule.mockReturnValue(of(undefined as unknown as number));
+    makeDirty();
+
+    // act
+    component.onPanelSave();
+    await settle();
+    component.loadRules();
+    await settle();
+
+    // assert & verify
+    expect(component['selectedRuleId']()).toBe(2);
+    expect(component['panelMode']()).toBe('rule');
+    expect(toast.info).not.toHaveBeenCalled();
+  });
+
   it('should add a rule, open it and say so', async () => {
     // arrange
     await create();

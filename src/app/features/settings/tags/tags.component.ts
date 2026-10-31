@@ -235,7 +235,9 @@ export class TagsComponent implements OnInit {
         finalize((): void => this.saving.set(false)),
       )
       .subscribe({
-        next: (id: number): void => {
+        next: (created: number | null | undefined): void => {
+          // an update answers with no id, so the open tag's own id stays selected
+          const id: number = 'id' in request ? request.id : (created as number);
           this.tagForm()?.form.markAsPristine();
           this.toast.success(editing ? 'Tag saved' : 'Tag added');
           this.loadTags((): void => {
