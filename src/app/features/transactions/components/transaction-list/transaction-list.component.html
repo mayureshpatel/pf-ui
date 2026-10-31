@@ -45,6 +45,7 @@
             data-testid="header-checkbox"
             aria-label="Select all transactions on this page"
             [checked]="allSelected()"
+            [indeterminate]="someSelected()"
             (click)="onHeaderCheckbox()"
           />
         </th>
@@ -137,7 +138,7 @@
               <input
                 type="checkbox"
                 data-testid="row-checkbox"
-                [attr.aria-label]="'Select ' + (txn.merchant?.name ?? txn.description)"
+                [attr.aria-label]="rowLabel(txn)"
                 [checked]="isSelected(txn.id)"
                 (click)="onRowCheckbox(indexOf(txn), $event)"
               />

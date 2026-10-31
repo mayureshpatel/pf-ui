@@ -42,6 +42,9 @@ import {
 /** What the form hands the host for a new rule (the host adds the user). */
 export type RuleCreateValue = Omit<CategoryRuleCreateRequest, 'userId'>;
 
+/** The server stores priority as a 32-bit integer. */
+const MAX_PRIORITY = 2_147_483_647;
+
 const MATCH_TYPE_OPTIONS: { label: string; value: MatchType }[] = [
   { label: 'Any keyword', value: 'OR' },
   { label: 'All keywords', value: 'AND' },
@@ -98,7 +101,7 @@ export class RuleEditFormComponent implements OnInit {
       category: new FormControl<Category | null>(null, { validators: [Validators.required] }),
       priority: new FormControl<number>(0, {
         nonNullable: true,
-        validators: [Validators.required, Validators.min(0)],
+        validators: [Validators.required, Validators.min(0), Validators.max(MAX_PRIORITY)],
       }),
       minAmount: new FormControl<number | null>(null, { validators: [Validators.min(0)] }),
       maxAmount: new FormControl<number | null>(null, { validators: [Validators.min(0)] }),
@@ -126,7 +129,22 @@ export class RuleEditFormComponent implements OnInit {
   private readonly formKey: Signal<string> = computed((): string =>
     String(this.rule()?.id ?? 'new'),
   );
+  /** What the open rule's fields were when the form was last filled, to tell a changed copy from the same one. */
+  private readonly contentKey: Signal<string> = computed((): string => {
+    const r: CategoryRule | null = this.rule();
+    return r
+      ? JSON.stringify([
+          r.keywords,
+          r.matchType,
+          r.priority,
+          r.category?.id ?? null,
+          r.minAmount ?? null,
+          r.maxAmount ?? null,
+        ])
+      : '';
+  });
   private filledFor: string | null = null;
+  private filledContent: string | null = null;
 
   /** Re-evaluates the messages below whenever the form's value or state changes. */
   private readonly formEvents = toSignal(this.form.events);
@@ -149,7 +167,10 @@ export class RuleEditFormComponent implements OnInit {
   readonly priorityError: Signal<string | null> = computed((): string | null => {
     this.formEvents();
     const control = this.form.controls.priority;
-    return control.invalid && control.touched ? 'Priority must be 0 or more.' : null;
+    if (!control.invalid || !control.touched) return null;
+    return control.errors?.['max']
+      ? 'Priority must be 2,147,483,647 or less.'
+      : 'Priority must be 0 or more.';
   });
 
   readonly amountError: Signal<string | null> = computed((): string | null => {
@@ -165,7 +186,16 @@ export class RuleEditFormComponent implements OnInit {
   constructor() {
     effect((): void => {
       const key: string = this.formKey();
-      if (key === this.filledFor) return;
+      const content: string = this.contentKey();
+      // another rule or a new one always refills; a changed copy of the same rule (edited elsewhere,
+      // or its keywords normalised by the save) refills only while the user has typed nothing
+      const changedCopy: boolean = content !== this.filledContent;
+      if (
+        key === this.filledFor &&
+        !(changedCopy && untracked((): boolean => this.form.pristine))
+      ) {
+        return;
+      }
       untracked((): void => this.fill(key));
     });
   }
@@ -178,6 +208,7 @@ export class RuleEditFormComponent implements OnInit {
 
   private fill(key: string): void {
     this.filledFor = key;
+    this.filledContent = this.contentKey();
     this.errorMessage.set(null);
     const rule: CategoryRule | null = this.rule();
     this.form.reset({

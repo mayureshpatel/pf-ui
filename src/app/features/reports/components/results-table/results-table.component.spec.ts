@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { By } from '@angular/platform-browser';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
@@ -285,5 +286,165 @@ describe('ResultsTableComponent', () => {
 
     // assert & verify
     expect(fixture.nativeElement.querySelector('[data-value]').textContent.trim()).toBe('—');
+  });
+
+  // PF-888: the row menu, for keyboard, mouse and touch
+  describe('row menu', () => {
+    const menuButton = (): HTMLButtonElement =>
+      fixture.nativeElement.querySelector('[data-row] [data-menu]');
+    const items = (): HTMLElement[] =>
+      Array.from(fixture.nativeElement.querySelectorAll('[role="menuitem"]'));
+    const menu = (): HTMLElement => fixture.nativeElement.querySelector('[role="menu"]');
+    const key = (target: HTMLElement, name: string): void => {
+      target.dispatchEvent(new KeyboardEvent('keydown', { key: name, bubbles: true }));
+      fixture.detectChanges();
+    };
+    const open = async (): Promise<void> => {
+      menuButton().click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+    };
+
+    it('should move focus to the first item when it opens', async () => {
+      // arrange
+      render([row('5', 'Food', 100)]);
+
+      // act
+      await open();
+
+      // assert & verify
+      expect(document.activeElement).toBe(items()[0]);
+    });
+
+    it('should move through the items with the arrow keys, wrapping, and with Home and End', async () => {
+      // arrange
+      render([row('5', 'Food', 100)]);
+      await open();
+
+      // act & assert
+      key(items()[0], 'ArrowDown');
+      expect(document.activeElement).toBe(items()[1]);
+      key(items()[1], 'End');
+      expect(document.activeElement).toBe(items()[2]);
+      key(items()[2], 'ArrowDown');
+      expect(document.activeElement).toBe(items()[0]);
+      key(items()[0], 'ArrowUp');
+      expect(document.activeElement).toBe(items()[2]);
+      key(items()[2], 'Home');
+      expect(document.activeElement).toBe(items()[0]);
+    });
+
+    it('should give focus back to the menu button when Escape closes it', async () => {
+      // arrange
+      render([row('5', 'Food', 100)]);
+      await open();
+
+      // act
+      key(menu(), 'Escape');
+      await fixture.whenStable();
+
+      // assert & verify
+      expect(menu()).toBeNull();
+      expect(document.activeElement).toBe(menuButton());
+    });
+
+    it('should open on right-click without the browser menu', async () => {
+      // arrange
+      render([row('5', 'Food', 100)]);
+      const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+
+      // act
+      (fixture.nativeElement.querySelector('[data-row]') as HTMLElement).dispatchEvent(event);
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      // assert & verify
+      expect(event.defaultPrevented).toBe(true);
+      expect(menu()).toBeTruthy();
+    });
+
+    describe('long press', () => {
+      const touch = (type: string, target: Element): void => {
+        const event = Object.assign(new Event(type, { bubbles: true }), { pointerType: 'touch' });
+        target.dispatchEvent(event);
+      };
+      afterEach(() => vi.useRealTimers());
+
+      it('should open after a touch is held, and not also drill when the finger lifts', () => {
+        // arrange
+        vi.useFakeTimers();
+        render([row('5', 'Food', 100)]);
+        const name = fixture.nativeElement.querySelector('[data-row] button') as Element;
+
+        // act
+        touch('pointerdown', name);
+        vi.advanceTimersByTime(600);
+        fixture.detectChanges();
+        touch('pointerup', name);
+        (name as HTMLElement).click();
+        fixture.detectChanges();
+
+        // assert & verify
+        expect(menu()).toBeTruthy();
+        expect(drilled).toEqual([]);
+      });
+
+      it('should not open when the touch is released early (a tap)', () => {
+        // arrange
+        vi.useFakeTimers();
+        render([row('5', 'Food', 100)]);
+        const name = fixture.nativeElement.querySelector('[data-row] button') as Element;
+
+        // act
+        touch('pointerdown', name);
+        vi.advanceTimersByTime(100);
+        touch('pointerup', name);
+        vi.advanceTimersByTime(600);
+        (name as HTMLElement).click();
+        fixture.detectChanges();
+
+        // assert & verify
+        expect(menu()).toBeNull();
+        expect(drilled).toHaveLength(1);
+      });
+
+      it('should not open when the finger moves away (a scroll)', () => {
+        // arrange
+        vi.useFakeTimers();
+        render([row('5', 'Food', 100)]);
+        const name = fixture.nativeElement.querySelector('[data-row] button') as Element;
+
+        // act
+        touch('pointerdown', name);
+        vi.advanceTimersByTime(100);
+        touch('pointercancel', name);
+        vi.advanceTimersByTime(600);
+        fixture.detectChanges();
+
+        // assert & verify
+        expect(menu()).toBeNull();
+      });
+    });
+  });
+
+  // PF-888: on a phone the change column is hidden, so the row carries its own change text
+  it('should show the change text on the row for a phone', () => {
+    // act
+    render([row('1', 'Food', 120, 100)]);
+
+    // assert & verify
+    const phone = fixture.nativeElement.querySelector('[data-change-phone]') as HTMLElement;
+    const wide = fixture.nativeElement.querySelector('[data-change]') as HTMLElement;
+    expect(phone).toBeTruthy();
+    expect(phone.textContent?.trim()).toBe(wide.textContent?.trim());
+    expect(phone.className).toContain('sm:hidden');
+  });
+
+  it('should not add a phone change line to rows with no comparison', () => {
+    // act
+    render([row('1', 'Food', 120, null)]);
+
+    // assert & verify
+    expect(fixture.nativeElement.querySelector('[data-change-phone]')).toBeNull();
   });
 });

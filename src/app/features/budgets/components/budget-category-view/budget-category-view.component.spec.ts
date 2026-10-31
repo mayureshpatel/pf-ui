@@ -177,4 +177,37 @@ describe('BudgetCategoryViewComponent', () => {
     expect(classes.contains('border-rose-300')).toBe(true);
     expect(classes.contains('dark:border-rose-800')).toBe(true);
   });
+
+  // PF-880
+  describe('init and the first render', () => {
+    const setRow = (r: BudgetRow): void => {
+      fixture.componentRef.setInput('row', r);
+      fixture.componentRef.setInput('monthName', 'October');
+      fixture.componentRef.setInput('saving', false);
+    };
+
+    it('should fill its limit at init, before any effect or render', () => {
+      // arrange
+      setRow(row(1, 450, 100));
+
+      // act
+      component.ngOnInit();
+
+      // assert & verify
+      expect(component.form.controls.amount.value).toBe(450);
+    });
+
+    it('should not reset again on the first render (typing survives it)', () => {
+      // arrange
+      setRow(row(1, 450, 100));
+      component.ngOnInit();
+      component.form.controls.amount.setValue(999);
+
+      // act -- the first render and its effects run now
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.form.controls.amount.value).toBe(999);
+    });
+  });
 });

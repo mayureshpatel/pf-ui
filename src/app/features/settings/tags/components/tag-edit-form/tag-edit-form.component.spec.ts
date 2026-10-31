@@ -218,4 +218,34 @@ describe('TagEditFormComponent', () => {
     expect(viewed).toBe(1);
     expect(removed).toBe(1);
   });
+
+  // PF-890
+  it('should refill a pristine form when the same tag comes back changed, but not a dirty one', () => {
+    // arrange
+    render(trip);
+
+    // act
+    fixture.componentRef.setInput('tag', { ...trip, name: 'Trips', color: '#3B82F6' });
+    fixture.detectChanges();
+
+    // assert & verify
+    expect(component.form.getRawValue()).toEqual({ name: 'Trips', color: '3B82F6' });
+
+    // act -- now the user types, and another copy arrives
+    component.form.controls.name.setValue('My edit');
+    component.form.markAsDirty();
+    fixture.componentRef.setInput('tag', { ...trip, name: 'Elsewhere' });
+    fixture.detectChanges();
+
+    // assert & verify
+    expect(component.form.getRawValue().name).toBe('My edit');
+  });
+
+  it('should disable Delete while a save is in flight', () => {
+    // act
+    render(trip, true);
+
+    // assert & verify
+    expect(buttonByText('Delete tag')?.disabled).toBe(true);
+  });
 });

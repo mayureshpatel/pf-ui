@@ -40,11 +40,19 @@ import { TransactionApiService } from './services/transaction-api.service';
 import { TransactionUrlStateService } from './services/transaction-url-state.service';
 import { DashboardApiService } from '@features/dashboard/services/dashboard-api.service';
 import { ActionItem, ActionType } from '@models/dashboard.model';
-import { hasAnyFilter, presetRange } from './utils/transaction-period';
+import { isSameTransactionState } from './utils/transaction-state';
+import {
+  describeEmptyPeriod,
+  hasAnyFilter,
+  hasOnlyPeriodFilter,
+  presetRange,
+} from './utils/transaction-period';
 import { UNCATEGORIZED } from './utils/transaction-filter-chips';
 import { TransactionFilterBarComponent } from './components/transaction-filter-bar/transaction-filter-bar.component';
 import {
   ReviewTab,
+  reviewTabId,
+  TRANSACTIONS_TABPANEL_ID,
   TransactionReviewTabsComponent,
 } from './components/transaction-review-tabs/transaction-review-tabs.component';
 import { TransactionListComponent } from './components/transaction-list/transaction-list.component';
@@ -277,6 +285,35 @@ export class TransactionsComponent implements OnInit {
     hasAnyFilter(this.state().filter),
   );
 
+  /**
+   * Whether any transaction exists at all, asked once when a period-only filter finds nothing.
+   * Null until answered (or when not asked), so the page can tell "nothing yet" from "nothing in
+   * this period".
+   */
+  readonly anyTransactionsExist: WritableSignal<boolean | null> = signal<boolean | null>(null);
+
+  /** What to tell the user when the list is empty (see PF-867). */
+  readonly emptyKind: Signal<'filtered' | 'period' | 'none' | 'checking'> = computed(() => {
+    const filter: TransactionFilter = this.state().filter;
+    if (hasAnyFilter(filter) && !hasOnlyPeriodFilter(filter)) return 'filtered';
+    if (!hasOnlyPeriodFilter(filter)) return 'none';
+    const exists: boolean | null = this.anyTransactionsExist();
+    if (exists === null) return 'checking';
+    return exists ? 'period' : 'none';
+  });
+
+  /** Headline for the empty state when only the period found nothing. */
+  readonly emptyPeriodMessage: Signal<string> = computed((): string =>
+    describeEmptyPeriod(
+      { startDate: this.state().filter.startDate, endDate: this.state().filter.endDate },
+      new Date(),
+    ),
+  );
+
+  /** The panel the review tabs control, and the id of the tab that names it. */
+  protected readonly tabPanelId: string = TRANSACTIONS_TABPANEL_ID;
+  readonly activeTabId: Signal<string> = computed((): string => reviewTabId(this.activeTab()));
+
   /** Heading for the side panel. */
   readonly panelTitle: Signal<string> = computed((): string => {
     switch (this.panelMode()) {
@@ -369,6 +406,7 @@ export class TransactionsComponent implements OnInit {
         next: (res: PageResponse<Transaction>): void => {
           this.transactions.set(res.content);
           this.totalRecords.set(res.page.totalElements);
+          this.checkForAnyTransactions(res.content.length === 0);
           // a selection never survives a reload, so bulk mode has nothing left to act on
           this.selectedTransactions.set([]);
           if (this.panelMode() === 'bulk') {
@@ -388,8 +426,31 @@ export class TransactionsComponent implements OnInit {
         error: (err: unknown): void => {
           console.error('Failed to load transactions:', err);
           this.toast.error('Failed to refresh ledger.');
+          // the old rows belong to the old filter, so do not leave them under the new filter
+          // chips; with nothing to show the page falls back to the error state with a retry
+          this.transactions.set([]);
+          this.totalRecords.set(0);
+          this.selectedTransactions.set([]);
           this.loadError.set(true);
         },
+      });
+  }
+
+  /**
+   * When a period-only filter finds nothing, asks whether any transaction exists at all, so the
+   * empty state can say "no transactions yet" for a new user and name the period otherwise.
+   */
+  private checkForAnyTransactions(emptyResult: boolean): void {
+    this.anyTransactionsExist.set(null);
+    if (!emptyResult || !hasOnlyPeriodFilter(this.state().filter)) return;
+    this.transactionApi
+      .getTransactions({}, { page: 0, size: 1, sort: this.state().sort })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res: PageResponse<Transaction>): void =>
+          this.anyTransactionsExist.set(res.page.totalElements > 0),
+        // cannot tell, so fall back to the plain "nothing in this period" wording
+        error: (): void => this.anyTransactionsExist.set(true),
       });
   }
 
@@ -412,7 +473,7 @@ export class TransactionsComponent implements OnInit {
       : hydrated;
     const currentState: TransactionState = this.state();
 
-    if (JSON.stringify(newState) !== JSON.stringify(currentState)) {
+    if (!isSameTransactionState(newState, currentState)) {
       this.state.set(newState);
     }
   }

@@ -22,9 +22,13 @@ export class MerchantOverviewComponent {
   /** Descriptions with no merchant link, or null while that figure is still loading. */
   readonly unlinkedCount: InputSignal<number | null> = input.required<number | null>();
   readonly hasTransactions: InputSignal<boolean> = input.required<boolean>();
+  /** The description totals could not be loaded (so the figure above will not arrive). */
+  readonly statsFailed: InputSignal<boolean> = input<boolean>(false);
 
   readonly add: OutputEmitterRef<void> = output<void>();
   readonly linkDescriptions: OutputEmitterRef<void> = output<void>();
+  /** Asks the page to load the description totals again. */
+  readonly retryStats: OutputEmitterRef<void> = output<void>();
 
   readonly merchantsText: Signal<string> = computed((): string =>
     merchantCountLabel(this.merchantCount()),

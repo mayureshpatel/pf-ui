@@ -70,9 +70,11 @@
         @switch (mode()) {
           @case ('overview') {
             <app-merchant-overview
-              [merchantCount]="totalRecords()"
+              [merchantCount]="merchantTotal() ?? totalRecords()"
               [unlinkedCount]="unlinkedCount()"
               [hasTransactions]="hasTransactions()"
+              [statsFailed]="statsFailed()"
+              (retryStats)="loadStats()"
               (add)="startAdd()"
               (linkDescriptions)="openPicker()"
             />

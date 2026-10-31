@@ -27,7 +27,7 @@ export type RecurringFrequency = 'WEEKLY' | 'BI_WEEKLY' | 'MONTHLY' | 'QUARTERLY
 export interface RecurringTransaction {
   id: number;
   userId: number;
-  account: Account;
+  account: Account | null;
   merchant: Merchant;
   amount: number;
   frequency: RecurringFrequency;

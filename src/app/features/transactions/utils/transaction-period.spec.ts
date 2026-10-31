@@ -1,5 +1,11 @@
 import { TransactionFilter } from '@models/transaction.model';
-import { detectPreset, hasAnyFilter, presetRange } from './transaction-period';
+import {
+  describeEmptyPeriod,
+  detectPreset,
+  hasAnyFilter,
+  hasOnlyPeriodFilter,
+  presetRange,
+} from './transaction-period';
 
 const TODAY = new Date(2026, 9, 17); // Oct 17, 2026, local time
 
@@ -78,6 +84,65 @@ describe('transaction-period', () => {
     it('should not count a null (an emptied input) as an applied filter', () => {
       // assert & verify
       expect(hasAnyFilter({ minAmount: null as unknown as undefined })).toBe(false);
+    });
+  });
+
+  describe('hasOnlyPeriodFilter (PF-867)', () => {
+    it('should be true when only dates are set', () => {
+      // assert & verify
+      expect(hasOnlyPeriodFilter({ startDate: TODAY })).toBe(true);
+      expect(hasOnlyPeriodFilter({ startDate: TODAY, endDate: TODAY })).toBe(true);
+    });
+
+    it('should be false when no dates are set, or any other filter is set with them', () => {
+      // assert & verify
+      expect(hasOnlyPeriodFilter({})).toBe(false);
+      expect(hasOnlyPeriodFilter({ description: 'x' })).toBe(false);
+      expect(hasOnlyPeriodFilter({ startDate: TODAY, categoryName: 'Groceries' })).toBe(false);
+    });
+
+    it('should ignore cleared (null or undefined) fields next to the dates', () => {
+      // assert & verify -- a cleared number input reports null
+      expect(
+        hasOnlyPeriodFilter({
+          startDate: TODAY,
+          minAmount: null as unknown as number,
+          description: undefined,
+        }),
+      ).toBe(true);
+    });
+  });
+
+  describe('describeEmptyPeriod (PF-867)', () => {
+    it('should name the month for THIS_MONTH', () => {
+      // assert & verify
+      expect(describeEmptyPeriod(presetRange('THIS_MONTH', TODAY), TODAY)).toBe(
+        'No transactions in October yet',
+      );
+    });
+
+    it('should name the month for LAST_MONTH', () => {
+      // assert & verify
+      expect(describeEmptyPeriod(presetRange('LAST_MONTH', TODAY), TODAY)).toBe(
+        'No transactions in September',
+      );
+    });
+
+    it('should name the year for THIS_YEAR', () => {
+      // assert & verify
+      expect(describeEmptyPeriod(presetRange('THIS_YEAR', TODAY), TODAY)).toBe(
+        'No transactions in 2026 yet',
+      );
+    });
+
+    it('should fall back to the date range for a custom range', () => {
+      // assert & verify
+      expect(
+        describeEmptyPeriod(
+          { startDate: new Date(2026, 2, 3), endDate: new Date(2026, 2, 9) },
+          TODAY,
+        ),
+      ).toBe('No transactions in this date range');
     });
   });
 });

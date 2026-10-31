@@ -1,5 +1,4 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { DebugElement } from '@angular/core';
 import { CategoryChartComponent } from './category-chart.component';
 import { CategoryBreakdown } from '@models/dashboard.model';
 import { Category, CategoryType } from '@models/category.model';
@@ -63,13 +62,13 @@ describe('CategoryChartComponent', () => {
     });
   });
 
-  describe('chartData (effect-driven)', () => {
+  describe('rows', () => {
     it('should sort items by absolute total, descending', () => {
       // arrange & act
       setCategories(mockBreakdown);
 
       // assert & verify
-      expect(component.chartData().labels).toEqual([
+      expect(component.rows().map((row) => row.name)).toEqual([
         'Rent',
         'Groceries',
         'Dining Out',
@@ -83,21 +82,20 @@ describe('CategoryChartComponent', () => {
       setCategories(mockBreakdown);
 
       // assert & verify -- 'Coffee' (smallest, -10) is excluded
-      expect(component.chartData().labels).toHaveLength(5);
-      expect(component.chartData().labels).not.toContain('Coffee');
+      expect(component.rows()).toHaveLength(5);
+      expect(component.rows().map((row) => row.name)).not.toContain('Coffee');
     });
 
     it('should re-slice reactively when topX changes', () => {
       // arrange
       setCategories(mockBreakdown);
-      expect(component.chartData().labels).toHaveLength(5);
 
       // act
       fixture.componentRef.setInput('topX', 2);
       fixture.detectChanges();
 
       // assert & verify
-      expect(component.chartData().labels).toEqual(['Rent', 'Groceries']);
+      expect(component.rows().map((row) => row.name)).toEqual(['Rent', 'Groceries']);
     });
 
     it('should map totals to their absolute value, not the raw signed amount', () => {
@@ -105,7 +103,7 @@ describe('CategoryChartComponent', () => {
       setCategories(mockBreakdown);
 
       // assert & verify -- all backing totals are negative (expenses)
-      expect(component.chartData().datasets[0].data).toEqual([900, 450.75, 120, 80, 35]);
+      expect(component.rows().map((row) => row.amount)).toEqual([900, 450.75, 120, 80, 35]);
     });
 
     it("should label an item with no category as 'Uncategorized'", () => {
@@ -113,68 +111,79 @@ describe('CategoryChartComponent', () => {
       setCategories([{ category: null as unknown as Category, total: -75 }, ...mockBreakdown]);
 
       // assert & verify -- -75 sorts ahead of Gas/Subscriptions/Coffee but behind Rent/Groceries
-      expect(component.chartData().labels).toContain('Uncategorized');
+      expect(component.rows().map((row) => row.name)).toContain('Uncategorized');
     });
 
-    it('should return an empty-but-shaped chart when categories is empty (PF-189)', () => {
-      // arrange & act -- computed() always returns a fully-shaped value, matching every
-      // sibling chart component (CashFlowTrendComponent, category-report.component.ts)
-      setCategories([]);
+    it("should use the category's own color when set, else a name-derived color", () => {
+      // arrange & act
+      setCategories(mockBreakdown);
+
+      // assert & verify -- 'Rent' has a color; 'Dining Out' (index 2) does not
+      expect(component.rows()[0].color).toBe('#3B82F6');
+      expect(component.rows()[2].color).toBe(getCategoryColor('Dining Out'));
+    });
+
+    it('should size each bar relative to the largest shown amount', () => {
+      // arrange & act
+      setCategories(mockBreakdown);
 
       // assert & verify
-      expect(component.chartData()).toEqual({
-        labels: [],
-        datasets: [
-          {
-            label: 'Total Spent',
-            data: [],
-            backgroundColor: [],
-            borderRadius: 8,
-            barThickness: 32,
-            hoverBackgroundColor: [],
-          },
-        ],
-      });
+      expect(component.rows()[0].widthPct).toBe(100);
+      expect(component.rows()[1].widthPct).toBeCloseTo((450.75 / 900) * 100, 5);
     });
 
-    describe('bar color', () => {
-      it("should use the category's own color directly when one is set", () => {
-        // arrange & act
-        setCategories(mockBreakdown);
+    it('should give every bar a zero width, not NaN, when all amounts are zero', () => {
+      // arrange & act
+      setCategories([{ category: category('Rent', '#3B82F6'), total: 0 }]);
 
-        // assert & verify -- 'Rent' (index 0) has color '#3B82F6' set
-        expect((component.chartData().datasets[0].backgroundColor as string[])[0]).toBe('#3B82F6');
-        expect((component.chartData().datasets[0].hoverBackgroundColor as string[])[0]).toBe(
-          '#3B82F6',
-        );
-      });
-
-      it('should fall back to a name-derived color when the category has no color set', () => {
-        // arrange & act
-        setCategories(mockBreakdown);
-
-        // assert & verify -- 'Dining Out' (index 2) has no color set
-        const expected = getCategoryColor('Dining Out');
-        expect((component.chartData().datasets[0].backgroundColor as string[])[2]).toBe(expected);
-        expect((component.chartData().datasets[0].hoverBackgroundColor as string[])[2]).toBe(
-          expected,
-        );
-      });
+      // assert & verify
+      expect(component.rows()[0].widthPct).toBe(0);
     });
   });
 
-  describe('chartOptions binding (PF-189)', () => {
-    it('should pass p-chart a real options object, not a signal function', () => {
-      // arrange & act -- the template binds [options]="chartOptions" with no (), so if
-      // chartOptions were still a WritableSignal, p-chart would receive the function itself
+  describe('rendering (PF-863)', () => {
+    const rowEls = (): HTMLElement[] =>
+      Array.from(fixture.nativeElement.querySelectorAll('[data-testid="category-row"]'));
+
+    it('should print each category name and its formatted amount as text', () => {
+      // arrange & act
       setCategories(mockBreakdown);
-      const pChart = fixture.debugElement.query(
-        (de: DebugElement): boolean => de.name === 'p-chart',
-      );
+
+      // assert & verify -- text in the DOM, readable without hovering and by a screen reader
+      const rows: HTMLElement[] = rowEls();
+      expect(rows).toHaveLength(5);
+      expect(rows[0].textContent).toContain('Rent');
+      expect(rows[0].textContent).toContain('$900.00');
+      expect(rows[1].textContent).toContain('Groceries');
+      expect(rows[1].textContent).toContain('$450.75');
+    });
+
+    it('should expose the rows as a list', () => {
+      // arrange & act
+      setCategories(mockBreakdown);
 
       // assert & verify
-      expect(typeof pChart.componentInstance.options).toBe('object');
-      expect(pChart.componentInstance.options.indexAxis).toBe('y');
+      expect(fixture.nativeElement.querySelector('ul[role="list"]')).not.toBeNull();
+    });
+
+    it('should draw bars with HTML, not a canvas chart', () => {
+      // arrange & act
+      setCategories(mockBreakdown);
+
+      // assert & verify
+      expect(fixture.nativeElement.querySelector('canvas')).toBeNull();
+      expect(fixture.nativeElement.querySelector('p-chart')).toBeNull();
+    });
+
+    it('should keep the empty state text and show no rows when there is no data', () => {
+      // arrange & act
+      setCategories([]);
+
+      // assert & verify
+      const text: string = fixture.nativeElement.textContent;
+      expect(text).toContain('No spending recorded for this period.');
+      expect(text).toContain('Try a different time period.');
+      expect(rowEls()).toHaveLength(0);
     });
   });
 });

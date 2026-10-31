@@ -136,7 +136,7 @@ export class TagsComponent implements OnInit {
     this.loading.set(true);
     this.loadError.set(false);
     this.loadSubscription = this.api
-      .getTags()
+      .getTags(true)
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize((): void => {
@@ -153,7 +153,9 @@ export class TagsComponent implements OnInit {
         error: (err: unknown): void => {
           console.error('Failed to load tags:', err);
           this.toast.error('Failed to load tags.');
-          this.tags.set([]);
+          // with a form open, the tags and the form stay (the banner offers a retry); otherwise the
+          // page falls back to the error state rather than showing stale tags
+          if (this.panelMode() === 'overview') this.tags.set([]);
           this.loadError.set(true);
         },
       });
@@ -161,6 +163,7 @@ export class TagsComponent implements OnInit {
 
   private afterTagsLoaded(data: Tag[]): void {
     if (data.length === 0) {
+      if (this.panelMode() === 'tag') this.toast.info('That tag no longer exists.');
       this.selectedTagId.set(null);
       this.panelMode.set('add');
       return;
@@ -240,7 +243,8 @@ export class TagsComponent implements OnInit {
       )
       .subscribe({
         next: (created: number | null | undefined): void => {
-          // an update answers with no id, so the open tag's own id stays selected
+          // an update answers with the number of rows it changed, not an id, so the open tag's own
+          // id stays selected
           const id: number = 'id' in request ? request.id : (created as number);
           this.tagForm()?.form.markAsPristine();
           this.toast.success(editing ? 'Tag saved' : 'Tag added');
@@ -291,6 +295,8 @@ export class TagsComponent implements OnInit {
         next: (): void => {
           this.toast.success('Tag deleted');
           this.tagForm()?.form.markAsPristine();
+          // the row that opened the panel is about to disappear, so focus goes to the panel instead
+          this.focusReturn = null;
           this.closePanel();
           this.loadTags();
         },

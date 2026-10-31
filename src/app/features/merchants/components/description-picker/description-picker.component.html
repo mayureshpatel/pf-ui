@@ -40,6 +40,14 @@
   >
     @if (rows().length === 0 && !loading()) {
       <p class="m-0 py-4 text-center text-sm text-muted-color">{{ emptyMessage() }}</p>
+    } @else if (rows().length === 0) {
+      <p
+        data-testid="picker-loading"
+        role="status"
+        class="m-0 py-4 text-center text-sm text-muted-color"
+      >
+        Loading descriptions
+      </p>
     } @else {
       <ul class="m-0 flex list-none flex-col gap-1 p-0">
         @for (row of rows(); track row.description) {

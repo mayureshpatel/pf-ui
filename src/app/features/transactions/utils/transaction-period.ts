@@ -74,3 +74,37 @@ export function hasAnyFilter(filter: TransactionFilter): boolean {
     (value: unknown): boolean => value !== undefined && value !== null,
   );
 }
+
+/**
+ * Whether the filter is a date range and nothing else. An empty list under such a filter may only
+ * mean "nothing in this period", so the page checks whether anything exists before saying so.
+ *
+ * @param filter - The filter to inspect.
+ */
+export function hasOnlyPeriodFilter(filter: TransactionFilter): boolean {
+  const { startDate, endDate, ...rest } = filter;
+  return (startDate != null || endDate != null) && !hasAnyFilter(rest);
+}
+
+const MONTH_NAME = new Intl.DateTimeFormat('en-US', { month: 'long' });
+
+/**
+ * The headline for an empty list when the period is the only filter and older transactions exist.
+ * A period that has not ended yet reads "yet"; a past one does not.
+ *
+ * @param range - The applied date range.
+ * @param today - Today's date.
+ * @returns For example "No transactions in October yet".
+ */
+export function describeEmptyPeriod(range: PeriodRange, today: Date): string {
+  switch (detectPreset(range, today)) {
+    case 'THIS_MONTH':
+      return `No transactions in ${MONTH_NAME.format(today)} yet`;
+    case 'LAST_MONTH':
+      return `No transactions in ${MONTH_NAME.format(presetRange('LAST_MONTH', today).startDate)}`;
+    case 'THIS_YEAR':
+      return `No transactions in ${today.getFullYear()} yet`;
+    default:
+      return 'No transactions in this date range';
+  }
+}

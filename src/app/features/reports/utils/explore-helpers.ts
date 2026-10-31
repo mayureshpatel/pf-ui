@@ -12,7 +12,12 @@ import {
   Period,
   Side,
 } from '../models/reports.model';
-import { effectiveDates, TIME_GROUPINGS, TIME_ONLY_MEASURES } from './explore-state';
+import {
+  effectiveDates,
+  fromQueryParams,
+  TIME_GROUPINGS,
+  TIME_ONLY_MEASURES,
+} from './explore-state';
 
 export const OTHER_KEY = '__other__';
 
@@ -408,7 +413,10 @@ export function topWithOther(
   };
 }
 
-/** Whether the filters fit the Transactions page (one account, one category, one merchant, one tag). */
+/**
+ * Whether the filters fit the Transactions page (one account, one category (or Uncategorized), one
+ * merchant, one tag).
+ */
 export function isTransactionsLinkable(
   filters: ExploreFilters,
   measure?: Measure,
@@ -418,7 +426,6 @@ export function isTransactionsLinkable(
     reason: `${TRANSACTIONS_PAGE} ${reason}.`,
   });
   if (filters.accountIds.length > 1) return no('show several accounts at once');
-  if (filters.uncategorized) return no('show only uncategorized transactions');
   if (filters.noMerchant) return no('show only transactions without a merchant');
   if (filters.noTag) return no('show only transactions without a tag');
   if (measure === 'NET' || measure === 'SAVINGS_RATE')
@@ -444,6 +451,8 @@ export function toTransactionsQuery(state: ExploreState): Params | null {
   if (f.accountIds.length === 1) query['accountId'] = String(f.accountIds[0]);
   if (f.merchantName) query['merchant'] = f.merchantName;
   if (f.categoryName) query['categoryName'] = f.categoryName;
+  // the Transactions page's Uncategorized filter is a category named 'null'
+  if (f.uncategorized) query['categoryName'] = 'null';
   if (f.tagId !== undefined) query['tagId'] = String(f.tagId);
   if (f.minAmount !== undefined) query['minAmount'] = String(f.minAmount);
   if (f.maxAmount !== undefined) query['maxAmount'] = String(f.maxAmount);
@@ -667,4 +676,23 @@ export function reconcileDrill(state: ExploreState): ExploreState {
     stepHolds(latest.get(step.filterKey) as DrillStep, state),
   );
   return drill.length === state.drill.length ? state : { ...state, drill };
+}
+
+/**
+ * Reads a state from URL parameters like {@link fromQueryParams}, and also drops drill steps the
+ * link's own filters don't back (a hand-edited or stale link), so the chips and breadcrumb never
+ * describe a filter that isn't applied. The note says so, after any other problem with the link.
+ *
+ * @param params - The URL query parameters.
+ * @param today - Today's date, for the default range.
+ */
+export function hydrateState(
+  params: Params,
+  today: Date = new Date(),
+): { state: ExploreState; note: string | null } {
+  const { state, note } = fromQueryParams(params, today);
+  const reconciled: ExploreState = reconcileDrill(state);
+  if (reconciled === state) return { state, note };
+  const dropped = 'Part of the drill path in this link had no matching filter, so it was dropped.';
+  return { state: reconciled, note: note ? `${note} ${dropped}` : dropped };
 }
