@@ -1402,6 +1402,25 @@ describe('TransactionsComponent', () => {
     });
 
     describe('tabs', () => {
+      // PF-868: the review tabs control one panel, named by whichever tab is active
+      it('should wrap the list area in a tabpanel labelled by the active tab', () => {
+        // act
+        openAt({});
+        const panel = (): HTMLElement =>
+          fixture.nativeElement.querySelector('[role="tabpanel"]') as HTMLElement;
+
+        // assert & verify
+        expect(panel().id).toBe('transactions-tabpanel');
+        expect(panel().getAttribute('aria-labelledby')).toBe('transaction-tab-all');
+
+        // act
+        component.onTabChange('NEEDS_CATEGORY');
+        fixture.detectChanges();
+
+        // assert & verify
+        expect(panel().getAttribute('aria-labelledby')).toBe('transaction-tab-needs-category');
+      });
+
       it('should leave other filters alone when All is clicked while already on All', () => {
         // arrange
         openAt({});

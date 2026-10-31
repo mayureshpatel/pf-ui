@@ -1,6 +1,9 @@
 import { vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { TransactionReviewTabsComponent } from './transaction-review-tabs.component';
+import {
+  TRANSACTIONS_TABPANEL_ID,
+  TransactionReviewTabsComponent,
+} from './transaction-review-tabs.component';
 
 describe('TransactionReviewTabsComponent', () => {
   let fixture: ComponentFixture<TransactionReviewTabsComponent>;
@@ -87,5 +90,107 @@ describe('TransactionReviewTabsComponent', () => {
     // assert & verify
     expect(tab(/Needs a category/)).toBeTruthy();
     expect(tab(/Needs a category/)?.textContent).not.toMatch(/\d/);
+  });
+
+  // PF-868: the WAI-ARIA tabs pattern
+  describe('tabs pattern', () => {
+    const tabs = (): HTMLButtonElement[] =>
+      Array.from(fixture.nativeElement.querySelectorAll('[role="tab"]'));
+    const press = (key: string, from: HTMLElement): void => {
+      from.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+      fixture.detectChanges();
+    };
+
+    it('should keep only the active tab in the tab order', () => {
+      // act
+      render({ activeTab: 'ALL', uncategorizedCount: 5, transferCount: 0 });
+
+      // assert & verify
+      expect(tabs().map((t) => t.getAttribute('tabindex'))).toEqual(['0', '-1']);
+    });
+
+    it('should move the tab stop with the active tab', () => {
+      // act
+      render({ activeTab: 'NEEDS_CATEGORY', uncategorizedCount: 5, transferCount: 0 });
+
+      // assert & verify
+      expect(tabs().map((t) => t.getAttribute('tabindex'))).toEqual(['-1', '0']);
+    });
+
+    it('should select and focus the next tab on ArrowRight, and wrap round', () => {
+      // arrange
+      render({ activeTab: 'ALL', uncategorizedCount: 5, transferCount: 0 });
+      const changed = vi.fn();
+      fixture.componentInstance.tabChange.subscribe(changed);
+
+      // act
+      press('ArrowRight', tabs()[0]);
+
+      // assert & verify
+      expect(changed).toHaveBeenLastCalledWith('NEEDS_CATEGORY');
+      expect(document.activeElement).toBe(tabs()[1]);
+
+      // act -- from the last tab it wraps to the first
+      render({ activeTab: 'NEEDS_CATEGORY', uncategorizedCount: 5, transferCount: 0 });
+      press('ArrowRight', tabs()[1]);
+
+      // assert & verify
+      expect(changed).toHaveBeenLastCalledWith('ALL');
+    });
+
+    it('should select the previous tab on ArrowLeft, and the first and last on Home and End', () => {
+      // arrange
+      render({ activeTab: 'ALL', uncategorizedCount: 5, transferCount: 0 });
+      const changed = vi.fn();
+      fixture.componentInstance.tabChange.subscribe(changed);
+
+      // act & assert
+      press('ArrowLeft', tabs()[0]);
+      expect(changed).toHaveBeenLastCalledWith('NEEDS_CATEGORY');
+      press('End', tabs()[0]);
+      expect(changed).toHaveBeenLastCalledWith('NEEDS_CATEGORY');
+      // the host applies the selection, so the next key press starts from the new active tab
+      render({ activeTab: 'NEEDS_CATEGORY', uncategorizedCount: 5, transferCount: 0 });
+      press('Home', tabs()[1]);
+      expect(changed).toHaveBeenLastCalledWith('ALL');
+    });
+
+    it('should do nothing on an arrow key when there is only one tab', () => {
+      // arrange
+      render({ activeTab: 'ALL', uncategorizedCount: 0, transferCount: 0 });
+      const changed = vi.fn();
+      fixture.componentInstance.tabChange.subscribe(changed);
+
+      // act
+      press('ArrowRight', tabs()[0]);
+
+      // assert & verify
+      expect(changed).not.toHaveBeenCalled();
+    });
+
+    it('should give each tab an id and point aria-controls at the shared panel', () => {
+      // act
+      render({ activeTab: 'ALL', uncategorizedCount: 5, transferCount: 0 });
+
+      // assert & verify
+      expect(tabs().map((t) => t.id)).toEqual([
+        'transaction-tab-all',
+        'transaction-tab-needs-category',
+      ]);
+      for (const t of tabs()) {
+        expect(t.getAttribute('aria-controls')).toBe(TRANSACTIONS_TABPANEL_ID);
+      }
+    });
+  });
+
+  it('should give the Needs a category count badge at least 4.5:1 text contrast (amber-700 or darker)', () => {
+    // act
+    render({ activeTab: 'ALL', uncategorizedCount: 5, transferCount: 0 });
+
+    // assert & verify -- white text; amber-600 is about 3.2:1, amber-700 is about 5:1
+    const badge = tab(/Needs a category/)?.querySelector('span') as HTMLElement;
+    expect(badge.classList.contains('text-white')).toBe(true);
+    expect(badge.classList.contains('bg-amber-700')).toBe(true);
+    expect(badge.classList.contains('bg-amber-600')).toBe(false);
   });
 });

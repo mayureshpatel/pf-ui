@@ -46,7 +46,13 @@
         panelMode() === 'closed' ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-[minmax(0,1fr)_26rem]'
       "
     >
-      <div class="flex min-w-0 flex-col gap-3" [class.pb-24]="selectedIds().length > 0">
+      <div
+        role="tabpanel"
+        [id]="tabPanelId"
+        [attr.aria-labelledby]="activeTabId()"
+        class="flex min-w-0 flex-col gap-3"
+        [class.pb-24]="selectedIds().length > 0"
+      >
         @if (isEmpty()) {
           <div
             class="rounded-2xl border border-surface-200 p-10 text-center dark:border-surface-800"

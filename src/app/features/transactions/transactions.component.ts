@@ -50,6 +50,8 @@ import { UNCATEGORIZED } from './utils/transaction-filter-chips';
 import { TransactionFilterBarComponent } from './components/transaction-filter-bar/transaction-filter-bar.component';
 import {
   ReviewTab,
+  reviewTabId,
+  TRANSACTIONS_TABPANEL_ID,
   TransactionReviewTabsComponent,
 } from './components/transaction-review-tabs/transaction-review-tabs.component';
 import { TransactionListComponent } from './components/transaction-list/transaction-list.component';
@@ -306,6 +308,10 @@ export class TransactionsComponent implements OnInit {
       new Date(),
     ),
   );
+
+  /** The panel the review tabs control, and the id of the tab that names it. */
+  protected readonly tabPanelId: string = TRANSACTIONS_TABPANEL_ID;
+  readonly activeTabId: Signal<string> = computed((): string => reviewTabId(this.activeTab()));
 
   /** Heading for the side panel. */
   readonly panelTitle: Signal<string> = computed((): string => {
