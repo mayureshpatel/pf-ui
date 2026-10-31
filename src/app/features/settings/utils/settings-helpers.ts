@@ -113,3 +113,13 @@ export function readableTextColor(color: string | null | undefined): string {
   const withDark: number = (l + 0.05) / (luminance(DARK_TEXT.slice(1)) + 0.05);
   return withDark > withWhite ? DARK_TEXT : LIGHT_TEXT;
 }
+
+/** The colour a tag without one is drawn in. */
+export const DEFAULT_TAG_COLOR = '#94a3b8';
+
+/** A stored colour as a bare 6-digit hex: 3-digit colours are expanded, anything unreadable becomes empty. */
+export function normalizeHex(color: string | null | undefined): string {
+  const hex: string = (color ?? '').replace('#', '');
+  if (/^[0-9a-fA-F]{3}$/.test(hex)) return [...hex].map((c: string): string => c + c).join('');
+  return /^[0-9a-fA-F]{6}$/.test(hex) ? hex : '';
+}

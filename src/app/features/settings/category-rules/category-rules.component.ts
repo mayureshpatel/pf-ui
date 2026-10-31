@@ -260,13 +260,20 @@ export class CategoryRulesComponent implements OnInit {
           const id: number = 'id' in request ? request.id : (created as number);
           this.ruleForm()?.form.markAsPristine();
           this.toast.success(editing ? 'Rule saved' : 'Rule added');
-          this.loadRules((): void => {
-            this.selectedRuleId.set(id);
-            this.go('rule');
-          });
+          // select it at once (the panel shows a skeleton until the reload lands), so what the user
+          // does during the reload is never overwritten and the add form cannot be sent twice
+          this.selectedRuleId.set(id);
+          this.go('rule');
+          this.loadRules();
         },
         error: (err: HttpErrorResponse): void => {
           console.error('Saving the rule failed:', err);
+          if (this.isGone(err)) {
+            // a rule deleted elsewhere answers 403 or 404: reload, which reports that it is gone
+            this.ruleForm()?.form.markAsPristine();
+            this.loadRules();
+            return;
+          }
           this.ruleForm()?.errorMessage.set(err.error?.detail || 'Failed to save the rule.');
         },
       });
@@ -305,9 +312,19 @@ export class CategoryRulesComponent implements OnInit {
         },
         error: (err: HttpErrorResponse): void => {
           console.error('Delete failed:', err);
+          if (this.isGone(err)) {
+            this.ruleForm()?.form.markAsPristine();
+            this.loadRules();
+            return;
+          }
           this.toast.error(err.error?.detail || 'Failed to delete rule.');
         },
       });
+  }
+
+  /** A rule deleted elsewhere answers an update or delete with 403 (ownership check) or 404. */
+  private isGone(err: HttpErrorResponse): boolean {
+    return err.status === 403 || err.status === 404;
   }
 
   // ---- apply ----

@@ -43,9 +43,12 @@
       <input
         pInputText
         id="tag-color"
-        formControlName="color"
-        maxlength="6"
         class="w-28 font-mono"
+        maxlength="7"
+        placeholder="No colour"
+        [value]="form.controls.color.value"
+        (input)="onColorInput($any($event.target))"
+        (blur)="form.controls.color.markAsTouched()"
       />
     </div>
     @if (colorError(); as error) {

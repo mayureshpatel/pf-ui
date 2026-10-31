@@ -49,6 +49,44 @@ describe('TagEditFormComponent', () => {
     expect(component.form.pristine).toBe(true);
   });
 
+  it('should keep a tag without a colour colourless when only the name changes', () => {
+    // arrange
+    render({ ...trip, color: null });
+    component.form.controls.name.setValue('Trips');
+
+    // act
+    component.submit();
+
+    // assert & verify
+    expect(component.form.controls.color.value).toBe('');
+    expect(saved).toEqual([{ id: 4, name: 'Trips', color: null }]);
+    expect(component.previewColor()).toBe('#94a3b8');
+  });
+
+  it('should accept an empty colour and a stored 3-digit colour', () => {
+    // act
+    render({ ...trip, color: '#abc' });
+
+    // assert & verify
+    expect(component.form.controls.color.value).toBe('aabbcc');
+    expect(component.form.valid).toBe(true);
+    component.form.controls.color.setValue('');
+    expect(component.form.controls.color.valid).toBe(true);
+  });
+
+  it('should take a pasted # in its stride', () => {
+    // arrange
+    render();
+
+    // act
+    const input: HTMLInputElement = fixture.nativeElement.querySelector('#tag-color');
+    input.value = '#3B82F6';
+    input.dispatchEvent(new Event('input'));
+
+    // assert & verify
+    expect(component.form.controls.color.value).toBe('3B82F6');
+  });
+
   it('should refill and become pristine when another tag is shown', () => {
     // arrange
     render(trip);

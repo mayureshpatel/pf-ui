@@ -34,6 +34,7 @@ import { SettingsSection, sectionFromParam } from './utils/settings-helpers';
   ],
   providers: [SettingsGuard],
   templateUrl: './settings.component.html',
+  host: { '(window:beforeunload)': 'onBeforeUnload($event)' },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SettingsComponent {
@@ -51,6 +52,27 @@ export class SettingsComponent {
     this.route.queryParams
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((params: Params): void => this.followUrl(params));
+  }
+
+  /** The route's `canDeactivate`: leaving Settings with unsaved changes asks first. */
+  canLeave(): Promise<boolean> {
+    if (!this.guard.dirty()) return Promise.resolve(true);
+    return new Promise<boolean>((resolve: (leave: boolean) => void): void => {
+      this.confirmation.confirm({
+        header: 'Discard changes?',
+        message: 'You have unsaved changes. Discard them?',
+        acceptLabel: 'Discard',
+        rejectLabel: 'Keep editing',
+        acceptButtonStyleClass: 'p-button-danger',
+        accept: (): void => resolve(true),
+        reject: (): void => resolve(false),
+      });
+    });
+  }
+
+  /** Closing or reloading the tab with unsaved changes makes the browser ask. */
+  protected onBeforeUnload(event: Event): void {
+    if (this.guard.dirty()) event.preventDefault();
   }
 
   /** The section list was used: switch, after asking when the current section has unsaved changes. */

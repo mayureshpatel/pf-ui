@@ -104,7 +104,7 @@
         [title]="panelTitle()"
         [saving]="saving()"
         [showClose]="panelMode() !== 'overview' && !onlyAddMode()"
-        [sheet]="panelMode() !== 'overview'"
+        [sheet]="panelMode() !== 'overview' && !onlyAddMode()"
         [moveFocus]="false"
         [showFooter]="panelMode() !== 'overview'"
         [saveLabel]="panelMode() === 'add' ? 'Add tag' : 'Save changes'"

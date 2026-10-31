@@ -25,16 +25,22 @@ import {
 import { InputTextModule } from 'primeng/inputtext';
 import { Tag } from '@models/tag.model';
 import { CATEGORY_COLORS } from '@shared/utils/category.utils';
-import { readableTextColor } from '../../../utils/settings-helpers';
+import {
+  DEFAULT_TAG_COLOR,
+  normalizeHex,
+  readableTextColor,
+} from '../../../utils/settings-helpers';
 
 const DEFAULT_COLOR = '3b82f6';
 const MAX_NAME_LENGTH = 50;
 const HEX_PATTERN = /^[0-9a-fA-F]{6}$/;
+const OPTIONAL_HEX_PATTERN = /^([0-9a-fA-F]{6})?$/;
 
 /** What the form hands the host for a new tag (the host adds the user). */
 export interface TagCreateValue {
   name: string;
-  color: string;
+  /** `#rrggbb`, or null for a tag that has no colour. */
+  color: string | null;
 }
 export interface TagUpdateValue extends TagCreateValue {
   id: number;
@@ -90,7 +96,7 @@ export class TagEditFormComponent implements OnInit {
     name: new FormControl<string>('', { nonNullable: true, validators: [nameValidator] }),
     color: new FormControl<string>(DEFAULT_COLOR, {
       nonNullable: true,
-      validators: [Validators.pattern(HEX_PATTERN)],
+      validators: [Validators.pattern(OPTIONAL_HEX_PATTERN)],
     }),
   });
 
@@ -125,7 +131,7 @@ export class TagEditFormComponent implements OnInit {
   readonly previewColor: Signal<string> = computed((): string => {
     this.formEvents();
     const value: string = this.form.controls.color.value;
-    return `#${HEX_PATTERN.test(value) ? value : DEFAULT_COLOR}`;
+    return HEX_PATTERN.test(value) ? `#${value}` : DEFAULT_TAG_COLOR;
   });
 
   readonly previewTextColor: Signal<string> = computed((): string =>
@@ -157,8 +163,17 @@ export class TagEditFormComponent implements OnInit {
     const tag: Tag | null = this.tag();
     this.form.reset({
       name: tag?.name ?? '',
-      color: tag?.color ? tag.color.replace('#', '') : DEFAULT_COLOR,
+      // a new tag starts blue; an existing one keeps what it has, including no colour at all
+      color: tag ? normalizeHex(tag.color) : DEFAULT_COLOR,
     });
+  }
+
+  /** Takes what was typed or pasted as the colour, dropping a leading # and anything past six digits. */
+  onColorInput(input: HTMLInputElement): void {
+    const cleaned: string = input.value.replace('#', '').slice(0, 6);
+    input.value = cleaned;
+    this.form.controls.color.setValue(cleaned);
+    this.form.controls.color.markAsDirty();
   }
 
   isSwatchSelected(swatch: string): boolean {
@@ -176,7 +191,10 @@ export class TagEditFormComponent implements OnInit {
     this.form.markAllAsTouched();
     if (this.form.invalid || this.saving()) return;
     const raw = this.form.getRawValue();
-    const common: TagCreateValue = { name: raw.name.trim(), color: `#${raw.color}` };
+    const common: TagCreateValue = {
+      name: raw.name.trim(),
+      color: raw.color ? `#${raw.color}` : null,
+    };
     const editing: Tag | null = this.tag();
     this.save.emit(editing ? { id: editing.id, ...common } : common);
   }

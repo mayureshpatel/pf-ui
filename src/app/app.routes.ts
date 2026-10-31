@@ -1,3 +1,4 @@
+import type { SettingsComponent } from './features/settings/settings.component';
 import { Routes } from '@angular/router';
 import { requireAuth, guestGuard } from '@core/auth/auth.guard';
 import { ShellComponent } from '@shared/components/layout/shell/shell.component';
@@ -69,6 +70,8 @@ export const routes: Routes = [
         path: 'settings',
         loadComponent: () =>
           import('./features/settings/settings.component').then((m) => m.SettingsComponent),
+        // leaving with an unsaved rule or tag asks first
+        canDeactivate: [(component: SettingsComponent): Promise<boolean> => component.canLeave()],
         title: 'Settings · Personal Finance',
       },
       {

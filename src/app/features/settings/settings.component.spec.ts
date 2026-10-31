@@ -187,4 +187,55 @@ describe('SettingsComponent', () => {
       replaceUrl: true,
     });
   });
+
+  it('should let a clean page be left without asking', async () => {
+    // arrange
+    await create();
+    fixture.debugElement.injector.get(SettingsGuard).register(() => false);
+
+    // act
+    const allowed = await component.canLeave();
+
+    // assert & verify
+    expect(allowed).toBe(true);
+    expect(confirmation.confirm).not.toHaveBeenCalled();
+  });
+
+  it('should ask before leaving the page with unsaved changes and follow the answer', async () => {
+    // arrange
+    await create();
+    fixture.debugElement.injector.get(SettingsGuard).register(() => true);
+
+    // act
+    const kept = component.canLeave();
+    confirmation.confirm.mock.calls[0][0].reject!();
+    const discarded = component.canLeave();
+    confirmation.confirm.mock.calls[1][0].accept!();
+
+    // assert & verify
+    expect(await kept).toBe(false);
+    expect(await discarded).toBe(true);
+    expect(confirmation.confirm.mock.calls[0][0].header).toBe('Discard changes?');
+  });
+
+  it('should warn the browser before it unloads the page with unsaved changes', async () => {
+    // arrange
+    await create();
+    const guard = fixture.debugElement.injector.get(SettingsGuard);
+    const unload = (): Event => {
+      const event = new Event('beforeunload', { cancelable: true });
+      window.dispatchEvent(event);
+      return event;
+    };
+
+    // act
+    guard.register(() => false);
+    const clean = unload();
+    guard.register(() => true);
+    const dirty = unload();
+
+    // assert & verify
+    expect(clean.defaultPrevented).toBe(false);
+    expect(dirty.defaultPrevented).toBe(true);
+  });
 });

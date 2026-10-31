@@ -224,6 +224,112 @@ describe('CategoryRulesComponent', () => {
     expect(toast.info).not.toHaveBeenCalled();
   });
 
+  it('should not trap a phone user in a full-screen sheet when there are no rules', async () => {
+    // arrange
+    api.getRules.mockReturnValue(of([]));
+
+    // act
+    await create();
+    const empty = fixture.nativeElement.querySelector('aside').className;
+    api.getRules.mockReturnValue(of([netflix, shell]));
+    component.loadRules();
+    await settle();
+    rows()[0].click();
+    await settle();
+    const open = fixture.nativeElement.querySelector('aside').className;
+
+    // assert & verify
+    expect(empty).not.toContain('fixed');
+    expect(open).toContain('fixed');
+  });
+
+  it('should select the saved rule at once so a click during the reload is not overwritten', async () => {
+    // arrange
+    await create();
+    rows()[0].click();
+    await settle();
+    makeDirty();
+    const reload = new Subject<CategoryRule[]>();
+    api.getRules.mockReturnValue(reload);
+
+    // act
+    component.onPanelSave();
+    await settle();
+    const duringReload = component['selectedRuleId']();
+    rows()[1].click();
+    await settle();
+    reload.next([netflix, shell]);
+    reload.complete();
+    await settle();
+
+    // assert & verify
+    expect(duringReload).toBe(2);
+    expect(component['selectedRuleId']()).toBe(1);
+    expect(component['panelMode']()).toBe('rule');
+  });
+
+  it('should not send a second create while the reload after an add is pending', async () => {
+    // arrange
+    await create();
+    button('Add rule')!.click();
+    await settle();
+    component['ruleForm']()!.form.patchValue({ keywordsInput: 'costco', category: gas });
+    api.getRules.mockReturnValue(new Subject<CategoryRule[]>());
+
+    // act
+    component.onPanelSave();
+    await settle();
+    component.onPanelSave();
+    await settle();
+
+    // assert & verify
+    expect(api.createRule).toHaveBeenCalledTimes(1);
+    expect(component['panelMode']()).toBe('rule');
+  });
+
+  it('should say the rule no longer exists when saving or deleting one deleted elsewhere', async () => {
+    // arrange
+    await create();
+    rows()[0].click();
+    await settle();
+    api.updateRule.mockReturnValue(
+      throwError(() => ({ status: 403, error: { detail: 'Access Denied' } })),
+    );
+    api.getRules.mockReturnValue(of([netflix]));
+    makeDirty();
+
+    // act
+    component.onPanelSave();
+    await settle();
+
+    // assert & verify
+    expect(text()).not.toContain('Access Denied');
+    expect(toast.info).toHaveBeenCalledWith('That rule no longer exists.');
+    expect(rows()).toHaveLength(1);
+    expect(component['panelMode']()).toBe('overview');
+  });
+
+  it('should say the rule no longer exists when deleting one deleted elsewhere', async () => {
+    // arrange
+    await create();
+    rows()[0].click();
+    await settle();
+    api.deleteRule.mockReturnValue(
+      throwError(() => ({ status: 404, error: { detail: 'Not found' } })),
+    );
+    api.getRules.mockReturnValue(of([netflix]));
+
+    // act
+    button('Delete rule')!.click();
+    confirmation.confirm.mock.calls[0][0].accept!();
+    await settle();
+
+    // assert & verify
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(toast.info).toHaveBeenCalledWith('That rule no longer exists.');
+    expect(rows()).toHaveLength(1);
+  });
+
   it('should add a rule, open it and say so', async () => {
     // arrange
     await create();

@@ -178,6 +178,70 @@ describe('TagsComponent', () => {
     expect(toast.info).not.toHaveBeenCalled();
   });
 
+  it('should not trap a phone user in a full-screen sheet when there are no tags', async () => {
+    // arrange
+    api.getTags.mockReturnValue(of([]));
+
+    // act
+    await create();
+    const empty = fixture.nativeElement.querySelector('aside').className;
+    api.getTags.mockReturnValue(of([trip, work]));
+    component.loadTags();
+    await settle();
+    rows()[0].click();
+    await settle();
+    const open = fixture.nativeElement.querySelector('aside').className;
+
+    // assert & verify
+    expect(empty).not.toContain('fixed');
+    expect(open).toContain('fixed');
+  });
+
+  it('should select the saved tag at once so a click during the reload is not overwritten', async () => {
+    // arrange
+    await create();
+    rows()[1].click();
+    await settle();
+    makeDirty();
+    const reload = new Subject<Tag[]>();
+    api.getTags.mockReturnValue(reload);
+
+    // act
+    component.onPanelSave();
+    await settle();
+    const duringReload = component['selectedTagId']();
+    rows()[0].click();
+    await settle();
+    reload.next([trip, apple, work]);
+    reload.complete();
+    await settle();
+
+    // assert & verify
+    expect(duringReload).toBe(1);
+    expect(component['selectedTagId']()).toBe(2);
+  });
+
+  it('should say the tag no longer exists when saving one deleted elsewhere', async () => {
+    // arrange
+    await create();
+    rows()[1].click();
+    await settle();
+    api.updateTag.mockReturnValue(
+      throwError(() => ({ status: 403, error: { detail: 'Access Denied' } })),
+    );
+    api.getTags.mockReturnValue(of([apple, work]));
+    makeDirty();
+
+    // act
+    component.onPanelSave();
+    await settle();
+
+    // assert & verify
+    expect(text()).not.toContain('Access Denied');
+    expect(toast.info).toHaveBeenCalledWith('That tag no longer exists.');
+    expect(rows()).toHaveLength(2);
+  });
+
   it('should add a tag for the user, open it and say so', async () => {
     // arrange
     await create();

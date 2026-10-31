@@ -27,6 +27,7 @@ import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen
 import { SidePanelComponent } from '@shared/components/side-panel/side-panel.component';
 import { SettingsGuard } from '../settings.guard';
 import {
+  DEFAULT_TAG_COLOR,
   filterTags,
   readableTextColor,
   sortTags,
@@ -39,7 +40,6 @@ import {
 } from './components/tag-edit-form/tag-edit-form.component';
 
 type TagPanelMode = 'overview' | 'tag' | 'add';
-const DEFAULT_TAG_COLOR = '#94a3b8';
 
 /**
  * The Tags section: the tags sorted by name beside an always-present panel (overview, the selected tag,
@@ -244,13 +244,20 @@ export class TagsComponent implements OnInit {
           const id: number = 'id' in request ? request.id : (created as number);
           this.tagForm()?.form.markAsPristine();
           this.toast.success(editing ? 'Tag saved' : 'Tag added');
-          this.loadTags((): void => {
-            this.selectedTagId.set(id);
-            this.go('tag');
-          });
+          // select it at once (the panel shows a skeleton until the reload lands), so what the user
+          // does during the reload is never overwritten and the add form cannot be sent twice
+          this.selectedTagId.set(id);
+          this.go('tag');
+          this.loadTags();
         },
         error: (err: HttpErrorResponse): void => {
           console.error('Saving the tag failed:', err);
+          if (this.isGone(err)) {
+            // a tag deleted elsewhere answers 403 or 404: reload, which reports that it is gone
+            this.tagForm()?.form.markAsPristine();
+            this.loadTags();
+            return;
+          }
           this.tagForm()?.errorMessage.set(err.error?.detail || 'Failed to save the tag.');
         },
       });
@@ -289,9 +296,19 @@ export class TagsComponent implements OnInit {
         },
         error: (err: HttpErrorResponse): void => {
           console.error('Delete failed:', err);
+          if (this.isGone(err)) {
+            this.tagForm()?.form.markAsPristine();
+            this.loadTags();
+            return;
+          }
           this.toast.error(err.error?.detail || 'Failed to delete tag.');
         },
       });
+  }
+
+  /** A tag deleted elsewhere answers an update or delete with 403 (ownership check) or 404. */
+  private isGone(err: HttpErrorResponse): boolean {
+    return err.status === 403 || err.status === 404;
   }
 
   // ---- internals ----

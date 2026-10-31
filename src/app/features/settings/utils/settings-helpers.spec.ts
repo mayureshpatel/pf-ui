@@ -8,6 +8,7 @@ import {
   filterTags,
   joinKeywords,
   keywordTooLong,
+  normalizeHex,
   parseKeywords,
   readableTextColor,
   sectionFromParam,
@@ -146,6 +147,18 @@ describe('settings helpers', () => {
       expect(readableTextColor('1e293b')).toBe('#ffffff');
       expect(readableTextColor(null)).toBe('#ffffff');
       expect(readableTextColor('nope')).toBe('#ffffff');
+    });
+  });
+
+  describe('normalizeHex', () => {
+    it('should give a bare 6-digit hex, expanding 3-digit colours and dropping anything else', () => {
+      // assert & verify
+      expect(normalizeHex('#3B82F6')).toBe('3B82F6');
+      expect(normalizeHex('3b82f6')).toBe('3b82f6');
+      expect(normalizeHex('#abc')).toBe('aabbcc');
+      expect(normalizeHex(null)).toBe('');
+      expect(normalizeHex('')).toBe('');
+      expect(normalizeHex('red')).toBe('');
     });
   });
 });
