@@ -4,20 +4,21 @@ import { Observable } from 'rxjs';
 import { environment } from '@env';
 import {
   ExploreResult,
+  NetWorthBreakdown,
   ExploreState,
   ExploreTransaction,
   ExploreTrend,
-  NetWorthDataPoint,
 } from '../models/reports.model';
 import { PageResponse } from '@models/transaction.model';
 import { toApiParams } from '../utils/explore-state';
+import { NetWorthState, toBreakdownParams } from '../utils/net-worth-state';
 import { SKIP_GENERIC_ERROR_TOAST } from '@core/auth/error.interceptor';
 
 const SKIP_TOAST_CONTEXT = new HttpContext().set(SKIP_GENERIC_ERROR_TOAST, true);
 
 /**
  * Client for the backend's report endpoints (`ReportController`): the explorer's groups, trend and
- * transactions (PF-886), all aggregated server-side with no row cap, and the net worth series.
+ * transactions (PF-886), all aggregated server-side with no row cap, and the net worth breakdown (PF-887).
  */
 @Injectable({
   providedIn: 'root',
@@ -27,19 +28,14 @@ export class ReportApiService {
   private readonly apiUrl: string = `${environment.apiUrl}/reports`;
 
   /**
-   * Gets the net-worth-over-time series from the backend.
-   * @param startDate the period start (ISO date); the backend defaults to a trailing 12 months if omitted.
-   * @param endDate the period end (ISO date); the backend defaults to today if omitted.
-   * @returns the net worth data points, one per month-end in range.
+   * Gets the net worth view in one response: month-end assets, debts and net worth, the rows by account
+   * type or account, the cards' figures, what moved net worth, and the comparison if asked.
+   * @param state the net worth view's state
+   * @returns the whole breakdown
    */
-  getNetWorth(startDate?: string, endDate?: string): Observable<NetWorthDataPoint[]> {
-    let params: HttpParams = new HttpParams();
-    if (startDate && endDate) {
-      params = params.set('startDate', startDate).set('endDate', endDate);
-    }
-
-    return this.http.get<NetWorthDataPoint[]>(`${this.apiUrl}/net-worth`, {
-      params,
+  getNetWorthBreakdown(state: NetWorthState): Observable<NetWorthBreakdown> {
+    return this.http.get<NetWorthBreakdown>(`${this.apiUrl}/net-worth/breakdown`, {
+      params: new HttpParams({ fromObject: toBreakdownParams(state) }),
       context: SKIP_TOAST_CONTEXT,
     });
   }

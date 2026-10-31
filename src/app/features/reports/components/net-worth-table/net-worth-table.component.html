@@ -1,0 +1,62 @@
+<div
+  class="overflow-hidden rounded-xl border border-surface-200 bg-surface-0 dark:border-surface-800 dark:bg-surface-900"
+>
+  @if (views().length === 0) {
+    <p class="m-0 p-4 text-sm text-muted-color">No accounts to show</p>
+  } @else {
+    <table class="w-full border-collapse text-sm">
+      <thead>
+        <tr class="bg-surface-50 text-left text-xs font-semibold dark:bg-surface-800">
+          <th scope="col" class="px-3 py-2">{{ firstHeading() }}</th>
+          <th scope="col" class="hidden px-3 py-2 sm:table-cell">Share of assets</th>
+          <th scope="col" class="px-3 py-2 text-right">Balance</th>
+          <th scope="col" class="px-3 py-2 text-right">{{ changeHeading() }}</th>
+          <th scope="col" class="hidden px-3 py-2 sm:table-cell">Trend</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (view of views(); track view.group.key) {
+          <tr data-testid="group-row" class="border-t border-surface-200 dark:border-surface-800">
+            <th scope="row" class="px-3 py-2 text-left font-semibold">
+              <button
+                type="button"
+                class="cursor-pointer border-0 bg-transparent p-0 text-left font-semibold hover:underline focus-visible:outline-2"
+                (click)="openGroup.emit(view.group)"
+              >
+                {{ view.group.label }}
+                <span aria-hidden="true" class="text-muted-color">&rsaquo;</span>
+              </button>
+            </th>
+            <td class="hidden px-3 py-2 sm:table-cell" aria-hidden="true">
+              <span class="block h-2 w-full rounded bg-surface-100 dark:bg-surface-800">
+                <span
+                  data-bar
+                  class="block h-2 rounded"
+                  [class]="view.group.kind === 'DEBT' ? 'bg-rose-500' : 'bg-primary-500'"
+                  [style.width.%]="view.width"
+                ></span>
+              </span>
+            </td>
+            <td class="px-3 py-2 text-right font-semibold tabular-nums">{{ view.balance }}</td>
+            <td class="px-3 py-2 text-right tabular-nums" [class]="toneClass(view.change.tone)">
+              {{ view.change.text }}
+            </td>
+            <td class="hidden px-3 py-2 sm:table-cell">
+              @if (view.trend) {
+                <svg viewBox="0 0 80 24" width="80" height="24" aria-hidden="true">
+                  <path
+                    [attr.d]="view.trend"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    class="text-muted-color"
+                  />
+                </svg>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</div>

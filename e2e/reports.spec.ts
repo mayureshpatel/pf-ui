@@ -12,8 +12,8 @@ import {
 /**
  * Covers PF-886: the Reports explorer through the real UI -- group spending by category, drill to
  * a subcategory, a merchant and the transactions behind the number, open them on the Transactions
- * page, compare with an earlier period, share the state as a link, the tag double-count note, and
- * the Net worth view. Uses brand-new registered users so every total is exact; read-only after
+ * page, compare with an earlier period, share the state as a link, and the tag double-count note.
+ * The Net worth view has its own spec (reports-net-worth.spec.ts). Uses brand-new registered users so every total is exact; read-only after
  * seeding. Also keeps PF-823's guarantee that nothing is capped at 1,000 rows.
  */
 test.describe('Reports explorer', () => {
@@ -22,9 +22,8 @@ test.describe('Reports explorer', () => {
   const row = (page: import('@playwright/test').Page, name: string | RegExp) =>
     page.locator('[data-row]', {hasText: name});
 
-  test('drill from a category to its transactions, compare, share, tags and net worth', async ({page}) => {
+  test('drill from a category to its transactions, compare, share and tags', async ({page}) => {
     await registerTestUser(page);
-    // createTestAccount seeds a $1,000 starting balance (the Net worth assertion depends on it)
     const account = await createTestAccount(page, 'E2E Reports Account');
     const parent = await createTestCategory(page, 'E2E Reports Parent');
     const category = await createTestCategory(page, 'E2E Reports Category', parent.id);
@@ -92,10 +91,6 @@ test.describe('Reports explorer', () => {
     await page.getByRole('option', {name: 'Tag', exact: true}).click();
     await expect(page.getByText(/appears under each of its tags/)).toBeVisible();
 
-    // 9. Net worth view (PF-305): $1,000 starting balance + 500 income - 100 - 50 = $1,350
-    await page.getByRole('button', {name: 'Net worth'}).click();
-    await expect(page.getByText('Net Worth Over Time')).toBeVisible();
-    await expect(page.getByText('$1,350.00').first()).toBeVisible();
   });
 
   test('totals cover every transaction, not just the newest 1,000', async ({page}) => {

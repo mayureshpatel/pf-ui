@@ -16,7 +16,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { SkeletonModule } from 'primeng/skeleton';
 import { ConfirmationService } from 'primeng/api';
@@ -63,6 +63,9 @@ export class AccountsComponent implements OnInit {
   private readonly confirmationService: ConfirmationService = inject(ConfirmationService);
   private readonly destroyRef: DestroyRef = inject(DestroyRef);
   private readonly router: Router = inject(Router);
+  private readonly route: ActivatedRoute = inject(ActivatedRoute);
+  /** The link's account is opened once, after the first load, never again on a reload. */
+  private linkedAccountHandled = false;
 
   accounts: WritableSignal<Account[]> = signal([]);
   accountTypes: WritableSignal<AccountType[]> = signal([]);
@@ -160,6 +163,7 @@ export class AccountsComponent implements OnInit {
           this.accounts.set(accounts);
           this.accountTypes.set(accountTypes);
           this.closePanelIfAccountGone(accounts);
+          this.openLinkedAccount(accounts);
         },
         error: (error: unknown): void => {
           console.error('Error loading accounts:', error);
@@ -167,6 +171,16 @@ export class AccountsComponent implements OnInit {
           this.loadError.set(true);
         },
       });
+  }
+
+  /** Opens the account named by `?accountId=` (from "Open in Accounts" in Reports) after the first load. */
+  private openLinkedAccount(accounts: Account[]): void {
+    if (this.linkedAccountHandled) return;
+    this.linkedAccountHandled = true;
+    const raw: unknown = this.route.snapshot.queryParams['accountId'];
+    const id: number = /^\d+$/.test(String(raw)) ? Number(raw) : NaN;
+    const account: Account | undefined = accounts.find((a: Account): boolean => a.id === id);
+    if (account) this.openAccount(account);
   }
 
   /** Shows an account in the panel. */

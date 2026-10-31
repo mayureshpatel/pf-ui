@@ -1,0 +1,36 @@
+<section
+  aria-labelledby="net-worth-story-title"
+  class="flex flex-col gap-2 rounded-xl border border-surface-200 bg-surface-0 p-4 dark:border-surface-800 dark:bg-surface-900"
+>
+  <h3 id="net-worth-story-title" class="m-0 text-sm font-semibold">{{ group().label }}</h3>
+  @if (story(); as s) {
+    <p class="m-0 text-sm tabular-nums">
+      Balance now {{ dollars(s.closingBalance) }}, from {{ dollars(s.openingBalance) }} at the start
+      of the range
+    </p>
+    @if (quiet()) {
+      <p class="m-0 text-sm text-muted-color">No activity in this range.</p>
+    } @else {
+      <p class="m-0 text-sm tabular-nums">
+        Deposits {{ dollars(s.deposits) }} &middot; Withdrawals
+        {{ dollars(s.withdrawals) }} &middot; Interest and adjustments {{ signed() }}
+      </p>
+    }
+  }
+  <div class="flex flex-wrap gap-4 text-sm">
+    <button
+      type="button"
+      class="cursor-pointer border-0 bg-transparent p-0 text-primary-700 underline dark:text-primary-400"
+      (click)="onExplorer()"
+    >
+      Open this account's transactions in the explorer
+    </button>
+    <button
+      type="button"
+      class="cursor-pointer border-0 bg-transparent p-0 text-primary-700 underline dark:text-primary-400"
+      (click)="onAccounts()"
+    >
+      Open in Accounts
+    </button>
+  </div>
+</section>

@@ -1,0 +1,51 @@
+<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+  <section
+    aria-labelledby="card-net-worth-title"
+    class="rounded-xl border border-surface-200 bg-surface-0 p-4 dark:border-surface-800 dark:bg-surface-900"
+  >
+    <h3 id="card-net-worth-title" class="m-0 text-sm font-normal text-muted-color">Net worth</h3>
+    <p data-testid="card-net-worth-value" class="m-0 mt-1 text-2xl font-bold tabular-nums">
+      {{ dollars(summary().netWorth) }}
+    </p>
+    <p data-testid="card-net-worth-change" class="m-0 mt-1 text-sm tabular-nums">
+      {{ netWorthChange() }}
+    </p>
+  </section>
+
+  <section
+    aria-labelledby="card-assets-title"
+    class="rounded-xl border border-surface-200 bg-surface-0 p-4 dark:border-surface-800 dark:bg-surface-900"
+  >
+    <h3 id="card-assets-title" class="m-0 text-sm font-normal text-muted-color">Assets</h3>
+    <p data-testid="card-assets-value" class="m-0 mt-1 text-2xl font-bold tabular-nums">
+      {{ dollars(summary().assets) }}
+    </p>
+    <p data-testid="card-assets-change" class="m-0 mt-1 text-sm tabular-nums">
+      {{ assetsChange() }}
+    </p>
+  </section>
+
+  <section
+    aria-labelledby="card-debts-title"
+    class="rounded-xl border border-surface-200 bg-surface-0 p-4 dark:border-surface-800 dark:bg-surface-900"
+  >
+    <h3 id="card-debts-title" class="m-0 text-sm font-normal text-muted-color">Debts</h3>
+    <p data-testid="card-debts-value" class="m-0 mt-1 text-2xl font-bold tabular-nums">
+      {{ dollars(summary().debts) }}
+    </p>
+    <p data-testid="card-debts-change" class="m-0 mt-1 text-sm tabular-nums">
+      {{ debtsChange() }}
+    </p>
+  </section>
+
+  <section
+    aria-labelledby="card-liquid-title"
+    class="rounded-xl border border-surface-200 bg-surface-0 p-4 dark:border-surface-800 dark:bg-surface-900"
+  >
+    <h3 id="card-liquid-title" class="m-0 text-sm font-normal text-muted-color">Liquid cash</h3>
+    <p data-testid="card-liquid-value" class="m-0 mt-1 text-2xl font-bold tabular-nums">
+      {{ dollars(summary().liquidCash) }}
+    </p>
+    <p data-testid="card-liquid-change" class="m-0 mt-1 text-sm">{{ liquidChange() }}</p>
+  </section>
+</div>

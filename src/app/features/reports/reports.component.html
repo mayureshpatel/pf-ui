@@ -66,13 +66,11 @@
   </app-screen-toolbar>
 
   @if (view() === 'networth') {
-    <div class="flex flex-col gap-4">
-      <app-date-range-filter
-        [dateRange]="dateRange()"
-        (dateRangeChange)="onNetWorthRange($event)"
-      />
-      <app-net-worth-report [dateRange]="dateRange()" />
-    </div>
+    <app-net-worth-view
+      [params]="netWorthParams()"
+      [accounts]="accounts()"
+      (paramsChange)="onNetWorthParams($event)"
+    />
   } @else {
     @if (note(); as message) {
       <p

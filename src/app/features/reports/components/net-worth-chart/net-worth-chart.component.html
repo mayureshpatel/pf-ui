@@ -1,0 +1,59 @@
+@if (points().length > 0) {
+  <section
+    aria-labelledby="net-worth-chart-title"
+    class="rounded-xl border border-surface-200 bg-surface-0 p-4 dark:border-surface-800 dark:bg-surface-900"
+  >
+    <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+      <h3 id="net-worth-chart-title" class="m-0 text-sm font-semibold">Month-end balances</h3>
+      <div class="flex items-center gap-2 text-sm">
+        <label for="net-worth-month" class="text-muted-color">Show accounts as of</label>
+        <select
+          id="net-worth-month"
+          class="rounded-lg border border-surface-300 bg-surface-0 px-2 py-1 dark:border-surface-700 dark:bg-surface-900"
+          (change)="onSelect($any($event.target).value)"
+        >
+          @for (option of monthOptions(); track option.value) {
+            <option [value]="option.value" [selected]="option.value === selectedMonth()">
+              {{ option.label }}
+            </option>
+          }
+        </select>
+      </div>
+    </div>
+
+    <div class="h-64 w-full">
+      <p-chart
+        type="bar"
+        [data]="chartData()"
+        [options]="chartOptions"
+        class="block h-full w-full"
+        (onDataSelect)="onChartSelect($event)"
+      />
+    </div>
+    <p class="m-0 mt-2 text-xs text-muted-color">Click a month to see that month's accounts</p>
+
+    <table class="sr-only">
+      <caption>
+        Assets, debts and net worth at each month end
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">Month</th>
+          <th scope="col">Assets</th>
+          <th scope="col">Debts</th>
+          <th scope="col">Net worth</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (point of points(); track point.date; let i = $index) {
+          <tr>
+            <th scope="row">{{ monthOptions()[i].label }}</th>
+            <td>{{ dollars(point.assets) }}</td>
+            <td>{{ dollars(point.debts) }}</td>
+            <td>{{ dollars(point.netWorth) }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </section>
+}

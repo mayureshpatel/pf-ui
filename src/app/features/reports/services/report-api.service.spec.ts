@@ -4,6 +4,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { environment } from '@env';
 import { ReportApiService } from './report-api.service';
 import { defaultState } from '../utils/explore-state';
+import { defaultNetWorthState } from '../utils/net-worth-state';
 import { ExploreState } from '../models/reports.model';
 
 describe('ReportApiService (explorer)', () => {
@@ -67,5 +68,32 @@ describe('ReportApiService (explorer)', () => {
     expect(req.request.params.has('compare')).toBe(false);
     expect(req.request.params.get('categoryId')).toBe('5');
     req.flush({ content: [], page: { totalElements: 0, totalPages: 0, number: 2, size: 20 } });
+  });
+
+  // PF-887
+  it('should request the net worth breakdown with every parameter by its API name', () => {
+    // arrange
+    const nw = {
+      ...defaultNetWorthState(new Date(2026, 9, 25)),
+      compare: 'YEAR_AGO' as const,
+      accountIds: [3, 4],
+      typeCode: 'SAVINGS',
+      month: '2026-03',
+    };
+
+    // act
+    service.getNetWorthBreakdown(nw).subscribe();
+
+    // assert & verify
+    const req = httpMock.expectOne((r) => r.url === `${apiUrl}/net-worth/breakdown`);
+    expect(req.request.method).toBe('GET');
+    expect(req.request.params.get('startDate')).toBe('2025-10-26');
+    expect(req.request.params.get('endDate')).toBe('2026-10-25');
+    expect(req.request.params.get('groupBy')).toBe('ACCOUNT');
+    expect(req.request.params.get('accountIds')).toBe('3,4');
+    expect(req.request.params.get('typeCode')).toBe('SAVINGS');
+    expect(req.request.params.get('compare')).toBe('YEAR_AGO');
+    expect(req.request.params.get('asOf')).toBe('2026-03');
+    req.flush({ points: [], groups: [] });
   });
 });

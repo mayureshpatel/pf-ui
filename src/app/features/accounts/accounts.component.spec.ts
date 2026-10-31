@@ -1,7 +1,7 @@
 import { vi, Mock, Mocked } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Params, Router } from '@angular/router';
 import { AccountsComponent } from './accounts.component';
 import { AccountApiService } from './services/account-api.service';
 import { AccountEditFormComponent } from './components/account-edit-form/account-edit-form.component';
@@ -20,6 +20,7 @@ describe('AccountsComponent', () => {
   let mockToast: Mocked<Pick<ToastService, 'success' | 'error'>>;
   let mockConfirmationService: { confirm: Mock<(confirmation: Confirmation) => void> };
   let mockRouter: { navigate: Mock };
+  let routeParams: Params;
 
   const checking: AccountType = {
     code: 'CHECKING',
@@ -61,6 +62,7 @@ describe('AccountsComponent', () => {
     mockToast = { success: vi.fn(), error: vi.fn() };
     mockConfirmationService = { confirm: vi.fn() };
     mockRouter = { navigate: vi.fn() };
+    routeParams = {};
 
     mockAccountApi.getAccounts.mockReturnValue(of([acct(1, 'Checking', 100, true)]));
     mockAccountApi.getAccountTypes.mockReturnValue(of([checking, credit]));
@@ -72,6 +74,14 @@ describe('AccountsComponent', () => {
         { provide: ToastService, useValue: mockToast },
         { provide: ConfirmationService, useValue: mockConfirmationService },
         { provide: Router, useValue: mockRouter },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            get snapshot() {
+              return { queryParams: routeParams };
+            },
+          },
+        },
       ],
     }).compileComponents();
 
@@ -974,6 +984,60 @@ describe('AccountsComponent', () => {
 
       // assert & verify
       expect(document.activeElement).toBe(menuButton);
+    });
+  });
+
+  // PF-887: "Open in Accounts" from the Reports net worth view links here with ?accountId=
+  describe('opening an account from a link', () => {
+    const openFresh = (params: Params): AccountsComponent => {
+      routeParams = params;
+      mockAccountApi.getAccounts.mockReturnValue(
+        of([acct(1, 'Checking', 100, true), acct(2, 'Savings', 500, true)]),
+      );
+      fixture = TestBed.createComponent(AccountsComponent);
+      fixture.detectChanges();
+      return fixture.componentInstance;
+    };
+
+    it('should open the account named by accountId after the first load', () => {
+      // act
+      const c = openFresh({ accountId: '2' });
+
+      // assert & verify
+      expect(c.panelMode()).toBe('account');
+      expect(c.selectedId()).toBe(2);
+    });
+
+    it('should ignore an unknown or malformed accountId', () => {
+      // act
+      const unknown = openFresh({ accountId: '999' });
+      const malformed = openFresh({ accountId: 'abc' });
+
+      // assert & verify
+      expect(unknown.panelMode()).toBe('overview');
+      expect(malformed.panelMode()).toBe('overview');
+    });
+
+    it('should not reopen it after a reload', () => {
+      // arrange
+      const c = openFresh({ accountId: '2' });
+      c.closePanel();
+
+      // act
+      c.loadAccounts();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(c.panelMode()).toBe('overview');
+    });
+
+    it('should open nothing when there is no accountId', () => {
+      // act
+      const c = openFresh({});
+
+      // assert & verify
+      expect(c.panelMode()).toBe('overview');
+      expect(mockConfirmationService.confirm).not.toHaveBeenCalled();
     });
   });
 });
