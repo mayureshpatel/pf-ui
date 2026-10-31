@@ -106,6 +106,20 @@ export class RuleEditFormComponent implements OnInit {
     { validators: [amountRangeValidator] },
   );
 
+  /**
+   * The category choices: the grouped list, plus the rule's own category when it isn't in it (an older
+   * rule may point at a parent category), so the select can always show what the rule uses.
+   */
+  protected readonly choices: Signal<CategoryGroup[]> = computed((): CategoryGroup[] => {
+    const groups: CategoryGroup[] = this.groups();
+    const own: Category | null | undefined = this.rule()?.category;
+    if (!own) return groups;
+    const listed: boolean = groups.some((g: CategoryGroup) =>
+      g.items.some((c: Category) => c.id === own.id),
+    );
+    return listed ? groups : [...groups, { parent: own, items: [own] }];
+  });
+
   readonly isEditMode: Signal<boolean> = computed((): boolean => this.rule() !== null);
 
   /** Which rule (or a new one) is shown; the form resets only when it changes. */
@@ -178,8 +192,8 @@ export class RuleEditFormComponent implements OnInit {
 
   /** The rule's category as the grouped list knows it (so the select shows it), else as the rule has it. */
   private categoryOf(rule: CategoryRule): Category | null {
-    const known: Category | undefined = this.groups()
-      .flatMap((g: CategoryGroup): Category[] => [g.parent, ...g.items])
+    const known: Category | undefined = this.choices()
+      .flatMap((g: CategoryGroup): Category[] => g.items)
       .find((c: Category): boolean => c.id === rule.category?.id);
     return known ?? rule.category ?? null;
   }

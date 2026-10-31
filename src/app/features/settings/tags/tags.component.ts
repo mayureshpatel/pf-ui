@@ -16,7 +16,6 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { finalize, Subscription } from 'rxjs';
-import { ButtonModule } from 'primeng/button';
 import { ConfirmationService } from 'primeng/api';
 import { SkeletonModule } from 'primeng/skeleton';
 import { AuthService } from '@core/auth/auth.service';
@@ -27,7 +26,12 @@ import { PageErrorStateComponent } from '@shared/components/page-error-state/pag
 import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen-toolbar';
 import { SidePanelComponent } from '@shared/components/side-panel/side-panel.component';
 import { SettingsGuard } from '../settings.guard';
-import { filterTags, sortTags, tagTransactionsQuery } from '../utils/settings-helpers';
+import {
+  filterTags,
+  readableTextColor,
+  sortTags,
+  tagTransactionsQuery,
+} from '../utils/settings-helpers';
 import {
   TagCreateValue,
   TagEditFormComponent,
@@ -46,7 +50,6 @@ const DEFAULT_TAG_COLOR = '#94a3b8';
   selector: 'app-tags',
   standalone: true,
   imports: [
-    ButtonModule,
     SkeletonModule,
     ScreenToolbarComponent,
     SidePanelComponent,
@@ -122,6 +125,7 @@ export class TagsComponent implements OnInit {
   }
 
   readonly color = (tag: Tag): string => tag.color || DEFAULT_TAG_COLOR;
+  readonly textColor = (tag: Tag): string => readableTextColor(this.color(tag));
 
   // ---- loading ----
 

@@ -9,6 +9,7 @@ import {
   joinKeywords,
   keywordTooLong,
   parseKeywords,
+  readableTextColor,
   sectionFromParam,
   sortRules,
   sortTags,
@@ -127,6 +128,24 @@ describe('settings helpers', () => {
     it('should link to the tag on the transactions page for all time', () => {
       // assert & verify
       expect(tagTransactionsQuery(tag(7, 'Trip'))).toEqual({ tagId: '7', period: 'all' });
+    });
+  });
+
+  describe('readableTextColor', () => {
+    it('should pick the text colour with the better contrast on a tag colour', () => {
+      // assert & verify -- white on blue is only 3.7:1, dark text on it is 5.7:1
+      expect(readableTextColor('#3b82f6')).toBe('#1c1917');
+      expect(readableTextColor('#10B981')).toBe('#1c1917');
+      expect(readableTextColor('#EAB308')).toBe('#1c1917');
+      expect(readableTextColor('#1e293b')).toBe('#ffffff');
+      expect(readableTextColor('#7c3aed')).toBe('#ffffff');
+    });
+
+    it('should accept a colour without the # and fall back to white on anything unreadable', () => {
+      // assert & verify
+      expect(readableTextColor('1e293b')).toBe('#ffffff');
+      expect(readableTextColor(null)).toBe('#ffffff');
+      expect(readableTextColor('nope')).toBe('#ffffff');
     });
   });
 });

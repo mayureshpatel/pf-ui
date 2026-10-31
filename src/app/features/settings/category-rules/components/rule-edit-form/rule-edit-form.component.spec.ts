@@ -74,6 +74,30 @@ describe('RuleEditFormComponent', () => {
     expect(component.form.pristine).toBe(true);
   });
 
+  it("should offer the rule's own category when it is not in the grouped list (a parent category)", () => {
+    // arrange
+    const parentRule: CategoryRule = { ...rule, category: food };
+
+    // act
+    render(parentRule);
+    const options = component['choices']().flatMap((g: CategoryGroup) =>
+      g.items.map((c: Category) => c.id),
+    );
+
+    // assert & verify
+    expect(options).toContain(5);
+    expect(options).toContain(8);
+    expect(component.form.getRawValue().category?.id).toBe(5);
+  });
+
+  it("should not add a duplicate option when the rule's category is already listed", () => {
+    // act
+    render(rule);
+
+    // assert & verify
+    expect(component['choices']()).toHaveLength(1);
+  });
+
   it('should refill and become pristine when another rule is shown', () => {
     // arrange
     render(rule);

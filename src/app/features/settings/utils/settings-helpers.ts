@@ -87,3 +87,29 @@ export const tagTransactionsQuery = (tag: Tag): Params => ({
   tagId: String(tag.id),
   period: 'all',
 });
+
+const DARK_TEXT = '#1c1917';
+const LIGHT_TEXT = '#ffffff';
+
+const channel = (value: number): number => {
+  const c: number = value / 255;
+  return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+};
+
+const luminance = (hex: string): number =>
+  0.2126 * channel(parseInt(hex.slice(0, 2), 16)) +
+  0.7152 * channel(parseInt(hex.slice(2, 4), 16)) +
+  0.0722 * channel(parseInt(hex.slice(4, 6), 16));
+
+/**
+ * Dark or white text, whichever reads better on a tag's own colour (white on a mid blue is only 3.7:1).
+ * Anything that is not a 6-digit hex gets white.
+ */
+export function readableTextColor(color: string | null | undefined): string {
+  const hex: string = (color ?? '').replace('#', '');
+  if (!/^[0-9a-fA-F]{6}$/.test(hex)) return LIGHT_TEXT;
+  const l: number = luminance(hex);
+  const withWhite: number = 1.05 / (l + 0.05);
+  const withDark: number = (l + 0.05) / (luminance(DARK_TEXT.slice(1)) + 0.05);
+  return withDark > withWhite ? DARK_TEXT : LIGHT_TEXT;
+}

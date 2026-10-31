@@ -15,7 +15,6 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpErrorResponse } from '@angular/common/http';
 import { finalize, Subscription } from 'rxjs';
-import { ButtonModule } from 'primeng/button';
 import { ConfirmationService } from 'primeng/api';
 import { SkeletonModule } from 'primeng/skeleton';
 import { CategoryApiService } from '@features/categories/services/category-api.service';
@@ -51,7 +50,6 @@ type RulePanelMode = 'overview' | 'rule' | 'add';
   selector: 'app-category-rules',
   standalone: true,
   imports: [
-    ButtonModule,
     SkeletonModule,
     ScreenToolbarComponent,
     SidePanelComponent,

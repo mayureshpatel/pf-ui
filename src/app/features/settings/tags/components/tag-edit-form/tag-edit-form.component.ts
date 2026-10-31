@@ -25,6 +25,7 @@ import {
 import { InputTextModule } from 'primeng/inputtext';
 import { Tag } from '@models/tag.model';
 import { CATEGORY_COLORS } from '@shared/utils/category.utils';
+import { readableTextColor } from '../../../utils/settings-helpers';
 
 const DEFAULT_COLOR = '3b82f6';
 const MAX_NAME_LENGTH = 50;
@@ -126,6 +127,10 @@ export class TagEditFormComponent implements OnInit {
     const value: string = this.form.controls.color.value;
     return `#${HEX_PATTERN.test(value) ? value : DEFAULT_COLOR}`;
   });
+
+  readonly previewTextColor: Signal<string> = computed((): string =>
+    readableTextColor(this.previewColor()),
+  );
 
   readonly previewName: Signal<string> = computed((): string => {
     this.formEvents();
