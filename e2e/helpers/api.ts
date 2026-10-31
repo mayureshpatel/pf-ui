@@ -186,6 +186,26 @@ export async function createTestCategory(
 }
 
 /**
+ * Deletes every tag whose name contains `fragment` via the real API. For a spec that creates tags
+ * through the UI and must not leave one behind when a step fails midway. Best effort: a failure here
+ * must never hide the test's own result, so it is swallowed.
+ */
+export async function deleteTestTagsContaining(page: Page, fragment: string): Promise<void> {
+  try {
+    const token = await getAuthToken(page);
+    const headers = {Authorization: `Bearer ${token}`};
+    const listed = await page.request.get(`${API_URL}/tags`, {headers});
+    if (!listed.ok()) return;
+    const tags = (await listed.json()) as {id: number; name: string}[];
+    for (const tag of tags.filter((t) => t.name.includes(fragment))) {
+      await page.request.delete(`${API_URL}/tags/${tag.id}`, {headers}).catch(() => undefined);
+    }
+  } catch {
+    // best effort: the page may not be on the app origin any more, or the session may be gone
+  }
+}
+
+/**
  * Creates a fresh, uniquely-named (via its description) transaction via the real API, on the
  * given account and category (`categoryId` is optional -- omit it for a deliberately
  * uncategorized transaction, e.g. to trigger the dashboard's UNCATEGORIZED action item). Returns

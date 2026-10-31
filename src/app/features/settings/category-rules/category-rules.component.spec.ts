@@ -541,6 +541,7 @@ describe('CategoryRulesComponent', () => {
     expect(text()).toContain('No rules yet');
     expect(button('Back')).toBeUndefined();
     expect(button('Close')).toBeUndefined();
+    expect(toast.info).not.toHaveBeenCalled();
   });
 
   it('should return to overview with a toast when the shown rule vanished', async () => {
@@ -609,5 +610,139 @@ describe('CategoryRulesComponent', () => {
     expect(inPanel).toBe('ASIDE');
     expect(document.activeElement).toBe(rows()[0]);
     fixture.nativeElement.remove();
+  });
+
+  // PF-890
+  describe('after the review', () => {
+    const openFirst = async (): Promise<void> => {
+      rows()[0].focus();
+      rows()[0].click();
+      await settle();
+    };
+
+    it('should keep the open form, with a retry line, when a reload fails', async () => {
+      // arrange
+      await create();
+      await openFirst();
+      api.getRules.mockReturnValue(throwError(() => new Error('down')));
+
+      // act
+      component.loadRules();
+      await settle();
+
+      // assert & verify
+      expect(fixture.nativeElement.querySelector('app-rule-edit-form')).toBeTruthy();
+      expect(fixture.nativeElement.querySelector('app-page-error-state')).toBeNull();
+      expect(rows()).toHaveLength(2);
+      expect(fixture.nativeElement.querySelector('[data-testid="reload-failed"]')).toBeTruthy();
+    });
+
+    it('should clear the retry line once a reload works', async () => {
+      // arrange
+      await create();
+      await openFirst();
+      api.getRules.mockReturnValue(throwError(() => new Error('down')));
+      component.loadRules();
+      await settle();
+      api.getRules.mockReturnValue(of([netflix, shell]));
+
+      // act
+      (
+        fixture.nativeElement.querySelector(
+          '[data-testid="reload-failed"] button',
+        ) as HTMLButtonElement
+      ).click();
+      await settle();
+
+      // assert & verify
+      expect(fixture.nativeElement.querySelector('[data-testid="reload-failed"]')).toBeNull();
+    });
+
+    it('should say the rule is gone, then switch to Add, when a reload comes back empty', async () => {
+      // arrange
+      await create();
+      await openFirst();
+      api.getRules.mockReturnValue(of([]));
+
+      // act
+      component.loadRules();
+      await settle();
+
+      // assert & verify
+      expect(toast.info).toHaveBeenCalledWith('That rule no longer exists.');
+      expect(component['panelMode']()).toBe('add');
+    });
+
+    it('should list a rule with a repeated keyword without a duplicate-key warning', async () => {
+      // arrange -- Angular reports duplicate keys when a list is updated, so load it twice
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+      api.getRules.mockReturnValue(of([rule(3, 0, ['coffee', 'coffee'], gas)]));
+      await create();
+      warn.mockClear();
+      error.mockClear();
+      api.getRules.mockReturnValue(of([rule(3, 1, ['coffee', 'coffee', 'tea'], gas)]));
+
+      // act
+      component.loadRules();
+      await settle();
+
+      // assert & verify
+      expect(rows()[0].textContent).toContain('tea');
+      const logged = [...warn.mock.calls, ...error.mock.calls].flat().map(String).join(' ');
+      expect(logged).not.toContain('NG0955');
+    });
+
+    it('should put focus on the panel after a delete, not on the row that is about to vanish', async () => {
+      // arrange
+      await create();
+      await openFirst();
+      const reload = new Subject<CategoryRule[]>();
+      api.getRules.mockReturnValue(reload);
+      button('Delete rule')!.click();
+      confirmation.confirm.mock.calls[0][0].accept!();
+
+      // act -- focus settles while the reload is still pending, then the reload removes the row
+      await settle();
+      reload.next([netflix]);
+      reload.complete();
+      await settle();
+
+      // assert & verify
+      const panel = fixture.nativeElement.querySelector('app-side-panel') as HTMLElement;
+      expect(document.activeElement).not.toBe(document.body);
+      expect(panel.contains(document.activeElement)).toBe(true);
+    });
+
+    it('should close the panel on Escape', async () => {
+      // arrange
+      await create();
+      await openFirst();
+      expect(component['panelMode']()).toBe('rule');
+
+      // act
+      (fixture.nativeElement.querySelector('app-side-panel aside') as HTMLElement).dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+      );
+      await settle();
+
+      // assert & verify
+      expect(component['panelMode']()).toBe('overview');
+    });
+
+    it('should show the add form above the empty list on a phone, with no Back or Close', async () => {
+      // arrange
+      api.getRules.mockReturnValue(of([]));
+
+      // act
+      await create();
+
+      // assert & verify -- the panel is shown first on a narrow screen (order-first), the list says why
+      const panel = fixture.nativeElement.querySelector('app-side-panel') as HTMLElement;
+      expect(panel.className).toContain('order-first');
+      expect(text()).toContain('No rules yet');
+      expect(button('Back')).toBeUndefined();
+      expect(button('Close')).toBeUndefined();
+    });
   });
 });

@@ -259,4 +259,81 @@ describe('RuleEditFormComponent', () => {
     expect(add).not.toContain('Delete rule');
     expect(removed).toBe(1);
   });
+
+  // PF-890
+  describe('reloaded copies of the open rule', () => {
+    it('should refill a pristine form when the same rule comes back changed', () => {
+      // arrange
+      render(rule);
+
+      // act -- edited elsewhere, or the keywords normalised by the save
+      fixture.componentRef.setInput('rule', {
+        ...rule,
+        keywords: ['kroger', 'whole foods'],
+        priority: 4,
+      });
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.form.getRawValue().keywordsInput).toBe('kroger, whole foods');
+      expect(component.form.getRawValue().priority).toBe(4);
+      expect(component.form.pristine).toBe(true);
+    });
+
+    it('should not overwrite what the user is typing when a changed copy arrives', () => {
+      // arrange
+      render(rule);
+      component.form.controls.keywordsInput.setValue('my edit');
+      component.form.markAsDirty();
+
+      // act
+      fixture.componentRef.setInput('rule', { ...rule, priority: 4 });
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.form.getRawValue().keywordsInput).toBe('my edit');
+      expect(component.form.getRawValue().priority).toBe(3);
+    });
+
+    it('should leave the form alone when an identical copy arrives', () => {
+      // arrange
+      render(rule);
+      const before = component.form.getRawValue();
+
+      // act
+      fixture.componentRef.setInput('rule', { ...rule });
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.form.getRawValue()).toEqual(before);
+    });
+  });
+
+  it('should stop a priority above the server integer', () => {
+    // arrange
+    render();
+    fill({ priority: 2147483647 });
+    component.submit();
+    expect(saved).toHaveLength(1);
+
+    // act
+    fill({ priority: 2147483648 });
+    component.submit();
+    fixture.detectChanges();
+
+    // assert & verify
+    expect(saved).toHaveLength(1);
+    expect(fixture.nativeElement.textContent).toContain('Priority must be 2,147,483,647 or less.');
+  });
+
+  it('should disable Delete while a save is in flight', () => {
+    // act
+    render(rule, true);
+
+    // assert & verify
+    const del = (
+      Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]
+    ).find((b) => b.textContent?.includes('Delete rule'))!;
+    expect(del.disabled).toBe(true);
+  });
 });
