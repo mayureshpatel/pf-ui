@@ -214,4 +214,28 @@ describe('DescriptionPickerComponent', () => {
     // assert & verify
     expect(wentBack).toBe(1);
   });
+
+  // PF-883
+  it('should say it is loading, not show a blank area, while the first rows load', () => {
+    // act
+    render({ rows: [], loading: true });
+
+    // assert & verify
+    expect(fixture.nativeElement.querySelector('[data-testid="picker-loading"]')).toBeTruthy();
+    expect(text(fixture.nativeElement)).toContain('Loading descriptions');
+  });
+
+  it('should not show the loading line once rows are there, or the empty message while loading', () => {
+    // act
+    render({ loading: true });
+
+    // assert & verify -- rows already shown just dim
+    expect(fixture.nativeElement.querySelector('[data-testid="picker-loading"]')).toBeNull();
+
+    // act
+    render({ rows: [], loading: false });
+
+    // assert & verify
+    expect(fixture.nativeElement.querySelector('[data-testid="picker-loading"]')).toBeNull();
+  });
 });

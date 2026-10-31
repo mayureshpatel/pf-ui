@@ -2,11 +2,15 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  ElementRef,
+  inject,
   input,
   InputSignal,
   output,
   OutputEmitterRef,
   Signal,
+  signal,
+  WritableSignal,
 } from '@angular/core';
 import { ExploreTrend, Measure, TrendBucket } from '../../models/reports.model';
 import {
@@ -47,6 +51,11 @@ export class TrendChartComponent {
   /** Drop empty buckets from the start (for "All time", which begins long before the first transaction). */
   readonly trimEmpty: InputSignal<boolean> = input(false);
   readonly selectBucket: OutputEmitterRef<TrendBucket> = output<TrendBucket>();
+
+  private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
+
+  /** The bar that is the tab stop (the others are reached with the arrow keys). */
+  private readonly stop: WritableSignal<number> = signal(0);
 
   protected readonly measureLabel: Signal<string> = computed(
     (): string => MEASURE_LABELS[this.measure()],
@@ -95,4 +104,39 @@ export class TrendChartComponent {
       };
     });
   });
+
+  /** The tab stop, kept inside the bars that exist now. */
+  protected readonly tabStop: Signal<number> = computed((): number =>
+    Math.min(this.stop(), Math.max(0, this.bars().length - 1)),
+  );
+
+  /** Remembers the focused bar, so tabbing back in returns to it. */
+  protected onBarFocus(index: number): void {
+    this.stop.set(index);
+  }
+
+  /** Arrow keys, Home and End move between the bars, which are a single tab stop. */
+  protected onBarKeydown(event: KeyboardEvent, index: number): void {
+    const last: number = this.bars().length - 1;
+    let next: number;
+    switch (event.key) {
+      case 'ArrowRight':
+        next = Math.min(index + 1, last);
+        break;
+      case 'ArrowLeft':
+        next = Math.max(index - 1, 0);
+        break;
+      case 'Home':
+        next = 0;
+        break;
+      case 'End':
+        next = last;
+        break;
+      default:
+        return;
+    }
+    event.preventDefault();
+    this.stop.set(next);
+    this.host.nativeElement.querySelectorAll<HTMLElement>('button[data-bar]')[next]?.focus();
+  }
 }

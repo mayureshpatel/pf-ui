@@ -59,6 +59,7 @@
       inputId="rule-priority"
       formControlName="priority"
       [min]="0"
+      [max]="2147483647"
       [fluid]="true"
       [useGrouping]="false"
       aria-describedby="rule-priority-help"
@@ -108,7 +109,8 @@
   @if (isEditMode()) {
     <button
       type="button"
-      class="cursor-pointer self-start rounded-lg border border-rose-300 px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-400 dark:hover:bg-rose-950"
+      class="cursor-pointer self-start rounded-lg border border-rose-300 px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-800 dark:text-rose-400 dark:hover:bg-rose-950"
+      [disabled]="saving()"
       (click)="remove.emit()"
     >
       Delete rule

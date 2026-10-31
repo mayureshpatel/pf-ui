@@ -174,21 +174,47 @@
           [compare]="state().compare"
           [biggest]="biggest()"
         />
-        <app-trend-chart
-          [trend]="trend()"
-          [measure]="state().measure"
-          [loading]="loading()"
-          [trimEmpty]="trimEmptyTrend()"
-          (selectBucket)="onSelectBucket($event)"
-        />
-        @if (state().leaf) {
-          <app-transaction-list
-            [page]="leafPage()"
-            [linkable]="linkable()"
+        @if (trendFailed()) {
+          <div
+            data-testid="trend-failed"
+            role="status"
+            class="rounded-xl border border-surface-200 p-4 text-sm text-muted-color dark:border-surface-800"
+          >
+            Couldn't load the trend.
+            <button type="button" class="cursor-pointer underline" (click)="retry()">
+              Try again
+            </button>
+          </div>
+        } @else {
+          <app-trend-chart
+            [trend]="trend()"
+            [measure]="state().measure"
             [loading]="loading()"
-            (pageChange)="onPageChange($event)"
-            (openInTransactions)="openInTransactions()"
+            [trimEmpty]="trimEmptyTrend()"
+            (selectBucket)="onSelectBucket($event)"
           />
+        }
+        @if (state().leaf) {
+          @if (leafFailed()) {
+            <div
+              data-testid="leaf-failed"
+              role="status"
+              class="rounded-xl border border-surface-200 p-4 text-sm text-muted-color dark:border-surface-800"
+            >
+              Couldn't load the transactions.
+              <button type="button" class="cursor-pointer underline" (click)="retry()">
+                Try again
+              </button>
+            </div>
+          } @else {
+            <app-transaction-list
+              [page]="leafPage()"
+              [linkable]="linkable()"
+              [loading]="loading()"
+              (pageChange)="onPageChange($event)"
+              (openInTransactions)="openInTransactions()"
+            />
+          }
         } @else {
           <app-results-table
             [rows]="current.rows"

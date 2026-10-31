@@ -22,6 +22,7 @@ import {
   filterOnly,
   isAllowed,
   isDrillable,
+  hydrateState,
   isTransactionsLinkable,
   nextGrouping,
   openTransactions,
@@ -446,11 +447,8 @@ describe('explore helpers', () => {
       expect(isTransactionsLinkable(filters({})).ok).toBe(true);
     });
 
-    it('should refuse the none filters and the measures that mix income with spending', () => {
+    it('should refuse the none filters (other than uncategorized) and the measures that mix income with spending', () => {
       // assert & verify
-      expect(isTransactionsLinkable(filters({ uncategorized: true })).reason).toContain(
-        'uncategorized',
-      );
       expect(isTransactionsLinkable(filters({ noMerchant: true })).reason).toContain(
         'without a merchant',
       );
@@ -462,6 +460,26 @@ describe('explore helpers', () => {
   });
 
   describe('toTransactionsQuery', () => {
+    // PF-888: the Transactions page has an Uncategorized filter (categoryName=null)
+    it('should open an Uncategorized filter for uncategorized transactions', () => {
+      // arrange
+      const state: ExploreState = {
+        ...base(),
+        startDate: '2026-03-01',
+        endDate: '2026-03-31',
+        filters: { accountIds: [], uncategorized: true },
+      };
+
+      // assert & verify
+      expect(isTransactionsLinkable(state.filters, state.measure).ok).toBe(true);
+      expect(toTransactionsQuery(state)).toEqual({
+        type: 'EXPENSE',
+        categoryName: 'null',
+        startDate: '2026-03-01',
+        endDate: '2026-03-31',
+      });
+    });
+
     it('should map the state onto the Transactions page parameters', () => {
       // arrange
       const state: ExploreState = {
@@ -792,6 +810,38 @@ describe('explore helpers', () => {
       // assert & verify -- 25 and 169 hours between local midnights
       expect(granularityOf(['2026-11-01', '2026-11-02'])).toBe('day');
       expect(granularityOf(['2026-10-27', '2026-11-03'])).toBe('week');
+    });
+  });
+
+  // PF-888: a link whose drill path no longer matches its filters
+  describe('hydrateState', () => {
+    const CATEGORY_DRILL = 'CATEGORY|categoryId|5|%7B%7D|Food';
+
+    it('should drop a drill step that has no matching filter and say so', () => {
+      // act
+      const { state, note } = hydrateState({ drill: [CATEGORY_DRILL] }, TODAY);
+
+      // assert & verify -- the drill says Food but nothing filters to Food
+      expect(state.drill).toEqual([]);
+      expect(note).toContain('drill');
+    });
+
+    it('should keep a drill path that matches its filters, with no note', () => {
+      // act
+      const { state, note } = hydrateState({ drill: [CATEGORY_DRILL], categoryId: '5' }, TODAY);
+
+      // assert & verify
+      expect(state.drill).toHaveLength(1);
+      expect(note).toBeNull();
+    });
+
+    it('should keep the other problems in the note when it also drops a step', () => {
+      // act
+      const { note } = hydrateState({ drill: [CATEGORY_DRILL], measure: 'nope' }, TODAY);
+
+      // assert & verify
+      expect(note).toContain('"nope" isn\'t a known setting');
+      expect(note).toContain('drill');
     });
   });
 });

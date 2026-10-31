@@ -390,6 +390,45 @@ describe('MerchantsComponent', () => {
       expect(mockApi.updateMerchant).toHaveBeenCalledTimes(1);
     });
 
+    // PF-883
+    it('should block a delete while a save is in flight', () => {
+      // arrange
+      mockApi.updateMerchant.mockReturnValue(new Subject<number>());
+      component.openMerchant(amazon);
+      component.saveMerchant({ id: 1, name: 'A' });
+
+      // act
+      component.deleteMerchant();
+
+      // assert & verify
+      expect(mockConfirmation.confirm).not.toHaveBeenCalled();
+      expect(mockApi.deleteMerchant).not.toHaveBeenCalled();
+    });
+
+    it('should not mark another merchant pristine or merge a finished save into it', () => {
+      // arrange -- save Amazon, then (discarding its edits) open Costco before the save returns
+      const saved = new Subject<number>();
+      mockApi.updateMerchant.mockReturnValue(saved);
+      component.openMerchant(amazon);
+      dirtyForm();
+      component.saveMerchant({ id: 1, name: 'Amazon Renamed' });
+      component.openMerchant(costco);
+      confirmAccept();
+      dirtyForm();
+      const costcoForm = fixture.debugElement.query(By.directive(MerchantEditFormComponent))
+        .componentInstance as MerchantEditFormComponent;
+
+      // act
+      saved.next(1);
+      saved.complete();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.selected()?.id).toBe(2);
+      expect(component.selected()?.name).toBe('Costco');
+      expect(costcoForm.form.dirty).toBe(true);
+    });
+
     it('should delete after confirmation and return to the overview', () => {
       // arrange
       component.openMerchant(amazon);
@@ -478,6 +517,115 @@ describe('MerchantsComponent', () => {
       expect(component.mode()).toBe('add');
       expect(component.onlyAddMode()).toBe(true);
       expect(fixture.nativeElement.textContent).toContain('No merchants yet');
+    });
+  });
+
+  // PF-883
+  describe('stale responses and totals', () => {
+    it("should not reload the first merchant's links when the user opened another before the remove returned", () => {
+      // arrange
+      const removed = new Subject<void>();
+      mockApi.deleteDescriptionLink.mockReturnValue(removed);
+      component.openMerchant(amazon);
+      component.removeLink(links[0]);
+      component.openMerchant(costco);
+      mockApi.getDescriptionLinks.mockClear();
+
+      // act
+      removed.next();
+      removed.complete();
+
+      // assert & verify -- Costco is shown, so Amazon's links are not fetched (or shown)
+      expect(mockApi.getDescriptionLinks).not.toHaveBeenCalled();
+    });
+
+    it('should still reload the links when the same merchant is still shown', () => {
+      // arrange
+      component.openMerchant(amazon);
+      mockApi.getDescriptionLinks.mockClear();
+
+      // act
+      component.removeLink(links[0]);
+
+      // assert & verify
+      expect(mockApi.getDescriptionLinks).toHaveBeenCalledWith(1);
+    });
+
+    it('should flag a failed totals load so the overview can offer a retry', () => {
+      // arrange
+      mockTransactions.getDescriptions.mockReturnValue(throwError(() => new Error('down')));
+
+      // act
+      component.loadStats();
+
+      // assert & verify
+      expect(component.statsFailed()).toBe(true);
+    });
+
+    it('should clear the failure when a retry succeeds', () => {
+      // arrange
+      mockTransactions.getDescriptions.mockReturnValueOnce(throwError(() => new Error('down')));
+      component.loadStats();
+      expect(component.statsFailed()).toBe(true);
+      mockTransactions.getDescriptions.mockImplementation((p: { unlinkedOnly?: boolean }) =>
+        of(page([], p.unlinkedOnly ? 7 : 20)),
+      );
+
+      // act
+      component.loadStats();
+
+      // assert & verify
+      expect(component.statsFailed()).toBe(false);
+      expect(component.unlinkedCount()).toBe(7);
+    });
+
+    it('should ignore the answer of an older totals load that arrives after a newer one', () => {
+      // arrange
+      const older = { unlinked: new Subject<unknown>(), any: new Subject<unknown>() };
+      const newer = { unlinked: new Subject<unknown>(), any: new Subject<unknown>() };
+      const sets = [older, newer];
+      let call = 0;
+      mockTransactions.getDescriptions.mockImplementation(((p: { unlinkedOnly?: boolean }) => {
+        const set = sets[Math.floor(call++ / 2)];
+        return (p.unlinkedOnly ? set.unlinked : set.any) as never;
+      }) as never);
+
+      // act -- two loads, the newer answers first, then the older one
+      component.loadStats();
+      component.loadStats();
+      newer.unlinked.next(page([], 5));
+      newer.unlinked.complete();
+      newer.any.next(page([], 9));
+      newer.any.complete();
+      older.unlinked.next(page([], 99));
+      older.unlinked.complete();
+      older.any.next(page([], 99));
+      older.any.complete();
+
+      // assert & verify
+      expect(component.unlinkedCount()).toBe(5);
+    });
+
+    it('should show the total number of merchants in the overview, not the number matching a search', () => {
+      // arrange -- 312 merchants in all, none match "zzz"
+      mockApi.getMerchants.mockImplementation((term: string | null) =>
+        of(term ? page([], 0) : page(list, 312)),
+      );
+      component.loadMerchants();
+      component.loadStats();
+
+      // act
+      component.onSearchInput('zzz');
+      component.page.set(0);
+      component.searchTerm.set('zzz');
+      component.loadMerchants();
+      fixture.detectChanges();
+
+      // assert & verify
+      const overview = fixture.nativeElement.querySelector('app-merchant-overview') as HTMLElement;
+      expect(component.totalRecords()).toBe(0);
+      expect(overview.textContent).toContain('312 merchants');
+      expect(overview.textContent).not.toContain('Create a merchant, then link');
     });
   });
 
@@ -578,6 +726,69 @@ describe('MerchantsComponent', () => {
       expect(mockToast.error).toHaveBeenCalledWith('Linked 1, 1 failed: Too long.');
       expect(component.mode()).toBe('picker');
       expect(component.pickerFailed()).toEqual(['BAD']);
+    });
+
+    // PF-883
+    it('should leave keyboard focus inside the panel after a merchant is chosen to link to', async () => {
+      // arrange
+      component.openPicker();
+      fixture.detectChanges();
+      const select = aside().querySelector<HTMLElement>('#link-target');
+      select?.focus();
+      expect(document.activeElement).toBe(select);
+
+      // act -- the choice replaces the select with the description picker, taking its focus with it
+      component.chooseTarget(costco);
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      // assert & verify -- not dropped onto <body> when the "Link to" select goes away
+      expect(aside().contains(document.activeElement)).toBe(true);
+    });
+
+    describe('the "Link to" search', () => {
+      afterEach(() => vi.useRealTimers());
+
+      it('should wait for typing to pause and send one request', () => {
+        // arrange
+        vi.useFakeTimers();
+        component.openPicker();
+        mockApi.getMerchants.mockClear();
+
+        // act
+        component.onTargetFilter('co');
+        component.onTargetFilter('cos');
+        component.onTargetFilter('cost');
+        expect(mockApi.getMerchants).not.toHaveBeenCalled();
+        vi.advanceTimersByTime(400);
+
+        // assert & verify
+        expect(mockApi.getMerchants).toHaveBeenCalledTimes(1);
+        expect(mockApi.getMerchants).toHaveBeenCalledWith('cost', expect.anything());
+      });
+
+      it('should not let a slow older answer overwrite a newer one', () => {
+        // arrange
+        vi.useFakeTimers();
+        component.openPicker();
+        const older = new Subject<ReturnType<typeof page<Merchant>>>();
+        const newer = new Subject<ReturnType<typeof page<Merchant>>>();
+        mockApi.getMerchants.mockReset();
+        mockApi.getMerchants
+          .mockReturnValueOnce(older as never)
+          .mockReturnValueOnce(newer as never);
+
+        // act -- two searches far enough apart to both be sent, answered in reverse order
+        component.onTargetFilter('co');
+        vi.advanceTimersByTime(400);
+        component.onTargetFilter('cost');
+        vi.advanceTimersByTime(400);
+        newer.next(page([costco]));
+        older.next(page([amazon, costco, shell]));
+
+        // assert & verify
+        expect(component.targetOptions().map((m) => m.name)).toEqual(['Costco']);
+      });
     });
 
     it('should block a second link while one is in flight', () => {

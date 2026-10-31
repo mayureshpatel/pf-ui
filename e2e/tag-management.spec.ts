@@ -1,4 +1,5 @@
 import {expect, test} from '@playwright/test';
+import {deleteTestTagsContaining} from './helpers/api';
 
 /**
  * Covers PF-309 and PF-889: tag management from Settings > Tags through the docked panel -- add a tag,
@@ -6,8 +7,17 @@ import {expect, test} from '@playwright/test';
  * user and removes its own tag at the end.
  */
 test.describe('Tag Management', () => {
+  let stamp = '';
+
+  // The UI delete at the end of the test is part of what it checks, but a step failing midway would
+  // leave the tag behind on the shared dev user, so remove whatever is left through the API.
+  test.afterEach(async ({page}) => {
+    if (stamp) await deleteTestTagsContaining(page, stamp);
+  });
+
   test('add, rename, view and delete a tag from the Settings page', async ({page}) => {
-    const tagName = `E2E Tag ${Date.now()}`;
+    stamp = String(Date.now());
+    const tagName = `E2E Tag ${stamp}`;
     const renamedTagName = `${tagName} Renamed`;
 
     await page.goto('/settings?section=tags');

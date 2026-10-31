@@ -1,7 +1,15 @@
 import { vi, Mocked } from 'vitest';
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute, Params, Router } from '@angular/router';
+import { Location } from '@angular/common';
+import {
+  ActivatedRoute,
+  Event as RouterEvent,
+  NavigationEnd,
+  NavigationStart,
+  Params,
+  Router,
+} from '@angular/router';
 import { Subject } from 'rxjs';
 import { ConfirmationService } from 'primeng/api';
 import { SettingsComponent } from './settings.component';
@@ -27,7 +35,8 @@ class TagsStubComponent {}
 describe('SettingsComponent', () => {
   let fixture: ComponentFixture<SettingsComponent>;
   let component: SettingsComponent;
-  let router: Mocked<Pick<Router, 'navigate'>>;
+  let router: Mocked<Pick<Router, 'navigate'>> & { events: Subject<RouterEvent> };
+  let location: { back: ReturnType<typeof vi.fn>; forward: ReturnType<typeof vi.fn> };
   let confirmation: Mocked<Pick<ConfirmationService, 'confirm'>>;
   let queryParams: Subject<Params>;
   let snapshotParams: Params;
@@ -50,12 +59,14 @@ describe('SettingsComponent', () => {
   beforeEach(async () => {
     queryParams = new Subject<Params>();
     snapshotParams = {};
-    router = { navigate: vi.fn().mockResolvedValue(true) };
+    router = { navigate: vi.fn().mockResolvedValue(true), events: new Subject<RouterEvent>() };
+    location = { back: vi.fn(), forward: vi.fn() };
     confirmation = { confirm: vi.fn() };
     await TestBed.configureTestingModule({
       imports: [SettingsComponent],
       providers: [
         { provide: Router, useValue: router },
+        { provide: Location, useValue: location },
         {
           provide: ActivatedRoute,
           useValue: {
@@ -237,5 +248,67 @@ describe('SettingsComponent', () => {
     // assert & verify
     expect(clean.defaultPrevented).toBe(false);
     expect(dirty.defaultPrevented).toBe(true);
+  });
+
+  // PF-890: keeping the edits after a browser Back or Forward steps the history back where it was,
+  // instead of overwriting the entry (which left two entries for the same section)
+  describe('keeping edits after browser Back or Forward', () => {
+    const dirty = async (): Promise<void> => {
+      await create({ section: 'rules' });
+      fixture.debugElement.injector.get(SettingsGuard).register(() => true);
+      router.events.next(
+        new NavigationEnd(3, '/settings?section=rules', '/settings?section=rules'),
+      );
+      router.navigate.mockClear();
+    };
+    const pop = (restoredId: number): void => {
+      router.events.next(
+        new NavigationStart(9, '/settings?section=tags', 'popstate', { navigationId: restoredId }),
+      );
+      queryParams.next({ section: 'tags' });
+    };
+
+    it('should go forward again after Back is kept, adding no history entry', async () => {
+      // arrange
+      await dirty();
+
+      // act -- Back moved to an earlier entry
+      pop(2);
+      confirmation.confirm.mock.calls[0][0].reject!();
+
+      // assert & verify
+      expect(location.forward).toHaveBeenCalledTimes(1);
+      expect(location.back).not.toHaveBeenCalled();
+      expect(router.navigate).not.toHaveBeenCalled();
+      expect(component.section()).toBe('rules');
+    });
+
+    it('should go back again after Forward is kept', async () => {
+      // arrange
+      await dirty();
+
+      // act -- Forward moved to a later entry
+      pop(4);
+      confirmation.confirm.mock.calls[0][0].reject!();
+
+      // assert & verify
+      expect(location.back).toHaveBeenCalledTimes(1);
+      expect(location.forward).not.toHaveBeenCalled();
+      expect(router.navigate).not.toHaveBeenCalled();
+    });
+
+    it('should leave the history alone and follow the URL when the edits are discarded', async () => {
+      // arrange
+      await dirty();
+
+      // act
+      pop(2);
+      confirmation.confirm.mock.calls[0][0].accept!();
+
+      // assert & verify
+      expect(component.section()).toBe('tags');
+      expect(location.forward).not.toHaveBeenCalled();
+      expect(location.back).not.toHaveBeenCalled();
+    });
   });
 });
