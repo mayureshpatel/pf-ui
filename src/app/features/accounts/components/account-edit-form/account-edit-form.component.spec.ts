@@ -284,4 +284,54 @@ describe('AccountEditFormComponent', () => {
       expect(fixture.nativeElement.textContent).toContain('Change the balance by reconciling.');
     });
   });
+
+  // PF-880: the fill happens at init, and the effect's first run must not redo it over what was typed
+  describe('init and the first render', () => {
+    const fresh = (account: Account | null): AccountEditFormComponent => {
+      const f = TestBed.createComponent(AccountEditFormComponent);
+      f.componentRef.setInput('accountTypes', mockAccountTypes);
+      f.componentRef.setInput('account', account);
+      fixture = f;
+      return f.componentInstance;
+    };
+
+    it('should fill its fields at init, before any effect or render', () => {
+      // arrange -- inputs set, but no change detection yet (no effect has run)
+      const c = fresh(mockAccount);
+
+      // act
+      c.ngOnInit();
+
+      // assert & verify
+      expect(c.form.getRawValue().name).toBe('Existing Account');
+      expect(c.form.getRawValue().currencyCode).toBe('USD');
+    });
+
+    it('should not reset again on the first render (typing survives it)', () => {
+      // arrange
+      const c = fresh(null);
+      c.ngOnInit();
+      c.form.patchValue({ name: 'Typed early' });
+
+      // act -- the first render and its effects run now
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(c.form.getRawValue().name).toBe('Typed early');
+    });
+
+    it('should still reset when another account is shown', () => {
+      // arrange
+      const c = fresh(null);
+      fixture.detectChanges();
+      c.form.patchValue({ name: 'Typed' });
+
+      // act
+      fixture.componentRef.setInput('account', mockAccount);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(c.form.getRawValue().name).toBe('Existing Account');
+    });
+  });
 });

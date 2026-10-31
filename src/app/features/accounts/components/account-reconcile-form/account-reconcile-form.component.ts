@@ -3,6 +3,7 @@ import {
   Component,
   computed,
   effect,
+  OnInit,
   inject,
   input,
   InputSignal,
@@ -35,7 +36,7 @@ import { toCents } from '../../utils/account-totals';
   templateUrl: './account-reconcile-form.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AccountReconcileFormComponent {
+export class AccountReconcileFormComponent implements OnInit {
   private readonly accountService: AccountApiService = inject(AccountApiService);
   private readonly toast: ToastService = inject(ToastService);
 
@@ -82,14 +83,31 @@ export class AccountReconcileFormComponent {
   /** Which account is shown; the form resets only when this changes, not on a background refresh. */
   private readonly accountId: Signal<number> = computed((): number => this.account().id);
 
+  /** The key the form was last filled for; the effect only resets when it really changes. */
+  private filledFor: string | null = null;
+
   constructor() {
     effect((): void => {
-      this.accountId();
-      untracked((): void => {
-        this.form.reset();
-        this.errorMessage.set(null);
-      });
+      const key = String(this.accountId());
+      // the reset at init already covered this account; only a different one resets again
+      if (key === this.filledFor) return;
+      untracked((): void => this.fill(key));
     });
+  }
+
+  /**
+   * Starts the form empty at init, synchronously and before the first render, so a balance typed
+   * at once can never be cleared by an effect that runs a moment later.
+   */
+  ngOnInit(): void {
+    const key = String(this.accountId());
+    if (key !== this.filledFor) this.fill(key);
+  }
+
+  private fill(key: string): void {
+    this.filledFor = key;
+    this.form.reset();
+    this.errorMessage.set(null);
   }
 
   /**
