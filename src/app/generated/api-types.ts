@@ -652,6 +652,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/reports/net-worth/breakdown": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Net worth breakdown
+         * @description Month-end assets, debts and net worth by account type or account, what moved net worth, and an optional comparison
+         */
+        get: operations["getNetWorthBreakdown"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/reports/explore": {
         parameters: {
             query?: never;
@@ -1563,6 +1583,88 @@ export interface components {
             /** Format: date */
             date?: string;
             netWorth?: number;
+        };
+        NetWorthBreakdownRequest: {
+            /** Format: date */
+            startDate?: string;
+            /** Format: date */
+            endDate?: string;
+            /** @enum {string} */
+            groupBy?: "TYPE" | "ACCOUNT";
+            accountIds?: number[];
+            typeCode?: string;
+            /** @enum {string} */
+            compare?: "NONE" | "YEAR_AGO" | "PREVIOUS_PERIOD";
+            asOf?: {
+                /** Format: int32 */
+                year?: number;
+                /** @enum {string} */
+                month?: "JANUARY" | "FEBRUARY" | "MARCH" | "APRIL" | "MAY" | "JUNE" | "JULY" | "AUGUST" | "SEPTEMBER" | "OCTOBER" | "NOVEMBER" | "DECEMBER";
+                /** Format: int32 */
+                monthValue?: number;
+                leapYear?: boolean;
+            };
+        };
+        NetWorthBreakdownDto: {
+            points?: components["schemas"]["NetWorthPointDto"][];
+            opening?: components["schemas"]["NetWorthPointDto"];
+            /** Format: date */
+            asOf?: string;
+            summary?: components["schemas"]["NetWorthSummaryDto"];
+            moved?: components["schemas"]["NetWorthMovedDto"];
+            comparison?: components["schemas"]["NetWorthComparisonDto"];
+            groups?: components["schemas"]["NetWorthGroupDto"][];
+        };
+        NetWorthComparisonDto: {
+            label?: string;
+            /** Format: date */
+            start?: string;
+            /** Format: date */
+            end?: string;
+            netWorth?: number;
+            assets?: number;
+            debts?: number;
+        };
+        NetWorthGroupDto: {
+            key?: string;
+            label?: string;
+            kind?: string;
+            typeCode?: string;
+            /** Format: int32 */
+            accountCount?: number;
+            balance?: number;
+            previousBalance?: number;
+            comparisonBalance?: number;
+            series?: number[];
+            story?: components["schemas"]["NetWorthStoryDto"];
+        };
+        NetWorthMovedDto: {
+            change?: number;
+            saved?: number;
+            other?: number;
+        };
+        NetWorthPointDto: {
+            /** Format: date */
+            date?: string;
+            assets?: number;
+            debts?: number;
+            netWorth?: number;
+            partial?: boolean;
+        };
+        NetWorthStoryDto: {
+            openingBalance?: number;
+            closingBalance?: number;
+            deposits?: number;
+            withdrawals?: number;
+            interestAndAdjustments?: number;
+        };
+        NetWorthSummaryDto: {
+            netWorth?: number;
+            assets?: number;
+            debts?: number;
+            liquidCash?: number;
+            averageMonthlySpending?: number;
+            monthsCovered?: number;
         };
         ExploreRequest: {
             /** @enum {string} */
@@ -3159,6 +3261,37 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["NetWorthDataPointDto"][];
+                };
+            };
+        };
+    };
+    getNetWorthBreakdown: {
+        parameters: {
+            query: {
+                request: components["schemas"]["NetWorthBreakdownRequest"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Breakdown returned */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["NetWorthBreakdownDto"];
+                };
+            };
+            /** @description The range is reversed, the account type is unknown, or the month is outside the range */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["NetWorthBreakdownDto"];
                 };
             };
         };

@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '@env';
 import {
   ExploreResult,
+  NetWorthBreakdown,
   ExploreState,
   ExploreTransaction,
   ExploreTrend,
@@ -11,6 +12,7 @@ import {
 } from '../models/reports.model';
 import { PageResponse } from '@models/transaction.model';
 import { toApiParams } from '../utils/explore-state';
+import { NetWorthState, toBreakdownParams } from '../utils/net-worth-state';
 import { SKIP_GENERIC_ERROR_TOAST } from '@core/auth/error.interceptor';
 
 const SKIP_TOAST_CONTEXT = new HttpContext().set(SKIP_GENERIC_ERROR_TOAST, true);
@@ -40,6 +42,19 @@ export class ReportApiService {
 
     return this.http.get<NetWorthDataPoint[]>(`${this.apiUrl}/net-worth`, {
       params,
+      context: SKIP_TOAST_CONTEXT,
+    });
+  }
+
+  /**
+   * Gets the net worth view in one response: month-end assets, debts and net worth, the rows by account
+   * type or account, the cards' figures, what moved net worth, and the comparison if asked.
+   * @param state the net worth view's state
+   * @returns the whole breakdown
+   */
+  getNetWorthBreakdown(state: NetWorthState): Observable<NetWorthBreakdown> {
+    return this.http.get<NetWorthBreakdown>(`${this.apiUrl}/net-worth/breakdown`, {
+      params: new HttpParams({ fromObject: toBreakdownParams(state) }),
       context: SKIP_TOAST_CONTEXT,
     });
   }

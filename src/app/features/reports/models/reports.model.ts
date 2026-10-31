@@ -24,6 +24,78 @@ export interface NetWorthDataPoint {
   netWorth: number;
 }
 
+// ---- Net worth (PF-887) ----
+
+export type NetWorthMeasure = 'NET_WORTH' | 'ASSETS' | 'DEBTS';
+export type NetWorthCompareMode = 'NONE' | 'YEAR_AGO' | 'PREVIOUS_PERIOD';
+
+/** Net worth at one month end. Field names match `NetWorthPointDto`; `debts` is the amount owed, positive. */
+export interface NetWorthPoint {
+  date: string; // ISO date (YYYY-MM-DD), the month end
+  assets: number;
+  debts: number;
+  netWorth: number;
+  partial: boolean;
+}
+
+/** What happened in one account over the range (`NetWorthStoryDto`). */
+export interface NetWorthStory {
+  openingBalance: number;
+  closingBalance: number;
+  deposits: number;
+  withdrawals: number;
+  interestAndAdjustments: number;
+}
+
+/** One row: an account type or an account (`NetWorthGroupDto`). Balances are raw and signed. */
+export interface NetWorthGroup {
+  key: string;
+  label: string;
+  kind: 'ASSET' | 'DEBT';
+  typeCode: string;
+  accountCount: number;
+  balance: number;
+  previousBalance: number;
+  comparisonBalance: number | null;
+  series: (number | null)[];
+  story: NetWorthStory | null;
+}
+
+export interface NetWorthSummary {
+  netWorth: number;
+  assets: number;
+  debts: number;
+  liquidCash: number;
+  averageMonthlySpending: number;
+  monthsCovered: number | null;
+}
+
+export interface NetWorthMoved {
+  change: number;
+  saved: number;
+  other: number;
+}
+
+export interface NetWorthComparison {
+  label: string;
+  start: string;
+  end: string;
+  netWorth: number;
+  assets: number;
+  debts: number;
+}
+
+/** Everything the net worth view shows (`NetWorthBreakdownDto`). */
+export interface NetWorthBreakdown {
+  points: NetWorthPoint[];
+  opening: NetWorthPoint;
+  asOf: string;
+  summary: NetWorthSummary;
+  moved: NetWorthMoved;
+  comparison: NetWorthComparison | null;
+  groups: NetWorthGroup[];
+}
+
 // ---- The explorer (PF-886) ----
 
 export type Measure = 'SPENDING' | 'INCOME' | 'NET' | 'SAVINGS_RATE' | 'COUNT' | 'AVERAGE';
