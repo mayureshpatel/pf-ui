@@ -177,6 +177,24 @@ describe('RecurringComponent', () => {
       expect(fixture.nativeElement.textContent).toContain('You pay about');
     });
 
+    it('should hold the strip space while patterns load so the page does not shift', () => {
+      // act
+      component.patternsLoaded.set(false);
+      fixture.detectChanges();
+
+      // assert & verify (PF-885)
+      const root: HTMLElement = fixture.nativeElement;
+      expect(root.querySelector('[data-testid="patterns-strip"]')).toBeNull();
+      expect(root.querySelector('[data-testid="patterns-strip-placeholder"]')).not.toBeNull();
+
+      // act
+      component.patternsLoaded.set(true);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(root.querySelector('[data-testid="patterns-strip-placeholder"]')).toBeNull();
+    });
+
     it('should show the strip only when patterns exist', () => {
       // assert & verify
       expect(fixture.nativeElement.querySelector('[data-testid="patterns-strip"]')).not.toBeNull();

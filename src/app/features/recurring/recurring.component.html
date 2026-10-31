@@ -19,6 +19,9 @@
       <p-skeleton height="16rem" borderRadius="1rem" />
     </div>
   } @else {
+    @if (!patternsLoaded()) {
+      <div data-testid="patterns-strip-placeholder" aria-hidden="true" class="h-11"></div>
+    }
     @if (patternsLoaded() && patterns().length > 0) {
       <div
         data-testid="patterns-strip"
