@@ -8,7 +8,6 @@ import {
   ExploreState,
   ExploreTransaction,
   ExploreTrend,
-  NetWorthDataPoint,
 } from '../models/reports.model';
 import { PageResponse } from '@models/transaction.model';
 import { toApiParams } from '../utils/explore-state';
@@ -19,7 +18,7 @@ const SKIP_TOAST_CONTEXT = new HttpContext().set(SKIP_GENERIC_ERROR_TOAST, true)
 
 /**
  * Client for the backend's report endpoints (`ReportController`): the explorer's groups, trend and
- * transactions (PF-886), all aggregated server-side with no row cap, and the net worth series.
+ * transactions (PF-886), all aggregated server-side with no row cap, and the net worth breakdown (PF-887).
  */
 @Injectable({
   providedIn: 'root',
@@ -27,24 +26,6 @@ const SKIP_TOAST_CONTEXT = new HttpContext().set(SKIP_GENERIC_ERROR_TOAST, true)
 export class ReportApiService {
   private readonly http: HttpClient = inject(HttpClient);
   private readonly apiUrl: string = `${environment.apiUrl}/reports`;
-
-  /**
-   * Gets the net-worth-over-time series from the backend.
-   * @param startDate the period start (ISO date); the backend defaults to a trailing 12 months if omitted.
-   * @param endDate the period end (ISO date); the backend defaults to today if omitted.
-   * @returns the net worth data points, one per month-end in range.
-   */
-  getNetWorth(startDate?: string, endDate?: string): Observable<NetWorthDataPoint[]> {
-    let params: HttpParams = new HttpParams();
-    if (startDate && endDate) {
-      params = params.set('startDate', startDate).set('endDate', endDate);
-    }
-
-    return this.http.get<NetWorthDataPoint[]>(`${this.apiUrl}/net-worth`, {
-      params,
-      context: SKIP_TOAST_CONTEXT,
-    });
-  }
 
   /**
    * Gets the net worth view in one response: month-end assets, debts and net worth, the rows by account
