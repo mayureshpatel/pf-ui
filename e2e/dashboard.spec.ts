@@ -46,11 +46,13 @@ test.describe('Dashboard', () => {
     await expect(keptCard.getByTestId('kept-amount')).toHaveText('$1,450.00');
     await expect(keptCard.getByText('72.5% of income')).toBeVisible();
 
-    // Charts render (canvas-backed p-chart; content isn't practically assertable, presence is)
-    await expect(page.getByText('Top categories')).toBeVisible();
-    await expect(page.locator('canvas').first()).toBeVisible();
-    const categoryChartCanvasCount = await page.locator('canvas').count();
-    expect(categoryChartCanvasCount).toBeGreaterThanOrEqual(2); // cash-flow-trend + category-chart
+    // Cash-flow trend is canvas-backed (presence is all that's assertable); the Top categories
+    // card is an HTML list, so each category's amount is plain text (PF-863).
+    await expect(page.locator('app-cash-flow-trend canvas').first()).toBeVisible();
+    const topCategories = page.locator('app-category-chart');
+    await expect(topCategories.getByText('Top categories')).toBeVisible();
+    await expect(topCategories.getByTestId('category-row').filter({hasText: 'E2E Dashboard Category'}))
+      .toContainText('$500.00');
 
     // Review banner: the uncategorized expense above must surface here, and clicking through
     // must both land on and actually filter the Transactions page down to it. Bug regression:
