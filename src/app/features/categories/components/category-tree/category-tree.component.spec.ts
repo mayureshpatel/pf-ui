@@ -35,6 +35,7 @@ describe('CategoryTreeComponent', () => {
       ticked: number[];
       showChecks: boolean;
       loading: boolean;
+      filtering: boolean;
     }> = {},
   ): void {
     fixture.componentRef.setInput('nodes', over.nodes ?? nodes());
@@ -44,6 +45,7 @@ describe('CategoryTreeComponent', () => {
     fixture.componentRef.setInput('ticked', new Set(over.ticked ?? []));
     fixture.componentRef.setInput('showChecks', over.showChecks ?? false);
     fixture.componentRef.setInput('loading', over.loading ?? false);
+    fixture.componentRef.setInput('filtering', over.filtering ?? false);
     fixture.detectChanges();
   }
   const all = <T extends HTMLElement>(s: string): T[] =>
@@ -200,5 +202,41 @@ describe('CategoryTreeComponent', () => {
 
     // assert & verify -- the box follows the ticked input, which did not change
     expect(box.checked).toBe(false);
+  });
+
+  // PF-879: while a filter or search is active the tree shows matches expanded, so the expand
+  // controls cannot do anything and are switched off
+  describe('while filtering', () => {
+    it('should disable Expand all, Collapse all and the row chevrons', () => {
+      // act
+      render({ filtering: true, expanded: [1] });
+
+      // assert & verify
+      expect(button('Expand all')?.disabled).toBe(true);
+      expect(button('Collapse all')?.disabled).toBe(true);
+      expect(button('Collapse Food')?.disabled).toBe(true);
+    });
+
+    it('should keep them working when nothing is filtered', () => {
+      // act
+      render({ filtering: false });
+
+      // assert & verify
+      expect(button('Expand all')?.disabled).toBe(false);
+      expect(button('Collapse all')?.disabled).toBe(false);
+      expect(button('Expand Food')?.disabled).toBe(false);
+    });
+
+    it('should label a parent with how many subcategories the group has, not how many match', () => {
+      // arrange -- a search left one of Food's two children visible
+      const [food] = nodes();
+      const filtered = { ...food, children: [food.children[0]] };
+
+      // act
+      render({ nodes: [filtered], filtering: true, expanded: [1] });
+
+      // assert & verify
+      expect(text(all('[data-testid="tree-row"]')[0])).toContain('2 subcategories');
+    });
   });
 });

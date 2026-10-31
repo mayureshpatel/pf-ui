@@ -6,6 +6,8 @@ export interface CategoryNode {
   children: Category[];
   /** The parent's own transactions plus its children's. */
   totalCount: number;
+  /** How many subcategories the group has, whatever a filter currently shows. */
+  subcategoryCount: number;
 }
 
 export interface CategoryFilter {
@@ -50,7 +52,7 @@ export function buildNodes(categories: Category[], counts: Category[]): Category
         (sum: number, c: Category): number => sum + (c.transactionCount ?? 0),
         parent.transactionCount ?? 0,
       );
-      return { parent, children, totalCount };
+      return { parent, children, totalCount, subcategoryCount: children.length };
     });
 }
 

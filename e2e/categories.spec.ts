@@ -1,4 +1,5 @@
 import {expect, test} from '@playwright/test';
+import {deleteTestCategoriesContaining} from './helpers/api';
 
 /**
  * Covers PF-332/PF-878: category CRUD through the real UI -- the tree beside an always-present
@@ -8,8 +9,16 @@ import {expect, test} from '@playwright/test';
  * its own categories, never budgeting them.
  */
 test.describe('Categories', () => {
+  let stamp = 0;
+
+  // The UI cleanup at the end of the test is part of what it checks, but a step failing midway would
+  // leave the categories behind on the shared dev user, so remove whatever is left through the API.
+  test.afterEach(async ({page}) => {
+    if (stamp) await deleteTestCategoriesContaining(page, String(stamp));
+  });
+
   test('create a parent and child, edit the child, then tick and delete both as unused', async ({page}) => {
-    const stamp = Date.now();
+    stamp = Date.now();
     const parentName = `E2E Category Parent ${stamp}`;
     const childName = `E2E Category Child ${stamp}`;
     const renamedChildName = `${childName} Renamed`;
@@ -25,6 +34,8 @@ test.describe('Categories', () => {
     await panel.getByRole('button', {name: 'Add category'}).click();
     await expect(page.getByText('Category added')).toBeVisible();
     await expect(panel).toHaveAccessibleName(parentName);
+    // let this toast go before the next create, or the next wait would match it instead of its own
+    await expect(page.getByText('Category added')).toBeHidden();
 
     // Create the child under it (wait for the panel to switch: the old category form also has a Name field)
     await page.getByRole('button', {name: 'Add category'}).first().click();

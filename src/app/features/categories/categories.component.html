@@ -13,10 +13,21 @@
   @if (loadError() && categories().length === 0) {
     <app-page-error-state message="Failed to load categories." (retry)="loadData()" />
   } @else if (loading() && !loadedOnce()) {
-    <div class="flex flex-col gap-4" aria-busy="true" role="status">
+    <div
+      class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_26rem]"
+      aria-busy="true"
+      role="status"
+    >
       <span class="sr-only">Loading categories</span>
-      <p-skeleton height="3rem" borderRadius="1rem" />
-      <p-skeleton height="16rem" borderRadius="1rem" />
+      <div class="flex min-w-0 flex-col gap-4">
+        <p-skeleton data-testid="skeleton-filters" height="3rem" borderRadius="1rem" />
+        <div class="flex flex-col gap-2">
+          @for (row of skeletonRows; track row) {
+            <p-skeleton data-testid="skeleton-row" height="3.5rem" borderRadius="0.75rem" />
+          }
+        </div>
+      </div>
+      <p-skeleton data-testid="skeleton-overview" height="16rem" borderRadius="1rem" />
     </div>
   } @else {
     <div class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_26rem]">
@@ -60,6 +71,7 @@
               [ticked]="tickedIds()"
               [showChecks]="showChecks()"
               [loading]="loading()"
+              [filtering]="filtering()"
               (openCategory)="openCategory($event)"
               (toggleExpand)="toggleExpand($event)"
               (toggleTick)="toggleTick($event)"

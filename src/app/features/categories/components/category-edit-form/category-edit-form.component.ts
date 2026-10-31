@@ -49,6 +49,14 @@ const COLOR_NAMES: string[] = [
 const notBlank = (control: AbstractControl): ValidationErrors | null =>
   String(control.value ?? '').trim() === '' ? { required: true } : null;
 
+/** A name is limited by its length once trimmed, since the trimmed text is what gets saved. */
+const trimmedMaxLength =
+  (max: number) =>
+  (control: AbstractControl): ValidationErrors | null => {
+    const length: number = String(control.value ?? '').trim().length;
+    return length > max ? { maxlength: { requiredLength: max, actualLength: length } } : null;
+  };
+
 /** The panel's category and add modes: one form for both, plus View transactions and Delete. */
 @Component({
   selector: 'app-category-edit-form',
@@ -110,7 +118,7 @@ export class CategoryEditFormComponent implements OnInit {
   readonly form = new FormGroup({
     name: new FormControl<string>('', {
       nonNullable: true,
-      validators: [Validators.required, notBlank, Validators.maxLength(50)],
+      validators: [Validators.required, notBlank, trimmedMaxLength(50)],
     }),
     type: new FormControl<CategoryType>(CategoryType.EXPENSE, { nonNullable: true }),
     parentId: new FormControl<number | null>(null),

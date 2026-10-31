@@ -96,6 +96,8 @@ export class CategoriesComponent implements OnInit {
   /** Every category, flat, each carrying its own transaction count. */
   readonly categories: WritableSignal<Category[]> = signal([]);
   readonly loading: WritableSignal<boolean> = signal(false);
+  /** Rows in the first-load skeleton. */
+  readonly skeletonRows: number[] = [0, 1, 2, 3, 4];
   readonly loadError: WritableSignal<boolean> = signal(false);
   /** True once a load has succeeded; later reloads dim the tree instead of replacing the page. */
   readonly loadedOnce: WritableSignal<boolean> = signal(false);
@@ -180,13 +182,7 @@ export class CategoriesComponent implements OnInit {
   /** Why the selected category cannot be deleted, or null when it can. */
   readonly deleteBlockedReason: Signal<string | null> = computed((): string | null => {
     const category: Category | null = this.selectedCategory();
-    if (!category) return null;
-    const count: number = category.transactionCount ?? 0;
-    if (count > 0) return `It has ${count} ${count === 1 ? 'transaction' : 'transactions'}.`;
-    if (this.categories().some((c: Category): boolean => c.parent?.id === category.id)) {
-      return 'Move or delete its subcategories first.';
-    }
-    return null;
+    return category ? this.blockedReasonFor(category) : null;
   });
 
   private readonly injector: Injector = inject(Injector);
@@ -230,6 +226,10 @@ export class CategoriesComponent implements OnInit {
           );
           this.loadedOnce.set(true);
           this.pruneTicks();
+          // every ticked row may be gone: nothing is left to show, or to delete
+          if (this.panelMode() === 'selection' && this.tickedIds().size === 0) {
+            this.closePanel(false);
+          }
           this.closePanelIfCategoryGone();
         },
         error: (err: unknown): void => {
@@ -317,7 +317,8 @@ export class CategoriesComponent implements OnInit {
     const mode: CategoryPanelMode = this.panelMode();
     if (mode === 'overview') return;
     this.confirmDiscardIfDirty((): void => {
-      if (mode === 'add' && this.selectedCategoryId() !== null) {
+      // back to the category the add came from, unless it was deleted elsewhere meanwhile
+      if (mode === 'add' && this.selectedCategory() !== null) {
         this.go('category');
       } else {
         this.clearTicksIfSelecting();
@@ -393,7 +394,9 @@ export class CategoriesComponent implements OnInit {
 
   /** Confirms, then deletes a category (the selected one by default). */
   deleteCategory(category: Category | null = this.selectedCategory()): void {
-    if (!category || this.deleteBlockedReason() !== null || this.saving() || this.loading()) return;
+    if (!category || this.blockedReasonFor(category) !== null || this.saving() || this.loading()) {
+      return;
+    }
     this.confirmationService.confirm({
       header: 'Delete category?',
       message: `Delete the ${category.name} category?`,
@@ -402,7 +405,7 @@ export class CategoriesComponent implements OnInit {
       rejectLabel: 'Cancel',
       acceptButtonStyleClass: 'p-button-danger',
       accept: (): void => {
-        if (this.saving()) return;
+        if (this.saving() || this.loading()) return;
         this.saving.set(true);
         this.categoryApi
           .deleteCategory(category.id)
@@ -453,7 +456,7 @@ export class CategoriesComponent implements OnInit {
    * rest; the toast reports the counts and the first server message.
    */
   private runBulkDelete(): void {
-    if (this.saving()) return;
+    if (this.saving() || this.loading()) return;
     this.saving.set(true);
     const categories: Category[] = this.categories();
     const failedIds = new Set<number>();
@@ -538,6 +541,16 @@ export class CategoriesComponent implements OnInit {
       },
       { injector: this.injector },
     );
+  }
+
+  /** Why a category cannot be deleted (it has transactions or subcategories), or null when it can. */
+  private blockedReasonFor(category: Category): string | null {
+    const count: number = category.transactionCount ?? 0;
+    if (count > 0) return `It has ${count} ${count === 1 ? 'transaction' : 'transactions'}.`;
+    if (this.categories().some((c: Category): boolean => c.parent?.id === category.id)) {
+      return 'Move or delete its subcategories first.';
+    }
+    return null;
   }
 
   private saveFailed(error: HttpErrorResponse): void {
