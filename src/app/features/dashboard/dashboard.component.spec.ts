@@ -318,6 +318,66 @@ describe('DashboardComponent', () => {
     });
   });
 
+  // PF-864: the full subtitle for each preset, at a fixed clock. A preset is compared with the
+  // immediately preceding window of the same number of days (DashboardService.getPulse), so these
+  // strings are not "the previous month/year". The clock is local midday, and the strings depend
+  // on periodRange() being local calendar days (PF-861), so run under TZ=UTC,
+  // TZ=America/New_York and TZ=Europe/Helsinki.
+  describe('periodSubtitle per preset (PF-864)', () => {
+    beforeEach(() => {
+      setUp(new Date(2026, 9, 17, 12, 0)); // Oct 17, 2026
+      fixture.detectChanges();
+    });
+
+    const subtitleOnPage = (): string | undefined =>
+      fixture.nativeElement.querySelector('[data-testid="period-subtitle"]')?.textContent?.trim();
+
+    it('should read THIS_MONTH against the 17 days before it', () => {
+      // act
+      component.selectedPreset.set('THIS_MONTH');
+      fixture.detectChanges();
+
+      // assert & verify
+      const expected = 'Oct 1 to Oct 17, 2026 compared with Sep 14 to Sep 30, 2026';
+      expect(component.periodSubtitle()).toBe(expected);
+      expect(subtitleOnPage()).toBe(expected);
+    });
+
+    it('should read LAST_MONTH as the month name against the 30 days before it', () => {
+      // act
+      component.selectedPreset.set('LAST_MONTH');
+      fixture.detectChanges();
+
+      // assert & verify
+      const expected = 'September 2026 compared with Aug 2 to Aug 31, 2026';
+      expect(component.periodSubtitle()).toBe(expected);
+      expect(subtitleOnPage()).toBe(expected);
+    });
+
+    it('should read THIS_YEAR against the 290 days before it', () => {
+      // act
+      component.selectedPreset.set('THIS_YEAR');
+      fixture.detectChanges();
+
+      // assert & verify -- Jan 1 to Oct 17 is 290 days, so the window ends Dec 31, 2025 and
+      // starts Mar 17, 2025
+      const expected = 'Jan 1 to Oct 17, 2026 compared with Mar 17 to Dec 31, 2025';
+      expect(component.periodSubtitle()).toBe(expected);
+      expect(subtitleOnPage()).toBe(expected);
+    });
+
+    it('should read LAST_YEAR against the 365 days before it', () => {
+      // act
+      component.selectedPreset.set('LAST_YEAR');
+      fixture.detectChanges();
+
+      // assert & verify -- 2024 is a leap year, so 365 days before Jan 1, 2025 is Jan 2, 2024
+      const expected = 'Jan 1 to Dec 31, 2025 compared with Jan 2 to Dec 31, 2024';
+      expect(component.periodSubtitle()).toBe(expected);
+      expect(subtitleOnPage()).toBe(expected);
+    });
+  });
+
   describe('periodSubtitle', () => {
     it('should compare a custom month with the previous calendar month', () => {
       // arrange
