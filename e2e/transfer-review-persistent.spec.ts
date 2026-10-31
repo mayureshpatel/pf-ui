@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import {expect, test} from './fixtures/test';
 
 /**
  * PF-831: the Dashboard's TRANSFER_REVIEW action item links to

@@ -1,10 +1,11 @@
-import {expect, test} from '@playwright/test';
+import {expect, test} from './fixtures/test';
 import {
   createTestAccount,
   createTestMerchant,
   createTestTransactionExact,
   deleteTestMerchant
 } from './helpers/api';
+import {trackByName} from './helpers/cleanup';
 
 /**
  * Covers PF-884: the Recurring page through the real UI -- the grouped list beside an always-present
@@ -92,6 +93,7 @@ test.describe('Recurring', () => {
     await panel.getByRole('button', {name: 'Add to recurring'}).click();
 
     await expect(page.getByText('Added to recurring')).toBeVisible();
+    await trackByName(page, 'merchant', merchantName);
     const row = page.getByTestId('open-item').filter({hasText: merchantName});
     await expect(row).toContainText('$75.00');
     await expect(page.getByTestId('group-header').filter({hasText: 'Monthly'})).toBeVisible();

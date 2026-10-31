@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import {expect, test} from './fixtures/test';
 
 /**
  * PF-825 fixed: `ActionItemDto.count` for the UNCATEGORIZED action item used to be the
