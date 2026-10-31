@@ -46,6 +46,7 @@ import {
 import { CategoryChartComponent } from './components/category-chart/category-chart.component';
 import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen-toolbar';
 import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
+import { toLocalDateString } from '@shared/utils/transaction.utils';
 import { PageErrorStateComponent } from '@shared/components/page-error-state/page-error-state.component';
 
 type RangePreset = 'THIS_MONTH' | 'LAST_MONTH' | 'THIS_YEAR' | 'LAST_YEAR' | 'CUSTOM';
@@ -157,8 +158,8 @@ export class DashboardComponent implements OnInit {
     }
 
     return {
-      start: start.toISOString().split('T')[0],
-      end: end.toISOString().split('T')[0],
+      start: toLocalDateString(start),
+      end: toLocalDateString(end),
     };
   });
 
