@@ -3,6 +3,7 @@ import {
   Component,
   computed,
   effect,
+  OnInit,
   input,
   InputSignal,
   output,
@@ -42,7 +43,7 @@ import { BankOption } from '@models/transaction.model';
   templateUrl: './account-edit-form.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AccountEditFormComponent {
+export class AccountEditFormComponent implements OnInit {
   account: InputSignal<Account | null> = input<Account | null>(null);
   accountTypes: InputSignal<AccountType[]> = input.required<AccountType[]>();
   saving: InputSignal<boolean> = input<boolean>(false);
@@ -105,11 +106,35 @@ export class AccountEditFormComponent {
     (): number | null => this.account()?.id ?? null,
   );
 
+  /** The key the form was last filled for; the effect only refills when it really changes. */
+  private filledFor: string | null = null;
+
+  /** Which account (or a new one) is shown, as a key. */
+  private readonly formKey: Signal<string> = computed((): string =>
+    String(this.accountId() ?? 'new'),
+  );
+
   constructor() {
     effect((): void => {
-      this.accountId();
-      untracked((): void => this.onShow());
+      const key: string = this.formKey();
+      // the fill at init already covered this key; only a different account refills
+      if (key === this.filledFor) return;
+      untracked((): void => this.fill(key));
     });
+  }
+
+  /**
+   * Fills the form at init, synchronously and before the first render, so text the user types at
+   * once can never be replaced by an effect that runs a moment later.
+   */
+  ngOnInit(): void {
+    const key: string = this.formKey();
+    if (key !== this.filledFor) this.fill(key);
+  }
+
+  private fill(key: string): void {
+    this.filledFor = key;
+    this.onShow();
   }
 
   /** Submits from outside (the panel's Save button). */
