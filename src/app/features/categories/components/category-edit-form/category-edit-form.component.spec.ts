@@ -111,6 +111,55 @@ describe('CategoryEditFormComponent', () => {
     expect(request.parentId).toBeUndefined();
   });
 
+  // PF-879: the backend clears a parent when the update leaves parentId out
+  it('should omit parentId on an update that clears the parent', () => {
+    // arrange
+    render(groceries);
+    const saved = vi.fn();
+    component.save.subscribe(saved);
+    expect(component.form.getRawValue().parentId).toBe(1);
+
+    // act
+    component.form.patchValue({ parentId: null });
+    component.submit();
+
+    // assert & verify
+    const request = saved.mock.calls[0][0] as CategoryUpdateRequest;
+    expect(request.id).toBe(2);
+    expect(request.parentId).toBeUndefined();
+  });
+
+  it('should count the name length after trimming', () => {
+    // arrange
+    render(null);
+    const saved = vi.fn();
+    component.save.subscribe(saved);
+
+    // act -- 50 characters once the padding is gone
+    component.form.patchValue({ name: `  ${'x'.repeat(50)}  ` });
+    component.submit();
+
+    // assert & verify
+    expect(saved).toHaveBeenCalledTimes(1);
+    expect((saved.mock.calls[0][0] as CategoryCreateRequest).name).toBe('x'.repeat(50));
+  });
+
+  it('should still refuse a name longer than 50 characters once trimmed', () => {
+    // arrange
+    render(null);
+    const saved = vi.fn();
+    component.save.subscribe(saved);
+
+    // act
+    component.form.patchValue({ name: `  ${'x'.repeat(51)}  ` });
+    component.submit();
+    fixture.detectChanges();
+
+    // assert & verify
+    expect(saved).not.toHaveBeenCalled();
+    expect(q('[data-testid="name-error"]').textContent).toContain('50 characters or fewer');
+  });
+
   it('should emit a create request with the chosen parent, or none', () => {
     // arrange
     render(null);

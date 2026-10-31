@@ -81,6 +81,27 @@ describe('category-helpers', () => {
       expect(names(result)).toEqual([['Food', []]]);
     });
 
+    // PF-879: the "N subcategories" label and the count column describe the same set of children
+    it('should keep describing the whole group while a search hides some of its children', () => {
+      // act
+      const [food] = filterNodes(nodes(), { ...NO_FILTER, search: 'groc' });
+
+      // assert & verify -- one child is shown, but the label count and the total are the group's
+      expect(food.children.map((c) => c.name)).toEqual(['Groceries']);
+      expect(food.subcategoryCount).toBe(3);
+      expect(food.totalCount).toBe(399);
+    });
+
+    it('should count the subcategories of every node when building the tree', () => {
+      // assert & verify
+      expect(nodes().map((n) => [n.parent.name, n.subcategoryCount])).toEqual([
+        ['Food', 3],
+        ['Housing', 0],
+        ['Income', 1],
+        ['Travel', 0],
+      ]);
+    });
+
     it('should combine the type filter with the search', () => {
       // act
       const result = filterNodes(nodes(), {

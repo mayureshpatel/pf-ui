@@ -186,6 +186,30 @@ export async function createTestCategory(
 }
 
 /**
+ * Deletes every category whose name contains `fragment` via the real API, subcategories before
+ * their parents (a parent that still has children is refused). For a spec that creates categories
+ * through the UI and must not leave them behind when a step fails midway. Best effort: a failure
+ * here must never hide the test's own result, so it is swallowed.
+ */
+export async function deleteTestCategoriesContaining(page: Page, fragment: string): Promise<void> {
+  try {
+    const token = await getAuthToken(page);
+    const headers = {Authorization: `Bearer ${token}`};
+    const listed = await page.request.get(`${API_URL}/categories`, {headers});
+    if (!listed.ok()) return;
+    const categories = (await listed.json()) as {id: number; name: string; parent?: {id: number} | null}[];
+    const mine = categories.filter((c) => c.name.includes(fragment));
+    const children = mine.filter((c) => c.parent);
+    const parents = mine.filter((c) => !c.parent);
+    for (const category of [...children, ...parents]) {
+      await page.request.delete(`${API_URL}/categories/${category.id}`, {headers}).catch(() => undefined);
+    }
+  } catch {
+    // best effort: the page may not be on the app origin any more, or the session may be gone
+  }
+}
+
+/**
  * Deletes every tag whose name contains `fragment` via the real API. For a spec that creates tags
  * through the UI and must not leave one behind when a step fails midway. Best effort: a failure here
  * must never hide the test's own result, so it is swallowed.

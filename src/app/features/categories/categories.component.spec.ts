@@ -357,6 +357,49 @@ describe('CategoriesComponent', () => {
       expect(component.panelMode()).toBe('add');
     });
 
+    // PF-879
+    it('should refuse to delete the category it is given when that one has transactions, whatever is open', () => {
+      // arrange -- Travel (deletable) is open, Groceries (301 transactions) is the target
+      openByName('Travel');
+      const groceriesRow = component.categories().find((c) => c.name === 'Groceries')!;
+
+      // act
+      component.deleteCategory(groceriesRow);
+
+      // assert & verify
+      expect(mockConfirmationService.confirm).not.toHaveBeenCalled();
+    });
+
+    it('should not run a confirmed single delete that is accepted while a reload is loading', () => {
+      // arrange
+      openByName('Travel');
+      component.deleteCategory();
+      component.loading.set(true);
+
+      // act
+      confirmAccept();
+
+      // assert & verify
+      expect(mockCategoryApi.deleteCategory).not.toHaveBeenCalled();
+      expect(component.saving()).toBe(false);
+    });
+
+    it('should return to the overview from Back when the parent being added under was deleted elsewhere', () => {
+      // arrange -- open Food, start adding a subcategory under it
+      openByName('Food');
+      component.startAdd(1);
+      expect(component.panelMode()).toBe('add');
+
+      // act -- a reload no longer contains Food, then the user presses Back
+      loadWith([housing, travel], []);
+      component.back();
+      fixture.detectChanges();
+
+      // assert & verify -- not stranded on a skeleton for a category that is gone
+      expect(component.panelMode()).toBe('overview');
+      expect(fixture.nativeElement.querySelector('app-side-panel p-skeleton')).toBeNull();
+    });
+
     it('should ignore save, add and delete while loading or saving', () => {
       // arrange
       openByName('Travel');
@@ -736,7 +779,7 @@ describe('CategoriesComponent', () => {
       expect(mockToast.error).toHaveBeenCalledWith('Deleted 1, 2 failed: Refused');
     });
 
-    it('should ignore a second bulk delete while one is running, and while loading', () => {
+    it('should ignore a second bulk delete while one is running', () => {
       // arrange
       unusedTree();
       tick(6);
@@ -750,6 +793,36 @@ describe('CategoriesComponent', () => {
       // assert & verify
       expect(mockConfirmationService.confirm).toHaveBeenCalledTimes(1);
       expect(component.saving()).toBe(true);
+    });
+
+    // PF-879
+    it('should not run a confirmed bulk delete that is accepted while a reload is loading', () => {
+      // arrange
+      unusedTree();
+      tick(6);
+      component.deleteSelected();
+      component.loading.set(true);
+
+      // act
+      confirmAccept();
+
+      // assert & verify
+      expect(mockCategoryApi.deleteCategory).not.toHaveBeenCalled();
+      expect(component.saving()).toBe(false);
+    });
+
+    it('should close the selection panel when a reload leaves nothing ticked', () => {
+      // arrange
+      unusedTree();
+      tick(6);
+      expect(component.panelMode()).toBe('selection');
+
+      // act -- the ticked category is deleted elsewhere
+      loadWith([food, coffee, dining], []);
+
+      // assert & verify
+      expect(component.tickedIds().size).toBe(0);
+      expect(component.panelMode()).toBe('overview');
     });
 
     it('should clear the selection from the panel', () => {
@@ -768,6 +841,36 @@ describe('CategoriesComponent', () => {
 
   describe('layout and states', () => {
     const aside = (): HTMLElement => fixture.nativeElement.querySelector('app-side-panel aside');
+
+    // PF-879
+    it('should show a first-load skeleton shaped like the page: filters, tree rows and the overview', () => {
+      // arrange
+      mockCategoryApi.getCategories.mockReturnValue(new Subject<Category[]>());
+      const first = TestBed.createComponent(CategoriesComponent);
+
+      // act
+      first.detectChanges();
+
+      // assert & verify
+      const root: HTMLElement = first.nativeElement;
+      expect(root.querySelector('[data-testid="skeleton-filters"]')).toBeTruthy();
+      expect(root.querySelectorAll('[data-testid="skeleton-row"]').length).toBeGreaterThanOrEqual(
+        4,
+      );
+      expect(root.querySelector('[data-testid="skeleton-overview"]')).toBeTruthy();
+    });
+
+    it('should switch off the expand controls while a filter is active', () => {
+      // act
+      component.setFilter({ ...NO_FILTER, search: 'food' });
+      fixture.detectChanges();
+
+      // assert & verify
+      const expandAll = Array.from<HTMLButtonElement>(
+        fixture.nativeElement.querySelectorAll('app-category-tree button'),
+      ).find((b) => b.textContent?.trim() === 'Expand all');
+      expect(expandAll?.disabled).toBe(true);
+    });
 
     it('should always render the panel, on the overview by default, beside the tree and filters', () => {
       // assert & verify

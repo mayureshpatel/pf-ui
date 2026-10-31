@@ -29,6 +29,11 @@ export class CategoryTreeComponent {
   readonly ticked: InputSignal<ReadonlySet<number>> = input.required<ReadonlySet<number>>();
   readonly showChecks: InputSignal<boolean> = input.required<boolean>();
   readonly loading: InputSignal<boolean> = input.required<boolean>();
+  /**
+   * A filter or search is active. The tree then shows every match expanded, so the expand and
+   * collapse controls have nothing to do and are switched off.
+   */
+  readonly filtering: InputSignal<boolean> = input<boolean>(false);
 
   readonly openCategory: OutputEmitterRef<Category> = output<Category>();
   readonly toggleExpand: OutputEmitterRef<number> = output<number>();
