@@ -1,164 +1,203 @@
-<div class="w-full flex flex-col gap-4">
-  <!-- Page Header -->
-  <app-screen-toolbar class="mb-6">
+<div class="flex w-full flex-col gap-4">
+  <app-screen-toolbar [showDivider]="false">
     <div toolbarTitle>
-      <h1 class="text-4xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight">Category Rules</h1>
-      <p class="text-muted-color mt-1 text-lg italic">Intelligent Automation Engine</p>
+      <h2 class="text-2xl font-semibold tracking-tight text-surface-900 dark:text-surface-0">
+        Category rules
+      </h2>
     </div>
-
-    <div toolbarActions class="flex gap-3">
+    <div toolbarActions class="flex gap-2">
       <p-button
-        label="Apply Rules"
-        icon="pi pi-refresh"
-        (onClick)="openApplyPreview()"
+        label="Apply rules"
         severity="secondary"
         [outlined]="true"
-        class="card-soft"
+        [disabled]="applying()"
+        (onClick)="openApplyPreview()"
       />
-      <p-button
-        label="New Rule"
-        icon="pi pi-plus"
-        (onClick)="openCreateDialog()"
-        severity="primary"
-        [raised]="true"
-      />
+      <p-button label="Add rule" icon="pi pi-plus" (onClick)="startAdd()" />
     </div>
   </app-screen-toolbar>
 
-  <!-- Rules Ledger -->
-  @if (!isEmpty()) {
-    <p-card class="overflow-hidden card-soft">
-      <p-table
-        [value]="rules()"
-        [loading]="loading()"
-        [rowHover]="true"
-        [stripedRows]="true"
-        size="small"
-        responsiveLayout="stack"
-        [breakpoint]="'960px'">
-
-        <ng-template #header>
-          <tr>
-            <th id="rule-priority" class="py-4 font-bold text-surface-700 dark:text-surface-200 w-24">Priority</th>
-            <th id="rule-keyword" class="py-4 font-bold text-surface-700 dark:text-surface-200">Match Keywords</th>
-            <th id="rule-category" class="py-4 font-bold text-surface-700 dark:text-surface-200">Assigned Category</th>
-            <th id="rule-amount-range" class="py-4 font-bold text-surface-700 dark:text-surface-200">Amount Range</th>
-            <th id="rule-actions" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-center w-24">
-              Action
-            </th>
-          </tr>
-        </ng-template>
-
-        <ng-template #body let-rule>
-          <tr class="hover:bg-surface-100/50 dark:hover:bg-surface-800/30 transition-colors duration-200">
-            <!-- Priority Badge -->
-            <td>
-              <span
-                class="px-2 py-0.5 rounded bg-surface-100 text-xs font-black font-mono text-surface-500 ring-1 ring-surface-200 dark:ring-surface-700">
-                #{{ rule.priority }}
-              </span>
-            </td>
-
-            <!-- Keyword Display -->
-            <td class="py-4">
-              <div class="flex items-center gap-1.5 flex-wrap">
-                <i class="pi pi-search text-xs text-muted-color"></i>
-                @for (keyword of rule.keywords; track keyword; let isLast = $last) {
-                  <span
-                    class="font-mono font-bold text-surface-900 dark:text-surface-0 bg-primary/5 px-2 py-1 rounded border border-primary/10">
-                    {{ keyword }}
-                  </span>
-                  @if (!isLast) {
-                    <span class="text-xs font-black uppercase text-surface-400 dark:text-surface-500 tracking-tighter">{{ rule.matchType }}</span>
-                  }
-                }
-              </div>
-            </td>
-
-            <!-- Category Association -->
-            <td>
-              <div class="flex items-center gap-3">
-                <div
-                  [class]="'w-8 h-8 flex items-center justify-center text-white card-soft' + (rule.category?.color || 'bg-surface-400 dark:bg-surface-500')">
-                  <i [class]="'pi ' + (rule.category?.icon || 'pi-tag') + ' text-xs'"></i>
-                </div>
-                <span class="font-bold text-surface-700 dark:text-surface-200">{{ rule.category?.name || 'Uncategorized' }}</span>
-              </div>
-            </td>
-
-            <!-- Amount Range -->
-            <td>
-              @if (rule.minAmount != null && rule.maxAmount != null) {
-                <span class="font-mono text-xs text-muted-color">
-                  {{ rule.minAmount | formatCurrency }} &ndash; {{ rule.maxAmount | formatCurrency }}
-                </span>
-              } @else if (rule.minAmount != null) {
-                <span class="font-mono text-xs text-muted-color">&ge; {{ rule.minAmount | formatCurrency }}</span>
-              } @else if (rule.maxAmount != null) {
-                <span class="font-mono text-xs text-muted-color">&le; {{ rule.maxAmount | formatCurrency }}</span>
-              } @else {
-                <span class="text-xs text-muted-color italic">Any amount</span>
-              }
-            </td>
-
-            <!-- Inline Actions -->
-            <td class="text-center">
+  @if (loadError() && rules().length === 0) {
+    <app-page-error-state message="Failed to load category rules." (retry)="loadRules()" />
+  } @else if (loading() && !loadedOnce()) {
+    <div class="flex flex-col gap-4" aria-busy="true" role="status">
+      <span class="sr-only">Loading category rules</span>
+      <p-skeleton height="3rem" borderRadius="1rem" />
+      <p-skeleton height="14rem" borderRadius="1rem" />
+    </div>
+  } @else {
+    <div class="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_24rem]">
+      <div
+        class="flex min-w-0 flex-col gap-3"
+        [attr.aria-busy]="loading()"
+        [class.opacity-60]="loading()"
+      >
+        @if (rules().length === 0) {
+          <div
+            class="rounded-2xl border border-surface-200 p-10 text-center dark:border-surface-800"
+          >
+            <p class="font-medium">No rules yet</p>
+            <p class="text-muted-color">
+              Rules assign a category to imported transactions when their description contains a
+              keyword.
+            </p>
+          </div>
+        } @else {
+          <label for="rules-search" class="sr-only">Search rules</label>
+          <input
+            id="rules-search"
+            type="search"
+            placeholder="Search rules"
+            class="w-full rounded-lg border border-surface-300 bg-surface-0 px-3 py-2 text-sm dark:border-surface-700 dark:bg-surface-900"
+            [value]="search()"
+            (input)="search.set($any($event.target).value)"
+          />
+          @if (visibleRules().length === 0) {
+            <div
+              class="rounded-2xl border border-surface-200 p-10 text-center dark:border-surface-800"
+            >
+              <p class="mb-3 font-medium">No rules match</p>
               <p-button
-                icon="pi pi-trash"
-                [text]="true"
-                [rounded]="true"
-                severity="danger"
-                (onClick)="deleteRule(rule)"
-                pTooltip="Permanently remove this rule"
-                ariaLabel="Permanently remove this rule"
+                label="Clear search"
+                severity="secondary"
+                [outlined]="true"
+                (onClick)="clearSearch()"
               />
-            </td>
-          </tr>
-        </ng-template>
-
-        <ng-template #emptymessage>
-          <tr>
-            <td colspan="5" class="text-center py-16 text-muted-color italic">
-              No categorization rules found.
-            </td>
-          </tr>
-        </ng-template>
-      </p-table>
-    </p-card>
-  } @else if (loadError()) {
-    <app-page-error-state message="Failed to load category rules." (retry)="loadRules()"/>
-  } @else if (!loading()) {
-    <!-- Hero State -->
-    <div class="flex flex-col items-center justify-center min-h-[60vh] text-center animate-fade-in">
-      <div class="relative mb-8">
-        <div class="absolute -inset-4 bg-primary/10 rounded-full blur-2xl animate-pulse"></div>
-        <i class="pi pi-tags text-8xl text-primary/40 relative"></i>
+            </div>
+          } @else {
+            <ul class="m-0 flex list-none flex-col gap-2 p-0">
+              @for (rule of visibleRules(); track rule.id) {
+                <li>
+                  <button
+                    type="button"
+                    data-rule-row
+                    class="flex w-full cursor-pointer items-start justify-between gap-3 rounded-xl border p-3 text-left"
+                    [class]="
+                      selectedRuleId() === rule.id
+                        ? 'border-primary-700 bg-primary-50 dark:border-primary-400 dark:bg-primary-950'
+                        : 'border-surface-200 bg-surface-0 hover:bg-surface-50 dark:border-surface-800 dark:bg-surface-900 dark:hover:bg-surface-800'
+                    "
+                    [attr.aria-current]="selectedRuleId() === rule.id ? 'true' : null"
+                    (click)="openRule(rule)"
+                  >
+                    <span class="flex min-w-0 flex-col gap-2">
+                      <span class="flex flex-wrap items-center gap-1.5">
+                        @for (keyword of rule.keywords; track keyword; let last = $last) {
+                          <span
+                            class="rounded-md bg-surface-100 px-2 py-0.5 text-sm font-medium dark:bg-surface-800"
+                          >
+                            {{ keyword }}
+                          </span>
+                          @if (!last) {
+                            <span class="text-xs text-muted-color">{{
+                              rule.matchType === 'AND' ? 'and' : 'or'
+                            }}</span>
+                          }
+                        }
+                      </span>
+                      <span
+                        class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-color"
+                      >
+                        <span class="flex items-center gap-1.5">
+                          <span
+                            aria-hidden="true"
+                            class="inline-block size-3 rounded-full"
+                            [style.background-color]="color(rule.category)"
+                          ></span>
+                          <span class="text-color">{{
+                            rule.category?.name || 'Uncategorized'
+                          }}</span>
+                        </span>
+                        @if (limitText(rule.minAmount, rule.maxAmount); as limits) {
+                          <span class="tabular-nums">{{ limits }}</span>
+                        }
+                      </span>
+                    </span>
+                    <span class="shrink-0 text-sm tabular-nums text-muted-color"
+                      >Priority {{ rule.priority }}</span
+                    >
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+        }
       </div>
-      <h2 class="text-3xl font-bold text-surface-900 dark:text-surface-0 mb-3">No active rules</h2>
-      <p class="text-muted-color mb-8 max-w-lg leading-relaxed text-lg">
-        Automate your accounting by creating rules that detect keywords in transaction
-        descriptions and automatically assign the correct category.
-      </p>
-      <p-button
-        label="Create Your First Rule"
-        icon="pi pi-plus"
-        (onClick)="openCreateDialog()"
-        severity="primary"
-        size="large"
-        [raised]="true"
-      />
+
+      <app-side-panel
+        class="order-first block xl:order-none"
+        [title]="panelTitle()"
+        [saving]="saving()"
+        [showClose]="panelMode() !== 'overview' && !onlyAddMode()"
+        [sheet]="panelMode() !== 'overview'"
+        [moveFocus]="false"
+        [showFooter]="panelMode() !== 'overview'"
+        [saveLabel]="panelMode() === 'add' ? 'Add rule' : 'Save changes'"
+        [showDelete]="false"
+        (save)="onPanelSave()"
+        (closePanel)="onPanelClose()"
+      >
+        @switch (panelMode()) {
+          @case ('overview') {
+            <div class="flex flex-col gap-3 text-sm">
+              <p class="m-0 text-lg font-semibold tabular-nums">
+                {{ rules().length }} {{ rules().length === 1 ? 'rule' : 'rules' }}
+              </p>
+              <p class="m-0 text-muted-color">
+                Rules run when transactions are imported. When several match, the highest priority
+                wins.
+              </p>
+              <div class="flex flex-wrap gap-2">
+                <p-button label="Add rule" icon="pi pi-plus" (onClick)="startAdd()" />
+                <p-button
+                  label="Apply rules"
+                  severity="secondary"
+                  [outlined]="true"
+                  (onClick)="openApplyPreview()"
+                />
+              </div>
+            </div>
+          }
+          @case ('rule') {
+            @if (selectedRule(); as rule) {
+              <button type="button" class="mb-3 cursor-pointer text-sm underline" (click)="back()">
+                Back to overview
+              </button>
+              <app-rule-edit-form
+                #ruleForm
+                [rule]="rule"
+                [groups]="groups()"
+                [saving]="saving()"
+                (save)="saveRule($event)"
+                (remove)="deleteSelected()"
+              />
+            } @else {
+              <p-skeleton height="8rem" borderRadius="1rem" />
+            }
+          }
+          @case ('add') {
+            @if (!onlyAddMode()) {
+              <button type="button" class="mb-3 cursor-pointer text-sm underline" (click)="back()">
+                Back
+              </button>
+            }
+            <app-rule-edit-form
+              #ruleForm
+              [rule]="null"
+              [groups]="groups()"
+              [saving]="saving()"
+              (save)="saveRule($event)"
+            />
+          }
+        }
+      </app-side-panel>
     </div>
   }
-
-  <!-- Dialogs -->
-  <app-category-rule-form-dialog
-    [(visible)]="showDialog"
-    (save)="onRuleSaved()"
-  />
 
   <app-apply-rules-dialog
     [(visible)]="showApplyDialog"
     [previewItems]="previewItems()"
+    [loading]="applying()"
     fieldLabel="Category"
     (confirm)="confirmApply()"
   />

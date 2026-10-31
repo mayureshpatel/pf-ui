@@ -177,11 +177,11 @@ export class RuleEditFormComponent implements OnInit {
   }
 
   /** The rule's category as the grouped list knows it (so the select shows it), else as the rule has it. */
-  private categoryOf(rule: CategoryRule): Category {
+  private categoryOf(rule: CategoryRule): Category | null {
     const known: Category | undefined = this.groups()
       .flatMap((g: CategoryGroup): Category[] => [g.parent, ...g.items])
       .find((c: Category): boolean => c.id === rule.category?.id);
-    return known ?? rule.category;
+    return known ?? rule.category ?? null;
   }
 
   /** Submits from outside (the panel's Save button). */
