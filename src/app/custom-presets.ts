@@ -22,6 +22,10 @@ export const FinancePreset: Preset = definePreset(Aura, {
     },
     colorScheme: {
       light: {
+        // PF-870: Aura's muted text is surface.500 (#78716c), 4.40:1 on surface.100, just under AA.
+        text: {
+          mutedColor: '#6b655f',
+        },
         surface: {
           0: '#ffffff',
           50: '#fafaf9',
@@ -51,6 +55,27 @@ export const FinancePreset: Preset = definePreset(Aura, {
           800: '#292524',
           900: '#1c1917',
           950: '#0c0a09',
+        },
+      },
+    },
+  },
+  components: {
+    // PF-870: Aura fills the light-mode primary button with primary.500, which gives white text
+    // 2.54:1. primary.700 gives 5.48:1. Dark mode is left as Aura has it (primary.400 with dark
+    // text). Tracks PF-862's choice of primary.700 for emerald text.
+    button: {
+      colorScheme: {
+        light: {
+          root: {
+            primary: {
+              background: '{primary.700}',
+              hoverBackground: '{primary.800}',
+              activeBackground: '{primary.900}',
+              borderColor: '{primary.700}',
+              hoverBorderColor: '{primary.800}',
+              activeBorderColor: '{primary.900}',
+            },
+          },
         },
       },
     },
