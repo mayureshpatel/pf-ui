@@ -106,7 +106,13 @@ export class TagEditFormComponent implements OnInit {
   private readonly formKey: Signal<string> = computed((): string =>
     String(this.tag()?.id ?? 'new'),
   );
+  /** What the open tag's fields were when the form was last filled, to tell a changed copy from the same one. */
+  private readonly contentKey: Signal<string> = computed((): string => {
+    const t: Tag | null = this.tag();
+    return t ? JSON.stringify([t.name, normalizeHex(t.color)]) : '';
+  });
   private filledFor: string | null = null;
+  private filledContent: string | null = null;
 
   private readonly formEvents = toSignal(this.form.events);
 
@@ -146,7 +152,15 @@ export class TagEditFormComponent implements OnInit {
   constructor() {
     effect((): void => {
       const key: string = this.formKey();
-      if (key === this.filledFor) return;
+      const content: string = this.contentKey();
+      // a changed copy of the same tag refills only while the user has typed nothing
+      const changedCopy: boolean = content !== this.filledContent;
+      if (
+        key === this.filledFor &&
+        !(changedCopy && untracked((): boolean => this.form.pristine))
+      ) {
+        return;
+      }
       untracked((): void => this.fill(key));
     });
   }
@@ -159,6 +173,7 @@ export class TagEditFormComponent implements OnInit {
 
   private fill(key: string): void {
     this.filledFor = key;
+    this.filledContent = this.contentKey();
     this.errorMessage.set(null);
     const tag: Tag | null = this.tag();
     this.form.reset({

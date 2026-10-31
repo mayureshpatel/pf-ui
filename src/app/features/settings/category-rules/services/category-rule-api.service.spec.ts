@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideHttpClient } from '@angular/common/http';
 import { environment } from '@env';
 import { AuthService } from '@core/auth/auth.service';
+import { SKIP_GENERIC_ERROR_TOAST } from '@core/auth/error.interceptor';
 import { CategoryRuleApiService } from './category-rule-api.service';
 
 describe('CategoryRuleApiService', () => {
@@ -82,5 +83,16 @@ describe('CategoryRuleApiService', () => {
     const req = httpMock.expectOne(`${apiUrl}/9`);
     expect(req.request.method).toBe('DELETE');
     req.flush(null);
+  });
+
+  // PF-890: the page shows its own message for a refused create, so the generic toast stays off
+  it('should keep the generic error toast off for a create', () => {
+    // act
+    service.createRule({ keywords: ['a'], categoryId: 5, priority: 0 } as never).subscribe();
+
+    // assert & verify
+    const req = httpMock.expectOne(apiUrl);
+    expect(req.request.context.get(SKIP_GENERIC_ERROR_TOAST)).toBe(true);
+    req.flush(1);
   });
 });

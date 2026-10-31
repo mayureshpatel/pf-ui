@@ -156,7 +156,9 @@ export class CategoryRulesComponent implements OnInit {
         error: (err: unknown): void => {
           console.error('Failed to load rules:', err);
           this.toast.error('Failed to load category rules.');
-          this.rules.set([]);
+          // with a form open, the rules and the form stay (the banner offers a retry); otherwise the
+          // page falls back to the error state rather than showing stale rules
+          if (this.panelMode() === 'overview') this.rules.set([]);
           this.loadError.set(true);
         },
       });
@@ -164,6 +166,7 @@ export class CategoryRulesComponent implements OnInit {
 
   private afterRulesLoaded(data: CategoryRule[]): void {
     if (data.length === 0) {
+      if (this.panelMode() === 'rule') this.toast.info('That rule no longer exists.');
       this.selectedRuleId.set(null);
       this.panelMode.set('add');
       return;
@@ -256,7 +259,8 @@ export class CategoryRulesComponent implements OnInit {
       )
       .subscribe({
         next: (created: number | null | undefined): void => {
-          // an update answers with no id, so the open rule's own id stays selected
+          // an update answers with the number of rows it changed, not an id, so the open rule's own
+          // id stays selected
           const id: number = 'id' in request ? request.id : (created as number);
           this.ruleForm()?.form.markAsPristine();
           this.toast.success(editing ? 'Rule saved' : 'Rule added');
@@ -307,6 +311,8 @@ export class CategoryRulesComponent implements OnInit {
         next: (): void => {
           this.toast.success('Rule deleted');
           this.ruleForm()?.form.markAsPristine();
+          // the row that opened the panel is about to disappear, so focus goes to the panel instead
+          this.focusReturn = null;
           this.closePanel();
           this.loadRules();
         },

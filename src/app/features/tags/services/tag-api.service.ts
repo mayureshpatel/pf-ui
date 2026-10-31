@@ -21,9 +21,11 @@ export class TagApiService {
 
   /**
    * Retrieves all tags for the current user.
+   * @param skipGenericToast - true when the caller shows its own message for a failed load (the
+   * Settings page does); other pages that load tags rely on the generic toast.
    */
-  getTags(): Observable<Tag[]> {
-    return this.http.get<Tag[]>(this.apiUrl);
+  getTags(skipGenericToast = false): Observable<Tag[]> {
+    return this.http.get<Tag[]>(this.apiUrl, skipGenericToast ? SKIP_TOAST_OPTIONS : {});
   }
 
   /**
@@ -32,15 +34,16 @@ export class TagApiService {
    */
   createTag(data: TagCreateRequest): Observable<number> {
     const userId: number | undefined = this.authService.user()?.id;
-    return this.http.post<number>(this.apiUrl, { ...data, userId });
+    return this.http.post<number>(this.apiUrl, { ...data, userId }, SKIP_TOAST_OPTIONS);
   }
 
   /**
    * Renames/recolors an existing tag.
    * @param data - The updated tag, including its id.
+   * @returns the number of rows the server changed (not the tag's id).
    */
   updateTag(data: TagUpdateRequest): Observable<number> {
-    return this.http.put<number>(this.apiUrl, data);
+    return this.http.put<number>(this.apiUrl, data, SKIP_TOAST_OPTIONS);
   }
 
   /**
