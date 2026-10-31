@@ -3,7 +3,6 @@ import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '@env';
 import { Budget, BudgetStatus } from '@models/budget.model';
-import { PageRequest, PageResponse } from '@models/transaction.model';
 import { AuthService } from '@core/auth/auth.service';
 import { SKIP_GENERIC_ERROR_TOAST } from '@core/auth/error.interceptor';
 
@@ -41,21 +40,6 @@ export class BudgetApiService {
       .set('month', month.toString())
       .set('year', year.toString());
     return this.http.get<BudgetStatus[]>(`${this.apiUrl}/status`, {
-      params,
-      context: SKIP_TOAST_CONTEXT,
-    });
-  }
-
-  /**
-   * Gets a page of budgets across all periods, most recent first (PF-320).
-   * @param pageRequest the page number and size to request.
-   * @returns the requested page of budgets.
-   */
-  getAllBudgets(pageRequest: PageRequest): Observable<PageResponse<Budget>> {
-    const params: HttpParams = new HttpParams()
-      .set('page', pageRequest.page.toString())
-      .set('size', pageRequest.size.toString());
-    return this.http.get<PageResponse<Budget>>(`${this.apiUrl}/all`, {
       params,
       context: SKIP_TOAST_CONTEXT,
     });

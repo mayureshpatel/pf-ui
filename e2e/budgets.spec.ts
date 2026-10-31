@@ -78,14 +78,17 @@ test.describe('Budgets', () => {
   test('copy last month fills the gaps in this month', async ({page}) => {
     await registerTestUser(page);
     const category = await seedCategoryWithSpending(page);
+    // last month in UTC, like the seeded transactions, so this cannot flip near a month boundary
     const now = new Date();
-    const last = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    await createTestBudget(page, category.id, 250, last.getMonth() + 1, last.getFullYear());
+    const last = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
+    await createTestBudget(page, category.id, 250, last.getUTCMonth() + 1, last.getUTCFullYear());
 
     await page.goto('/budgets');
     await expect(page.getByText(/No budgets for/)).toBeVisible();
 
     await page.getByRole('button', {name: "Copy last month's limits"}).click();
+    // the dialog opens with focus on Fill gaps (PF-877)
+    await expect(page.getByRole('button', {name: 'Fill gaps'})).toBeFocused();
     await page.getByRole('button', {name: 'Fill gaps'}).click();
 
     await expect(page.getByText('Added 1 limit')).toBeVisible();

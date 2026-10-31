@@ -10,7 +10,7 @@
         <div class="flex items-center gap-1">
           <button
             type="button"
-            class="cursor-pointer rounded-lg px-2 py-2"
+            class="cursor-pointer rounded-lg px-2 py-2 hover:bg-surface-100 dark:hover:bg-surface-800"
             aria-label="Previous month"
             (click)="previousMonth()"
           >
@@ -21,7 +21,7 @@
           </span>
           <button
             type="button"
-            class="cursor-pointer rounded-lg px-2 py-2"
+            class="cursor-pointer rounded-lg px-2 py-2 hover:bg-surface-100 dark:hover:bg-surface-800"
             aria-label="Next month"
             (click)="nextMonth()"
           >
@@ -52,35 +52,15 @@
     </div>
   } @else {
     <div class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_26rem]">
-      <div class="flex min-w-0 flex-col gap-4">
-        @if (budgets().length === 0 && !loading()) {
-          <div
-            class="rounded-2xl border border-surface-200 p-10 text-center dark:border-surface-800"
-          >
-            <p class="font-medium">No budgets for {{ monthName() }}</p>
-            <p class="text-muted-color">
-              Set a limit for each category you want to track, or copy last month's.
-            </p>
-          </div>
-        }
-        @if (rows().length > 0) {
-          <app-budget-list
-            [groups]="groups()"
-            [selectedCategoryId]="selectedCategoryId()"
-            [loading]="loading()"
-            (openCategory)="openCategory($event)"
-          />
-        }
-      </div>
-
+      <!-- first in the page so a phone reads it first, as it shows; on a wide screen it sits in the right column -->
       <app-side-panel
-        class="order-first block lg:order-none"
+        class="block lg:col-start-2 lg:row-start-1"
         [title]="panelTitle()"
         [saving]="saving()"
         [showClose]="panelMode() !== 'overview'"
         [sheet]="panelMode() !== 'overview'"
         [moveFocus]="false"
-        [showFooter]="panelMode() !== 'overview'"
+        [showFooter]="showPanelFooter()"
         [saveLabel]="panelMode() === 'add' ? 'Add budget' : 'Save limit'"
         [showDelete]="false"
         (save)="onPanelSave()"
@@ -126,6 +106,27 @@
           }
         }
       </app-side-panel>
+
+      <div class="flex min-w-0 flex-col gap-4 lg:col-start-1 lg:row-start-1">
+        @if (budgets().length === 0 && !loading()) {
+          <div
+            class="rounded-2xl border border-surface-200 p-10 text-center dark:border-surface-800"
+          >
+            <p class="font-medium">No budgets for {{ monthName() }}</p>
+            <p class="text-muted-color">
+              Set a limit for each category you want to track, or copy last month's.
+            </p>
+          </div>
+        }
+        @if (rows().length > 0) {
+          <app-budget-list
+            [groups]="groups()"
+            [selectedCategoryId]="selectedCategoryId()"
+            [loading]="loading()"
+            (openCategory)="openCategory($event)"
+          />
+        }
+      </div>
     </div>
   }
 
