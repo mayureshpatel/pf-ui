@@ -52,6 +52,11 @@
     @for (view of views(); track view.id) {
       <div
         data-row
+        (contextmenu)="onContextMenu($event, view.id)"
+        (pointerdown)="onPointerDown($event, view.id)"
+        (pointerup)="cancelPress()"
+        (pointercancel)="cancelPress()"
+        (pointerleave)="cancelPress()"
         class="relative grid grid-cols-[1fr_auto_2rem] items-center gap-x-3 gap-y-1 border-t border-surface-200 px-3 py-2 sm:grid-cols-[1.6fr_2fr_0.9fr_1fr_0.5fr_2rem] dark:border-surface-800"
       >
         @if (drillable()) {
@@ -89,21 +94,21 @@
 
         <span class="hidden text-right text-sm sm:block">
           @if (view.change; as change) {
-            <span
-              data-change
-              [attr.data-tone]="change.tone"
-              [class]="
-                change.tone === 'bad'
-                  ? 'text-amber-700 dark:text-amber-400'
-                  : change.tone === 'good'
-                    ? 'text-primary-700 dark:text-primary-400'
-                    : 'text-muted-color'
-              "
-            >
+            <span data-change [attr.data-tone]="change.tone" [class]="toneClass(change.tone)">
               {{ change.text }}
             </span>
           }
         </span>
+
+        @if (view.change; as change) {
+          <span
+            data-change-phone
+            class="order-last col-span-3 text-xs sm:hidden"
+            [class]="toneClass(change.tone)"
+          >
+            {{ change.text }}
+          </span>
+        }
 
         <span class="hidden text-right text-sm tabular-nums sm:block">{{ view.row.count }}</span>
 
@@ -125,7 +130,7 @@
                 role="menu"
                 tabindex="-1"
                 class="absolute right-0 top-full z-20 m-0 min-w-64 list-none rounded-lg border border-surface-200 bg-surface-0 p-1 shadow-lg dark:border-surface-700 dark:bg-surface-900"
-                (keydown.escape)="openMenu.set(null); $event.stopPropagation()"
+                (keydown)="onMenuKeydown($event)"
               >
                 <li role="none">
                   <button

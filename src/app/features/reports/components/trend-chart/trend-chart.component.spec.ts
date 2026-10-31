@@ -144,4 +144,69 @@ describe('TrendChartComponent', () => {
     // assert & verify
     expect(bars()[0].getAttribute('aria-label')).toBe('Jan 2026: —');
   });
+
+  // PF-888: up to a year of daily bars must not be a year of tab stops
+  describe('keyboard', () => {
+    const press = (key: string, from: HTMLElement): void => {
+      from.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+      fixture.detectChanges();
+    };
+
+    it('should make the bars one tab stop', () => {
+      // act
+      render(MONTHS);
+
+      // assert & verify
+      expect(bars().map((b) => b.getAttribute('tabindex'))).toEqual(['0', '-1', '-1']);
+    });
+
+    it('should move focus and the tab stop with the arrow keys, Home and End', () => {
+      // arrange
+      render(MONTHS);
+      bars()[0].focus();
+
+      // act & assert
+      press('ArrowRight', bars()[0]);
+      expect(document.activeElement).toBe(bars()[1]);
+      expect(bars().map((b) => b.getAttribute('tabindex'))).toEqual(['-1', '0', '-1']);
+
+      press('End', bars()[1]);
+      expect(document.activeElement).toBe(bars()[2]);
+
+      press('ArrowRight', bars()[2]);
+      expect(document.activeElement).toBe(bars()[2]); // stops at the end
+
+      press('ArrowLeft', bars()[2]);
+      expect(document.activeElement).toBe(bars()[1]);
+
+      press('Home', bars()[1]);
+      expect(document.activeElement).toBe(bars()[0]);
+    });
+
+    it('should keep a valid tab stop when the buckets change', () => {
+      // arrange
+      render(MONTHS);
+      bars()[0].focus();
+      press('End', bars()[0]);
+
+      // act -- fewer buckets than the remembered stop
+      render({ current: [bucket('2026-01-01', 100)], comparison: [] });
+
+      // assert & verify
+      expect(bars().map((b) => b.getAttribute('tabindex'))).toEqual(['0']);
+    });
+
+    it('should still select a bucket on click', () => {
+      // arrange
+      render(MONTHS);
+      const picked: TrendBucket[] = [];
+      fixture.componentInstance.selectBucket.subscribe((b: TrendBucket) => picked.push(b));
+
+      // act
+      bars()[1].click();
+
+      // assert & verify
+      expect(picked.map((b) => b.start)).toEqual(['2026-02-01']);
+    });
+  });
 });
