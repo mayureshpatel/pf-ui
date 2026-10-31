@@ -22,6 +22,7 @@ import {
   concat,
   debounceTime,
   distinctUntilChanged,
+  EMPTY,
   finalize,
   forkJoin,
   map,
@@ -29,6 +30,7 @@ import {
   of,
   Subject,
   Subscription,
+  switchMap,
   toArray,
 } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
@@ -112,6 +114,10 @@ export class MerchantsComponent implements OnInit {
   /** Transaction descriptions with no merchant link; null until first loaded. */
   readonly unlinkedCount: WritableSignal<number | null> = signal(null);
   readonly hasTransactions: WritableSignal<boolean> = signal(false);
+  /** The description totals could not be loaded. */
+  readonly statsFailed: WritableSignal<boolean> = signal(false);
+  /** Every merchant the user has, whatever the search shows; null until first loaded. */
+  readonly merchantTotal: WritableSignal<number | null> = signal(null);
 
   readonly mode: WritableSignal<MerchantPanelMode> = signal('overview');
   /** The merchant shown in the merchant mode (kept as an object: it may not be on this page). */
@@ -166,10 +172,12 @@ export class MerchantsComponent implements OnInit {
   private loadSubscription: Subscription | null = null;
   private loadRun = 0;
   private linksSubscription: Subscription | null = null;
+  private statsSubscription: Subscription | null = null;
   private pickerSubscription: Subscription | null = null;
   private pickerRun = 0;
   private readonly searchInput$: Subject<string> = new Subject<string>();
   private readonly pickerSearch$: Subject<string> = new Subject<string>();
+  private readonly targetFilter$: Subject<string> = new Subject<string>();
 
   constructor() {
     effect((): void => {
@@ -186,6 +194,17 @@ export class MerchantsComponent implements OnInit {
     this.pickerSearch$
       .pipe(debounceTime(DEBOUNCE_MS), takeUntilDestroyed(this.destroyRef))
       .subscribe((): void => this.loadPickerRows(true));
+    this.targetFilter$
+      .pipe(
+        debounceTime(DEBOUNCE_MS),
+        switchMap((term: string) =>
+          this.merchantApi
+            .getMerchants(term.trim() || null, { page: 0, size: PAGE_SIZE })
+            .pipe(catchError(() => EMPTY)),
+        ),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((res: PageResponse<Merchant>): void => this.targetOptions.set(res.content));
   }
 
   ngOnInit(): void {
@@ -213,6 +232,7 @@ export class MerchantsComponent implements OnInit {
           this.merchants.set(res.content);
           this.totalRecords.set(res.page.totalElements);
           this.dataSearch.set(term);
+          if (term === '') this.merchantTotal.set(res.page.totalElements);
           this.loadedOnce.set(true);
           this.refreshSelected();
         },
@@ -227,19 +247,30 @@ export class MerchantsComponent implements OnInit {
       });
   }
 
-  /** Loads the two figures the overview needs: unlinked descriptions, and whether any exist. */
+  /**
+   * Loads the figures the overview needs: unlinked descriptions, whether any exist, and how many
+   * merchants there are in all (the list's own total follows the search). A newer load replaces an
+   * older one, and a failure is flagged so the overview can offer a retry.
+   */
   loadStats(): void {
-    forkJoin({
+    this.statsSubscription?.unsubscribe();
+    this.statsFailed.set(false);
+    this.statsSubscription = forkJoin({
       unlinked: this.transactionApi.getDescriptions({ page: 0, size: 1, unlinkedOnly: true }),
       any: this.transactionApi.getDescriptions({ page: 0, size: 1 }),
+      merchants: this.merchantApi.getMerchants(null, { page: 0, size: 1 }),
     })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: ({ unlinked, any }): void => {
+        next: ({ unlinked, any, merchants }): void => {
           this.unlinkedCount.set(unlinked.page.totalElements);
           this.hasTransactions.set(any.page.totalElements > 0);
+          this.merchantTotal.set(merchants.page.totalElements);
         },
-        error: (err: unknown): void => console.error('Failed to load description totals:', err),
+        error: (err: unknown): void => {
+          console.error('Failed to load description totals:', err);
+          this.statsFailed.set(true);
+        },
       });
   }
 
@@ -294,10 +325,10 @@ export class MerchantsComponent implements OnInit {
   }
 
   /** Returns to the overview with nothing selected, without asking. */
-  closePanel(moveFocus = true): void {
+  closePanel(): void {
     this.selected.set(null);
     this.pickerTarget.set(null);
-    this.go('overview', moveFocus);
+    this.go('overview');
   }
 
   /** Close button and Escape: asks first when there are unsaved edits; the overview ignores them. */
@@ -327,11 +358,15 @@ export class MerchantsComponent implements OnInit {
         .subscribe({
           next: (): void => {
             this.toast.success('Merchant updated');
-            this.editForm()?.form.markAsPristine();
-            this.selected.update(
-              (current: Merchant | null): Merchant | null =>
-                current && { ...current, ...this.asMerchantFields(value) },
-            );
+            // the user may have opened another merchant while the save ran: only touch the form
+            // and the selection if this one is still what they are looking at
+            if (this.mode() === 'merchant' && this.selected()?.id === id) {
+              this.editForm()?.form.markAsPristine();
+              this.selected.update(
+                (current: Merchant | null): Merchant | null =>
+                  current && { ...current, ...this.asMerchantFields(value) },
+              );
+            }
             this.loadMerchants();
           },
           error: (error: HttpErrorResponse): void => this.failed(error, 'Failed to save merchant'),
@@ -418,7 +453,8 @@ export class MerchantsComponent implements OnInit {
       .subscribe({
         next: (): void => {
           this.toast.success('Link removed');
-          this.loadLinks(merchant.id);
+          // another merchant may be open by now; its links must not be replaced by these
+          if (this.selected()?.id === merchant.id) this.loadLinks(merchant.id);
           this.loadMerchants();
           this.loadStats();
         },
@@ -446,14 +482,14 @@ export class MerchantsComponent implements OnInit {
   chooseTarget(merchant: Merchant): void {
     this.pickerTarget.set(merchant);
     this.loadPickerRows(true);
+    // the "Link to" select this was chosen in is replaced by the picker, which would drop focus
+    // onto the page
+    afterNextRender((): void => this.panel()?.focus(), { injector: this.injector });
   }
 
-  /** Narrows the "Link to" choice by name. */
+  /** Narrows the "Link to" choice by name (debounced; an older answer never replaces a newer one). */
   onTargetFilter(term: string): void {
-    this.merchantApi
-      .getMerchants(term.trim() || null, { page: 0, size: PAGE_SIZE })
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((res: PageResponse<Merchant>): void => this.targetOptions.set(res.content));
+    this.targetFilter$.next(term);
   }
 
   onPickerSearch(term: string): void {
@@ -621,12 +657,7 @@ export class MerchantsComponent implements OnInit {
   }
 
   /** Switches mode and moves focus: into the panel for any step, back to the opener for overview. */
-  private go(mode: MerchantPanelMode, moveFocus = true): void {
-    if (!moveFocus) {
-      this.focusReturn = null;
-      this.mode.set(mode);
-      return;
-    }
+  private go(mode: MerchantPanelMode): void {
     // already on the overview (a reload): nothing moved, so focus stays put
     if (mode === 'overview' && this.mode() === 'overview') return;
     if (this.mode() === 'overview' && mode !== 'overview') {

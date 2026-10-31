@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MerchantOverviewComponent } from './merchant-overview.component';
 
@@ -95,5 +96,31 @@ describe('MerchantOverviewComponent', () => {
 
     // assert & verify
     expect(events).toEqual(['add', 'link']);
+  });
+
+  // PF-883: a failed totals load must not leave the skeleton pulsing for ever
+  it('should show a retry, not a skeleton, when the description totals failed to load', () => {
+    // arrange
+    fixture.componentRef.setInput('statsFailed', true);
+
+    // act
+    render(5, null);
+
+    // assert & verify
+    expect(fixture.nativeElement.querySelector('[data-testid="unlinked-skeleton"]')).toBeNull();
+    expect(text()).toContain("Couldn't load the description totals.");
+    const retried = vi.fn();
+    component.retryStats.subscribe(retried);
+    button('Try again')?.click();
+    expect(retried).toHaveBeenCalledTimes(1);
+  });
+
+  it('should keep the skeleton while the totals are still loading', () => {
+    // act
+    render(5, null);
+
+    // assert & verify
+    expect(fixture.nativeElement.querySelector('[data-testid="unlinked-skeleton"]')).toBeTruthy();
+    expect(button('Try again')).toBeUndefined();
   });
 });

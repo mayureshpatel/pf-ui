@@ -1,6 +1,7 @@
 import { inject, Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { AuthService } from '@core/auth/auth.service';
+import { SKIP_GENERIC_ERROR_TOAST } from '@core/auth/error.interceptor';
 import { Observable } from 'rxjs';
 import { environment } from '@env';
 import {
@@ -10,6 +11,12 @@ import {
   MerchantUpdateRequest,
 } from '@models/merchant.model';
 import { PageRequest, PageResponse } from '@models/transaction.model';
+
+/**
+ * The Merchants page shows its own toast for every failed call (and a batch of links would add one
+ * generic toast per failure), so the generic error toast is off for all of these requests.
+ */
+const SKIP_TOAST_CONTEXT = new HttpContext().set(SKIP_GENERIC_ERROR_TOAST, true);
 
 @Injectable({
   providedIn: 'root',
@@ -40,7 +47,10 @@ export class MerchantApiService {
       params = params.set('search', search);
     }
 
-    return this.http.get<PageResponse<Merchant>>(this.apiUrl, { params });
+    return this.http.get<PageResponse<Merchant>>(this.apiUrl, {
+      params,
+      context: SKIP_TOAST_CONTEXT,
+    });
   }
 
   /**
@@ -50,7 +60,11 @@ export class MerchantApiService {
    */
   createMerchant(request: MerchantCreateRequest): Observable<number> {
     const userId: number | undefined = this.authService.user()?.id;
-    return this.http.post<number>(this.apiUrl, { ...request, userId });
+    return this.http.post<number>(
+      this.apiUrl,
+      { ...request, userId },
+      { context: SKIP_TOAST_CONTEXT },
+    );
   }
 
   /**
@@ -59,7 +73,7 @@ export class MerchantApiService {
    * @returns the number of rows updated.
    */
   updateMerchant(request: MerchantUpdateRequest): Observable<number> {
-    return this.http.put<number>(this.apiUrl, request);
+    return this.http.put<number>(this.apiUrl, request, { context: SKIP_TOAST_CONTEXT });
   }
 
   /**
@@ -68,7 +82,7 @@ export class MerchantApiService {
    * @param id the merchant id to delete.
    */
   deleteMerchant(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${id}`);
+    return this.http.delete<void>(`${this.apiUrl}/${id}`, { context: SKIP_TOAST_CONTEXT });
   }
 
   /**
@@ -79,6 +93,7 @@ export class MerchantApiService {
   getDescriptionLinks(merchantId: number): Observable<MerchantDescriptionLink[]> {
     return this.http.get<MerchantDescriptionLink[]>(
       `${this.apiUrl}/${merchantId}/description-links`,
+      { context: SKIP_TOAST_CONTEXT },
     );
   }
 
@@ -89,7 +104,11 @@ export class MerchantApiService {
    * @param description the raw description to link.
    */
   addDescriptionLink(merchantId: number, description: string): Observable<void> {
-    return this.http.post<void>(`${this.apiUrl}/${merchantId}/description-links`, { description });
+    return this.http.post<void>(
+      `${this.apiUrl}/${merchantId}/description-links`,
+      { description },
+      { context: SKIP_TOAST_CONTEXT },
+    );
   }
 
   /**
@@ -99,6 +118,8 @@ export class MerchantApiService {
    * @param linkId the link id to delete.
    */
   deleteDescriptionLink(merchantId: number, linkId: number): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${merchantId}/description-links/${linkId}`);
+    return this.http.delete<void>(`${this.apiUrl}/${merchantId}/description-links/${linkId}`, {
+      context: SKIP_TOAST_CONTEXT,
+    });
   }
 }

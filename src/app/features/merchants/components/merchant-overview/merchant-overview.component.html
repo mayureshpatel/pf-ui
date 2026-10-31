@@ -3,6 +3,13 @@
     <p class="m-0 text-2xl font-bold tabular-nums">{{ merchantsText() }}</p>
     @if (unlinkedText(); as unlinked) {
       <p data-testid="unlinked-line" class="mt-2 text-sm text-muted-color">{{ unlinked }}</p>
+    } @else if (statsFailed()) {
+      <p data-testid="unlinked-failed" class="mt-2 text-sm text-muted-color">
+        Couldn't load the description totals.
+        <button type="button" class="cursor-pointer underline" (click)="retryStats.emit()">
+          Try again
+        </button>
+      </p>
     } @else {
       <div
         data-testid="unlinked-skeleton"
