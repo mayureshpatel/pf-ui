@@ -195,7 +195,8 @@
                     >
                     <p-select
                       [ariaLabelledBy]="labelId(item, 'category')"
-                      [options]="categoryOptions()"
+                      [options]="categoryGroups()"
+                      [group]="true"
                       optionLabel="label"
                       optionValue="value"
                       placeholder="Uncategorized"
@@ -207,7 +208,14 @@
                       [ngModel]="item.row.category?.id ?? null"
                       (ngModelChange)="setCategory(item, $event)"
                       [disabled]="!item.editable"
-                    />
+                    >
+                      <ng-template pTemplate="group" let-group>
+                        <span class="text-sm font-semibold">{{ group.label }}</span>
+                      </ng-template>
+                      <ng-template pTemplate="item" let-option>
+                        <span>{{ option.name }}</span>
+                      </ng-template>
+                    </p-select>
                   </span>
                   <span
                     role="cell"

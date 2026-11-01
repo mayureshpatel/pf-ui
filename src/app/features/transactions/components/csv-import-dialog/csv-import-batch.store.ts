@@ -83,6 +83,13 @@ const EXCEL_PATTERN = /\.xlsx?$/i;
 const EXCEL_ERROR =
   'Excel files (.xls, .xlsx) are not supported. Export the statement as CSV and add it again.';
 const PREVIEW_ERROR = 'Could not read this file. Check that the bank format matches the statement.';
+/**
+ * The fixed `detail` of the backend's `CsvParsingException` handler. Only this detail is safe to
+ * show: any other 400 from /upload (e.g. IllegalArgumentException, NumberFormatException) carries
+ * raw exception text, and the problem's `type`/`title` are the generic defaults for every 400.
+ */
+const CSV_PARSING_DETAIL =
+  'Failed to parse the provided CSV file. Please check the file format and try again.';
 const HASH_ERROR = 'Could not read this file from disk.';
 const COMMIT_ERROR = 'The import could not be completed. Check your connection and try again.';
 const FAILED_RESULT_ERROR = 'This file could not be imported.';
@@ -158,10 +165,20 @@ function previewError(error: unknown): string {
     const body: unknown = error.error;
     if (typeof body === 'object' && body !== null && 'detail' in body) {
       const detail: unknown = (body as { detail: unknown }).detail;
-      if (typeof detail === 'string' && detail.trim()) return `Could not read this file: ${detail}`;
+      if (detail === CSV_PARSING_DETAIL) return `Could not read this file: ${detail}`;
     }
   }
   return PREVIEW_ERROR;
+}
+
+/**
+ * Whether commit sends a row. Rows the backend preview flagged as duplicates, and every row of an
+ * already-imported file, are never sent. A row that only duplicates an earlier file of this batch
+ * IS sent: files commit one after another, so the backend's save-time check skips it once the
+ * earlier file's rows are saved, and still saves it if that earlier file failed.
+ */
+export function isSentRow(file: BatchFile, row: ReviewRow): boolean {
+  return !file.alreadyImported && !row.preview.duplicate;
 }
 
 /**
@@ -184,6 +201,7 @@ export class CsvImportBatchStore {
   private readonly previewRunning: WritableSignal<boolean> = signal(false);
   private readonly commitRunning: WritableSignal<boolean> = signal(false);
   private readonly progress: WritableSignal<PreviewProgress> = signal({ done: 0, total: 0 });
+  private readonly notAdded: WritableSignal<number> = signal(0);
 
   /** Bumped on every preview run and on cancel; a stale run's late results are dropped. */
   private previewRun = 0;
@@ -196,6 +214,8 @@ export class CsvImportBatchStore {
   readonly previewing: Signal<boolean> = this.previewRunning.asReadonly();
   readonly committing: Signal<boolean> = this.commitRunning.asReadonly();
   readonly previewProgress: Signal<PreviewProgress> = this.progress.asReadonly();
+  /** Files the last {@link addFiles} call left out because they were already in the list. */
+  readonly notAddedCount: Signal<number> = this.notAdded.asReadonly();
 
   readonly canPreview: Signal<boolean> = computed((): boolean => {
     const files: BatchFile[] = this.files();
@@ -255,8 +275,8 @@ export class CsvImportBatchStore {
   }
 
   /**
-   * Adds files, skipping any with the same name and size as one already in the batch.
-   * Ignored while a commit is in flight.
+   * Adds files, skipping any with the same name and size as one already in the batch; how many
+   * were skipped is reported in {@link notAddedCount}. Ignored while a commit is in flight.
    */
   addFiles(files: File[]): void {
     if (this.commitRunning()) return;
@@ -264,9 +284,13 @@ export class CsvImportBatchStore {
       this.files().map((f: BatchFile): string => `${f.file.name}|${f.file.size}`),
     );
     const added: BatchFile[] = [];
+    let skipped = 0;
     for (const file of files) {
       const key = `${file.name}|${file.size}`;
-      if (seen.has(key)) continue;
+      if (seen.has(key)) {
+        skipped++;
+        continue;
+      }
       seen.add(key);
       const match: FileMatch = matchFile(file.name, this.accounts());
       added.push({
@@ -287,6 +311,7 @@ export class CsvImportBatchStore {
         result: null,
       });
     }
+    this.notAdded.set(skipped);
     if (added.length) this.files.update((current: BatchFile[]) => [...current, ...added]);
   }
 
@@ -396,9 +421,11 @@ export class CsvImportBatchStore {
   }
 
   /**
-   * Commits every ready file in one bulk request. Files with nothing to save (no rows, every row
-   * skipped, or already imported) are marked skipped and never sent; with none left, nothing is
-   * sent at all.
+   * Commits every ready file in one bulk request. Files with nothing to send (no rows, every row
+   * a backend-flagged duplicate, or already imported) are marked skipped and never sent; with none
+   * left, nothing is sent at all. Rows that only repeat an earlier file are sent (see
+   * {@link isSentRow}). The request says merchants were reviewed, so a cleared merchant stays
+   * cleared.
    * @returns the backend's per-file results (empty when nothing was sent or the request failed).
    */
   async commit(): Promise<FileImportResult[]> {
@@ -423,6 +450,7 @@ export class CsvImportBatchStore {
   reset(): void {
     this.cancelPreview();
     this.files.set([]);
+    this.notAdded.set(0);
     this.progress.set({ done: 0, total: 0 });
   }
 
@@ -599,7 +627,7 @@ export class CsvImportBatchStore {
     for (const id of ids) {
       const f: BatchFile | undefined = this.find(id);
       if (!f) continue;
-      const committable: ReviewRow[] = f.rows.filter((r: ReviewRow): boolean => r.skip === null);
+      const committable: ReviewRow[] = f.rows.filter((r: ReviewRow): boolean => isSentRow(f, r));
       if (f.alreadyImported) skipped.set(id, 'already-imported');
       else if (f.rows.length === 0) skipped.set(id, 'no-rows');
       else if (committable.length === 0) skipped.set(id, 'all-duplicates');
@@ -609,6 +637,7 @@ export class CsvImportBatchStore {
           fileName: f.file.name,
           fileHash: f.hash,
           accountId: f.accountId,
+          merchantsReviewed: true,
           transactions: committable.map((r: ReviewRow): TransactionDto => ({
             date: r.preview.date,
             postDate: r.preview.postDate,

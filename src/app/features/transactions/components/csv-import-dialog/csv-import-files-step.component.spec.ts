@@ -71,6 +71,27 @@ describe('CsvImportFilesStepComponent', () => {
     expect(text()).not.toContain('Add files');
   });
 
+  it('should say how many files were not added because they are already in the list', async () => {
+    const notice = (): HTMLElement =>
+      fixture.nativeElement.querySelector('[data-testid="not-added"]');
+    await addFiles('capone-2026-01.csv', 'discover-2026-01.csv');
+    expect(notice().getAttribute('role')).toBe('status');
+    expect(notice().textContent?.trim()).toBe('');
+
+    await addFiles('capone-2026-01.csv', 'discover-2026-01.csv');
+    expect(notice().textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      '2 files already in the list were not added',
+    );
+
+    await addFiles('capone-2026-01.csv');
+    expect(notice().textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      '1 file already in the list was not added',
+    );
+
+    await addFiles('synovus-2026-01.csv');
+    expect(notice().textContent?.trim()).toBe('');
+  });
+
   it('should list added files with size and statement month and offer Add files', async () => {
     await addFiles('capone-2026-01.csv');
 

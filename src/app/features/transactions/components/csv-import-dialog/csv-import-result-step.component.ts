@@ -2,19 +2,22 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
+  effect,
   inject,
   output,
   OutputEmitterRef,
   Signal,
   signal,
+  untracked,
   WritableSignal,
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ButtonModule } from 'primeng/button';
+import { Subscription } from 'rxjs';
 
 import { TransactionApiService } from '@features/transactions/services/transaction-api.service';
 import { TransferSuggestion } from '@models/transaction.model';
-import { BatchFile, CsvImportBatchStore, ReviewRow } from './csv-import-batch.store';
+import { BatchFile, CsvImportBatchStore, isSentRow, ReviewRow } from './csv-import-batch.store';
 
 type OutcomeKind = 'imported' | 'skipped' | 'failed' | 'not-imported';
 
@@ -50,12 +53,16 @@ function plural(n: number, one: string, many: string): string {
 }
 
 /**
- * Rows not sent because they duplicate a saved transaction or an earlier file in the batch, plus
- * the rows the backend skipped as duplicates. Client-skipped rows are never sent, so the backend's
- * `duplicateRowCount` alone would miss them.
+ * Duplicate rows that were never sent (the preview already flagged them), plus the rows the
+ * backend skipped as duplicates. Rows that only repeat an earlier file are sent and counted by the
+ * backend, so they are not counted here as well. An already-imported file's rows are not
+ * duplicates: the whole file was skipped.
  */
 function duplicatesOf(file: BatchFile): number {
-  const local: number = file.rows.filter((r: ReviewRow): boolean => r.skip === 'duplicate').length;
+  const local: number = file.alreadyImported
+    ? 0
+    : file.rows.filter((r: ReviewRow): boolean => r.skip === 'duplicate' && !isSentRow(file, r))
+        .length;
   return local + (file.result?.duplicateRowCount ?? 0);
 }
 
@@ -112,6 +119,7 @@ function outcomeOf(file: BatchFile): FileOutcome {
 export class CsvImportResultStepComponent {
   private readonly store: CsvImportBatchStore = inject(CsvImportBatchStore);
   private readonly transactionApi: TransactionApiService = inject(TransactionApiService);
+  private transferRequest: Subscription | null = null;
 
   /** The user chose to review the possible transfers now. */
   readonly reviewTransfers: OutputEmitterRef<void> = output<void>();
@@ -120,6 +128,11 @@ export class CsvImportResultStepComponent {
   readonly transferCount: WritableSignal<number> = signal(0);
 
   readonly committing: Signal<boolean> = this.store.committing;
+
+  private readonly committedCount: Signal<number> = computed(
+    (): number =>
+      this.store.items().filter((f: BatchFile): boolean => f.status === 'committed').length,
+  );
 
   readonly outcomes: Signal<FileOutcome[]> = computed((): FileOutcome[] =>
     this.store.items().map(outcomeOf),
@@ -153,15 +166,21 @@ export class CsvImportResultStepComponent {
   });
 
   constructor() {
-    // fetched once, after the commit: the step is only shown once every file has finished
-    this.transactionApi
-      .getTransferSuggestions()
-      .pipe(takeUntilDestroyed())
-      .subscribe({
-        next: (suggestions: TransferSuggestion[]): void =>
-          this.transferCount.set(suggestions.length),
-        error: (): void => this.transferCount.set(0),
-      });
+    // fetched when the step opens and again whenever a retry commits more files, since a newly
+    // imported file can complete a transfer pair
+    effect((): void => {
+      this.committedCount();
+      untracked((): void => this.loadTransferCount());
+    });
+    inject(DestroyRef).onDestroy((): void => this.transferRequest?.unsubscribe());
+  }
+
+  private loadTransferCount(): void {
+    this.transferRequest?.unsubscribe();
+    this.transferRequest = this.transactionApi.getTransferSuggestions().subscribe({
+      next: (suggestions: TransferSuggestion[]): void => this.transferCount.set(suggestions.length),
+      error: (): void => this.transferCount.set(0),
+    });
   }
 
   retryFailed(): void {

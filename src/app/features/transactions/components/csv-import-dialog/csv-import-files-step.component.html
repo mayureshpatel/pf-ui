@@ -25,6 +25,17 @@
     }
   </div>
 
+  <p
+    data-testid="not-added"
+    role="status"
+    class="m-0 text-sm text-amber-700 empty:hidden dark:text-amber-400"
+  >
+    @if (notAddedCount() > 0) {
+      {{ notAddedCount() }} {{ notAddedCount() === 1 ? 'file' : 'files' }} already in the list
+      {{ notAddedCount() === 1 ? 'was' : 'were' }} not added
+    }
+  </p>
+
   @if (items().length === 0) {
     <div
       data-testid="empty-state"

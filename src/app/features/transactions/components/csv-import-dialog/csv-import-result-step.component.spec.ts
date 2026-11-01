@@ -157,7 +157,7 @@ describe('CsvImportResultStepComponent', () => {
 
     const failed = outcomeFor('discover-2026-03.csv');
     expect(text(failed)).toContain('Failed');
-    expect(text(failed)).toContain('Unexpected header row');
+    expect(text(failed)).toContain('Could not read this file');
     expect(failed.querySelector('i.pi-times-circle')).not.toBeNull();
 
     // skipped-row counts come from the rows: the client never sends duplicates
@@ -176,6 +176,63 @@ describe('CsvImportResultStepComponent', () => {
 
     expect(text(outcomeFor('capone-2026-01.csv'))).toContain('1 transaction saved');
     expect(text(outcomeFor('capone-2026-01.csv'))).toContain('2 duplicates skipped');
+  });
+
+  it('counts a row repeated from an earlier file once, from the backend result', async () => {
+    await setup({
+      previews: {
+        'capone-2026-01.csv': [preview('A')],
+        'capone-2026-02.csv': [preview('A'), preview('B')],
+      },
+      // the backend skips the repeated row at save time, after the first file is saved
+      save: (requests) =>
+        of(requests.map((r) => imported(r, r.fileName === 'capone-2026-02.csv' ? 1 : 0))),
+    });
+
+    expect(saveBulk.mock.calls[0][0].map((r: SaveTransactionRequest) => r.fileName)).toEqual([
+      'capone-2026-01.csv',
+      'capone-2026-02.csv',
+    ]);
+    expect(text(outcomeFor('capone-2026-02.csv'))).toContain('1 transaction saved');
+    expect(text(outcomeFor('capone-2026-02.csv'))).toContain('1 duplicate skipped');
+    expect(text(fixture.nativeElement.querySelector('[data-testid="result-summary"]'))).toBe(
+      '2 of 2 files imported - 2 transactions, 1 duplicate skipped',
+    );
+  });
+
+  it('checks for transfers again when a retry imports more files', async () => {
+    let attempt = 0;
+    let suggestionCount = 0;
+    await setup({
+      previews: { 'capone-2026-01.csv': [preview('A')], 'discover-2026-01.csv': [preview('B')] },
+      save: (requests) => {
+        attempt++;
+        return of(
+          requests.map((r): FileImportResult =>
+            attempt === 1 && r.fileName === 'discover-2026-01.csv'
+              ? {
+                  fileName: r.fileName,
+                  status: 'FAILED',
+                  savedCount: 0,
+                  duplicateRowCount: 0,
+                  error: 'Database unavailable',
+                }
+              : imported(r),
+          ),
+        );
+      },
+      suggestions: () =>
+        of(Array.from({ length: suggestionCount }, () => ({}) as TransferSuggestion)),
+    });
+    expect(button('review-transfers')).toBeNull();
+
+    // the retried file completes a transfer pair
+    suggestionCount = 2;
+    button('retry-failed')!.click();
+    await settle();
+
+    expect(getSuggestions).toHaveBeenCalledTimes(2);
+    expect(text(button('review-transfers')!)).toBe('Review 2 possible transfers');
   });
 
   it('retries files whose commit failed and shows the new outcome', async () => {

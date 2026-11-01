@@ -19,7 +19,7 @@
       <button
         type="button"
         data-testid="close-x"
-        class="cursor-pointer rounded-lg px-2 py-2 text-muted-color hover:bg-surface-100 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-surface-800"
+        class="cursor-pointer rounded-lg px-2 py-2 text-muted-color hover:bg-surface-100 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-surface-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 dark:focus-visible:outline-primary-400"
         aria-label="Close"
         [disabled]="committing()"
         (click)="requestClose()"
@@ -145,7 +145,7 @@
             <button
               type="button"
               data-testid="cancel"
-              class="cursor-pointer rounded-lg px-3 py-2 text-sm font-medium underline"
+              class="cursor-pointer rounded-lg px-3 py-2 text-sm font-medium underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 dark:focus-visible:outline-primary-400"
               (click)="requestClose()"
             >
               Cancel
@@ -154,7 +154,7 @@
               <button
                 type="button"
                 data-testid="stop-preview"
-                class="cursor-pointer rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium dark:border-surface-700"
+                class="cursor-pointer rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium dark:border-surface-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 dark:focus-visible:outline-primary-400"
                 (click)="stopPreview()"
               >
                 Stop preview
@@ -163,7 +163,7 @@
             <button
               type="button"
               data-testid="preview"
-              class="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-primary-700 px-3 py-2 text-sm font-medium text-white hover:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-50"
+              class="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-primary-700 px-3 py-2 text-sm font-medium text-white hover:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 dark:focus-visible:outline-primary-400"
               [disabled]="!canPreview()"
               (click)="preview()"
             >
@@ -177,7 +177,7 @@
             <button
               type="button"
               data-testid="back"
-              class="cursor-pointer rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 dark:border-surface-700"
+              class="cursor-pointer rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 dark:border-surface-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 dark:focus-visible:outline-primary-400"
               [disabled]="committing()"
               (click)="back()"
             >
@@ -187,7 +187,7 @@
             <button
               type="button"
               data-testid="cancel"
-              class="cursor-pointer rounded-lg px-3 py-2 text-sm font-medium underline disabled:cursor-not-allowed disabled:opacity-50"
+              class="cursor-pointer rounded-lg px-3 py-2 text-sm font-medium underline disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 dark:focus-visible:outline-primary-400"
               [disabled]="committing()"
               (click)="requestClose()"
             >
@@ -196,7 +196,7 @@
             <button
               type="button"
               data-testid="import"
-              class="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-primary-700 px-3 py-2 text-sm font-medium text-white hover:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-50"
+              class="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-primary-700 px-3 py-2 text-sm font-medium text-white hover:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 dark:focus-visible:outline-primary-400"
               [disabled]="!canCommit()"
               (click)="commit()"
             >
@@ -210,7 +210,7 @@
             <button
               type="button"
               data-testid="close"
-              class="cursor-pointer rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 dark:border-surface-700"
+              class="cursor-pointer rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 dark:border-surface-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 dark:focus-visible:outline-primary-400"
               [disabled]="committing()"
               (click)="requestClose()"
             >

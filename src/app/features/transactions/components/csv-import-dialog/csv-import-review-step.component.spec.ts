@@ -21,17 +21,22 @@ import { CsvImportReviewStepComponent } from './csv-import-review-step.component
 
 const inBrowser = !/jsdom/i.test(navigator.userAgent);
 
-function category(id: number, name: string): Category {
-  return { id, userId: 1, name, type: CategoryType.EXPENSE, parent: null, icon: '', color: '' };
+function category(id: number, name: string, parent: Category | null = null): Category {
+  return { id, userId: 1, name, type: CategoryType.EXPENSE, parent, icon: '', color: '' };
 }
 
 function merchant(id: number, name: string): Merchant {
   return { id, userId: 1, name, city: null, state: null, postalCode: null, country: null };
 }
 
-const GROCERIES = category(1, 'Groceries');
-const SHOPPING = category(2, 'Shopping');
-const PHARMACY = category(3, 'Pharmacy');
+const FOOD = category(100, 'Food');
+const HEALTH = category(101, 'Health');
+const RETAIL = category(102, 'Retail');
+const GROCERIES = category(1, 'Groceries', FOOD);
+const SHOPPING = category(2, 'Shopping', RETAIL);
+const PHARMACY = category(3, 'Pharmacy', HEALTH);
+/** Selectable options in an open select; group headers are rendered as options too. */
+const OPTION = '[role="option"]:not(.p-select-option-group)';
 const WALGREENS = merchant(10, 'Walgreens');
 const KROGER = merchant(11, 'Kroger');
 
@@ -95,7 +100,9 @@ describe('CsvImportReviewStepComponent', () => {
       providers: [
         {
           provide: CategoryApiService,
-          useValue: { getCategories: () => of([GROCERIES, SHOPPING, PHARMACY]) },
+          useValue: {
+            getCategories: () => of([FOOD, HEALTH, RETAIL, GROCERIES, SHOPPING, PHARMACY]),
+          },
         },
         {
           provide: MerchantApiService,
@@ -319,7 +326,7 @@ describe('CsvImportReviewStepComponent', () => {
     expect(text(alert)).toContain('capone-2026-02.xls');
     expect(text(alert)).toContain('Excel files (.xls, .xlsx) are not supported');
     expect(text(alert)).toContain('discover-2026-03.csv');
-    expect(text(alert)).toContain('Unexpected header row');
+    expect(text(alert)).toContain('Could not read this file');
     // the alert comes before the table, and the readable file still shows
     const table = fixture.nativeElement.querySelector('[data-testid="review-table"]');
     expect(alert.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -410,11 +417,51 @@ describe('CsvImportReviewStepComponent', () => {
     expect(merchants).toHaveBeenCalledTimes(1);
     const options = fixture.componentInstance.merchantOptions().map((o) => o.label);
     expect(options).toEqual(['Kroger', 'Walgreens']);
-    expect(fixture.componentInstance.categoryOptions().map((o) => o.label)).toEqual([
-      'Groceries',
-      'Pharmacy',
-      'Shopping',
+    expect(
+      fixture.componentInstance.categoryGroups().map((g) => [g.label, g.items.map((o) => o.label)]),
+    ).toEqual([
+      ['Food', ['Food / Groceries']],
+      ['Health', ['Health / Pharmacy']],
+      ['Retail', ['Retail / Shopping']],
     ]);
+  });
+
+  it.skipIf(!inBrowser)(
+    'should group categories under their parent, offering only subcategories',
+    async () => {
+      await setup({ previews: { 'capone-2026-01.csv': [preview('KROGER #1')] } });
+
+      rowsFor('KROGER #1')[0]
+        .querySelector<HTMLElement>('[data-testid="row-category"] [role="combobox"]')!
+        .click();
+      await settle();
+
+      await vi.waitFor(() =>
+        expect(
+          Array.from(document.querySelectorAll('.p-select-option-group')).map((o) => text(o)),
+        ).toEqual(['Food', 'Health', 'Retail']),
+      );
+      expect(Array.from(document.querySelectorAll(OPTION)).map((o) => text(o))).toEqual([
+        'Groceries',
+        'Pharmacy',
+        'Shopping',
+      ]);
+      // a parent header cannot be picked
+      (document.querySelector('.p-select-option-group') as HTMLElement).click();
+      await settle();
+      expect(store.items()[0].rows[0].category).toBeNull();
+    },
+  );
+
+  it('should still show a top-level category that is already on a row', async () => {
+    await setup({
+      previews: { 'capone-2026-01.csv': [preview('KROGER #1', { suggestedCategory: FOOD })] },
+    });
+
+    const shown = rowsFor('KROGER #1')[0].querySelector(
+      '[data-testid="row-category"] .p-select-label',
+    );
+    expect(text(shown!)).toBe('Food');
   });
 
   it('should give every editor its own accessible name and keep ids unique', async () => {
@@ -474,9 +521,9 @@ describe('CsvImportReviewStepComponent', () => {
       );
       await userEvent.keyboard('Shop');
       await vi.waitFor(() =>
-        expect(
-          Array.from(document.querySelectorAll('[role="option"]')).map((o) => text(o)),
-        ).toEqual(['Shopping']),
+        expect(Array.from(document.querySelectorAll(OPTION)).map((o) => text(o))).toEqual([
+          'Shopping',
+        ]),
       );
       await userEvent.keyboard('{ArrowDown}');
       await vi.waitFor(() =>
@@ -513,7 +560,7 @@ describe('CsvImportReviewStepComponent', () => {
       first.querySelector<HTMLElement>('[data-testid="row-merchant"] [role="combobox"]')!.click();
       await settle();
       const option = await vi.waitFor((): HTMLElement => {
-        const found = Array.from(document.querySelectorAll<HTMLElement>('[role="option"]')).find(
+        const found = Array.from(document.querySelectorAll<HTMLElement>(OPTION)).find(
           (o) => text(o) === 'Kroger',
         );
         if (!found) throw new Error('Kroger option not rendered yet');
@@ -699,7 +746,7 @@ describe('CsvImportReviewStepComponent', () => {
     row.querySelector<HTMLElement>(`[data-testid="row-${field}"] [role="combobox"]`)!.click();
     await settle();
     const option = await vi.waitFor((): HTMLElement => {
-      const found = Array.from(document.querySelectorAll<HTMLElement>('[role="option"]')).find(
+      const found = Array.from(document.querySelectorAll<HTMLElement>(OPTION)).find(
         (o) => text(o) === label,
       );
       if (!found) throw new Error(`${label} option not rendered yet`);
@@ -791,9 +838,9 @@ describe('CsvImportReviewStepComponent', () => {
       );
       await userEvent.keyboard('Groc');
       await vi.waitFor(() =>
-        expect(
-          Array.from(document.querySelectorAll('[role="option"]')).map((o) => text(o)),
-        ).toEqual(['Groceries']),
+        expect(Array.from(document.querySelectorAll(OPTION)).map((o) => text(o))).toEqual([
+          'Groceries',
+        ]),
       );
       await userEvent.keyboard('{ArrowDown}');
       await vi.waitFor(() =>

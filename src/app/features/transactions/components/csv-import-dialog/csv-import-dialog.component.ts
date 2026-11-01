@@ -106,7 +106,10 @@ export class CsvImportDialogComponent {
       .filter((f: BatchFile): boolean => f.status === 'failed' && f.failedAt === 'preview'),
   );
 
-  /** Rows the Import button will send: rows of ready files not flagged to be skipped. */
+  /**
+   * Rows the Import button expects to save: rows of ready files not predicted to be skipped. Rows
+   * that repeat an earlier file are still sent, and the backend skips them when they are saved.
+   */
   readonly importCount: Signal<number> = computed((): number =>
     this.store
       .items()
@@ -190,11 +193,17 @@ export class CsvImportDialogComponent {
     });
   }
 
-  /** Escape inside this dialog (not in a dropdown, which handles its own) acts like Cancel. */
+  /**
+   * Escape inside this dialog (not in a dropdown, which handles its own) acts like Cancel. So does
+   * Escape while focus has fallen to the page body (e.g. after a focused row scrolled away), since
+   * this modal dialog is then still the only thing on screen to act on.
+   */
   onEscape(event: Event): void {
     if (!this.visible() || event.defaultPrevented) return;
+    const target: Node | null = event.target as Node | null;
+    const onBody: boolean = target === document.body;
     const container: HTMLElement | null | undefined = this.dialog()?.container();
-    if (!container || !container.contains(event.target as Node)) return;
+    if (!onBody && (!container || !container.contains(target))) return;
     event.preventDefault();
     this.requestClose();
   }
@@ -209,15 +218,21 @@ export class CsvImportDialogComponent {
     this.focusHeading();
   }
 
+  /**
+   * The hide animation has finished: only now is the batch cleared and the wizard rewound, so the
+   * closing dialog never flashes an empty Files step and the next open starts clean.
+   */
   onHide(): void {
+    this.store.reset();
+    this.step.set('files');
     if (!this.transfersRequested) return;
     this.transfersRequested = false;
     this.reviewTransfers.emit();
   }
 
+  /** Stops any upload at once; the batch itself is cleared in {@link onHide}. */
   private close(): void {
-    this.store.reset();
-    this.step.set('files');
+    this.store.cancelPreview();
     this.visible.set(false);
   }
 

@@ -204,7 +204,7 @@ describe('CsvImportDialogComponent', () => {
     expect(currentStep()).toContain('Files');
     const failures = text(byTestId('preview-failures'));
     expect(failures).toContain('2 files could not be read');
-    expect(failures).toContain('Unexpected header row');
+    expect(failures).toContain('Could not read this file');
     expect(failures).toContain('.xls');
   });
 
@@ -239,7 +239,53 @@ describe('CsvImportDialogComponent', () => {
 
     expect(upload.observed).toBe(false);
     expect(host.visible()).toBe(false);
+    // the batch is cleared once the hide animation has finished
+    await vi.waitFor(() => expect(store.items()).toEqual([]), { timeout: 3000 });
+  });
+
+  it('keeps the batch on screen while hiding, then reopens on a clean Files step', async () => {
+    const dialog = (): CsvImportDialogComponent =>
+      fixture.debugElement.query(By.directive(CsvImportDialogComponent)).componentInstance;
+    await toReview();
+
+    await click('close-x');
+    (confirmSpy.mock.calls[0][0] as Confirmation).accept!();
+    await settle();
+
+    // nothing flashes back to an empty Files step during the close animation
+    expect(host.visible()).toBe(false);
+    expect(dialog().step()).toBe('review');
+    expect(store.items().length).toBe(1);
+
+    await vi.waitFor(() => expect(store.items()).toEqual([]), { timeout: 3000 });
+    expect(dialog().step()).toBe('files');
+
+    host.visible.set(true);
+    await settle();
+    await vi.waitFor(() => expect(currentStep()).toContain('Files'));
     expect(store.items()).toEqual([]);
+    expect(byTestId('preview')!.disabled).toBe(true);
+  });
+
+  it('treats Escape as Cancel when focus has fallen to the page body', async () => {
+    await toReview();
+    (document.activeElement as HTMLElement | null)?.blur();
+    expect(document.activeElement).toBe(document.body);
+
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await settle();
+
+    expect(confirmSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores Escape on the page body once the dialog is closed', async () => {
+    host.visible.set(false);
+    await settle();
+
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await settle();
+
+    expect(confirmSpy).not.toHaveBeenCalled();
   });
 
   it('closes without asking when nothing has been chosen', async () => {

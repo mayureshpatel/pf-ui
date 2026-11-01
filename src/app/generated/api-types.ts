@@ -1384,6 +1384,7 @@ export interface components {
             fileHash: string;
             /** Format: int64 */
             accountId?: number;
+            merchantsReviewed?: boolean;
         };
         TagDto: {
             /** Format: int64 */

@@ -115,6 +115,28 @@ describe('CsvImportBatchStore', () => {
       expect(store.items().length).toBe(1);
     });
 
+    it('reports how many files were not added because they are already in the list', () => {
+      store.addFiles([csv('capone-2026-01.csv'), csv('discover-2026-01.csv')]);
+      expect(store.notAddedCount()).toBe(0);
+
+      store.addFiles([csv('capone-2026-01.csv'), csv('discover-2026-01.csv'), csv('new.csv')]);
+
+      expect(store.items().length).toBe(3);
+      expect(store.notAddedCount()).toBe(2);
+
+      store.addFiles([csv('other.csv')]);
+      expect(store.notAddedCount()).toBe(0);
+    });
+
+    it('clears the not-added count on reset', () => {
+      store.addFiles([csv('capone-2026-01.csv'), csv('capone-2026-01.csv')]);
+      expect(store.notAddedCount()).toBe(1);
+
+      store.reset();
+
+      expect(store.notAddedCount()).toBe(0);
+    });
+
     it('keeps both when the name matches but the size differs', () => {
       store.addFiles([csv('capone-2026-01.csv', 'a'), csv('capone-2026-01.csv', 'abc')]);
 
@@ -236,10 +258,12 @@ describe('CsvImportBatchStore', () => {
       ]);
     });
 
-    it('keeps previewing other files when one fails, with the backend detail', async () => {
+    it('keeps previewing other files when one fails, showing the csv parsing detail', async () => {
+      const parsingDetail =
+        'Failed to parse the provided CSV file. Please check the file format and try again.';
       previews['capone-2026-01.csv'] = new HttpErrorResponse({
         status: 400,
-        error: { detail: 'Unexpected header row' },
+        error: { status: 400, title: 'Bad Request', detail: parsingDetail },
       });
       previews['discover-2026-01.csv'] = [row()];
       store.addFiles([csv('capone-2026-01.csv'), csv('discover-2026-01.csv')]);
@@ -248,9 +272,25 @@ describe('CsvImportBatchStore', () => {
 
       expect(fileByName('capone-2026-01.csv')).toMatchObject({
         status: 'failed',
-        error: expect.stringContaining('Unexpected header row'),
+        error: expect.stringContaining(parsingDetail),
       });
       expect(fileByName('discover-2026-01.csv').status).toBe('ready');
+    });
+
+    it('shows a generic message instead of any other backend detail', async () => {
+      previews['capone-2026-01.csv'] = new HttpErrorResponse({
+        status: 400,
+        error: { status: 400, title: 'Bad Request', detail: 'For input string: "12,34x"' },
+      });
+      store.addFiles([csv('capone-2026-01.csv')]);
+
+      await store.previewAll();
+
+      const error: string | null = fileByName('capone-2026-01.csv').error;
+      expect(error).not.toContain('12,34x');
+      expect(error).toBe(
+        'Could not read this file. Check that the bank format matches the statement.',
+      );
     });
 
     it('rejects Excel files without uploading them', async () => {
@@ -610,6 +650,7 @@ describe('CsvImportBatchStore', () => {
           fileName: 'capone-2026-01.csv',
           fileHash: 'hash-capone-2026-01.csv',
           accountId: 1,
+          merchantsReviewed: true,
           transactions: [
             {
               date: '2026-01-05T00:00:00Z',
@@ -877,17 +918,78 @@ describe('CsvImportBatchStore', () => {
       expect(importService.saveBulkTransactions).toHaveBeenCalledTimes(1);
     });
 
-    it('does not change the rows of skipped files after commit', async () => {
+    it('does not change the rows of committed files after commit', async () => {
       previews['capone-2026-01.csv'] = [row()];
       previews['capone-2026-02.csv'] = [row()];
       store.addFiles([csv('capone-2026-01.csv'), csv('capone-2026-02.csv')]);
       await store.previewAll();
       await store.commit();
-      expect(fileByName('capone-2026-02.csv').skipReason).toBe('all-duplicates');
+      expect(fileByName('capone-2026-02.csv').status).toBe('committed');
 
       store.removeFile(fileByName('capone-2026-01.csv').id);
 
       expect(fileByName('capone-2026-02.csv').rows[0].skip).toBe('duplicate');
+    });
+
+    it('tells the backend merchants were reviewed and sends a cleared merchant as null', async () => {
+      const shop: Merchant = merchant(20, 'Shop');
+      previews['capone-2026-01.csv'] = [row({ suggestedMerchant: shop })];
+      store.addFiles([csv('capone-2026-01.csv')]);
+      await store.previewAll();
+      store.editRow(fileByName('capone-2026-01.csv').id, 0, { merchant: null });
+
+      await store.commit();
+
+      const [request] = requestsSent();
+      expect(request.merchantsReviewed).toBe(true);
+      expect(request.transactions[0].merchant).toBeNull();
+    });
+
+    it('still sends rows duplicated from an earlier file so the backend decides', async () => {
+      const shared: TransactionPreview = row({ description: 'RENT', amount: 1200 });
+      previews['capone-2026-01.csv'] = [shared];
+      previews['capone-2026-02.csv'] = [shared, row({ description: 'OLD', duplicate: true })];
+      previews['capone-2026-03.csv'] = [shared];
+      store.addFiles([
+        csv('capone-2026-01.csv'),
+        csv('capone-2026-02.csv'),
+        csv('capone-2026-03.csv'),
+      ]);
+      await store.previewAll();
+      // review still predicts the cross-file row will be skipped
+      expect(fileByName('capone-2026-02.csv').rows[0].skip).toBe('duplicate');
+      importService.saveBulkTransactions.mockReturnValueOnce(
+        of([
+          {
+            fileName: 'capone-2026-01.csv',
+            status: 'FAILED',
+            savedCount: 0,
+            duplicateRowCount: 0,
+            error: 'Could not import this file.',
+          },
+          imported('capone-2026-02.csv', 1),
+          {
+            fileName: 'capone-2026-03.csv',
+            status: 'IMPORTED',
+            savedCount: 0,
+            duplicateRowCount: 1,
+            error: null,
+          },
+        ]),
+      );
+
+      await store.commit();
+
+      const sent: SaveTransactionRequest[] = requestsSent();
+      expect(sent.map((r: SaveTransactionRequest) => r.fileName)).toEqual([
+        'capone-2026-01.csv',
+        'capone-2026-02.csv',
+        'capone-2026-03.csv',
+      ]);
+      // the backend-flagged duplicate is still never sent
+      expect(sent[1].transactions.map((t) => t.description)).toEqual(['RENT']);
+      expect(fileByName('capone-2026-02.csv').status).toBe('committed');
+      expect(fileByName('capone-2026-03.csv').result?.duplicateRowCount).toBe(1);
     });
 
     it('does not retry files whose preview failed', async () => {

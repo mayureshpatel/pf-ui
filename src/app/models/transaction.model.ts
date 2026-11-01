@@ -199,6 +199,11 @@ export interface SaveTransactionRequest {
   fileName: string;
   fileHash: string;
   accountId: number;
+  /**
+   * True when the user reviewed every row's merchant (the import dialog), so a row sent with no
+   * merchant is saved with none. Omitted or false keeps the backend's description-match fallback.
+   */
+  merchantsReviewed?: boolean;
 }
 
 /**

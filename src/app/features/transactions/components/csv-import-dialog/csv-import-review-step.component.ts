@@ -31,6 +31,19 @@ interface SelectOption {
   value: number;
 }
 
+/** A category option: `label` (`Parent / Child`) is shown when chosen and searched by the filter. */
+interface CategoryOption extends SelectOption {
+  /** The name shown in the open list, under its parent's group header. */
+  name: string;
+}
+
+/** A parent category as a non-selectable group header over its subcategories. */
+interface CategoryGroup {
+  label: string;
+  value: number;
+  items: CategoryOption[];
+}
+
 interface FileCounts {
   rows: number;
   willImport: number;
@@ -261,11 +274,56 @@ export class CsvImportReviewStepComponent {
       .sort((a: SelectOption, b: SelectOption): number => a.label.localeCompare(b.label)),
   );
 
-  readonly categoryOptions = computed((): SelectOption[] =>
-    [...this.categoryById().values()]
-      .map((c: Category): SelectOption => ({ label: categoryLabel(c), value: c.id }))
-      .sort((a: SelectOption, b: SelectOption): number => a.label.localeCompare(b.label)),
-  );
+  /**
+   * Subcategories grouped under their parent, like the transaction edit form: a transaction can
+   * only be assigned a subcategory (the save rejects anything else), so a parent is only a
+   * header. A top-level category that is already on a row (never suggested by the backend, but
+   * kept defensively) is listed in its own group so the row still shows it.
+   */
+  readonly categoryGroups = computed((): CategoryGroup[] => {
+    const all: Category[] = [...this.categoryById().values()];
+    const groups = new Map<number, CategoryGroup>();
+    const groupFor = (id: number, name: string): CategoryGroup => {
+      let group: CategoryGroup | undefined = groups.get(id);
+      if (!group) {
+        group = { label: name, value: id, items: [] };
+        groups.set(id, group);
+      }
+      return group;
+    };
+    for (const c of all) {
+      if (c.parent) {
+        groupFor(c.parent.id, c.parent.name).items.push({
+          label: categoryLabel(c),
+          name: c.name,
+          value: c.id,
+        });
+      }
+    }
+    const onRows = new Set<number>();
+    for (const f of this.reviewFiles()) {
+      for (const r of f.rows) if (r.category && !r.category.parent) onRows.add(r.category.id);
+    }
+    for (const c of all) {
+      if (!c.parent && onRows.has(c.id)) {
+        groupFor(c.id, c.name).items.unshift({ label: c.name, name: c.name, value: c.id });
+      }
+    }
+    const byName = (a: { label: string }, b: { label: string }): number =>
+      a.label.localeCompare(b.label);
+    return [...groups.values()]
+      .filter((g: CategoryGroup): boolean => g.items.length > 0)
+      .map((g: CategoryGroup): CategoryGroup => {
+        // the parent's own (top-level) option, if any, stays first
+        const [first, ...rest] = g.items;
+        const ownFirst: boolean = first.value === g.value;
+        const children: CategoryOption[] = (ownFirst ? rest : g.items).sort(
+          (a: CategoryOption, b: CategoryOption): number => a.name.localeCompare(b.name),
+        );
+        return { ...g, items: ownFirst ? [first, ...children] : children };
+      })
+      .sort(byName);
+  });
 
   /** Headers, rows and per-file messages, flattened in display order. */
   readonly items = computed((): ReviewItem[] => {

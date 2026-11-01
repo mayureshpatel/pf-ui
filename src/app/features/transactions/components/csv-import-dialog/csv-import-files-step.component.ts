@@ -37,6 +37,8 @@ export class CsvImportFilesStepComponent {
   private readonly store: CsvImportBatchStore = inject(CsvImportBatchStore);
 
   readonly items = this.store.items;
+  /** Files the last add left out because the same name and size was already in the list. */
+  readonly notAddedCount = this.store.notAddedCount;
   readonly busy = computed((): boolean => this.store.previewing() || this.store.committing());
 
   readonly accountOptions = computed((): SelectOption<number>[] =>

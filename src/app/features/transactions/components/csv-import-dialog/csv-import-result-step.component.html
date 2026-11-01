@@ -39,7 +39,7 @@
         <button
           type="button"
           data-testid="retry-failed"
-          class="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium text-surface-900 disabled:cursor-not-allowed disabled:opacity-50 dark:border-surface-700 dark:text-surface-0"
+          class="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium text-surface-900 disabled:cursor-not-allowed disabled:opacity-50 dark:border-surface-700 dark:text-surface-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 dark:focus-visible:outline-primary-400"
           [disabled]="committing()"
           (click)="retryFailed()"
         >
@@ -54,7 +54,7 @@
         <button
           type="button"
           data-testid="review-transfers"
-          class="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-primary-700 px-3 py-2 text-sm font-medium text-white hover:bg-primary-800"
+          class="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-primary-700 px-3 py-2 text-sm font-medium text-white hover:bg-primary-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 dark:focus-visible:outline-primary-400"
           (click)="onReviewTransfers()"
         >
           <i class="pi pi-arrow-right-arrow-left" aria-hidden="true"></i>
