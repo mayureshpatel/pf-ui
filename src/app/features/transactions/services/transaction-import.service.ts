@@ -2,7 +2,11 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '@env';
-import { SaveTransactionRequest, TransactionPreview } from '@models/transaction.model';
+import {
+  FileImportResult,
+  SaveTransactionRequest,
+  TransactionPreview,
+} from '@models/transaction.model';
 import { BankName } from '@models/account.model';
 
 @Injectable({
@@ -44,14 +48,26 @@ export class TransactionImportService {
   }
 
   /**
-   * Saves multiple previewed transactions in a single request.
-   * @param requests the transactions to save.
-   * @returns a confirmation message from the backend.
+   * Saves multiple previewed transactions in a single request. Each file commits independently.
+   * @param requests the transactions to save, one request per file.
+   * @returns the per-file outcome; failed files are reported here, not as an HTTP error.
    */
-  saveBulkTransactions(requests: SaveTransactionRequest[]): Observable<string> {
-    return this.http.post<string>(`${this.apiUrl}/transactions/bulk`, requests, {
-      responseType: 'text' as 'json',
-    });
+  saveBulkTransactions(requests: SaveTransactionRequest[]): Observable<FileImportResult[]> {
+    return this.http.post<FileImportResult[]>(`${this.apiUrl}/transactions/bulk`, requests);
+  }
+
+  /**
+   * Asks the backend which (account, file hash) pairs were already imported.
+   * @param items the candidate pairs to check.
+   * @returns the already-imported subset; empty if none.
+   */
+  checkAlreadyImported(
+    items: { accountId: number; fileHash: string }[],
+  ): Observable<{ accountId: number; fileHash: string }[]> {
+    return this.http.post<{ accountId: number; fileHash: string }[]>(
+      `${this.apiUrl}/transactions/import-check`,
+      items,
+    );
   }
 
   /**

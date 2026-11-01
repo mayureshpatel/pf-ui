@@ -5,6 +5,7 @@ import { TransactionImportService } from './transaction-import.service';
 import { environment } from '@env';
 import { BankName } from '@models/account.model';
 import {
+  FileImportResult,
   SaveTransactionRequest,
   TransactionPreview,
   TransactionType,
@@ -43,6 +44,7 @@ describe('TransactionImportService', () => {
         type: TransactionType.EXPENSE,
         suggestedCategory: null,
         suggestedMerchant: null,
+        duplicate: false,
       },
     ];
 
@@ -84,7 +86,7 @@ describe('TransactionImportService', () => {
     req.flush(mockResponse);
   });
 
-  it('should save bulk transactions', () => {
+  it('saveBulkTransactions parses a per-file result list', () => {
     const mockRequests: SaveTransactionRequest[] = [
       {
         accountId: 1,
@@ -99,17 +101,50 @@ describe('TransactionImportService', () => {
         transactions: [],
       },
     ];
-    const mockResponse = 'Successfully saved bulk transactions.';
+    const mockResponse: FileImportResult[] = [
+      {
+        fileName: 'test1.csv',
+        status: 'IMPORTED',
+        savedCount: 3,
+        duplicateRowCount: 1,
+        error: null,
+      },
+      {
+        fileName: 'test2.csv',
+        status: 'FAILED',
+        savedCount: 0,
+        duplicateRowCount: 0,
+        error: 'Merchant not found.',
+      },
+    ];
+    let result: FileImportResult[] | undefined;
 
-    service.saveBulkTransactions(mockRequests).subscribe((response) => {
-      expect(response).toBe(mockResponse);
-    });
+    service.saveBulkTransactions(mockRequests).subscribe((response) => (result = response));
 
     const req = httpTestingController.expectOne(`${environment.apiUrl}/transactions/bulk`);
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual(mockRequests);
+    expect(req.request.responseType).toBe('json');
 
     req.flush(mockResponse);
+    expect(result).toEqual(mockResponse);
+  });
+
+  it('checkAlreadyImported posts candidates and returns the matches', () => {
+    const candidates = [
+      { accountId: 1, fileHash: 'hash1' },
+      { accountId: 2, fileHash: 'hash2' },
+    ];
+    let result: { accountId: number; fileHash: string }[] | undefined;
+
+    service.checkAlreadyImported(candidates).subscribe((response) => (result = response));
+
+    const req = httpTestingController.expectOne(`${environment.apiUrl}/transactions/import-check`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual(candidates);
+
+    req.flush([candidates[1]]);
+    expect(result).toEqual([candidates[1]]);
   });
 
   it('should calculate file hash', async () => {

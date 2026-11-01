@@ -203,7 +203,7 @@ describe('CsvImportDialogComponent', () => {
       ]);
 
       mockImportService.calculateFileHash.mockResolvedValue('hash123');
-      mockImportService.saveBulkTransactions.mockReturnValue(of('Success'));
+      mockImportService.saveBulkTransactions.mockReturnValue(of([]));
 
       const emitSpy = vi.spyOn(component.importComplete, 'emit');
       const hideSpy = vi.spyOn(component, 'onHide');

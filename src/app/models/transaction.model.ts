@@ -157,6 +157,23 @@ export interface TransactionPreview {
   type: TransactionType;
   suggestedCategory?: Category | null;
   suggestedMerchant?: Merchant | null;
+  /** True when an identical transaction already exists for the account. */
+  duplicate: boolean;
+}
+
+/** Outcome of one file within a bulk import. */
+export type FileImportStatus = 'IMPORTED' | 'SKIPPED_ALREADY_IMPORTED' | 'FAILED';
+
+/**
+ * Per-file result of `POST /transactions/bulk` (backend `FileImportResultDto`). A failed file is
+ * reported here inside a 200 response, not as an HTTP error.
+ */
+export interface FileImportResult {
+  fileName: string;
+  status: FileImportStatus;
+  savedCount: number;
+  duplicateRowCount: number;
+  error: string | null;
 }
 
 /**
