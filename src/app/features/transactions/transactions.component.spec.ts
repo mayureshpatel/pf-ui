@@ -1520,6 +1520,71 @@ describe('TransactionsComponent', () => {
         expect(component.selectedIds()).toEqual([2]);
       });
 
+      describe('a description with commas', () => {
+        const paypal = (): Transaction =>
+          row(3, { description: 'PAYPAL *ACME, SAN JOSE CA', category: null as never });
+        const openWithPaypal = (): void => {
+          mockCategoryApi.getGroupedCategories.mockReturnValue(of(groups));
+          openAt({ categoryName: 'null' }, [netflix(), paypal()]);
+        };
+
+        it("should prefill one keyword, the description's longest comma-free part, from a row", async () => {
+          // arrange
+          openWithPaypal();
+
+          // act
+          rowAction('PAYPAL *ACME, SAN JOSE CA').click();
+          await settle();
+
+          // assert & verify
+          expect(keyword().value).toBe('PAYPAL *ACME');
+          expect(component.ruleDraft()?.keywords).toEqual(['PAYPAL *ACME']);
+        });
+
+        it('should prefill the same single keyword from the edit panel', async () => {
+          // arrange
+          openWithPaypal();
+          component.openEditDialog(paypal());
+          await settle();
+
+          // act
+          buttonNamed('aside', 'Create rule from this transaction')!.click();
+          await settle();
+
+          // assert & verify
+          expect(keyword().value).toBe('PAYPAL *ACME');
+        });
+
+        it('should prefill the same single keyword from one selected row', async () => {
+          // arrange
+          openWithPaypal();
+          component.onSelectionChange([3]);
+          fixture.detectChanges();
+
+          // act
+          buttonNamed('app-transaction-bulk-bar', 'Create rule')!.click();
+          await settle();
+
+          // assert & verify
+          expect(keyword().value).toBe('PAYPAL *ACME');
+        });
+      });
+
+      it('should ask to fix the keywords in the match list when there are too many', async () => {
+        // arrange
+        open();
+        rowAction('NETFLIX.COM 866-579').click();
+        await settle();
+
+        // act
+        typeKeyword(Array.from({ length: 21 }, (_, i) => `k${i}`).join(', '));
+        await settle();
+
+        // assert & verify
+        expect(component.ruleDraft()).toBeNull();
+        expect(q('app-rule-match-list')?.textContent).toContain('Fix the keywords to see matches');
+      });
+
       it('should drop the rule form state when a row is opened for editing instead', async () => {
         // arrange
         open();

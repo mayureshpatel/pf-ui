@@ -199,7 +199,11 @@
                 (remove)="deleteSelected()"
                 (draftChange)="draft.set($event)"
               />
-              <app-rule-match-list class="mt-4 block" [draft]="draft()" />
+              <app-rule-match-list
+                class="mt-4 block"
+                [draft]="draft()"
+                [invalid]="ruleForm.keywordsInvalid()"
+              />
             } @else {
               <p-skeleton height="8rem" borderRadius="1rem" />
             }
@@ -218,7 +222,11 @@
               (save)="saveRule($event)"
               (draftChange)="draft.set($event)"
             />
-            <app-rule-match-list class="mt-4 block" [draft]="draft()" />
+            <app-rule-match-list
+              class="mt-4 block"
+              [draft]="draft()"
+              [invalid]="ruleForm.keywordsInvalid()"
+            />
           }
         }
       </app-side-panel>

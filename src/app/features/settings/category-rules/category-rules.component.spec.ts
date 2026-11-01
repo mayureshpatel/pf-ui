@@ -635,17 +635,28 @@ describe('CategoryRulesComponent', () => {
     const lastDraft = (): RuleDraft | undefined =>
       api.previewMatches.mock.calls[api.previewMatches.mock.calls.length - 1]?.[0];
 
+    const manyKeywords = (n: number): string =>
+      Array.from({ length: n }, (_, i) => `k${i}`).join(', ');
+    /** the match list's 300 ms debounce, run on fake timers installed before the draft changes */
+    const elapse = (): void => {
+      fixture.detectChanges();
+      vi.advanceTimersByTime(300);
+      fixture.detectChanges();
+    };
+
+    afterEach(() => vi.useRealTimers());
+
     it('should show the match list while adding a rule', async () => {
       // arrange
       await create();
       expect(matchList()).toBeNull();
-
-      // act
       button('Add rule')!.click();
       await settle();
+      vi.useFakeTimers();
+
+      // act
       component['ruleForm']()!.form.patchValue({ keywordsInput: 'costco' });
-      await new Promise((r) => setTimeout(r, 400));
-      await settle();
+      elapse();
 
       // assert & verify
       expect(matchList()).not.toBeNull();
@@ -655,18 +666,50 @@ describe('CategoryRulesComponent', () => {
     it("should show the match list while editing and send the edited rule's id", async () => {
       // arrange
       await create();
+      vi.useFakeTimers();
 
       // act
       rows()[0].click();
-      await settle();
-      await new Promise((r) => setTimeout(r, 400));
-      await settle();
+      elapse();
 
       // assert & verify -- the sort puts the priority-5 rule first
       expect(matchList()).not.toBeNull();
       expect(lastDraft()).toEqual(
         expect.objectContaining({ ruleId: 2, keywords: ['shell', 'chevron'] }),
       );
+    });
+
+    it('should preview the second rule when switching straight from one rule to another', async () => {
+      // arrange
+      await create();
+      vi.useFakeTimers();
+      rows()[0].click();
+      elapse();
+      expect(lastDraft()).toEqual(expect.objectContaining({ ruleId: 2 }));
+
+      // act
+      rows()[1].click();
+      elapse();
+
+      // assert & verify
+      expect(lastDraft()).toEqual(expect.objectContaining({ ruleId: 1, keywords: ['netflix'] }));
+    });
+
+    it('should ask to fix the keywords, sending nothing, when there are too many', async () => {
+      // arrange
+      await create();
+      button('Add rule')!.click();
+      await settle();
+      vi.useFakeTimers();
+      const before = api.previewMatches.mock.calls.length;
+
+      // act
+      component['ruleForm']()!.form.patchValue({ keywordsInput: manyKeywords(21) });
+      elapse();
+
+      // assert & verify
+      expect(matchList()!.textContent).toContain('Fix the keywords to see matches');
+      expect(api.previewMatches.mock.calls.length).toBe(before);
     });
 
     it('should clear the draft when the panel closes', async () => {

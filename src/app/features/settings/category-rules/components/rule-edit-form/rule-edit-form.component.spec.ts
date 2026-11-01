@@ -166,6 +166,23 @@ describe('RuleEditFormComponent', () => {
     expect(component.form.controls.keywordsInput.valid).toBe(true);
   });
 
+  it('should allow at most 20 keywords', () => {
+    // arrange
+    render();
+    const many = (n: number): string => Array.from({ length: n }, (_, i) => `k${i}`).join(', ');
+
+    // act
+    fill({ keywordsInput: many(21) });
+    component.form.controls.keywordsInput.markAsTouched();
+    fixture.detectChanges();
+
+    // assert & verify
+    expect(component.form.controls.keywordsInput.valid).toBe(false);
+    expect(fixture.nativeElement.textContent).toContain('Use at most 20 keywords.');
+    fill({ keywordsInput: many(20) });
+    expect(component.form.controls.keywordsInput.valid).toBe(true);
+  });
+
   it('should reject a negative priority and negative amounts', () => {
     // arrange
     render();
@@ -390,6 +407,55 @@ describe('RuleEditFormComponent', () => {
       // assert & verify
       expect(last()).toBeNull();
       expect(drafts[0]).toBeNull();
+    });
+
+    it('should emit null and flag the keywords as invalid for more than 20 keywords', () => {
+      // arrange
+      render();
+      component.form.patchValue({ keywordsInput: 'costco' });
+      expect(last()).not.toBeNull();
+      expect(component.keywordsInvalid()).toBe(false);
+
+      // act
+      component.form.patchValue({
+        keywordsInput: Array.from({ length: 21 }, (_, i) => `k${i}`).join(', '),
+      });
+
+      // assert & verify
+      expect(last()).toBeNull();
+      expect(component.keywordsInvalid()).toBe(true);
+    });
+
+    it('should emit null and flag the keywords as invalid for a keyword over 255 characters', () => {
+      // arrange
+      render();
+      component.form.patchValue({ keywordsInput: 'costco' });
+
+      // act
+      component.form.patchValue({ keywordsInput: `costco, ${'a'.repeat(256)}` });
+
+      // assert & verify
+      expect(last()).toBeNull();
+      expect(component.keywordsInvalid()).toBe(true);
+    });
+
+    it('should emit null when editing a rule that has more than 20 keywords', () => {
+      // act
+      render({ ...rule, keywords: Array.from({ length: 21 }, (_, i) => `k${i}`) });
+
+      // assert & verify
+      expect(drafts.every((d) => d === null)).toBe(true);
+      expect(component.keywordsInvalid()).toBe(true);
+    });
+
+    it('should not flag an empty keyword field as invalid input', () => {
+      // act
+      render();
+      component.form.patchValue({ keywordsInput: ' , ' });
+
+      // assert & verify
+      expect(last()).toBeNull();
+      expect(component.keywordsInvalid()).toBe(false);
     });
 
     it('should prefill the keyword field for a new rule and ignore initialKeyword when editing', () => {

@@ -1,12 +1,16 @@
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
+  ElementRef,
   inject,
+  Injector,
   input,
   InputSignal,
   signal,
   Signal,
+  viewChild,
   WritableSignal,
 } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
@@ -21,6 +25,7 @@ import {
   of,
   Subject,
   switchMap,
+  tap,
   timer,
 } from 'rxjs';
 import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
@@ -105,11 +110,17 @@ function sameDraft(a: RuleDraft | null, b: RuleDraft | null): boolean {
 })
 export class RuleMatchListComponent {
   private readonly api: CategoryRuleApiService = inject(CategoryRuleApiService);
+  private readonly injector: Injector = inject(Injector);
 
   /** The rule being drafted; null or keyword-less shows the prompt. */
   readonly draft: InputSignal<RuleDraft | null> = input<RuleDraft | null>(null);
   /** The selected transactions, shown as context while the keyword is empty. */
   readonly context: InputSignal<Transaction[]> = input<Transaction[]>([]);
+  /**
+   * True when the form holds keywords the server would refuse (the draft is null then): the list
+   * asks for a fix instead of prompting for a keyword.
+   */
+  readonly invalid: InputSignal<boolean> = input<boolean>(false);
 
   protected readonly preview: WritableSignal<RuleMatchPreview | null> = signal(null);
   protected readonly loading: WritableSignal<boolean> = signal(false);
@@ -120,6 +131,12 @@ export class RuleMatchListComponent {
   });
   protected readonly hasKeyword: Signal<boolean> = computed(() => this.active() !== null);
   private readonly retry$: Subject<void> = new Subject<void>();
+  private readonly retryButton: Signal<ElementRef<HTMLButtonElement> | undefined> =
+    viewChild<ElementRef<HTMLButtonElement>>('retryButton');
+  private readonly region: Signal<ElementRef<HTMLElement> | undefined> =
+    viewChild<ElementRef<HTMLElement>>('region');
+  /** Set when Retry is pressed from the keyboard focus, so a success can hand focus on. */
+  private retryHadFocus = false;
 
   protected readonly contextRows: Signal<ContextRowView[]> = computed(() =>
     this.context().map((t) => ({
@@ -163,6 +180,11 @@ export class RuleMatchListComponent {
   constructor() {
     const drafts$: Observable<Trigger> = toObservable(this.active).pipe(
       distinctUntilChanged(sameDraft),
+      // a new draft replaces the failed one at once, not only when its own request settles
+      tap((): void => {
+        this.failed.set(false);
+        this.retryHadFocus = false;
+      }),
       map((draft) => ({ draft, debounce: true })),
     );
     const retries$: Observable<Trigger> = this.retry$.pipe(
@@ -177,8 +199,14 @@ export class RuleMatchListComponent {
       .subscribe((outcome: Outcome) => this.settle(outcome));
   }
 
-  /** Asks again for the current draft after a failed request. */
+  /**
+   * Asks again for the current draft after a failed request. The alert and its button stay while
+   * the retry is in flight (the button says so), so keyboard focus is never dropped; a press while
+   * one is in flight is ignored.
+   */
   protected retry(): void {
+    if (this.loading()) return;
+    this.retryHadFocus = document.activeElement === this.retryButton()?.nativeElement;
     this.retry$.next();
   }
 
@@ -202,5 +230,15 @@ export class RuleMatchListComponent {
     this.loading.set(false);
     this.failed.set(outcome.kind === 'error');
     this.preview.set(outcome.kind === 'ok' ? outcome.preview : null);
+    // a retry that succeeds removes the focused button: focus moves to the list region instead
+    if (outcome.kind !== 'error' && this.retryHadFocus) {
+      this.retryHadFocus = false;
+      afterNextRender(
+        { read: (): void => this.region()?.nativeElement.focus() },
+        {
+          injector: this.injector,
+        },
+      );
+    }
   }
 }

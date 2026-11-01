@@ -105,13 +105,14 @@ export type RuleVerdict = 'WILL_CATEGORIZE' | 'LOSES_TO_OTHER_RULE' | 'ALREADY_C
  *
  * @property id - The rule's id.
  * @property keywords - The rule's keyword set.
- * @property categoryName - The name of the category the rule assigns.
+ * @property categoryName - The name of the category the rule assigns, or null when the rule has no
+ * category.
  * @property priority - The rule's priority.
  */
 export interface RuleRef {
   id: number;
   keywords: string[];
-  categoryName: string;
+  categoryName: string | null;
   priority: number;
 }
 
@@ -122,7 +123,8 @@ export interface RuleRef {
  * @property date - The transaction date (ISO string).
  * @property description - The transaction description.
  * @property amount - The transaction amount.
- * @property accountName - The name of the account the transaction belongs to.
+ * @property accountName - The name of the account the transaction belongs to, or null when it has
+ * none.
  * @property currentCategory - The transaction's current category, or null if uncategorized.
  * @property verdict - What the engine would do with the transaction.
  * @property otherRules - Other rules matching this transaction (relevant to `LOSES_TO_OTHER_RULE`).
@@ -132,7 +134,7 @@ export interface RuleMatchRow {
   date: string;
   description: string;
   amount: number;
-  accountName: string;
+  accountName: string | null;
   currentCategory: Category | null;
   verdict: RuleVerdict;
   otherRules: RuleRef[];

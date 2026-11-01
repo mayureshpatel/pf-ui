@@ -97,6 +97,21 @@ interface RuleStart {
 }
 
 /**
+ * One keyword from a description: the description itself, or when it has commas (which the rule
+ * form reads as separate OR keywords) its longest comma-separated part, trimmed. That part is still
+ * in the description, so the transaction it came from still matches.
+ */
+function singleKeyword(description: string): string {
+  if (!description.includes(',')) return description;
+  return description
+    .split(',')
+    .map((part: string): string => part.trim())
+    .reduce((longest: string, part: string): string =>
+      part.length > longest.length ? part : longest,
+    );
+}
+
+/**
  * Component for managing and auditing the master transaction ledger.
  *
  * Provides high-fidelity filtering, bulk operations, CSV imports, and
@@ -705,7 +720,7 @@ export class TransactionsComponent implements OnInit {
     }
   }
 
-  /** Starts a rule from a row's Create rule action: its raw description becomes the keyword. */
+  /** Starts a rule from a row's Create rule action: its description becomes the keyword. */
   onCreateRuleFromRow(txn: Transaction): void {
     this.openRuleForm(txn.description, []);
   }
@@ -738,9 +753,11 @@ export class TransactionsComponent implements OnInit {
 
   /**
    * Opens the panel on a fresh Create rule form, leaving the page's selection, filters and list
-   * alone. Focus moves to the keyword field.
+   * alone. Focus moves to the keyword field. The keyword is reduced to one comma-free part (see
+   * {@link singleKeyword}), since the form reads commas as separate keywords.
    */
-  private openRuleForm(keyword: string, context: Transaction[]): void {
+  private openRuleForm(description: string, context: Transaction[]): void {
+    const keyword: string = singleKeyword(description);
     // captured before any discard prompt takes focus
     const opener: HTMLElement | null = document.activeElement as HTMLElement | null;
     this.confirmDiscardIfDirty((): void => {

@@ -17,7 +17,12 @@ const draft = (keywords: string[], over: Partial<RuleDraft> = {}): RuleDraft => 
   maxAmount: null,
   ...over,
 });
-const ref = (id: number, keywords: string[], categoryName: string, priority: number): RuleRef => ({
+const ref = (
+  id: number,
+  keywords: string[],
+  categoryName: string | null,
+  priority: number,
+): RuleRef => ({
   id,
   keywords,
   categoryName,
@@ -56,6 +61,17 @@ describe('RuleMatchListComponent', () => {
   const rows = (): HTMLLIElement[] => Array.from(el().querySelectorAll('[data-match-row]'));
   const rowText = (i: number): string => (rows()[i].textContent ?? '').replace(/\s+/g, ' ');
   const summary = (): HTMLElement => el().querySelector('[data-testid="match-summary"]')!;
+  const retryButton = (): HTMLButtonElement | undefined =>
+    Array.from<HTMLButtonElement>(el().querySelectorAll('button')).find((b) =>
+      b.textContent?.trim().startsWith('Retry'),
+    );
+  /** searches, then fails the request the next draft sends */
+  function failNext(value: RuleDraft): void {
+    setDraft(value);
+    vi.advanceTimersByTime(300);
+    calls[calls.length - 1].error(new Error('boom'));
+    fixture.detectChanges();
+  }
 
   function setDraft(value: RuleDraft | null): void {
     fixture.componentRef.setInput('draft', value);
@@ -381,5 +397,125 @@ describe('RuleMatchListComponent', () => {
     );
     order.forEach((index) => expect(index).toBeGreaterThanOrEqual(0));
     expect([...order].sort((a, b) => a - b)).toEqual(order);
+  });
+
+  it('asks to fix the keywords instead of prompting for one when the input is invalid', () => {
+    // act
+    fixture.componentRef.setInput('invalid', true);
+    setDraft(null);
+    vi.advanceTimersByTime(1000);
+    fixture.detectChanges();
+
+    // assert & verify
+    expect(text()).toContain('Fix the keywords to see matches');
+    expect(text()).not.toContain('Type a keyword to see which transactions it would match');
+    expect(previewMatches).not.toHaveBeenCalled();
+
+    // act -- valid again, still empty
+    fixture.componentRef.setInput('invalid', false);
+    fixture.detectChanges();
+
+    // assert & verify
+    expect(text()).toContain('Type a keyword to see which transactions it would match');
+  });
+
+  it('clears the error as soon as a new draft arrives, before the debounce elapses', () => {
+    // arrange
+    failNext(draft(['costco']));
+    expect(text()).toContain("Couldn't load matching transactions");
+
+    // act
+    setDraft(draft(['costco whse']));
+    fixture.detectChanges();
+
+    // assert & verify
+    expect(text()).not.toContain("Couldn't load matching transactions");
+    vi.advanceTimersByTime(300);
+    expect(previewMatches).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps keyboard focus inside the list while a retry is in flight and after it settles', () => {
+    // arrange
+    failNext(draft(['costco']));
+    const button = retryButton()!;
+    button.focus();
+
+    // act
+    button.click();
+    fixture.detectChanges();
+
+    // assert & verify -- in flight: the same button keeps focus and says it is busy
+    expect(previewMatches).toHaveBeenCalledTimes(2);
+    expect(document.activeElement).toBe(button);
+    expect(button.getAttribute('aria-disabled')).toBe('true');
+    expect(button.textContent).toContain('Retrying');
+    button.click();
+    expect(previewMatches).toHaveBeenCalledTimes(2);
+
+    // act -- it succeeds
+    answer(preview([row(1)]));
+    fixture.detectChanges();
+
+    // assert & verify
+    expect(rows().length).toBe(1);
+    expect(document.activeElement).not.toBe(document.body);
+    expect(el().contains(document.activeElement)).toBe(true);
+  });
+
+  it('keeps focus on Retry when the retry fails again', () => {
+    // arrange
+    failNext(draft(['costco']));
+    const button = retryButton()!;
+    button.focus();
+    button.click();
+    fixture.detectChanges();
+
+    // act
+    calls[1].error(new Error('boom'));
+    fixture.detectChanges();
+
+    // assert & verify
+    expect(text()).toContain("Couldn't load matching transactions");
+    expect(document.activeElement).toBe(retryButton());
+    expect(retryButton()!.getAttribute('aria-disabled')).toBe('false');
+  });
+
+  it('sends no new request for a draft with the same content', () => {
+    // arrange
+    search(draft(['costco']), preview([row(1)]));
+
+    // act
+    setDraft(draft(['costco']));
+    setDraft(draft([' costco ', '']));
+    vi.advanceTimersByTime(1000);
+    fixture.detectChanges();
+
+    // assert & verify
+    expect(previewMatches).toHaveBeenCalledTimes(1);
+    expect(rows().length).toBe(1);
+  });
+
+  it("falls back to 'Loses to another rule' when no competing rule is named", () => {
+    // act
+    search(
+      draft(['costco']),
+      preview([row(1, { verdict: 'LOSES_TO_OTHER_RULE', otherRules: [] })]),
+    );
+
+    // assert & verify
+    const verdict = rows()[0].querySelector('[data-testid="verdict"]')!;
+    expect(verdict.textContent).toContain('Loses to another rule');
+  });
+
+  it('names a missing account and a missing category instead of leaving them blank', () => {
+    // act
+    search(
+      draft(['costco']),
+      preview([row(1, { accountName: null, otherRules: [ref(4, ['whse'], null, 2)] })]),
+    );
+
+    // assert & verify
+    expect(rowText(0)).toContain('Account: (no account)');
+    expect(rowText(0)).toContain('(no category) (priority 2)');
   });
 });

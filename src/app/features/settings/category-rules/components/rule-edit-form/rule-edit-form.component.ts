@@ -39,6 +39,7 @@ import {
   amountRangeError,
   joinKeywords,
   keywordTooLong,
+  MAX_KEYWORDS,
   parseKeywords,
 } from '../../../utils/settings-helpers';
 
@@ -53,11 +54,20 @@ const MATCH_TYPE_OPTIONS: { label: string; value: MatchType }[] = [
   { label: 'All keywords', value: 'AND' },
 ];
 
-/** The keywords box needs at least one keyword and none over the server's length limit. */
+/**
+ * The keywords box needs at least one keyword, at most the server's count limit, and none over its
+ * length limit.
+ */
 function keywordsValidator(control: AbstractControl<string>): ValidationErrors | null {
   const keywords: string[] = parseKeywords(control.value ?? '');
   if (keywords.length === 0) return { required: true };
+  if (keywords.length > MAX_KEYWORDS) return { maxcount: true };
   return keywordTooLong(keywords) ? { maxlength: true } : null;
+}
+
+/** Whether the keywords box fails for a reason other than being empty. */
+function hasBadKeywords(control: AbstractControl<string>): boolean {
+  return control.invalid && !control.hasError('required');
 }
 
 function amountRangeValidator(group: AbstractControl): ValidationErrors | null {
@@ -92,7 +102,8 @@ export class RuleEditFormComponent implements OnInit {
   readonly remove: OutputEmitterRef<void> = output<void>();
   /**
    * The rule as drafted so far (category aside), for the match list: on init and whenever keywords,
-   * match type, priority or range change. Null while there is no keyword. Repeats are not re-emitted.
+   * match type, priority or range change. Null while there is no keyword, or while the keywords are
+   * ones the server would refuse (see `keywordsInvalid`). Repeats are not re-emitted.
    */
   readonly draftChange: OutputEmitterRef<RuleDraft | null> = output<RuleDraft | null>();
 
@@ -163,9 +174,19 @@ export class RuleEditFormComponent implements OnInit {
     this.formEvents();
     const control = this.form.controls.keywordsInput;
     if (!control.errors || !control.touched) return null;
+    if (control.errors['maxcount']) return `Use at most ${MAX_KEYWORDS} keywords.`;
     return control.errors['maxlength']
       ? 'Each keyword must be 255 characters or fewer.'
       : 'Enter at least one keyword.';
+  });
+
+  /**
+   * True while the keywords box holds keywords the server would refuse (too many, or one too long),
+   * as opposed to none at all; the draft is null then, and the match list asks for a fix.
+   */
+  readonly keywordsInvalid: Signal<boolean> = computed((): boolean => {
+    this.formEvents();
+    return hasBadKeywords(this.form.controls.keywordsInput);
   });
 
   readonly categoryError: Signal<string | null> = computed((): string | null => {
@@ -237,12 +258,15 @@ export class RuleEditFormComponent implements OnInit {
     this.emitDraft();
   }
 
-  /** Emits the current draft unless it is the one emitted last. */
+  /**
+   * Emits the current draft unless it is the one emitted last. Keywords the server would refuse
+   * give null, like no keyword, so the preview never asks for something that can only fail.
+   */
   private emitDraft(): void {
     const raw = this.form.getRawValue();
     const keywords: string[] = parseKeywords(raw.keywordsInput);
     const draft: RuleDraft | null =
-      keywords.length === 0
+      keywords.length === 0 || hasBadKeywords(this.form.controls.keywordsInput)
         ? null
         : {
             ruleId: this.rule()?.id ?? null,
