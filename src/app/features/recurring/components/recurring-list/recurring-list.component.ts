@@ -47,7 +47,7 @@ export class RecurringListComponent {
   }
 
   priceChange(item: RecurringTransaction): string | null {
-    return item.priceChange ? priceChangeText(item.priceChange) : null;
+    return item.active && item.priceChange ? priceChangeText(item.priceChange) : null;
   }
 
   pausedLabel(count: number): string {

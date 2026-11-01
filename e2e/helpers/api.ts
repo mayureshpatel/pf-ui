@@ -1,4 +1,5 @@
 import {Page} from '@playwright/test';
+import {track} from './cleanup';
 
 const API_URL = process.env['E2E_API_URL'] ?? 'http://localhost:8080/api/v1';
 
@@ -96,6 +97,7 @@ export async function createTestAccount(page: Page, namePrefix: string): Promise
   }
 
   const id = (await response.json()) as number;
+  track(page, 'account', id);
   return {id, name};
 }
 
@@ -129,6 +131,7 @@ export async function createTestTag(page: Page, namePrefix: string): Promise<{id
   }
 
   const id = (await response.json()) as number;
+  track(page, 'tag', id);
   return {id, name};
 }
 
@@ -154,7 +157,9 @@ export async function createTestBudget(
     throw new Error(`Failed to create test budget: ${response.status()} ${await response.text()}`);
   }
 
-  return (await response.json()) as number;
+  const id = (await response.json()) as number;
+  track(page, 'budget', id);
+  return id;
 }
 
 /**
@@ -182,6 +187,7 @@ export async function createTestCategory(
   }
 
   const id = (await response.json()) as number;
+  track(page, 'category', id);
   return {id, name};
 }
 
@@ -267,6 +273,7 @@ export async function createTestTransaction(
   }
 
   const id = (await response.json()) as number;
+  track(page, 'transaction', id);
   return {id, description};
 }
 
@@ -379,7 +386,9 @@ export async function createTestTransactionExact(
   if (!response.ok()) {
     throw new Error(`Failed to create test transaction: ${response.status()} ${await response.text()}`);
   }
-  return (await response.json()) as number;
+  const id = (await response.json()) as number;
+  track(page, 'transaction', id);
+  return id;
 }
 
 /**
@@ -398,7 +407,9 @@ export async function createTestMerchant(page: Page, namePrefix: string): Promis
   if (!response.ok()) {
     throw new Error(`Failed to create test merchant: ${response.status()} ${await response.text()}`);
   }
-  return {id: (await response.json()) as number, name};
+  const id = (await response.json()) as number;
+  track(page, 'merchant', id);
+  return {id, name};
 }
 
 /**

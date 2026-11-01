@@ -1,4 +1,5 @@
-import {expect, test} from '@playwright/test';
+import {expect, test} from './fixtures/test';
+import {trackByName} from './helpers/cleanup';
 
 /**
  * Covers PF-882: the Merchants page through the real UI -- the list beside an always-present panel
@@ -22,6 +23,7 @@ test.describe('Merchants', () => {
     await panel.getByLabel('Name').fill(name);
     await panel.getByRole('button', {name: 'Add merchant'}).click();
     await expect(page.getByText('Merchant added')).toBeVisible();
+    await trackByName(page, 'merchant', name);
     await expect(panel).toHaveAccessibleName('Link descriptions');
 
     // The picker starts on unlinked descriptions; take the first one

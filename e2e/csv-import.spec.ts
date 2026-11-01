@@ -1,7 +1,6 @@
-import { expect, Locator, Page, test } from '@playwright/test';
-import { createTestAccount, createTestCategory, getAuthToken } from './helpers/api';
-
-const API_URL = process.env['E2E_API_URL'] ?? 'http://localhost:8080/api/v1';
+import { Locator, Page } from '@playwright/test';
+import { expect, test } from './fixtures/test';
+import { createTestAccount, createTestCategory } from './helpers/api';
 
 /** A Standard-format CSV statement built in memory, for `setInputFiles`. */
 interface StatementFile {
@@ -44,58 +43,8 @@ function statementsFor(token: string) {
 
 let files: ReturnType<typeof statementsFor>;
 
-/** What a test created, so afterEach can delete it whether the test passed or failed. */
-const made = { accountIds: [] as number[], categoryIds: [] as number[] };
-
-/**
- * Deletes what the test created: every transaction on the test accounts (the import rows), then the
- * categories (children before parents, which the backend requires), then the accounts. Only rows
- * whose own account is the test's account are ever deleted, even if the list ignored the filter. Best effort -- a failure here must never hide the test's own result.
- *
- * This is a local copy of the PF-871 cleanup (`fixtures/test.ts`, `helpers/cleanup.ts`), which lives
- * on branch feature/PF-871 and is not on this branch yet. Once PF-871 is merged, drop this and use
- * the shared fixture (`test` from './fixtures/test'; the createTestX helpers then track on their own).
- */
-async function cleanUpCreatedRows(page: Page): Promise<void> {
-  try {
-    const headers = { Authorization: `Bearer ${await getAuthToken(page)}` };
-    const bulkDelete = (ids: number[]) =>
-      page.request
-        .delete(`${API_URL}/transactions/bulk`, { headers, data: ids })
-        .catch(() => undefined);
-    for (const accountId of made.accountIds) {
-      for (let attempt = 0; attempt < 5; attempt++) {
-        const listed = await page.request
-          .get(`${API_URL}/transactions?accountId=${accountId}&size=1000`, { headers })
-          .catch(() => null);
-        if (!listed?.ok()) break;
-        const listedRows = (
-          (await listed.json()) as { content: { id: number; account?: { id: number } | null }[] }
-        ).content;
-        const rows = listedRows.filter((row) => row.account?.id === accountId);
-        if (rows.length === 0) break;
-        await bulkDelete(rows.map((row) => row.id));
-      }
-    }
-    // created parent first, so deleting in reverse removes each child before its parent
-    for (const id of [...made.categoryIds].reverse()) {
-      await page.request.delete(`${API_URL}/categories/${id}`, { headers }).catch(() => undefined);
-    }
-    for (const id of made.accountIds) {
-      await page.request.delete(`${API_URL}/accounts/${id}`, { headers }).catch(() => undefined);
-    }
-  } catch {
-    // the page may be gone or the session expired; leave it to the one-time leftovers cleanup
-  } finally {
-    made.accountIds = [];
-    made.categoryIds = [];
-  }
-}
-
 async function newAccount(page: Page): Promise<{ id: number; name: string }> {
-  const account = await createTestAccount(page, 'E2E CSV Import');
-  made.accountIds.push(account.id);
-  return account;
+  return createTestAccount(page, 'E2E CSV Import');
 }
 
 /** A parent category and a subcategory under it; only a subcategory can go on a transaction. */
@@ -103,9 +52,7 @@ async function newSubcategory(
   page: Page,
 ): Promise<{ id: number; name: string; optionName: string }> {
   const parent = await createTestCategory(page, 'E2E Import Parent');
-  made.categoryIds.push(parent.id);
   const child = await createTestCategory(page, 'E2E Import Category', parent.id);
-  made.categoryIds.push(child.id);
   // the dropdown lists a subcategory as "<Parent> / <Child>" (the bare parent is a separate, non-selectable entry)
   return { ...child, optionName: `${parent.name} / ${child.name}` };
 }
@@ -149,17 +96,13 @@ async function ledgerRows(page: Page, description: string): Promise<Locator> {
 }
 
 test.describe('CSV import dialog -> ledger', () => {
-  // the tests share the module-level `made`/`files` state and the one dev user; run them in order
+  // the tests share the module-level `files` state and the one dev user; run them in order
   test.describe.configure({ mode: 'serial' });
 
   // playwright requires an object pattern for the fixtures argument, even when none is used
   // eslint-disable-next-line no-empty-pattern
   test.beforeEach(async ({}, testInfo) => {
     files = statementsFor(`${testInfo.testId}-${Date.now()}`);
-  });
-
-  test.afterEach(async ({ page }) => {
-    await cleanUpCreatedRows(page);
   });
 
   test('two statement files import together and a Review edit changes one row only', async ({

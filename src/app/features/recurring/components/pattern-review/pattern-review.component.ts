@@ -39,6 +39,8 @@ export interface PatternAcceptance {
   pattern: RecurringSuggestion;
   /** The chosen existing merchant, or null when a new one should be created. */
   merchantId: number | null;
+  /** The chosen existing merchant's name, or null when a new one should be created. */
+  merchantName: string | null;
   /** The name for the merchant to create, or null when an existing one was chosen. */
   newMerchantName: string | null;
   accountId: number;
@@ -122,26 +124,44 @@ export class PatternReviewComponent implements OnInit {
     return this.form.valid && nameOk;
   });
 
+  /** Every merchant name seen so far, so a chosen merchant stays offered after a search narrows the list past it. */
+  private readonly knownNames: Map<number, string> = new Map<number, string>();
+
   readonly merchantOptions: Signal<{ id: number; name: string }[]> = computed(() => {
+    this.formEvents();
     const pattern: RecurringSuggestion | null = this.selected();
     const options: { id: number; name: string }[] = this.merchants().map((m: Merchant) => ({
       id: m.id,
       name: m.name,
     }));
-    // the merchant this text is already linked to is always offered, even when the search missed it
-    if (
-      pattern?.linkedMerchantId != null &&
-      !options.some((o: { id: number }): boolean => o.id === pattern.linkedMerchantId)
-    ) {
-      options.push({
-        id: pattern.linkedMerchantId,
-        name: pattern.linkedMerchantName ?? 'Linked merchant',
-      });
+    options.forEach((o): void => void this.knownNames.set(o.id, o.name));
+    // the merchant this text is linked to, and the one chosen now, are always offered, even when the search missed them
+    const keep: [number | null | undefined, string | null | undefined][] = [
+      [pattern?.linkedMerchantId, pattern?.linkedMerchantName],
+      [this.form.controls.merchantId.value, null],
+    ];
+    for (const [id, name] of keep) {
+      if (id == null || id === CREATE_MERCHANT_ID || options.some((o): boolean => o.id === id)) {
+        continue;
+      }
+      options.push({ id, name: name ?? this.knownNames.get(id) ?? 'Linked merchant' });
     }
     return [
       ...options,
       { id: CREATE_MERCHANT_ID, name: `Create "${(pattern?.merchant?.name ?? '').trim()}"` },
     ];
+  });
+
+  /** Why the account is empty, so the disabled Add button is not a mystery; null once an account is chosen. */
+  readonly accountHint: Signal<string | null> = computed((): string | null => {
+    this.formEvents();
+    if (this.form.controls.accountId.value !== null) return null;
+    const known: boolean = this.accounts().some(
+      (a: Account): boolean => a.id === this.selected()?.accountId,
+    );
+    return this.selected()?.accountId != null && !known
+      ? 'The account this was found on is not in your accounts. Choose one to add it.'
+      : 'Choose an account to add it.';
   });
 
   private filledFor: string | null = null;
@@ -212,6 +232,9 @@ export class PatternReviewComponent implements OnInit {
     this.add.emit({
       pattern,
       merchantId: creating ? null : (raw.merchantId as number),
+      merchantName: creating
+        ? null
+        : (this.merchantOptions().find((o) => o.id === raw.merchantId)?.name ?? null),
       newMerchantName: creating ? raw.newMerchantName.trim() : null,
       accountId: raw.accountId as number,
       amount: raw.amount as number,

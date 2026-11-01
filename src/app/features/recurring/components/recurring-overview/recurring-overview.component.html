@@ -30,7 +30,7 @@
         @for (item of priceChanges(); track item.id) {
           <li class="py-0.5">
             {{ item.merchant.name }}: {{ item.priceChange?.previousAmount | currency }} to
-            {{ item.priceChange?.newAmount | currency }}
+            {{ item.priceChange?.newAmount | currency }} since {{ sinceOf(item) }}
           </li>
         }
       </ul>
