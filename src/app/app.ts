@@ -18,4 +18,12 @@ export class App {
    * (Lighthouse `aria-dialog-name`) on every page.
    */
   protected readonly confirmDialogPt = { host: { role: 'presentation' } };
+
+  /**
+   * PF-898: a long confirmation message otherwise grows the dialog to the full screen width, edge
+   * to edge on a phone. A max width only (no fixed width) leaves wider screens content-sized as
+   * before. (`breakpoints` cannot do this: PrimeNG's confirm dialog writes its breakpoint rules for
+   * an attribute its inner dialog never gets.)
+   */
+  protected readonly confirmDialogStyle = { maxWidth: 'calc(100vw - 2rem)' };
 }

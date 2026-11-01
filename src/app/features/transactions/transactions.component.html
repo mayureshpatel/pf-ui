@@ -210,6 +210,7 @@
     [(visible)]="showImportDialog"
     [accounts]="accounts()"
     (importComplete)="onImportComplete()"
+    (reviewTransfers)="onImportReviewTransfers()"
   />
 
   <app-transfer-matching-dialog

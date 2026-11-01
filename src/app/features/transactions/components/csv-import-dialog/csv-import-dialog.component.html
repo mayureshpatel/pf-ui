@@ -1,350 +1,222 @@
 <p-dialog
-  header="Import Transaction Ledger"
-  [(visible)]="visible"
+  [visible]="visible()"
   appRestoreFocusOnHide
   [modal]="true"
   [draggable]="false"
   [resizable]="false"
-  [style]="{ width: '1000px' }"
-  [breakpoints]="{ '960px': '95vw' }"
-  class="p-fluid"
+  [closable]="false"
+  [focusOnShow]="false"
+  [style]="{ width: '64rem' }"
+  [breakpoints]="{ '1100px': '95vw' }"
+  (onShow)="onShow()"
+  (onHide)="onHide()"
 >
-  <div class="flex flex-col gap-6 py-2">
-    <!-- Process Status Message -->
-    @if (generalMessage()) {
-      <p-message [severity]="generalMessage()!.severity" variant="simple" class="w-full animate-fade-in">
-        {{ generalMessage()!.text }}
-      </p-message>
-    }
+  <ng-template #header let-labelledBy="ariaLabelledBy">
+    <div class="flex w-full items-center justify-between gap-3">
+      <span [id]="labelledBy" class="text-lg font-semibold text-surface-900 dark:text-surface-0"
+        >Import CSV statements</span
+      >
+      <button
+        type="button"
+        data-testid="close-x"
+        class="cursor-pointer rounded-lg px-2 py-2 text-muted-color hover:bg-surface-100 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-surface-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 dark:focus-visible:outline-primary-400"
+        aria-label="Close"
+        [disabled]="committing()"
+        (click)="requestClose()"
+      >
+        <i class="pi pi-times" aria-hidden="true"></i>
+      </button>
+    </div>
+  </ng-template>
 
-    <!-- Configuration & File Selection -->
-    @if (currentStep() === 0) {
-      <div class="flex flex-col gap-6">
-        <!-- Bulk Management Card -->
-        <div class="card-soft">
-          <div class="flex items-center gap-2 mb-4">
-            <i class="pi pi-bolt text-primary"></i>
-            <span class="text-xs font-black uppercase tracking-widest text-surface-400 dark:text-surface-500"
-            >Bulk Batch Configuration</span
-            >
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-            <div class="md:col-span-5 flex flex-col gap-2">
-              <!-- PF-805: ariaLabelledBy is the real fix (p-select's combobox isn't a native
-                   labelable element -- verified live); inputId/for kept too since the lint rule
-                   only checks that `for` has a value, not that it resolves. See bulk-edit-dialog
-                   for the full explanation. -->
-              <label id="csv-import-default-account-label" for="csv-import-default-account" class="text-xs font-bold text-surface-700 dark:text-surface-200 uppercase"
-              >Default Account</label
-              >
-              <p-select
-                [inputId]="'csv-import-default-account'"
-                [ariaLabelledBy]="'csv-import-default-account-label'"
-                [options]="accountOptions()"
-                [ngModel]="globalAccountId()"
-                (ngModelChange)="globalAccountId.set($event)"
-                optionLabel="label"
-                optionValue="value"
-                placeholder="Target Account"
-                appendTo="body"
-              />
-            </div>
-            <div class="md:col-span-5 flex flex-col gap-2">
-              <!-- PF-805: same pattern as Default Account above. -->
-              <label id="csv-import-bank-format-label" for="csv-import-bank-format" class="text-xs font-bold text-surface-700 dark:text-surface-200 uppercase"
-              >Bank Format</label
-              >
-              <p-select
-                [inputId]="'csv-import-bank-format'"
-                [ariaLabelledBy]="'csv-import-bank-format-label'"
-                [options]="bankOptions"
-                [ngModel]="globalBankName()"
-                (ngModelChange)="globalBankName.set($event)"
-                optionLabel="label"
-                optionValue="value"
-                placeholder="Statement Format"
-                appendTo="body"
-              />
-            </div>
-            <div class="md:col-span-2">
-              <p-button
-                label="Sync All"
-                (onClick)="applyGlobalAccount(); applyGlobalBank()"
-                [disabled]="!hasItems() || (!globalAccountId() && !globalBankName())"
-                severity="secondary"
-                [raised]="true"
-              />
-            </div>
-          </div>
-        </div>
-
-        <!-- Multi-File Upload Zone -->
-        <div class="flex flex-col gap-3">
-          <div class="flex justify-between items-end px-1">
-            <div class="flex flex-col">
-							<span class="text-lg font-black text-surface-900 dark:text-surface-0 tracking-tight"
-              >Source Files</span
-              >
-              <span class="text-xs font-bold text-muted-color uppercase tracking-widest"
-              >CSV Export from your bank</span
-              >
-            </div>
-            @if (hasItems()) {
-              <p-button
-                label="Clear Batch"
-                icon="pi pi-trash"
-                [text]="true"
-                severity="danger"
-                size="small"
-                (onClick)="importItems.set([])"
-              />
+  <div class="flex flex-col gap-5">
+    <nav aria-label="Import steps">
+      <ol class="m-0 flex list-none flex-wrap items-center gap-x-2 gap-y-1 p-0 text-sm">
+        @for (s of steps; track s.id; let i = $index) {
+          <li
+            data-testid="step"
+            class="flex items-center gap-2"
+            [attr.aria-current]="s.id === step() ? 'step' : null"
+          >
+            @if (i > 0) {
+              <i class="pi pi-angle-right text-xs text-muted-color" aria-hidden="true"></i>
             }
-          </div>
-
-          @if (!hasItems()) {
-            <!-- Empty Dropzone -->
-            <div
-              class="group relative overflow-hidden border-2 border-dashed border-surface-200 dark:border-surface-800 rounded-2xl p-12 text-center bg-surface-0 transition-all duration-500 hover:border-primary/50"
+            <span
+              class="inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold"
+              [class]="
+                s.id === step()
+                  ? 'bg-primary-700 text-white'
+                  : i < stepIndex()
+                    ? 'bg-primary-50 text-primary-700 dark:bg-primary-950 dark:text-primary-300'
+                    : 'bg-surface-100 text-surface-700 dark:bg-surface-800 dark:text-surface-200'
+              "
+              aria-hidden="true"
             >
-              <div
-                class="absolute -inset-24 bg-primary/5 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity"
-              ></div>
-              <div class="relative flex flex-col items-center">
-                <div
-                  class="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6 animate-pulse"
-                >
-                  <i class="pi pi-upload text-4xl text-primary"></i>
-                </div>
-                <h3 class="text-xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight mb-2">
-                  Ready to Synchronize?
-                </h3>
-                <p class="text-muted-color text-sm mb-8 max-w-sm mx-auto">
-                  Select one or more CSV files exported from your bank statements.
-                </p>
+              @if (i < stepIndex()) {
+                <i class="pi pi-check text-xs"></i>
+              } @else {
+                {{ i + 1 }}
+              }
+            </span>
+            <span
+              [class]="
+                s.id === step()
+                  ? 'font-semibold text-surface-900 dark:text-surface-0'
+                  : 'text-muted-color'
+              "
+            >
+              {{ s.label }}
+              @if (i < stepIndex()) {
+                <span class="sr-only">(done)</span>
+              }
+            </span>
+          </li>
+        }
+      </ol>
+    </nav>
 
-                <p-fileupload
-                  mode="basic"
-                  [multiple]="true"
-                  accept=".csv"
-                  [maxFileSize]="5000000"
-                  [auto]="true"
-                  [customUpload]="true"
-                  (onSelect)="onFilesSelect($event)"
-                  chooseLabel="Browse CSV Files"
-                />
-              </div>
-            </div>
-          } @else {
-            <!-- Batch File Ledger -->
-            <div class="flex flex-col gap-2">
-              <p-table [value]="importItems()" size="small" class="overflow-hidden card-soft">
-                <ng-template #header>
-                  <tr>
-                    <th id="file-name" class="py-3 font-bold text-surface-700 dark:text-surface-200">
-                      File Details
-                    </th>
-                    <th id="file-account" class="py-3 font-bold text-surface-700 dark:text-surface-200">
-                      Target Account
-                    </th>
-                    <th id="file-format" class="py-3 font-bold text-surface-700 dark:text-surface-200">
-                      Bank Format
-                    </th>
-                    <th class="w-15"></th>
-                  </tr>
-                </ng-template>
-                <ng-template #body let-item let-i="rowIndex">
-                  <tr class="hover:bg-surface-100/50 dark:hover:bg-surface-800/30">
-                    <td class="py-3">
-                      <div class="flex flex-col">
-												<span class="font-bold text-surface-900 dark:text-surface-0">{{
-                            item.file.name
-                          }}</span>
-                        <span class="text-xs font-mono text-muted-color uppercase"
-                        >{{ (item.file.size / 1024).toFixed(1) }} KB</span
-                        >
-                        @if (item.error) {
-                          <span class="text-xs font-black text-rose-500 uppercase mt-1">{{
-                              item.error
-                            }}</span>
-                        }
-                      </div>
-                    </td>
-                    <td>
-                      <p-select
-                        [options]="accountOptions()"
-                        [ngModel]="item.accountId"
-                        (ngModelChange)="onAccountChange(i, $event)"
-                        optionLabel="label"
-                        optionValue="value"
-                        placeholder="Select..."
-                        appendTo="body"
-                        class="w-full border-none bg-surface-100/50 dark:bg-surface-800/50"
-                      />
-                    </td>
-                    <td>
-                      <p-select
-                        [options]="bankOptions"
-                        [ngModel]="item.bankName"
-                        (ngModelChange)="onBankChange(i, $event)"
-                        optionLabel="label"
-                        optionValue="value"
-                        placeholder="Select..."
-                        appendTo="body"
-                        class="w-full border-none bg-surface-100/50 dark:bg-surface-800/50"
-                      />
-                    </td>
-                    <td class="text-right">
-                      <p-button
-                        icon="pi pi-times"
-                        [text]="true"
-                        [rounded]="true"
-                        severity="danger"
-                        (onClick)="removeItem(i)"
-                      />
-                    </td>
-                  </tr>
-                </ng-template>
-              </p-table>
+    <h2
+      #stepHeading
+      data-testid="step-heading"
+      tabindex="-1"
+      class="m-0 text-xl font-semibold text-surface-900 outline-none dark:text-surface-0"
+    >
+      {{ currentStep().heading }}
+    </h2>
 
-              <div class="flex justify-end mt-2">
-                <p-fileupload
-                  mode="basic"
-                  [multiple]="true"
-                  accept=".csv"
-                  [auto]="true"
-                  [customUpload]="true"
-                  (onSelect)="onFilesSelect($event)"
-                  chooseLabel="Add Files"
-                  chooseIcon="pi pi-plus"
-                  size="small"
-                />
-              </div>
-            </div>
-          }
-        </div>
-      </div>
-    }
-
-    <!-- Intelligent Preview -->
-    @if (currentStep() === 1) {
-      <div class="flex flex-col gap-6 animate-in fade-in duration-500">
-        <div class="flex items-center justify-between px-1">
-          <div class="flex flex-col">
-            <h2 class="text-2xl font-black text-surface-900 dark:text-surface-0 tracking-tight">Data Preview</h2>
-            <span class="text-xs font-bold text-muted-color uppercase tracking-widest">
-							{{ allPreviews().length }} transactions from {{ importItems().length }} file(s)
-						</span>
-          </div>
-        </div>
-
-        <p-table
-          [value]="allPreviews()"
-          [scrollable]="true"
-          scrollHeight="450px"
-          [stripedRows]="true"
-          size="small"
-          rowGroupMode="subheader"
-          groupRowsBy="_sourceFile"
-          class="overflow-hidden card-soft"
-        >
-          <ng-template #header>
-            <tr>
-              <th id="pre-date" class="py-3 font-bold text-surface-700 dark:text-surface-200">Date</th>
-              <th id="pre-desc" class="py-3 font-bold text-surface-700 dark:text-surface-200">Description</th>
-              <th id="pre-cat" class="py-3 font-bold text-surface-700 dark:text-surface-200">Smart Category</th>
-              <th id="pre-amount" class="py-3 font-bold text-surface-700 dark:text-surface-200 text-right">Amount</th>
-            </tr>
-          </ng-template>
-
-          <ng-template #groupheader let-preview>
-            <tr pRowGroupHeader class="bg-surface-100 dark:bg-surface-800">
-              <td colspan="4" class="py-2 px-4">
-                <div class="flex items-center gap-2">
-                  <i class="pi pi-file text-xs text-muted-color"></i>
-                  <span
-                    class="text-xs font-black uppercase tracking-widest text-surface-600 dark:text-surface-300"
-                  >File: {{ preview._sourceFile }}</span
-                  >
-                </div>
-              </td>
-            </tr>
-          </ng-template>
-
-          <ng-template #body let-preview>
-            <tr class="hover:bg-surface-100/50 dark:hover:bg-surface-800/30">
-              <td class="py-3 font-mono text-xs font-bold">{{ preview.date | date: 'MMM d, yyyy' }}</td>
-              <td class="py-3">
-                <div class="flex flex-col max-w-75">
-									<span class="text-sm font-bold text-surface-900 dark:text-surface-0 truncate">{{
-                      preview.suggestedMerchant?.name || 'General Payee'
-                    }}</span>
-                  <span class="text-xs text-muted-color truncate italic">{{ preview.description }}</span>
-                </div>
-              </td>
-              <td>
-                <div
-                  class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-surface-100 ring-1 ring-surface-200 dark:ring-surface-700"
-                >
-									<span class="text-xs font-black uppercase text-surface-600 dark:text-surface-300">
-										{{ preview.suggestedCategory?.name || 'Uncategorized' }}
-									</span>
-                </div>
-              </td>
-              <td class="text-right">
-								<span [class]="getTransactionTypeStyles(preview.type) + ' px-2 py-1 rounded font-mono font-black'">
-									{{ preview.amount | currency }}
-								</span>
-              </td>
-            </tr>
-          </ng-template>
-        </p-table>
-      </div>
+    @switch (step()) {
+      @case ('files') {
+        @if (!previewing() && unreadableFiles().length > 0) {
+          <section
+            data-testid="preview-failures"
+            aria-labelledby="csv-import-failures-heading"
+            class="rounded-2xl border border-rose-200 bg-rose-50 p-4 dark:border-rose-900 dark:bg-rose-950"
+          >
+            <h3
+              id="csv-import-failures-heading"
+              class="m-0 flex items-center gap-2 text-sm font-semibold text-rose-900 dark:text-rose-100"
+            >
+              <i
+                class="pi pi-exclamation-circle text-rose-600 dark:text-rose-400"
+                aria-hidden="true"
+              ></i>
+              {{ unreadableFiles().length }}
+              {{ unreadableFiles().length === 1 ? 'file' : 'files' }} could not be read
+            </h3>
+            <ul class="m-0 mt-2 flex list-none flex-col gap-1 p-0 text-sm">
+              @for (file of unreadableFiles(); track file.id) {
+                <li class="text-rose-700 dark:text-rose-300">
+                  <span class="break-all font-medium">{{ file.file.name }}</span
+                  >: {{ file.error }}
+                </li>
+              }
+            </ul>
+            <p class="m-0 mt-2 text-sm text-rose-900 dark:text-rose-100">
+              Fix or remove these files, then preview again.
+            </p>
+          </section>
+        }
+        <app-csv-import-files-step />
+      }
+      @case ('review') {
+        <app-csv-import-review-step />
+      }
+      @case ('result') {
+        <app-csv-import-result-step (reviewTransfers)="onReviewTransfers()" />
+      }
     }
   </div>
 
   <ng-template #footer>
-    <div class="flex items-center justify-between pt-4 border-t border-surface-100 dark:border-surface-800">
-      <div>
-        @if (currentStep() === 1) {
-          <p-button
-            label="Back to Setup"
-            icon="pi pi-arrow-left"
-            (onClick)="goBack()"
-            [text]="true"
-            severity="secondary"
-            [disabled]="saving()"
-          />
+    <div class="flex w-full flex-wrap items-center justify-between gap-2">
+      <div class="text-sm text-muted-color" aria-live="polite">
+        @if (step() === 'files' && previewing()) {
+          <span data-testid="preview-progress"
+            >Previewing {{ previewProgress().done }} of {{ previewProgress().total }} files</span
+          >
+        }
+        @if (step() === 'review' && committing()) {
+          <span>Importing...</span>
         }
       </div>
-
-      <div class="flex gap-3">
-        <p-button
-          label="Cancel"
-          severity="secondary"
-          [text]="true"
-          (onClick)="onHide()"
-          [disabled]="uploading() || saving()"
-        />
-
-        @if (currentStep() === 0) {
-          <p-button
-            label="Analyze Files"
-            icon="pi pi-bolt"
-            (onClick)="uploadAndPreview()"
-            [loading]="uploading()"
-            [disabled]="!canProceedToPreview()"
-            [raised]="true"
-          />
-        } @else {
-          <p-button
-            label="Import Ledger"
-            icon="pi pi-check"
-            (onClick)="saveTransactions()"
-            [loading]="saving()"
-            [disabled]="!canSave()"
-            [raised]="true"
-          />
+      <div class="flex flex-wrap justify-end gap-2">
+        @switch (step()) {
+          @case ('files') {
+            <button
+              type="button"
+              data-testid="cancel"
+              class="cursor-pointer rounded-lg px-3 py-2 text-sm font-medium underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 dark:focus-visible:outline-primary-400"
+              (click)="requestClose()"
+            >
+              Cancel
+            </button>
+            @if (previewing()) {
+              <button
+                type="button"
+                data-testid="stop-preview"
+                class="cursor-pointer rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium dark:border-surface-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 dark:focus-visible:outline-primary-400"
+                (click)="stopPreview()"
+              >
+                Stop preview
+              </button>
+            }
+            <button
+              type="button"
+              data-testid="preview"
+              class="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-primary-700 px-3 py-2 text-sm font-medium text-white hover:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 dark:focus-visible:outline-primary-400"
+              [disabled]="!canPreview()"
+              (click)="preview()"
+            >
+              @if (previewing()) {
+                <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+              }
+              Preview
+            </button>
+          }
+          @case ('review') {
+            <button
+              type="button"
+              data-testid="back"
+              class="cursor-pointer rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 dark:border-surface-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 dark:focus-visible:outline-primary-400"
+              [disabled]="committing()"
+              (click)="back()"
+            >
+              <i class="pi pi-arrow-left" aria-hidden="true"></i>
+              Back
+            </button>
+            <button
+              type="button"
+              data-testid="cancel"
+              class="cursor-pointer rounded-lg px-3 py-2 text-sm font-medium underline disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 dark:focus-visible:outline-primary-400"
+              [disabled]="committing()"
+              (click)="requestClose()"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              data-testid="import"
+              class="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-primary-700 px-3 py-2 text-sm font-medium text-white hover:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 dark:focus-visible:outline-primary-400"
+              [disabled]="!canCommit()"
+              (click)="commit()"
+            >
+              @if (committing()) {
+                <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+              }
+              Import {{ importCount() }} {{ importCount() === 1 ? 'transaction' : 'transactions' }}
+            </button>
+          }
+          @case ('result') {
+            <button
+              type="button"
+              data-testid="close"
+              class="cursor-pointer rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 dark:border-surface-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 dark:focus-visible:outline-primary-400"
+              [disabled]="committing()"
+              (click)="requestClose()"
+            >
+              Close
+            </button>
+          }
         }
       </div>
     </div>

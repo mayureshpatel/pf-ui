@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { TransactionEditFormComponent } from './components/transaction-edit-form/transaction-edit-form.component';
+import { CsvImportDialogComponent } from './components/csv-import-dialog/csv-import-dialog.component';
 import { TransactionsComponent } from './transactions.component';
 import { TransactionApiService } from './services/transaction-api.service';
 import { AccountApiService } from '@features/accounts/services/account-api.service';
@@ -834,6 +835,32 @@ describe('TransactionsComponent', () => {
       // assert & verify
       expect(mockToast.error).toHaveBeenCalledWith('Conflict');
       expect(component.selectedTransactions()).toEqual([t1]);
+    });
+  });
+
+  describe('CSV import (PF-898)', () => {
+    const importDialog = (): CsvImportDialogComponent =>
+      fixture.debugElement.query(By.directive(CsvImportDialogComponent)).componentInstance;
+
+    it('reloads the list when an import completes, without opening the transfer dialog', () => {
+      component.showImportDialog.set(true);
+      fixture.detectChanges();
+      const loadsBefore: number = listLoads().length;
+
+      importDialog().importComplete.emit();
+      fixture.detectChanges();
+
+      expect(listLoads().length).toBe(loadsBefore + 1);
+      expect(component.showTransferDialog()).toBe(false);
+      // the import dialog stays open on its Result step
+      expect(component.showImportDialog()).toBe(true);
+    });
+
+    it('opens the transfer dialog when the import asks to review transfers', () => {
+      importDialog().reviewTransfers.emit();
+      fixture.detectChanges();
+
+      expect(component.showTransferDialog()).toBe(true);
     });
   });
 

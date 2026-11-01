@@ -268,6 +268,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/transactions/import-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check already-imported files
+         * @description Returns the subset of the given (account, file hash) pairs whose file was already imported
+         */
+        post: operations["checkAlreadyImported"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/transactions/bulk": {
         parameters: {
             query?: never;
@@ -1299,6 +1319,11 @@ export interface components {
             merchantId?: number;
             netChange?: number;
         };
+        ImportHashCheckRequest: {
+            /** Format: int64 */
+            accountId: number;
+            fileHash: string;
+        };
         AccountDto: {
             /** Format: int64 */
             id?: number;
@@ -1359,6 +1384,7 @@ export interface components {
             fileHash: string;
             /** Format: int64 */
             accountId?: number;
+            merchantsReviewed?: boolean;
         };
         TagDto: {
             /** Format: int64 */
@@ -1389,6 +1415,16 @@ export interface components {
             id?: number;
             username?: string;
             email?: string;
+        };
+        FileImportResultDto: {
+            fileName?: string;
+            /** @enum {string} */
+            status?: "IMPORTED" | "SKIPPED_ALREADY_IMPORTED" | "FAILED";
+            /** Format: int32 */
+            savedCount?: number;
+            /** Format: int32 */
+            duplicateRowCount?: number;
+            error?: string;
         };
         TagCreateRequest: {
             /** Format: int64 */
@@ -1492,6 +1528,7 @@ export interface components {
             type?: "INCOME" | "EXPENSE" | "TRANSFER" | "TRANSFER_IN" | "TRANSFER_OUT" | "ADJUSTMENT";
             suggestedCategory?: components["schemas"]["CategoryDto"];
             suggestedMerchant?: components["schemas"]["MerchantDto"];
+            duplicate?: boolean;
         };
         AccountReconcileRequest: {
             /** Format: int64 */
@@ -2589,6 +2626,39 @@ export interface operations {
             };
         };
     };
+    checkAlreadyImported: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImportHashCheckRequest"][];
+            };
+        };
+        responses: {
+            /** @description Already-imported pairs returned; empty if none */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ImportHashCheckRequest"][];
+                };
+            };
+            /** @description A candidate account belongs to another user */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ImportHashCheckRequest"][];
+                };
+            };
+        };
+    };
     saveBulkTransactions: {
         parameters: {
             query?: never;
@@ -2602,13 +2672,13 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Transactions saved, confirmation message returned */
+            /** @description Per-file import results returned; each file commits independently */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string;
+                    "*/*": components["schemas"]["FileImportResultDto"][];
                 };
             };
         };
