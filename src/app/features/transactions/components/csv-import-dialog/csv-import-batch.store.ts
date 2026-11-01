@@ -108,11 +108,15 @@ function toReviewRow(preview: TransactionPreview): ReviewRow {
   };
 }
 
-/** Recomputes every row's skip flag; unchanged rows and files keep their object identity. */
+/**
+ * Recomputes every row's skip flag; unchanged rows and files keep their object identity.
+ * Committed and skipped files are final: their rows still count as earlier rows, but never change.
+ */
 function withSkips(files: BatchFile[]): BatchFile[] {
   const seenByAccount = new Map<number, Set<string>>();
   return files.map((file: BatchFile): BatchFile => {
     if (file.rows.length === 0) return file;
+    const final: boolean = file.status === 'committed' || file.status === 'skipped';
     let seen: Set<string> | undefined =
       file.accountId === null ? undefined : seenByAccount.get(file.accountId);
     if (!seen) {
@@ -130,7 +134,7 @@ function withSkips(files: BatchFile[]): BatchFile[] {
         : row.preview.duplicate || earlier.has(sig)
           ? 'duplicate'
           : null;
-      if (skip === row.skip) return row;
+      if (final || skip === row.skip) return row;
       changed = true;
       return { ...row, skip };
     });
@@ -161,6 +165,10 @@ function previewError(error: unknown): string {
  *
  * Provide it on the import dialog and feed it the user's accounts with {@link setAccounts}.
  * Nothing is saved until {@link commit}.
+ *
+ * While a commit or retry is in flight the batch is frozen: {@link addFiles}, {@link removeFile},
+ * {@link setAccount}, {@link setBank}, {@link applyToSelected} and {@link editRow} do nothing, so
+ * each file's outcome always describes exactly what was sent.
  */
 @Injectable()
 export class CsvImportBatchStore {
@@ -174,7 +182,8 @@ export class CsvImportBatchStore {
 
   /** Bumped on every preview run and on cancel; a stale run's late results are dropped. */
   private previewRun = 0;
-  private readonly inFlight = new Set<() => void>();
+  /** Cancels for in-flight uploads, by file id. */
+  private readonly inFlight = new Map<string, () => void>();
 
   readonly items: Signal<BatchFile[]> = this.files.asReadonly();
   readonly previewing: Signal<boolean> = this.previewRunning.asReadonly();
@@ -233,8 +242,12 @@ export class CsvImportBatchStore {
     this.accounts.set(accounts);
   }
 
-  /** Adds files, skipping any with the same name and size as one already in the batch. */
+  /**
+   * Adds files, skipping any with the same name and size as one already in the batch.
+   * Ignored while a commit is in flight.
+   */
   addFiles(files: File[]): void {
+    if (this.commitRunning()) return;
     const seen = new Set<string>(
       this.files().map((f: BatchFile): string => `${f.file.name}|${f.file.size}`),
     );
@@ -265,22 +278,32 @@ export class CsvImportBatchStore {
     if (added.length) this.files.update((current: BatchFile[]) => [...current, ...added]);
   }
 
+  /** Removes a file and cancels its upload if one is running. Ignored while committing. */
   removeFile(id: string): void {
+    if (this.commitRunning()) return;
+    this.inFlight.get(id)?.();
     this.files.update((files: BatchFile[]) =>
       withSkips(files.filter((f: BatchFile): boolean => f.id !== id)),
     );
   }
 
-  /** Sets a file's account; also fills its bank from the account when it has none. */
+  /**
+   * Sets a file's account; also fills its bank from the account when it has none. A real change
+   * to a previewed (or previewing) file sends it back to `'pending'`. Ignored while committing.
+   */
   setAccount(id: string, accountId: number | null): void {
     this.assign([id], accountId, undefined);
   }
 
+  /** Sets a file's bank format; same reset rules as {@link setAccount}. Ignored while committing. */
   setBank(id: string, bank: BankName | null): void {
     this.assign([id], undefined, bank);
   }
 
-  /** Applies an account and/or bank to the given files; a null argument leaves that field alone. */
+  /**
+   * Applies an account and/or bank to the given files; a null argument leaves that field alone.
+   * Ignored while committing.
+   */
   applyToSelected(ids: string[], accountId: number | null, bank: BankName | null): void {
     this.assign(ids, accountId ?? undefined, bank ?? undefined);
   }
@@ -333,7 +356,7 @@ export class CsvImportBatchStore {
   cancelPreview(): void {
     if (!this.previewRunning()) return;
     this.previewRun++;
-    [...this.inFlight].forEach((cancel: () => void) => cancel());
+    [...this.inFlight.values()].forEach((cancel: () => void) => cancel());
     this.inFlight.clear();
     this.files.update((files: BatchFile[]) =>
       files.map((f: BatchFile): BatchFile =>
@@ -343,8 +366,12 @@ export class CsvImportBatchStore {
     this.previewRunning.set(false);
   }
 
-  /** Changes one row's merchant and/or category. No other row, and no rule, is affected. */
+  /**
+   * Changes one row's merchant and/or category. No other row, and no rule, is affected.
+   * Ignored while committing, and for committed or skipped files.
+   */
   editRow(fileId: string, rowIndex: number, patch: RowPatch): void {
+    if (this.commitRunning()) return;
     this.files.update((files: BatchFile[]) =>
       files.map((f: BatchFile): BatchFile => {
         if (f.id !== fileId || !f.rows[rowIndex]) return f;
@@ -392,8 +419,12 @@ export class CsvImportBatchStore {
     accountId: number | null | undefined,
     bank: BankName | null | undefined,
   ): void {
+    if (this.commitRunning()) return;
     const targets = new Set<string>(ids);
     const accounts: Account[] = this.accounts();
+    const wasPreviewing: string[] = this.files()
+      .filter((f: BatchFile): boolean => targets.has(f.id) && f.status === 'previewing')
+      .map((f: BatchFile): string => f.id);
     this.files.update((files: BatchFile[]) =>
       withSkips(
         files.map((f: BatchFile): BatchFile => {
@@ -404,7 +435,13 @@ export class CsvImportBatchStore {
             nextBank = accounts.find((a: Account): boolean => a.id === nextAccount)?.bank ?? null;
           }
           if (nextAccount === f.accountId && nextBank === f.bankName) return f;
-          const changed: BatchFile = { ...f, accountId: nextAccount, bankName: nextBank };
+          // the already-imported check was for the old account; never carry it to a new one
+          const changed: BatchFile = {
+            ...f,
+            accountId: nextAccount,
+            bankName: nextBank,
+            alreadyImported: nextAccount === f.accountId ? f.alreadyImported : false,
+          };
           if (f.status === 'pending') return changed;
           return {
             ...changed,
@@ -419,6 +456,10 @@ export class CsvImportBatchStore {
         }),
       ),
     );
+    // an upload for the old account/bank is now useless
+    for (const id of wasPreviewing) {
+      if (this.find(id)?.status === 'pending') this.inFlight.get(id)?.();
+    }
   }
 
   private patch(id: string, changes: Partial<BatchFile>): void {
@@ -489,10 +530,16 @@ export class CsvImportBatchStore {
     this.patch(id, { status: 'previewing', error: null, failedAt: null });
 
     const outcome: Settled<TransactionPreview[]> | null = await this.cancellable(
+      id,
       this.importService.uploadCsv(file.accountId, file.file, file.bankName),
     );
-    // cancelled, or the file was changed/removed while uploading: drop the result
-    if (!outcome || run !== this.previewRun || this.find(id)?.status !== 'previewing') return;
+    // the whole run was cancelled: its files went back to pending and its progress is moot
+    if (run !== this.previewRun) return;
+    // the file was changed or removed while uploading: drop the result, but count it as done
+    if (!outcome || this.find(id)?.status !== 'previewing') {
+      this.progress.update((p: PreviewProgress) => ({ ...p, done: p.done + 1 }));
+      return;
+    }
 
     if (outcome.ok) {
       this.files.update((files: BatchFile[]) =>
@@ -509,13 +556,13 @@ export class CsvImportBatchStore {
   }
 
   /** Resolves with the first value or the error, or with null if cancelled first. */
-  private cancellable<T>(source: Observable<T>): Promise<Settled<T> | null> {
+  private cancellable<T>(id: string, source: Observable<T>): Promise<Settled<T> | null> {
     return new Promise((resolve: (value: Settled<T> | null) => void): void => {
       let settled = false;
       const finish = (value: Settled<T> | null): void => {
         if (settled) return;
         settled = true;
-        this.inFlight.delete(cancel);
+        if (this.inFlight.get(id) === cancel) this.inFlight.delete(id);
         resolve(value);
       };
       const cancel = (): void => {
@@ -523,7 +570,7 @@ export class CsvImportBatchStore {
         subscription.unsubscribe();
         finish(null);
       };
-      this.inFlight.add(cancel);
+      this.inFlight.set(id, cancel);
       const subscription: Subscription = source.subscribe({
         next: (value: T) => finish({ ok: true, value }),
         error: (error: unknown) => finish({ ok: false, error }),
@@ -580,37 +627,46 @@ export class CsvImportBatchStore {
     try {
       results = await firstValueFrom(this.importService.saveBulkTransactions(requests));
     } catch {
-      const failed = new Set<string>(sent.map((f: BatchFile): string => f.id));
-      this.files.update((files: BatchFile[]) =>
-        files.map((f: BatchFile): BatchFile =>
-          failed.has(f.id)
-            ? { ...f, status: 'failed', failedAt: 'commit', error: COMMIT_ERROR }
-            : f,
+      this.commitRunning.set(false);
+      this.applyToSent(
+        new Map(
+          sent.map((f: BatchFile): [BatchFile, Partial<BatchFile>] => [
+            f,
+            { status: 'failed', failedAt: 'commit', error: COMMIT_ERROR },
+          ]),
         ),
       );
       return [];
-    } finally {
-      this.commitRunning.set(false);
     }
+    this.commitRunning.set(false);
 
     // match by file name, consuming each result once (two files can share a name)
     const unmatched: FileImportResult[] = [...results];
-    const outcomes = new Map<string, Partial<BatchFile>>();
+    const outcomes = new Map<BatchFile, Partial<BatchFile>>();
     for (const f of sent) {
       const index: number = unmatched.findIndex(
         (r: FileImportResult): boolean => r.fileName === f.file.name,
       );
       const result: FileImportResult | undefined =
         index >= 0 ? unmatched.splice(index, 1)[0] : undefined;
-      outcomes.set(f.id, this.outcome(result));
+      outcomes.set(f, this.outcome(result));
     }
+    this.applyToSent(outcomes);
+    return results;
+  }
+
+  /**
+   * Applies commit outcomes keyed by the exact file snapshot that was sent. Mutators are frozen
+   * during a commit, so the snapshot is normally still current; a file that is gone (reset) or
+   * no longer identical is left alone rather than given an outcome for something it isn't.
+   */
+  private applyToSent(outcomes: Map<BatchFile, Partial<BatchFile>>): void {
     this.files.update((files: BatchFile[]) =>
       files.map((f: BatchFile): BatchFile => {
-        const changes: Partial<BatchFile> | undefined = outcomes.get(f.id);
+        const changes: Partial<BatchFile> | undefined = outcomes.get(f);
         return changes ? { ...f, ...changes } : f;
       }),
     );
-    return results;
   }
 
   private outcome(result: FileImportResult | undefined): Partial<BatchFile> {

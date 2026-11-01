@@ -332,6 +332,150 @@ describe('CsvImportBatchStore', () => {
     });
   });
 
+  describe('preview while files change', () => {
+    let uploads: Map<string, Subject<TransactionPreview[]>>;
+
+    beforeEach(() => {
+      uploads = new Map();
+      importService.uploadCsv.mockImplementation((_accountId: number, file: File) => {
+        const subject = new Subject<TransactionPreview[]>();
+        uploads.set(file.name, subject);
+        return subject;
+      });
+    });
+
+    function respond(name: string, rows: TransactionPreview[] = [row()]): void {
+      const subject: Subject<TransactionPreview[]> | undefined = uploads.get(name);
+      if (!subject) throw new Error(`no upload for ${name}`);
+      subject.next(rows);
+      subject.complete();
+    }
+
+    it('does not keep the old account already-imported flag for a queued file', async () => {
+      const names: string[] = [1, 2, 3, 4, 5].map((m: number) => `capone-2026-0${m}.csv`);
+      alreadyImported = [{ accountId: 1, fileHash: 'hash-capone-2026-05.csv' }];
+      store.addFiles(names.map((n: string) => csv(n)));
+
+      const done: Promise<void> = store.previewAll();
+      await vi.waitFor(() => expect(uploads.size).toBe(4));
+      expect(fileByName('capone-2026-05.csv')).toMatchObject({
+        status: 'pending',
+        alreadyImported: true,
+      });
+
+      store.setAccount(fileByName('capone-2026-05.csv').id, 3);
+      names.slice(0, 4).forEach((n: string) => respond(n));
+      await vi.waitFor(() => expect(uploads.size).toBe(5));
+      respond('capone-2026-05.csv');
+      await done;
+
+      const moved: BatchFile = fileByName('capone-2026-05.csv');
+      expect(importService.uploadCsv.mock.calls[4][0]).toBe(3);
+      expect(moved).toMatchObject({ accountId: 3, status: 'ready', alreadyImported: false });
+      expect(moved.rows[0].skip).toBeNull();
+    });
+
+    it('stops before uploading when cancelled while files are being hashed', async () => {
+      let releaseHash: (hash: string) => void = () => undefined;
+      importService.calculateFileHash.mockImplementation(
+        () => new Promise<string>((resolve) => (releaseHash = resolve)),
+      );
+      store.addFiles([csv('capone-2026-01.csv')]);
+
+      const done: Promise<void> = store.previewAll();
+      store.cancelPreview();
+      releaseHash('late-hash');
+      await done;
+
+      expect(importService.checkAlreadyImported).not.toHaveBeenCalled();
+      expect(importService.uploadCsv).not.toHaveBeenCalled();
+      expect(fileByName('capone-2026-01.csv').status).toBe('pending');
+    });
+
+    it('does not count a cancelled run against a preview started right after it', async () => {
+      store.addFiles([csv('capone-2026-01.csv'), csv('discover-2026-01.csv')]);
+      const first: Promise<void> = store.previewAll();
+      await vi.waitFor(() => expect(uploads.size).toBe(2));
+      uploads.clear();
+
+      store.cancelPreview();
+      const second: Promise<void> = store.previewAll();
+      await first;
+      await vi.waitFor(() => expect(uploads.size).toBe(2));
+
+      expect(store.previewProgress()).toEqual({ done: 0, total: 2 });
+      expect(store.items().every((f: BatchFile) => f.status === 'previewing')).toBe(true);
+      respond('capone-2026-01.csv');
+      respond('discover-2026-01.csv');
+      await second;
+      expect(store.previewProgress()).toEqual({ done: 2, total: 2 });
+    });
+
+    it('drops uploads that answer after a cancel', async () => {
+      store.addFiles([csv('capone-2026-01.csv'), csv('discover-2026-01.csv')]);
+
+      const done: Promise<void> = store.previewAll();
+      await vi.waitFor(() => expect(uploads.size).toBe(2));
+      store.cancelPreview();
+      await done;
+      respond('capone-2026-01.csv');
+      respond('discover-2026-01.csv');
+
+      expect(store.items().map((f: BatchFile) => [f.status, f.rows.length])).toEqual([
+        ['pending', 0],
+        ['pending', 0],
+      ]);
+    });
+
+    it('drops the upload of a file removed or changed mid-upload and still completes progress', async () => {
+      store.addFiles([
+        csv('capone-2026-01.csv'),
+        csv('discover-2026-01.csv'),
+        csv('synovus-2026-01.csv'),
+      ]);
+
+      const done: Promise<void> = store.previewAll();
+      await vi.waitFor(() => expect(uploads.size).toBe(3));
+      const removedUpload: Subject<TransactionPreview[]> = uploads.get(
+        'capone-2026-01.csv',
+      ) as Subject<TransactionPreview[]>;
+      store.removeFile(fileByName('capone-2026-01.csv').id);
+      store.setAccount(fileByName('discover-2026-01.csv').id, 1);
+      respond('discover-2026-01.csv');
+      respond('synovus-2026-01.csv');
+      await done;
+
+      expect(removedUpload.observed).toBe(false);
+      expect(fileByName('discover-2026-01.csv')).toMatchObject({
+        status: 'pending',
+        accountId: 1,
+        rows: [],
+      });
+      expect(fileByName('synovus-2026-01.csv').status).toBe('ready');
+      expect(store.previewProgress()).toEqual({ done: 3, total: 3 });
+      expect(store.previewing()).toBe(false);
+    });
+
+    it('checks already-imported files in chunks of 1000', async () => {
+      importService.uploadCsv.mockImplementation(() => of([]));
+      store.addFiles(
+        Array.from({ length: 1001 }, (_: unknown, i: number) => csv(`statement-${i}.csv`)),
+      );
+      store.applyToSelected(
+        store.items().map((f: BatchFile) => f.id),
+        1,
+        BankName.CAPITAL_ONE,
+      );
+
+      await store.previewAll();
+
+      expect(importService.checkAlreadyImported).toHaveBeenCalledTimes(2);
+      expect(importService.checkAlreadyImported.mock.calls.map((c) => c[0].length)).toEqual([
+        1000, 1,
+      ]);
+    });
+  });
+
   describe('editing rows', () => {
     it('changes exactly the edited row even when descriptions are identical', async () => {
       const dining: Category = category(11, 'Dining');
@@ -523,7 +667,7 @@ describe('CsvImportBatchStore', () => {
           duplicateRowCount: 0,
           error: null,
         },
-        // the backend may omit `error` entirely
+        // a FAILED file arrives inside the 200 response, not as an HTTP error
         {
           fileName: 'synovus-2026-01.csv',
           status: 'FAILED',
@@ -564,7 +708,98 @@ describe('CsvImportBatchStore', () => {
       await store.commit();
 
       expect(fileByName('capone-2026-01.csv').status).toBe('failed');
-      expect(fileByName('capone-2026-01.csv').error).toEqual(expect.any(String));
+      expect(fileByName('capone-2026-01.csv').error).toBeTruthy();
+    });
+
+    it('gives a failed result a message when the backend error is blank', async () => {
+      previews['capone-2026-01.csv'] = [row()];
+      store.addFiles([csv('capone-2026-01.csv')]);
+      await store.previewAll();
+      importService.saveBulkTransactions.mockReturnValue(
+        of([
+          {
+            fileName: 'capone-2026-01.csv',
+            status: 'FAILED',
+            savedCount: 0,
+            duplicateRowCount: 0,
+            error: '  ',
+          },
+        ]),
+      );
+
+      await store.commit();
+
+      expect(fileByName('capone-2026-01.csv').error?.trim()).toBeTruthy();
+    });
+
+    it('maps results to two files with the same name in request order', async () => {
+      importService.uploadCsv.mockImplementation((_accountId: number, file: File) =>
+        of([row({ description: `ROW-${file.size}` })]),
+      );
+      store.addFiles([csv('statement.csv', 'a'), csv('statement.csv', 'abc')]);
+      store.applyToSelected(
+        store.items().map((f: BatchFile) => f.id),
+        1,
+        BankName.CAPITAL_ONE,
+      );
+      await store.previewAll();
+      importService.saveBulkTransactions.mockReturnValue(
+        of([
+          imported('statement.csv'),
+          {
+            fileName: 'statement.csv',
+            status: 'FAILED',
+            savedCount: 0,
+            duplicateRowCount: 0,
+            error: 'Merchant not found.',
+          },
+        ]),
+      );
+
+      await store.commit();
+
+      const sentDescriptions: string[] = requestsSent().map(
+        (r: SaveTransactionRequest) => r.transactions[0].description,
+      );
+      expect(sentDescriptions).toEqual(['ROW-1', 'ROW-3']);
+      expect(store.items().map((f: BatchFile) => [f.file.size, f.status])).toEqual([
+        [1, 'committed'],
+        [3, 'failed'],
+      ]);
+    });
+
+    it('ignores changes made while a commit is in flight and maps the result to what was sent', async () => {
+      const dining: Category = category(11, 'Dining');
+      previews['capone-2026-01.csv'] = [row()];
+      previews['discover-2026-01.csv'] = [row({ description: 'GAS' })];
+      store.addFiles([csv('capone-2026-01.csv'), csv('discover-2026-01.csv')]);
+      await store.previewAll();
+      const response = new Subject<FileImportResult[]>();
+      importService.saveBulkTransactions.mockReturnValue(response);
+
+      const done: Promise<FileImportResult[]> = store.commit();
+      const capone: string = fileByName('capone-2026-01.csv').id;
+      store.setAccount(capone, 3);
+      store.setBank(capone, BankName.SYNOVUS);
+      store.applyToSelected([capone], 2, BankName.DISCOVER);
+      store.editRow(capone, 0, { category: dining });
+      store.removeFile(fileByName('discover-2026-01.csv').id);
+      store.addFiles([csv('synovus-2026-01.csv')]);
+      response.next([imported('capone-2026-01.csv'), imported('discover-2026-01.csv')]);
+      response.complete();
+      await done;
+
+      expect(store.items().map((f: BatchFile) => f.file.name)).toEqual([
+        'capone-2026-01.csv',
+        'discover-2026-01.csv',
+      ]);
+      const committed: BatchFile = fileByName('capone-2026-01.csv');
+      expect(committed).toMatchObject({
+        status: 'committed',
+        accountId: requestsSent()[0].accountId,
+        bankName: BankName.CAPITAL_ONE,
+      });
+      expect(committed.rows[0]).toMatchObject({ category: null, origin: 'none' });
     });
 
     it('marks the sent files failed when the whole request fails, and retries only those', async () => {
@@ -579,7 +814,7 @@ describe('CsvImportBatchStore', () => {
       await store.commit();
 
       expect(store.items().map((f: BatchFile) => f.status)).toEqual(['failed', 'failed']);
-      expect(fileByName('capone-2026-01.csv').error).toEqual(expect.any(String));
+      expect(fileByName('capone-2026-01.csv').error).toBeTruthy();
 
       importService.saveBulkTransactions.mockReturnValueOnce(
         of([
@@ -615,6 +850,19 @@ describe('CsvImportBatchStore', () => {
       await store.retryFailed();
 
       expect(importService.saveBulkTransactions).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not change the rows of skipped files after commit', async () => {
+      previews['capone-2026-01.csv'] = [row()];
+      previews['capone-2026-02.csv'] = [row()];
+      store.addFiles([csv('capone-2026-01.csv'), csv('capone-2026-02.csv')]);
+      await store.previewAll();
+      await store.commit();
+      expect(fileByName('capone-2026-02.csv').skipReason).toBe('all-duplicates');
+
+      store.removeFile(fileByName('capone-2026-01.csv').id);
+
+      expect(fileByName('capone-2026-02.csv').rows[0].skip).toBe('duplicate');
     });
 
     it('does not retry files whose preview failed', async () => {
