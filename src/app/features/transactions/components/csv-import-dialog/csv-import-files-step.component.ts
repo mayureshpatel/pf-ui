@@ -120,6 +120,7 @@ export class CsvImportFilesStepComponent {
   }
 
   remove(id: string): void {
+    this.toggle(id, false);
     this.store.removeFile(id);
   }
 

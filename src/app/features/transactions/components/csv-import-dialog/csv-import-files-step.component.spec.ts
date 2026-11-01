@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, Subject } from 'rxjs';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TransactionImportService } from '@features/transactions/services/transaction-import.service';
 import { Account, BankName } from '@models/account.model';
@@ -13,10 +13,6 @@ function account(id: number, bank: BankName): Account {
 
 function file(name: string): File {
   return new File(['Date,Description,Amount\n'], name);
-}
-
-async function vi_waitForPreviewing(): Promise<void> {
-  await new Promise<void>((resolve) => setTimeout(resolve, 50));
 }
 
 describe('CsvImportFilesStepComponent', () => {
@@ -69,8 +65,8 @@ describe('CsvImportFilesStepComponent', () => {
     await settle();
   });
 
-  it('should show an empty drop area and no table before any file is added', () => {
-    expect(all('[data-testid="drop-area"]').length).toBe(1);
+  it('should show an empty state and no table before any file is added', () => {
+    expect(all('[data-testid="empty-state"]').length).toBe(1);
     expect(rows().length).toBe(0);
     expect(text()).not.toContain('Add files');
   });
@@ -78,7 +74,7 @@ describe('CsvImportFilesStepComponent', () => {
   it('should list added files with size and statement month and offer Add files', async () => {
     await addFiles('capone-2026-01.csv');
 
-    expect(all('[data-testid="drop-area"]').length).toBe(0);
+    expect(all('[data-testid="empty-state"]').length).toBe(0);
     const row = rowFor('capone-2026-01.csv');
     expect(row.textContent).toContain('2026-01');
     expect(row.textContent).toMatch(/\d+(\.\d)? (B|KB)/);
@@ -143,18 +139,30 @@ describe('CsvImportFilesStepComponent', () => {
     expect(button.getAttribute('aria-label')).toBe('Remove capone-2026-01.csv');
   });
 
-  it('should give every select an accessible name', async () => {
-    await addFiles('capone-2026-01.csv');
+  it('should give every select and checkbox its own accessible name across rows', async () => {
+    await addFiles('capone-2026-01.csv', 'discover-2026-02.csv');
 
-    const selects = all('p-select');
-    expect(selects.length).toBe(4);
-    for (const select of selects) {
-      const id = select.getAttribute('aria-labelledby') ?? select.getAttribute('ariaLabelledBy');
-      const labelled = select.querySelector('[aria-labelledby]');
-      const labelId = id ?? labelled?.getAttribute('aria-labelledby');
-      expect(labelId).toBeTruthy();
-      expect(fixture.nativeElement.querySelector(`#${labelId}`)?.textContent?.trim()).toBeTruthy();
+    const ids: string[] = [];
+    for (const select of all('p-select')) {
+      const labelId =
+        select.getAttribute('ariaLabelledBy') ?? select.getAttribute('aria-labelledby');
+      const inner = select.querySelector('[aria-labelledby]')?.getAttribute('aria-labelledby');
+      const id = inner ?? labelId;
+      expect(id).toBeTruthy();
+      expect(fixture.nativeElement.querySelector(`#${id}`)?.textContent?.trim()).toBeTruthy();
+      ids.push(id!);
     }
+    expect(ids.length).toBe(6);
+    expect(new Set(ids).size).toBe(ids.filter((id) => !id.includes('bulk')).length + 2);
+
+    const names = all<HTMLInputElement>('p-checkbox input').map((i) =>
+      i.getAttribute('aria-label'),
+    );
+    expect(names).toEqual([
+      'Select all files',
+      'Select capone-2026-01.csv',
+      'Select discover-2026-02.csv',
+    ]);
   });
 
   it('should disable Apply until a row is selected', async () => {
@@ -204,6 +212,61 @@ describe('CsvImportFilesStepComponent', () => {
     expect(item.accountId).toBe(2);
     expect(item.bankName).toBe(BankName.CAPITAL_ONE);
   });
+
+  // The select overlay needs matchMedia, which jsdom lacks; this runs under --browsers=ChromiumHeadless.
+  it.skipIf(/jsdom/i.test(navigator.userAgent))(
+    'should leave the account unchanged after the apply account is cleared in the select',
+    async () => {
+      await addFiles('capone-2026-01.csv');
+      checkboxOf(rowFor('capone-2026-01.csv')).click();
+      const bulkSelect: HTMLElement = fixture.nativeElement.querySelector(
+        'p-select[inputId="csv-bulk-account"]',
+      );
+      bulkSelect.querySelector<HTMLElement>('.p-select-label, [role="combobox"]')!.click();
+      await settle();
+      const option = Array.from(document.querySelectorAll<HTMLElement>('[role="option"]')).find(
+        (o) => o.textContent?.includes('Account 2'),
+      )!;
+      option.click();
+      await settle();
+      expect(fixture.componentInstance.bulkAccountId()).toBe(2);
+
+      bulkSelect
+        .querySelector('.p-select-clear-icon')!
+        .dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await settle();
+      fixture.nativeElement.querySelector('[data-testid="apply-selected"] button').click();
+      await settle();
+
+      expect(fixture.componentInstance.bulkAccountId()).toBeNull();
+      expect(store.items()[0].accountId).toBe(1);
+    },
+  );
+
+  it.skipIf(/jsdom/i.test(navigator.userAgent))(
+    'should keep every file control inside a 375px viewport',
+    async () => {
+      const { page } = await import('vitest/browser');
+      await page.viewport(375, 812);
+      document.body.appendChild(fixture.nativeElement);
+      await addFiles('capone-2026-01.csv');
+
+      const row = rowFor('capone-2026-01.csv');
+      const controls = [
+        ...Array.from(row.querySelectorAll<HTMLElement>('p-select')),
+        row.querySelector<HTMLElement>('[data-testid="remove-file"]')!,
+      ];
+      expect(controls.length).toBe(3);
+      for (const el of controls) {
+        const box = el.getBoundingClientRect();
+        expect(box.width).toBeGreaterThan(0);
+        expect(box.left).toBeGreaterThanOrEqual(0);
+        expect(box.right).toBeLessThanOrEqual(375);
+      }
+      expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(375);
+      await page.viewport(1280, 800);
+    },
+  );
 
   it('should select and clear every row with select-all', async () => {
     await addFiles('capone-2026-01.csv', 'discover-2026-02.csv');
@@ -256,9 +319,8 @@ describe('CsvImportFilesStepComponent', () => {
   it('should disable the controls while a preview is running', async () => {
     await addFiles('capone-2026-01.csv');
     void store.previewAll();
-    await vi_waitForPreviewing();
+    await vi.waitFor(() => expect(store.previewing()).toBe(true));
     await settle();
-    expect(store.previewing()).toBe(true);
 
     const row = rowFor('capone-2026-01.csv');
     expect(row.querySelector<HTMLButtonElement>('[data-testid="remove-file"]')!.disabled).toBe(
