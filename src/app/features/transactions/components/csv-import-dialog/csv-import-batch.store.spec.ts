@@ -1,0 +1,707 @@
+import { TestBed } from '@angular/core/testing';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Observable, of, Subject, throwError } from 'rxjs';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { BatchFile, CsvImportBatchStore } from './csv-import-batch.store';
+import { TransactionImportService } from '@features/transactions/services/transaction-import.service';
+import { Account, BankName } from '@models/account.model';
+import {
+  FileImportResult,
+  SaveTransactionRequest,
+  TransactionPreview,
+  TransactionType,
+} from '@models/transaction.model';
+import { Category } from '@models/category.model';
+import { Merchant } from '@models/merchant.model';
+
+function account(id: number, bank: BankName): Account {
+  return { id, bank, name: `Account ${id}` } as Account;
+}
+
+function csv(name: string, content = 'Date,Description,Amount\n'): File {
+  return new File([content], name, { type: 'text/csv' });
+}
+
+function category(id: number, name: string): Category {
+  return { id, name } as Category;
+}
+
+function merchant(id: number, name: string): Merchant {
+  return { id, name } as Merchant;
+}
+
+function row(overrides: Partial<TransactionPreview> = {}): TransactionPreview {
+  return {
+    date: '2026-01-05T00:00:00Z',
+    postDate: '2026-01-06T00:00:00Z',
+    description: 'COFFEE SHOP',
+    amount: 4.5,
+    type: TransactionType.EXPENSE,
+    suggestedCategory: null,
+    suggestedMerchant: null,
+    duplicate: false,
+    ...overrides,
+  };
+}
+
+const ACCOUNTS: Account[] = [
+  account(1, BankName.CAPITAL_ONE),
+  account(2, BankName.DISCOVER),
+  account(3, BankName.SYNOVUS),
+];
+
+describe('CsvImportBatchStore', () => {
+  let store: CsvImportBatchStore;
+  /** Preview response per file name; an HttpErrorResponse makes that upload fail. */
+  let previews: Record<string, TransactionPreview[] | HttpErrorResponse>;
+  let alreadyImported: { accountId: number; fileHash: string }[];
+
+  const importService = {
+    uploadCsv: vi.fn(),
+    calculateFileHash: vi.fn(),
+    checkAlreadyImported: vi.fn(),
+    saveBulkTransactions: vi.fn(),
+  };
+
+  function fileByName(name: string): BatchFile {
+    const found: BatchFile | undefined = store.items().find((f: BatchFile) => f.file.name === name);
+    if (!found) throw new Error(`no file ${name}`);
+    return found;
+  }
+
+  function requestsSent(callIndex = 0): SaveTransactionRequest[] {
+    return importService.saveBulkTransactions.mock.calls[callIndex][0] as SaveTransactionRequest[];
+  }
+
+  function imported(fileName: string, savedCount = 1): FileImportResult {
+    return { fileName, status: 'IMPORTED', savedCount, duplicateRowCount: 0, error: null };
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    previews = {};
+    alreadyImported = [];
+    importService.uploadCsv.mockImplementation(
+      (_accountId: number, file: File): Observable<TransactionPreview[]> => {
+        const response: TransactionPreview[] | HttpErrorResponse | undefined = previews[file.name];
+        if (response instanceof HttpErrorResponse) return throwError(() => response);
+        return of(response ?? []);
+      },
+    );
+    importService.calculateFileHash.mockImplementation(
+      async (file: File): Promise<string> => `hash-${file.name}`,
+    );
+    importService.checkAlreadyImported.mockImplementation(() => of(alreadyImported));
+    importService.saveBulkTransactions.mockImplementation((requests: SaveTransactionRequest[]) =>
+      of(requests.map((r: SaveTransactionRequest) => imported(r.fileName, r.transactions.length))),
+    );
+
+    TestBed.configureTestingModule({
+      providers: [
+        CsvImportBatchStore,
+        { provide: TransactionImportService, useValue: importService },
+      ],
+    });
+    store = TestBed.inject(CsvImportBatchStore);
+    store.setAccounts(ACCOUNTS);
+  });
+
+  describe('adding files', () => {
+    it('keeps one entry when the same name and size is added twice', () => {
+      store.addFiles([csv('capone-2026-01.csv'), csv('capone-2026-01.csv')]);
+      store.addFiles([csv('capone-2026-01.csv')]);
+
+      expect(store.items().length).toBe(1);
+    });
+
+    it('keeps both when the name matches but the size differs', () => {
+      store.addFiles([csv('capone-2026-01.csv', 'a'), csv('capone-2026-01.csv', 'abc')]);
+
+      expect(store.items().length).toBe(2);
+    });
+
+    it('infers account, bank and month from the file name', () => {
+      store.addFiles([csv('capone-2026-01.csv'), csv('Synvous-2026-07.csv')]);
+
+      expect(fileByName('capone-2026-01.csv')).toMatchObject({
+        accountId: 1,
+        bankName: BankName.CAPITAL_ONE,
+        statementMonth: '2026-01',
+        matchReason: 'matched',
+        status: 'pending',
+      });
+      expect(fileByName('Synvous-2026-07.csv')).toMatchObject({
+        accountId: null,
+        bankName: null,
+        statementMonth: null,
+        matchReason: 'unrecognised-name',
+      });
+    });
+
+    it('removes a file by id', () => {
+      store.addFiles([csv('capone-2026-01.csv'), csv('discover-2026-01.csv')]);
+
+      store.removeFile(fileByName('capone-2026-01.csv').id);
+
+      expect(store.items().map((f: BatchFile) => f.file.name)).toEqual(['discover-2026-01.csv']);
+    });
+  });
+
+  describe('account and bank assignment', () => {
+    it('cannot preview until every file has an account and a bank', () => {
+      store.addFiles([csv('capone-2026-01.csv'), csv('statement.csv')]);
+      expect(store.canPreview()).toBe(false);
+
+      const id: string = fileByName('statement.csv').id;
+      store.setAccount(id, 2);
+      store.setBank(id, BankName.DISCOVER);
+
+      expect(store.canPreview()).toBe(true);
+    });
+
+    it('cannot preview an empty batch', () => {
+      expect(store.canPreview()).toBe(false);
+    });
+
+    it('applies an account and bank to only the selected files', () => {
+      store.addFiles([csv('a.csv'), csv('b.csv'), csv('c.csv')]);
+      const ids: string[] = [fileByName('a.csv').id, fileByName('b.csv').id];
+
+      store.applyToSelected(ids, 3, BankName.SYNOVUS);
+
+      expect(fileByName('a.csv')).toMatchObject({ accountId: 3, bankName: BankName.SYNOVUS });
+      expect(fileByName('b.csv')).toMatchObject({ accountId: 3, bankName: BankName.SYNOVUS });
+      expect(fileByName('c.csv')).toMatchObject({ accountId: null, bankName: null });
+    });
+
+    it('leaves the bank alone when applying only an account', () => {
+      store.addFiles([csv('capone-2026-01.csv')]);
+      const id: string = fileByName('capone-2026-01.csv').id;
+
+      store.applyToSelected([id], 2, null);
+
+      expect(fileByName('capone-2026-01.csv')).toMatchObject({
+        accountId: 2,
+        bankName: BankName.CAPITAL_ONE,
+      });
+    });
+  });
+
+  describe('preview', () => {
+    it('builds review rows with prefilled merchant and category', async () => {
+      const groceries: Category = category(10, 'Groceries');
+      const shop: Merchant = merchant(20, 'Corner Shop');
+      previews['capone-2026-01.csv'] = [
+        row({ description: 'CORNER SHOP', suggestedCategory: groceries, suggestedMerchant: shop }),
+        row({ description: 'UNKNOWN' }),
+        row({ description: 'SEEN BEFORE', duplicate: true }),
+      ];
+      store.addFiles([csv('capone-2026-01.csv')]);
+
+      await store.previewAll();
+
+      const file: BatchFile = fileByName('capone-2026-01.csv');
+      expect(file.status).toBe('ready');
+      expect(file.hash).toBe('hash-capone-2026-01.csv');
+      expect(file.rows.map((r) => [r.merchant, r.category, r.origin, r.skip])).toEqual([
+        [shop, groceries, 'rule', null],
+        [null, null, 'none', null],
+        [null, null, 'none', 'duplicate'],
+      ]);
+    });
+
+    it('keeps previewing other files when one fails, with the backend detail', async () => {
+      previews['capone-2026-01.csv'] = new HttpErrorResponse({
+        status: 400,
+        error: { detail: 'Unexpected header row' },
+      });
+      previews['discover-2026-01.csv'] = [row()];
+      store.addFiles([csv('capone-2026-01.csv'), csv('discover-2026-01.csv')]);
+
+      await store.previewAll();
+
+      expect(fileByName('capone-2026-01.csv')).toMatchObject({
+        status: 'failed',
+        error: expect.stringContaining('Unexpected header row'),
+      });
+      expect(fileByName('discover-2026-01.csv').status).toBe('ready');
+    });
+
+    it('rejects Excel files without uploading them', async () => {
+      store.addFiles([csv('capone-2026-01.xlsx')]);
+      store.applyToSelected([fileByName('capone-2026-01.xlsx').id], 1, BankName.CAPITAL_ONE);
+
+      await store.previewAll();
+
+      const file: BatchFile = fileByName('capone-2026-01.xlsx');
+      expect(file.status).toBe('failed');
+      expect(file.error).toContain('.xls');
+      expect(importService.uploadCsv).not.toHaveBeenCalled();
+    });
+
+    it('uploads at most four files at a time', async () => {
+      const pending: Subject<TransactionPreview[]>[] = [];
+      importService.uploadCsv.mockImplementation(() => {
+        const subject = new Subject<TransactionPreview[]>();
+        pending.push(subject);
+        return subject;
+      });
+      store.addFiles([1, 2, 3, 4, 5, 6].map((m: number) => csv(`capone-2026-0${m}.csv`)));
+
+      const done: Promise<void> = store.previewAll();
+      await vi.waitFor(() => expect(importService.uploadCsv).toHaveBeenCalledTimes(4));
+
+      pending[0].next([row()]);
+      pending[0].complete();
+      await vi.waitFor(() => expect(importService.uploadCsv).toHaveBeenCalledTimes(5));
+      expect(store.items().filter((f: BatchFile) => f.status === 'previewing').length).toBe(4);
+
+      for (let i = 1; i < 6; i++) {
+        await vi.waitFor(() => expect(pending.length).toBeGreaterThan(i));
+        pending[i].next([row()]);
+        pending[i].complete();
+      }
+      await done;
+      expect(store.items().every((f: BatchFile) => f.status === 'ready')).toBe(true);
+    });
+
+    it('stops starting uploads when cancelled and leaves unfinished files pending', async () => {
+      importService.uploadCsv.mockImplementation(() => new Subject<TransactionPreview[]>());
+      store.addFiles([1, 2, 3, 4, 5, 6].map((m: number) => csv(`capone-2026-0${m}.csv`)));
+
+      const done: Promise<void> = store.previewAll();
+      await vi.waitFor(() => expect(importService.uploadCsv).toHaveBeenCalledTimes(4));
+      store.cancelPreview();
+      await done;
+
+      expect(importService.uploadCsv).toHaveBeenCalledTimes(4);
+      expect(store.items().every((f: BatchFile) => f.status === 'pending')).toBe(true);
+      expect(store.previewing()).toBe(false);
+    });
+
+    it('checks already-imported files once for the batch and skips their rows', async () => {
+      previews['capone-2026-01.csv'] = [row(), row({ description: 'OTHER' })];
+      previews['discover-2026-01.csv'] = [row()];
+      alreadyImported = [{ accountId: 1, fileHash: 'hash-capone-2026-01.csv' }];
+      store.addFiles([csv('capone-2026-01.csv'), csv('discover-2026-01.csv')]);
+
+      await store.previewAll();
+
+      expect(importService.checkAlreadyImported).toHaveBeenCalledTimes(1);
+      expect(importService.checkAlreadyImported).toHaveBeenCalledWith([
+        { accountId: 1, fileHash: 'hash-capone-2026-01.csv' },
+        { accountId: 2, fileHash: 'hash-discover-2026-01.csv' },
+      ]);
+      const done: BatchFile = fileByName('capone-2026-01.csv');
+      expect(done.alreadyImported).toBe(true);
+      expect(done.rows.map((r) => r.skip)).toEqual([
+        'file-already-imported',
+        'file-already-imported',
+      ]);
+      expect(fileByName('discover-2026-01.csv').alreadyImported).toBe(false);
+    });
+
+    it('marks a later file row as duplicate of an earlier file for the same account', async () => {
+      const shared: TransactionPreview = row({ description: 'RENT', amount: 1200.0 });
+      previews['capone-2026-01.csv'] = [shared];
+      previews['capone-2026-02.csv'] = [shared, row({ description: 'NEW' })];
+      previews['discover-2026-02.csv'] = [shared];
+      store.addFiles([
+        csv('capone-2026-01.csv'),
+        csv('capone-2026-02.csv'),
+        csv('discover-2026-02.csv'),
+      ]);
+
+      await store.previewAll();
+
+      expect(fileByName('capone-2026-01.csv').rows[0].skip).toBeNull();
+      expect(fileByName('capone-2026-02.csv').rows.map((r) => r.skip)).toEqual(['duplicate', null]);
+      expect(fileByName('discover-2026-02.csv').rows[0].skip).toBeNull();
+    });
+
+    it('clears a cross-file duplicate when the earlier file is removed', async () => {
+      previews['capone-2026-01.csv'] = [row()];
+      previews['capone-2026-02.csv'] = [row()];
+      store.addFiles([csv('capone-2026-01.csv'), csv('capone-2026-02.csv')]);
+      await store.previewAll();
+
+      store.removeFile(fileByName('capone-2026-01.csv').id);
+
+      expect(fileByName('capone-2026-02.csv').rows[0].skip).toBeNull();
+    });
+  });
+
+  describe('editing rows', () => {
+    it('changes exactly the edited row even when descriptions are identical', async () => {
+      const dining: Category = category(11, 'Dining');
+      previews['capone-2026-01.csv'] = [row({ amount: 1 }), row({ amount: 2 }), row({ amount: 3 })];
+      store.addFiles([csv('capone-2026-01.csv')]);
+      await store.previewAll();
+      const before: BatchFile = fileByName('capone-2026-01.csv');
+
+      store.editRow(before.id, 1, { category: dining });
+
+      const after: BatchFile = fileByName('capone-2026-01.csv');
+      expect(after.rows[1]).toMatchObject({ category: dining, merchant: null, origin: 'edited' });
+      expect(after.rows[0]).toEqual(before.rows[0]);
+      expect(after.rows[2]).toEqual(before.rows[2]);
+    });
+
+    it('changes only the merchant when only the merchant is patched', async () => {
+      const groceries: Category = category(10, 'Groceries');
+      const shop: Merchant = merchant(20, 'Shop');
+      previews['capone-2026-01.csv'] = [row({ suggestedCategory: groceries })];
+      store.addFiles([csv('capone-2026-01.csv')]);
+      await store.previewAll();
+
+      store.editRow(fileByName('capone-2026-01.csv').id, 0, { merchant: shop });
+
+      expect(fileByName('capone-2026-01.csv').rows[0]).toMatchObject({
+        merchant: shop,
+        category: groceries,
+        origin: 'edited',
+      });
+    });
+  });
+
+  describe('going back and changing a file', () => {
+    it('re-previews only the changed file, keeping edits on the others', async () => {
+      const dining: Category = category(11, 'Dining');
+      previews['capone-2026-01.csv'] = [row()];
+      previews['discover-2026-01.csv'] = [row({ description: 'GAS' })];
+      store.addFiles([csv('capone-2026-01.csv'), csv('discover-2026-01.csv')]);
+      await store.previewAll();
+      store.editRow(fileByName('capone-2026-01.csv').id, 0, { category: dining });
+      store.editRow(fileByName('discover-2026-01.csv').id, 0, { category: dining });
+
+      store.setAccount(fileByName('capone-2026-01.csv').id, 3);
+
+      expect(fileByName('capone-2026-01.csv')).toMatchObject({
+        status: 'pending',
+        rows: [],
+        discardedEdits: true,
+      });
+      expect(fileByName('discover-2026-01.csv').rows[0].origin).toBe('edited');
+
+      importService.uploadCsv.mockClear();
+      await store.previewAll();
+
+      expect(importService.uploadCsv).toHaveBeenCalledTimes(1);
+      expect(importService.uploadCsv.mock.calls[0][0]).toBe(3);
+      expect(fileByName('capone-2026-01.csv').status).toBe('ready');
+      expect(fileByName('discover-2026-01.csv').rows[0]).toMatchObject({
+        category: dining,
+        origin: 'edited',
+      });
+    });
+
+    it('does not flag discarded edits when the changed file had none', async () => {
+      store.addFiles([csv('capone-2026-01.csv')]);
+      await store.previewAll();
+
+      store.setBank(fileByName('capone-2026-01.csv').id, BankName.UNIVERSAL);
+
+      expect(fileByName('capone-2026-01.csv')).toMatchObject({
+        status: 'pending',
+        discardedEdits: false,
+      });
+    });
+
+    it('keeps rows when the same account is chosen again', async () => {
+      previews['capone-2026-01.csv'] = [row()];
+      store.addFiles([csv('capone-2026-01.csv')]);
+      await store.previewAll();
+
+      store.setAccount(fileByName('capone-2026-01.csv').id, 1);
+
+      expect(fileByName('capone-2026-01.csv')).toMatchObject({ status: 'ready' });
+      expect(fileByName('capone-2026-01.csv').rows.length).toBe(1);
+    });
+  });
+
+  describe('commit', () => {
+    it('sends only ready files with their committable rows and reviewed values', async () => {
+      const dining: Category = category(11, 'Dining');
+      const shop: Merchant = merchant(20, 'Shop');
+      previews['capone-2026-01.csv'] = [
+        row({ amount: -12.5, description: 'LUNCH' }),
+        row({ description: 'OLD', duplicate: true }),
+      ];
+      previews['discover-2026-01.csv'] = new HttpErrorResponse({ status: 400 });
+      store.addFiles([csv('capone-2026-01.csv'), csv('discover-2026-01.csv')]);
+      await store.previewAll();
+      store.editRow(fileByName('capone-2026-01.csv').id, 0, { merchant: shop, category: dining });
+
+      await store.commit();
+
+      expect(importService.saveBulkTransactions).toHaveBeenCalledTimes(1);
+      expect(requestsSent()).toEqual([
+        {
+          fileName: 'capone-2026-01.csv',
+          fileHash: 'hash-capone-2026-01.csv',
+          accountId: 1,
+          transactions: [
+            {
+              date: '2026-01-05T00:00:00Z',
+              postDate: '2026-01-06T00:00:00Z',
+              type: TransactionType.EXPENSE,
+              amount: 12.5,
+              description: 'LUNCH',
+              merchant: shop,
+              category: dining,
+            },
+          ],
+        },
+      ]);
+      expect(fileByName('capone-2026-01.csv').status).toBe('committed');
+      expect(fileByName('discover-2026-01.csv').status).toBe('failed');
+    });
+
+    it('reports header-only, all-duplicate and already-imported files as skipped without sending them', async () => {
+      previews['capone-2026-01.csv'] = [];
+      previews['capone-2026-02.csv'] = [row({ duplicate: true })];
+      previews['discover-2026-01.csv'] = [row()];
+      previews['synovus-2026-01.csv'] = [row({ description: 'PAY' })];
+      alreadyImported = [{ accountId: 2, fileHash: 'hash-discover-2026-01.csv' }];
+      store.addFiles([
+        csv('capone-2026-01.csv'),
+        csv('capone-2026-02.csv'),
+        csv('discover-2026-01.csv'),
+        csv('synovus-2026-01.csv'),
+      ]);
+      await store.previewAll();
+
+      await store.commit();
+
+      expect(requestsSent().map((r: SaveTransactionRequest) => r.fileName)).toEqual([
+        'synovus-2026-01.csv',
+      ]);
+      expect(fileByName('capone-2026-01.csv')).toMatchObject({
+        status: 'skipped',
+        skipReason: 'no-rows',
+      });
+      expect(fileByName('capone-2026-02.csv')).toMatchObject({
+        status: 'skipped',
+        skipReason: 'all-duplicates',
+      });
+      expect(fileByName('discover-2026-01.csv')).toMatchObject({
+        status: 'skipped',
+        skipReason: 'already-imported',
+      });
+      expect(fileByName('synovus-2026-01.csv').status).toBe('committed');
+    });
+
+    it('does not call the backend when every file is excluded', async () => {
+      previews['capone-2026-01.csv'] = [];
+      store.addFiles([csv('capone-2026-01.csv')]);
+      await store.previewAll();
+
+      const results: FileImportResult[] = await store.commit();
+
+      expect(results).toEqual([]);
+      expect(importService.saveBulkTransactions).not.toHaveBeenCalled();
+      expect(fileByName('capone-2026-01.csv').status).toBe('skipped');
+    });
+
+    it('maps each backend result back to its file', async () => {
+      previews['capone-2026-01.csv'] = [row()];
+      previews['discover-2026-01.csv'] = [row()];
+      previews['synovus-2026-01.csv'] = [row()];
+      store.addFiles([
+        csv('capone-2026-01.csv'),
+        csv('discover-2026-01.csv'),
+        csv('synovus-2026-01.csv'),
+      ]);
+      await store.previewAll();
+      const results: FileImportResult[] = [
+        imported('capone-2026-01.csv'),
+        {
+          fileName: 'discover-2026-01.csv',
+          status: 'SKIPPED_ALREADY_IMPORTED',
+          savedCount: 0,
+          duplicateRowCount: 0,
+          error: null,
+        },
+        // the backend may omit `error` entirely
+        {
+          fileName: 'synovus-2026-01.csv',
+          status: 'FAILED',
+          savedCount: 0,
+          duplicateRowCount: 0,
+          error: 'Merchant not found.',
+        },
+      ];
+      importService.saveBulkTransactions.mockReturnValue(of(results));
+
+      const returned: FileImportResult[] = await store.commit();
+
+      expect(returned).toEqual(results);
+      expect(fileByName('capone-2026-01.csv')).toMatchObject({
+        status: 'committed',
+        result: results[0],
+      });
+      expect(fileByName('discover-2026-01.csv')).toMatchObject({
+        status: 'skipped',
+        skipReason: 'already-imported',
+      });
+      expect(fileByName('synovus-2026-01.csv')).toMatchObject({
+        status: 'failed',
+        error: 'Merchant not found.',
+      });
+    });
+
+    it('gives a failed result a message even when the backend omits the error', async () => {
+      previews['capone-2026-01.csv'] = [row()];
+      store.addFiles([csv('capone-2026-01.csv')]);
+      await store.previewAll();
+      importService.saveBulkTransactions.mockReturnValue(
+        of([
+          { fileName: 'capone-2026-01.csv', status: 'FAILED', savedCount: 0, duplicateRowCount: 0 },
+        ]),
+      );
+
+      await store.commit();
+
+      expect(fileByName('capone-2026-01.csv').status).toBe('failed');
+      expect(fileByName('capone-2026-01.csv').error).toEqual(expect.any(String));
+    });
+
+    it('marks the sent files failed when the whole request fails, and retries only those', async () => {
+      previews['capone-2026-01.csv'] = [row()];
+      previews['discover-2026-01.csv'] = [row()];
+      store.addFiles([csv('capone-2026-01.csv'), csv('discover-2026-01.csv')]);
+      await store.previewAll();
+      importService.saveBulkTransactions.mockReturnValueOnce(
+        throwError(() => new HttpErrorResponse({ status: 500 })),
+      );
+
+      await store.commit();
+
+      expect(store.items().map((f: BatchFile) => f.status)).toEqual(['failed', 'failed']);
+      expect(fileByName('capone-2026-01.csv').error).toEqual(expect.any(String));
+
+      importService.saveBulkTransactions.mockReturnValueOnce(
+        of([
+          imported('capone-2026-01.csv'),
+          {
+            fileName: 'discover-2026-01.csv',
+            status: 'FAILED',
+            savedCount: 0,
+            duplicateRowCount: 0,
+            error: 'Merchant not found.',
+          },
+        ]),
+      );
+      await store.retryFailed();
+      expect(fileByName('capone-2026-01.csv').status).toBe('committed');
+
+      await store.retryFailed();
+
+      expect(importService.saveBulkTransactions).toHaveBeenCalledTimes(3);
+      expect(requestsSent(2).map((r: SaveTransactionRequest) => r.fileName)).toEqual([
+        'discover-2026-01.csv',
+      ]);
+      expect(fileByName('discover-2026-01.csv').status).toBe('committed');
+    });
+
+    it('does not send already committed files again', async () => {
+      previews['capone-2026-01.csv'] = [row()];
+      store.addFiles([csv('capone-2026-01.csv')]);
+      await store.previewAll();
+      await store.commit();
+
+      await store.commit();
+      await store.retryFailed();
+
+      expect(importService.saveBulkTransactions).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not retry files whose preview failed', async () => {
+      previews['capone-2026-01.csv'] = new HttpErrorResponse({ status: 400 });
+      store.addFiles([csv('capone-2026-01.csv')]);
+      await store.previewAll();
+
+      await store.retryFailed();
+
+      expect(importService.saveBulkTransactions).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('canCommit', () => {
+    it('is false before preview and true once a file is ready', async () => {
+      previews['capone-2026-01.csv'] = [row()];
+      store.addFiles([csv('capone-2026-01.csv')]);
+      expect(store.canCommit()).toBe(false);
+
+      await store.previewAll();
+
+      expect(store.canCommit()).toBe(true);
+    });
+
+    it('is false after everything is committed', async () => {
+      previews['capone-2026-01.csv'] = [row()];
+      store.addFiles([csv('capone-2026-01.csv')]);
+      await store.previewAll();
+      await store.commit();
+
+      expect(store.canCommit()).toBe(false);
+    });
+
+    it('is false while a file still waits for preview', async () => {
+      previews['capone-2026-01.csv'] = [row()];
+      store.addFiles([csv('capone-2026-01.csv')]);
+      await store.previewAll();
+      store.addFiles([csv('discover-2026-01.csv')]);
+
+      expect(store.canCommit()).toBe(false);
+    });
+  });
+
+  describe('summary', () => {
+    it('counts files, the month span, missing months and files needing an account', () => {
+      store.addFiles([
+        csv('capone-2026-01.csv'),
+        csv('capone-2026-02.csv'),
+        csv('capone-2026-05.csv'),
+        csv('discover-2026-02.csv'),
+        csv('Synvous-2026-07.csv'),
+        csv('standard-2026-03.csv'),
+      ]);
+
+      expect(store.summary()).toEqual({
+        fileCount: 6,
+        firstMonth: '2026-01',
+        lastMonth: '2026-05',
+        missingMonths: ['2026-04'],
+        needsAccountCount: 2,
+      });
+    });
+
+    it('spans a year boundary', () => {
+      store.addFiles([csv('capone-2025-11.csv'), csv('capone-2026-02.csv')]);
+
+      expect(store.summary().missingMonths).toEqual(['2025-12', '2026-01']);
+    });
+
+    it('is empty for an empty batch', () => {
+      expect(store.summary()).toEqual({
+        fileCount: 0,
+        firstMonth: null,
+        lastMonth: null,
+        missingMonths: [],
+        needsAccountCount: 0,
+      });
+    });
+  });
+
+  it('reset clears the batch', async () => {
+    store.addFiles([csv('capone-2026-01.csv')]);
+    await store.previewAll();
+
+    store.reset();
+
+    expect(store.items()).toEqual([]);
+    expect(store.canPreview()).toBe(false);
+  });
+});
