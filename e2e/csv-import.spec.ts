@@ -99,12 +99,15 @@ async function newAccount(page: Page): Promise<{ id: number; name: string }> {
 }
 
 /** A parent category and a subcategory under it; only a subcategory can go on a transaction. */
-async function newSubcategory(page: Page): Promise<{ id: number; name: string }> {
+async function newSubcategory(
+  page: Page,
+): Promise<{ id: number; name: string; optionName: string }> {
   const parent = await createTestCategory(page, 'E2E Import Parent');
   made.categoryIds.push(parent.id);
   const child = await createTestCategory(page, 'E2E Import Category', parent.id);
   made.categoryIds.push(child.id);
-  return child;
+  // the dropdown lists a subcategory as "<Parent> / <Child>" (the bare parent is a separate, non-selectable entry)
+  return { ...child, optionName: `${parent.name} / ${child.name}` };
 }
 
 async function openImportDialog(page: Page): Promise<Locator> {
@@ -139,7 +142,7 @@ async function ensureAccount(
 
 /** Ledger rows for a description, over all time (the page opens on This month; the fixtures are older). */
 async function ledgerRows(page: Page, description: string): Promise<Locator> {
-  await page.getByRole('button', { name: 'All time' }).click();
+  await page.getByRole('button', { name: 'All time', exact: true }).click();
   await page.getByRole('searchbox').fill(description);
   await expect(page.getByRole('cell', { name: description }).first()).toBeVisible();
   return page.getByRole('row').filter({ hasText: description });
@@ -189,7 +192,7 @@ test.describe('CSV import dialog -> ledger', () => {
       const coffee = dialog.getByTestId('review-row').filter({ hasText: files.coffee });
       await expect(coffee).toHaveCount(2);
       await coffee.first().getByTestId('row-category').getByRole('combobox').click();
-      await page.getByRole('option', { name: category.name, exact: true }).click();
+      await page.getByRole('option', { name: category.optionName, exact: true }).click();
 
       // row-local: the first row changed, its twin kept what it had
       await expect(coffee.first().getByTestId('row-status')).toHaveText('Edited');
