@@ -3,7 +3,8 @@ import { APIRequestContext, BrowserContext, Page } from '@playwright/test';
 const API_URL = process.env['E2E_API_URL'] ?? 'http://localhost:8080/api/v1';
 
 /** What a spec can create and that the cleanup knows how to delete. */
-export type CreatedKind = 'transaction' | 'budget' | 'tag' | 'category' | 'merchant' | 'account';
+export type CreatedKind =
+  'transaction' | 'budget' | 'tag' | 'category' | 'merchant' | 'account' | 'rule';
 
 interface Created {
   kind: CreatedKind;
@@ -51,7 +52,7 @@ async function remove(
 
 /**
  * Deletes what a test created, in an order the API accepts: every transaction on a tracked account
- * (and each tracked transaction) first, then budgets, tags, categories (children before their
+ * (and each tracked transaction) first, then category rules, budgets, tags, categories (children before their
  * parents), merchants, and accounts last (an account with transactions is refused). Best effort: a
  * failure here must never hide the test's own result, so every call swallows its error.
  */
@@ -86,6 +87,8 @@ export async function cleanupTracked(
     }
   }
 
+  // a rule references its category, so rules go before categories
+  for (const id of ids('rule')) await remove(request, headers, `category-rules/${id}`);
   for (const id of ids('budget')) await remove(request, headers, `budgets/${id}`);
   for (const id of ids('tag')) await remove(request, headers, `tags/${id}`);
   // a category created later is a child of one created earlier, so delete newest first
@@ -116,4 +119,21 @@ export async function trackByName(
   const rows = Array.isArray(body) ? body : body.content;
   const match = rows.find((row) => row.name === name);
   if (match) track(page, kind, match.id);
+}
+
+/**
+ * Like {@link trackByName}, for a category rule the test made through the UI: finds it through the
+ * API by one of its keywords (which must embed a unique token) and tracks its id. Call it right after
+ * the UI step that saves the rule, before anything that could fail.
+ */
+export async function trackRuleByKeyword(page: Page, keyword: string): Promise<void> {
+  const token = await sharedUserToken(page.context());
+  if (!token) return;
+  const response = await page.request
+    .get(`${API_URL}/category-rules`, { headers: { Authorization: `Bearer ${token}` } })
+    .catch(() => null);
+  if (!response?.ok()) return;
+  const rules = (await response.json()) as { id: number; keywords: string[] }[];
+  for (const rule of rules.filter((r) => r.keywords.includes(keyword)))
+    track(page, 'rule', rule.id);
 }

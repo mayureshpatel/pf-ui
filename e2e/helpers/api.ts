@@ -422,3 +422,39 @@ export async function deleteTestMerchant(page: Page, merchantId: number): Promis
     .delete(`${API_URL}/merchants/${merchantId}`, {headers: {Authorization: `Bearer ${token}`}})
     .catch(() => undefined);
 }
+
+/**
+ * Creates a category rule via the real API and tracks it for cleanup (it is deleted before its
+ * category). `keyword` should embed a unique token so previews only ever match this test's data.
+ * The category must be a subcategory.
+ */
+export async function createTestCategoryRule(
+  page: Page,
+  categoryId: number,
+  keyword: string,
+  priority: number,
+  options?: {matchType?: 'AND' | 'OR'; minAmount?: number; maxAmount?: number}
+): Promise<number> {
+  const token = await getAuthToken(page);
+  const userId = await getAuthenticatedUserId(page);
+
+  const response = await page.request.post(`${API_URL}/category-rules`, {
+    headers: {Authorization: `Bearer ${token}`},
+    data: {
+      userId,
+      categoryId,
+      keywords: [keyword],
+      matchType: options?.matchType ?? 'OR',
+      priority,
+      minAmount: options?.minAmount,
+      maxAmount: options?.maxAmount
+    }
+  });
+
+  if (!response.ok()) {
+    throw new Error(`Failed to create test category rule: ${response.status()} ${await response.text()}`);
+  }
+  const id = (await response.json()) as number;
+  track(page, 'rule', id);
+  return id;
+}
