@@ -13,7 +13,7 @@ import {
   untracked,
   WritableSignal,
 } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import {
   AbstractControl,
   FormControl,
@@ -31,6 +31,7 @@ import {
   CategoryRuleCreateRequest,
   CategoryRuleUpdateRequest,
   MatchType,
+  RuleDraft,
 } from '@models/category-rule.model';
 import {
   amountRangeError,
@@ -80,11 +81,18 @@ export class RuleEditFormComponent implements OnInit {
   /** Categories grouped under their parents, for the category choice. */
   readonly groups: InputSignal<CategoryGroup[]> = input.required<CategoryGroup[]>();
   readonly saving: InputSignal<boolean> = input<boolean>(false);
+  /** Prefills the keywords of a new rule (ignored when `rule` is set); it does not make the form dirty. */
+  readonly initialKeyword: InputSignal<string> = input<string>('');
 
   readonly save: OutputEmitterRef<RuleCreateValue | CategoryRuleUpdateRequest> = output<
     RuleCreateValue | CategoryRuleUpdateRequest
   >();
   readonly remove: OutputEmitterRef<void> = output<void>();
+  /**
+   * The rule as drafted so far (category aside), for the match list: on init and whenever keywords,
+   * match type, priority or range change. Null while there is no keyword. Repeats are not re-emitted.
+   */
+  readonly draftChange: OutputEmitterRef<RuleDraft | null> = output<RuleDraft | null>();
 
   /** A message the form itself cannot express, such as the server's refusal. */
   readonly errorMessage: WritableSignal<string | null> = signal<string | null>(null);
@@ -183,7 +191,10 @@ export class RuleEditFormComponent implements OnInit {
     return touched ? amountRangeError(minAmount.value, maxAmount.value) : null;
   });
 
+  private lastDraft: string | null = null;
+
   constructor() {
+    this.form.valueChanges.pipe(takeUntilDestroyed()).subscribe((): void => this.emitDraft());
     effect((): void => {
       const key: string = this.formKey();
       const content: string = this.contentKey();
@@ -212,13 +223,35 @@ export class RuleEditFormComponent implements OnInit {
     this.errorMessage.set(null);
     const rule: CategoryRule | null = this.rule();
     this.form.reset({
-      keywordsInput: rule ? joinKeywords(rule.keywords) : '',
+      keywordsInput: rule ? joinKeywords(rule.keywords) : this.initialKeyword(),
       matchType: rule?.matchType ?? 'OR',
       category: rule ? this.categoryOf(rule) : null,
       priority: rule?.priority ?? 0,
       minAmount: rule?.minAmount ?? null,
       maxAmount: rule?.maxAmount ?? null,
     });
+    this.emitDraft();
+  }
+
+  /** Emits the current draft unless it is the one emitted last. */
+  private emitDraft(): void {
+    const raw = this.form.getRawValue();
+    const keywords: string[] = parseKeywords(raw.keywordsInput);
+    const draft: RuleDraft | null =
+      keywords.length === 0
+        ? null
+        : {
+            ruleId: this.rule()?.id ?? null,
+            keywords,
+            matchType: raw.matchType,
+            priority: raw.priority ?? 0,
+            minAmount: raw.minAmount ?? null,
+            maxAmount: raw.maxAmount ?? null,
+          };
+    const key: string = JSON.stringify(draft);
+    if (key === this.lastDraft) return;
+    this.lastDraft = key;
+    this.draftChange.emit(draft);
   }
 
   /** The rule's category as the grouped list knows it (so the select shows it), else as the rule has it. */

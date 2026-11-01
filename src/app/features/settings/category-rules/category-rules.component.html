@@ -197,7 +197,9 @@
                 [saving]="saving()"
                 (save)="saveRule($event)"
                 (remove)="deleteSelected()"
+                (draftChange)="draft.set($event)"
               />
+              <app-rule-match-list class="mt-4 block" [draft]="draft()" />
             } @else {
               <p-skeleton height="8rem" borderRadius="1rem" />
             }
@@ -214,7 +216,9 @@
               [groups]="groups()"
               [saving]="saving()"
               (save)="saveRule($event)"
+              (draftChange)="draft.set($event)"
             />
+            <app-rule-match-list class="mt-4 block" [draft]="draft()" />
           }
         }
       </app-side-panel>

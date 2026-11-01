@@ -1,7 +1,7 @@
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Category, CategoryGroup } from '@models/category.model';
-import { CategoryRule } from '@models/category-rule.model';
+import { CategoryRule, RuleDraft } from '@models/category-rule.model';
 import { RuleEditFormComponent } from './rule-edit-form.component';
 
 const food = { id: 5, name: 'Food' } as Category;
@@ -23,17 +23,21 @@ describe('RuleEditFormComponent', () => {
   let component: RuleEditFormComponent;
   let saved: unknown[];
   let removed: number;
+  let drafts: (RuleDraft | null)[];
 
-  function render(current: CategoryRule | null = null, saving = false): void {
+  function render(current: CategoryRule | null = null, saving = false, initial = ''): void {
     fixture = TestBed.createComponent(RuleEditFormComponent);
     component = fixture.componentInstance;
     saved = [];
     removed = 0;
+    drafts = [];
+    component.draftChange.subscribe((d) => drafts.push(d));
     component.save.subscribe((v) => saved.push(v));
     component.remove.subscribe(() => removed++);
     fixture.componentRef.setInput('rule', current);
     fixture.componentRef.setInput('groups', groups);
     fixture.componentRef.setInput('saving', saving);
+    fixture.componentRef.setInput('initialKeyword', initial);
     fixture.detectChanges();
   }
 
@@ -335,5 +339,90 @@ describe('RuleEditFormComponent', () => {
       Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]
     ).find((b) => b.textContent?.includes('Delete rule'))!;
     expect(del.disabled).toBe(true);
+  });
+
+  describe('draft', () => {
+    const last = (): RuleDraft | null => drafts[drafts.length - 1];
+
+    it('should emit a draft as keywords, match type, priority and range change', () => {
+      // arrange
+      render();
+
+      // act
+      component.form.patchValue({ keywordsInput: ' costco , , gas ' });
+      component.form.patchValue({ matchType: 'AND' });
+      component.form.patchValue({ priority: 4 });
+      component.form.patchValue({ minAmount: 5, maxAmount: 50 });
+
+      // assert & verify
+      expect(last()).toEqual({
+        ruleId: null,
+        keywords: ['costco', 'gas'],
+        matchType: 'AND',
+        priority: 4,
+        minAmount: 5,
+        maxAmount: 50,
+      });
+    });
+
+    it('should emit null for an empty keyword list', () => {
+      // arrange
+      render();
+      component.form.patchValue({ keywordsInput: 'costco' });
+      expect(last()).not.toBeNull();
+
+      // act
+      component.form.patchValue({ keywordsInput: ' , ' });
+
+      // assert & verify
+      expect(last()).toBeNull();
+      expect(drafts[0]).toBeNull();
+    });
+
+    it('should prefill the keyword field for a new rule and ignore initialKeyword when editing', () => {
+      // act
+      render(null, false, 'COSTCO');
+
+      // assert & verify
+      expect(component.form.controls.keywordsInput.value).toBe('COSTCO');
+      expect(component.form.dirty).toBe(false);
+      expect(last()?.keywords).toEqual(['COSTCO']);
+
+      // act
+      render(rule, false, 'COSTCO');
+
+      // assert & verify
+      expect(component.form.controls.keywordsInput.value).toBe('whole foods, kroger');
+      expect(last()?.keywords).toEqual(['whole foods', 'kroger']);
+    });
+
+    it("should emit the existing rule's id when editing", () => {
+      // act
+      render(rule);
+
+      // assert & verify
+      expect(last()).toEqual({
+        ruleId: 9,
+        keywords: ['whole foods', 'kroger'],
+        matchType: 'AND',
+        priority: 3,
+        minAmount: 10,
+        maxAmount: 200,
+      });
+    });
+
+    it('should not emit duplicate consecutive drafts', () => {
+      // arrange
+      render();
+      component.form.patchValue({ keywordsInput: 'costco' });
+      const count = drafts.length;
+
+      // act -- same draft again, and a change that is not part of it
+      component.form.patchValue({ keywordsInput: ' costco ' });
+      component.form.patchValue({ category: groceries });
+
+      // assert & verify
+      expect(drafts).toHaveLength(count);
+    });
   });
 });

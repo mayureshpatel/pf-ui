@@ -97,6 +97,10 @@
         placeholder="No maximum"
       />
     </div>
+    <small class="col-span-2 text-muted-color">
+      The range compares the amount ignoring its sign, so $10 covers both a $10 charge and a $10
+      refund.
+    </small>
     @if (amountError(); as error) {
       <small class="col-span-2 text-rose-700 dark:text-rose-400">{{ error }}</small>
     }
