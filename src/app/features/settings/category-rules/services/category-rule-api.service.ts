@@ -7,6 +7,8 @@ import {
   CategoryRuleCreateRequest,
   CategoryRuleUpdateRequest,
   RuleChangePreview,
+  RuleDraft,
+  RuleMatchPreview,
 } from '@models/category-rule.model';
 import { AuthService } from '@core/auth/auth.service';
 import { SKIP_GENERIC_ERROR_TOAST } from '@core/auth/error.interceptor';
@@ -59,6 +61,28 @@ export class CategoryRuleApiService {
    */
   previewApply(): Observable<RuleChangePreview[]> {
     return this.http.get<RuleChangePreview[]>(`${this.apiUrl}/preview`, SKIP_TOAST_OPTIONS);
+  }
+
+  /**
+   * Previews which transactions a draft rule would match and what the engine would do with each.
+   * Read-only; nothing is saved.
+   * @param draft - The rule being drafted (`ruleId` is null for a new rule).
+   */
+  previewMatches(draft: RuleDraft): Observable<RuleMatchPreview> {
+    const body: RuleDraft = {
+      ruleId: draft.ruleId,
+      keywords: draft.keywords,
+      matchType: draft.matchType,
+      priority: draft.priority,
+      minAmount: draft.minAmount,
+      maxAmount: draft.maxAmount,
+    };
+
+    return this.http.post<RuleMatchPreview>(
+      `${this.apiUrl}/match-preview`,
+      body,
+      SKIP_TOAST_OPTIONS,
+    );
   }
 
   /**
