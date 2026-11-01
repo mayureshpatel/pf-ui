@@ -1,0 +1,620 @@
+import { signal } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { HttpErrorResponse } from '@angular/common/http';
+import { of, throwError } from 'rxjs';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import { CategoryApiService } from '@features/categories/services/category-api.service';
+import { MerchantApiService } from '@features/merchants/services/merchant-api.service';
+import { TransactionImportService } from '@features/transactions/services/transaction-import.service';
+import { Account, BankName } from '@models/account.model';
+import { Category, CategoryType } from '@models/category.model';
+import { Merchant } from '@models/merchant.model';
+import { TransactionPreview, TransactionType } from '@models/transaction.model';
+import {
+  BatchFile,
+  CsvImportBatchStore,
+  ReviewRow,
+  ReviewRowOrigin,
+} from './csv-import-batch.store';
+import { CsvImportReviewStepComponent } from './csv-import-review-step.component';
+
+const inBrowser = !/jsdom/i.test(navigator.userAgent);
+
+function category(id: number, name: string): Category {
+  return { id, userId: 1, name, type: CategoryType.EXPENSE, parent: null, icon: '', color: '' };
+}
+
+function merchant(id: number, name: string): Merchant {
+  return { id, userId: 1, name, city: null, state: null, postalCode: null, country: null };
+}
+
+const GROCERIES = category(1, 'Groceries');
+const SHOPPING = category(2, 'Shopping');
+const PHARMACY = category(3, 'Pharmacy');
+const WALGREENS = merchant(10, 'Walgreens');
+const KROGER = merchant(11, 'Kroger');
+
+function preview(
+  description: string,
+  overrides: Partial<TransactionPreview> = {},
+): TransactionPreview {
+  return {
+    date: '2026-01-05',
+    postDate: '2026-01-06',
+    description,
+    amount: -12.5,
+    type: TransactionType.EXPENSE,
+    suggestedCategory: null,
+    suggestedMerchant: null,
+    duplicate: false,
+    ...overrides,
+  };
+}
+
+function account(id: number, bank: BankName): Account {
+  return { id, bank, name: `Account ${id}` } as Account;
+}
+
+interface Setup {
+  previews: Record<string, TransactionPreview[]>;
+  alreadyImported?: string[];
+  failing?: Record<string, string>;
+}
+
+describe('CsvImportReviewStepComponent', () => {
+  let fixture: ComponentFixture<CsvImportReviewStepComponent>;
+  let store: CsvImportBatchStore;
+
+  const all = <T extends HTMLElement>(
+    selector: string,
+    root: ParentNode = fixture.nativeElement,
+  ): T[] => Array.from(root.querySelectorAll<T>(selector));
+  const text = (el: Element): string => (el.textContent ?? '').replace(/\s+/g, ' ').trim();
+  const rows = (): HTMLElement[] => all('[data-testid="review-row"]');
+  const headers = (): HTMLElement[] => all('[data-testid="file-header"]');
+  const headerFor = (name: string): HTMLElement =>
+    headers().find((h: HTMLElement): boolean => text(h).includes(name))!;
+  const rowsFor = (description: string): HTMLElement[] =>
+    rows().filter(
+      (r: HTMLElement): boolean =>
+        text(r.querySelector('[data-testid="row-description"]')!) === description,
+    );
+  const statusOf = (row: HTMLElement): HTMLElement =>
+    row.querySelector<HTMLElement>('[data-testid="row-status"]')!;
+
+  async function settle(): Promise<void> {
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+  }
+
+  async function configure(providers: unknown[]): Promise<void> {
+    await TestBed.configureTestingModule({
+      imports: [CsvImportReviewStepComponent],
+      providers: [
+        {
+          provide: CategoryApiService,
+          useValue: { getCategories: () => of([GROCERIES, SHOPPING, PHARMACY]) },
+        },
+        {
+          provide: MerchantApiService,
+          useValue: {
+            getMerchants: vi.fn(() =>
+              of({
+                content: [WALGREENS, KROGER],
+                page: { totalElements: 2, totalPages: 1, number: 0, size: 2000 },
+              }),
+            ),
+          },
+        },
+        ...(providers as never[]),
+      ],
+    }).compileComponents();
+  }
+
+  /** A real store, previewed through its public API. */
+  async function setup({ previews, alreadyImported = [], failing = {} }: Setup): Promise<void> {
+    await configure([
+      CsvImportBatchStore,
+      {
+        provide: TransactionImportService,
+        useValue: {
+          calculateFileHash: async (f: File): Promise<string> => `hash-${f.name}`,
+          checkAlreadyImported: (pairs: { accountId: number; fileHash: string }[]) =>
+            of(pairs.filter((p) => alreadyImported.some((n) => p.fileHash === `hash-${n}`))),
+          uploadCsv: (_id: number, f: File) =>
+            failing[f.name]
+              ? throwError(
+                  () => new HttpErrorResponse({ status: 400, error: { detail: failing[f.name] } }),
+                )
+              : of(previews[f.name] ?? []),
+        },
+      },
+    ]);
+    store = TestBed.inject(CsvImportBatchStore);
+    store.setAccounts([account(1, BankName.CAPITAL_ONE), account(2, BankName.DISCOVER)]);
+    const names = [...Object.keys(previews), ...Object.keys(failing)];
+    store.addFiles(names.map((n: string): File => new File(['x'], n)));
+    // files the name matcher could not place (e.g. .xls) still need an account to be previewed
+    store
+      .items()
+      .filter((f: BatchFile): boolean => f.accountId === null || f.bankName === null)
+      .forEach((f: BatchFile): void => {
+        store.setAccount(f.id, 1);
+        store.setBank(f.id, BankName.CAPITAL_ONE);
+      });
+    await store.previewAll();
+    fixture = TestBed.createComponent(CsvImportReviewStepComponent);
+    await settle();
+  }
+
+  /** A store double whose rows carry any origin, including `'guess'` (the real store has none yet). */
+  async function setupWithOrigins(origins: ReviewRowOrigin[]): Promise<void> {
+    const reviewRows: ReviewRow[] = origins.map(
+      (origin: ReviewRowOrigin, i: number): ReviewRow => ({
+        preview: preview(`ROW ${origin.toUpperCase()} ${i}`),
+        merchant: null,
+        category: origin === 'none' ? null : GROCERIES,
+        origin,
+        skip: null,
+      }),
+    );
+    reviewRows.push({
+      preview: preview('ROW SKIPPED NONE', { duplicate: true }),
+      merchant: null,
+      category: null,
+      origin: 'none',
+      skip: 'duplicate',
+    });
+    const file: BatchFile = {
+      id: 'f1',
+      file: new File(['x'], 'capone-2026-01.csv'),
+      accountId: 1,
+      bankName: BankName.CAPITAL_ONE,
+      statementMonth: '2026-01',
+      matchReason: 'matched',
+      hash: 'h',
+      alreadyImported: false,
+      status: 'ready',
+      error: null,
+      rows: reviewRows,
+      discardedEdits: false,
+      failedAt: null,
+      skipReason: null,
+      result: null,
+    };
+    await configure([
+      {
+        provide: CsvImportBatchStore,
+        useValue: {
+          items: signal([file]),
+          accountList: signal([account(1, BankName.CAPITAL_ONE)]),
+          committing: signal(false),
+          editRow: vi.fn(),
+        },
+      },
+    ]);
+    fixture = TestBed.createComponent(CsvImportReviewStepComponent);
+    await settle();
+  }
+
+  afterEach(async () => {
+    if (inBrowser) {
+      const { page } = await import('vitest/browser');
+      await page.viewport(1280, 800);
+    }
+  });
+
+  it('should group rows under one header per file with that file’s counts', async () => {
+    await setup({
+      previews: {
+        'capone-2026-01.csv': [
+          preview('KROGER #1'),
+          preview('KROGER #2'),
+          preview('OLD ONE', { duplicate: true }),
+        ],
+        'discover-2026-02.csv': [preview('SHELL OIL'), preview('AMAZON')],
+      },
+    });
+
+    expect(headers().length).toBe(2);
+    const capone = text(headerFor('capone-2026-01.csv'));
+    expect(capone).toContain('Account 1');
+    expect(capone).toContain('2026-01');
+    expect(capone).toContain('3 rows, 2 will import, 1 skipped');
+    expect(text(headerFor('discover-2026-02.csv'))).toContain('2 rows, 2 will import, 0 skipped');
+    expect(rows().length).toBe(5);
+
+    // rows follow their own file's header
+    const order = all('[data-testid="file-header"], [data-testid="review-row"]').map(text);
+    expect(order[0]).toContain('capone-2026-01.csv');
+    expect(order[1]).toContain('KROGER #1');
+    expect(order[4]).toContain('discover-2026-02.csv');
+    expect(order[5]).toContain('SHELL OIL');
+  });
+
+  it('should show date, raw description, amount with sign, merchant and category', async () => {
+    await setup({
+      previews: {
+        'capone-2026-01.csv': [
+          preview('WALGREENS #123 ATLANTA', {
+            amount: -42.1,
+            suggestedMerchant: WALGREENS,
+            suggestedCategory: PHARMACY,
+          }),
+          preview('PAYROLL ACME', { amount: 2000, type: TransactionType.INCOME }),
+        ],
+      },
+    });
+
+    const [expense, income] = rows();
+    expect(text(expense)).toContain('Jan 5, 2026');
+    expect(text(expense)).toContain('WALGREENS #123 ATLANTA');
+    expect(text(expense)).toContain('-$42.10');
+    expect(text(expense)).toContain('Walgreens');
+    expect(text(expense)).toContain('Pharmacy');
+    const incomeAmount = income.querySelector<HTMLElement>('[data-testid="row-amount"]')!;
+    expect(text(incomeAmount)).toBe('+$2,000.00');
+    expect(incomeAmount.className).toContain('text-emerald-700');
+    expect(incomeAmount.className).toContain('dark:text-emerald-400');
+    expect(expense.querySelector('[data-testid="row-amount"]')!.className).toContain(
+      'text-rose-700',
+    );
+  });
+
+  it('should grey out duplicate rows and label them as skipped with the reason', async () => {
+    await setup({
+      previews: {
+        'capone-2026-01.csv': [preview('NEW ONE'), preview('OLD ONE', { duplicate: true })],
+      },
+    });
+
+    const [kept, dup] = [rowsFor('NEW ONE')[0], rowsFor('OLD ONE')[0]];
+    expect(text(statusOf(dup))).toContain('Will be skipped');
+    expect(text(statusOf(dup))).toContain('duplicate');
+    expect(statusOf(dup).querySelector('i.pi')).not.toBeNull();
+    expect(dup.getAttribute('data-skipped')).toBe('true');
+    expect(dup.className).toContain('opacity-60');
+    expect(text(statusOf(kept))).not.toContain('skipped');
+    expect(all('p-select.p-disabled', dup).length).toBe(2);
+    expect(all('p-select.p-disabled', kept).length).toBe(0);
+  });
+
+  it('should show every row of an already-imported file as skipped', async () => {
+    await setup({
+      previews: {
+        'capone-2026-01.csv': [preview('A'), preview('B')],
+        'discover-2026-02.csv': [preview('C')],
+      },
+      alreadyImported: ['capone-2026-01.csv'],
+    });
+
+    const header = text(headerFor('capone-2026-01.csv'));
+    expect(header).toContain('Already imported');
+    expect(header).toContain('2 rows, 0 will import, 2 skipped');
+    for (const description of ['A', 'B']) {
+      const [row] = rowsFor(description);
+      expect(text(statusOf(row))).toBe('Will be skipped: file already imported');
+      expect(row.getAttribute('data-skipped')).toBe('true');
+    }
+    expect(text(statusOf(rowsFor('C')[0]))).not.toContain('skipped');
+  });
+
+  it('should list files that failed to preview with their reason, above the other files’ rows', async () => {
+    await setup({
+      previews: {
+        'capone-2026-01.csv': [preview('KROGER')],
+        'capone-2026-02.xls': [],
+      },
+      failing: { 'discover-2026-03.csv': 'Unexpected header row' },
+    });
+
+    const alert = fixture.nativeElement.querySelector(
+      '[data-testid="failed-files"]',
+    ) as HTMLElement;
+    expect(alert).not.toBeNull();
+    expect(text(alert)).toContain('2 files could not be read');
+    expect(text(alert)).toContain('capone-2026-02.xls');
+    expect(text(alert)).toContain('Excel files (.xls, .xlsx) are not supported');
+    expect(text(alert)).toContain('discover-2026-03.csv');
+    expect(text(alert)).toContain('Unexpected header row');
+    // the alert comes before the table, and the readable file still shows
+    const table = fixture.nativeElement.querySelector('[data-testid="review-table"]');
+    expect(alert.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(headers().length).toBe(1);
+    expect(rowsFor('KROGER').length).toBe(1);
+  });
+
+  it('should say when a file has no transactions', async () => {
+    await setup({
+      previews: { 'capone-2026-01.csv': [], 'discover-2026-02.csv': [preview('SHELL')] },
+    });
+
+    expect(text(headerFor('capone-2026-01.csv'))).toContain('0 rows');
+    expect(all('[data-testid="empty-file"]').map(text)).toEqual(['No transactions in this file']);
+  });
+
+  it('should show a total count of transactions, rows to import and rows to skip', async () => {
+    await setup({
+      previews: {
+        'capone-2026-01.csv': [preview('A'), preview('B', { duplicate: true })],
+        'discover-2026-02.csv': [preview('C', { suggestedCategory: GROCERIES })],
+      },
+    });
+
+    const summary = text(fixture.nativeElement.querySelector('[data-testid="review-summary"]'));
+    expect(summary).toContain('3 transactions in 2 files');
+    expect(summary).toContain('2 will import');
+    expect(summary).toContain('1 will be skipped');
+  });
+
+  it('should label rule, guess, edited and uncategorized rows distinctly, in text and icon', async () => {
+    await setupWithOrigins(['rule', 'guess', 'edited', 'none']);
+
+    const labels = ['RULE', 'GUESS', 'EDITED', 'NONE'].map((o, i) =>
+      statusOf(rowsFor(`ROW ${o} ${i}`)[0]),
+    );
+    expect(labels.map(text)).toEqual(['Rule applied', 'Suggested', 'Edited', 'Uncategorized']);
+    const icons = labels.map((l) => l.querySelector('i.pi')!.className);
+    expect(new Set(icons).size).toBe(4);
+  });
+
+  it('should show only uncategorized and guessed rows with Needs a look', async () => {
+    await setupWithOrigins(['rule', 'guess', 'edited', 'none', 'none']);
+    const toggle = (): HTMLButtonElement =>
+      fixture.nativeElement.querySelector('[data-testid="needs-look-toggle"]');
+
+    expect(text(toggle())).toContain('Needs a look (3)');
+    expect(toggle().getAttribute('aria-pressed')).toBe('false');
+    expect(rows().length).toBe(6);
+
+    toggle().click();
+    await settle();
+
+    expect(toggle().getAttribute('aria-pressed')).toBe('true');
+    expect(rows().map((r) => text(r.querySelector('[data-testid="row-description"]')!))).toEqual([
+      'ROW GUESS 1',
+      'ROW NONE 3',
+      'ROW NONE 4',
+    ]);
+    expect(headers().length).toBe(1);
+
+    toggle().click();
+    await settle();
+    expect(rows().length).toBe(6);
+  });
+
+  it('should say when nothing needs a look', async () => {
+    await setupWithOrigins(['rule', 'edited']);
+
+    fixture.nativeElement.querySelector('[data-testid="needs-look-toggle"]').click();
+    await settle();
+
+    expect(rows().length).toBe(0);
+    expect(text(fixture.nativeElement)).toContain(
+      'Every row has a category from a rule or from you',
+    );
+  });
+
+  it('should load categories and merchants once for every row’s options', async () => {
+    await setup({
+      previews: { 'capone-2026-01.csv': [preview('A'), preview('B'), preview('C')] },
+    });
+
+    const merchants = TestBed.inject(MerchantApiService).getMerchants as ReturnType<typeof vi.fn>;
+    expect(merchants).toHaveBeenCalledTimes(1);
+    const options = fixture.componentInstance.merchantOptions().map((o) => o.label);
+    expect(options).toEqual(['Kroger', 'Walgreens']);
+    expect(fixture.componentInstance.categoryOptions().map((o) => o.label)).toEqual([
+      'Groceries',
+      'Pharmacy',
+      'Shopping',
+    ]);
+  });
+
+  it('should give every editor its own accessible name and keep ids unique', async () => {
+    await setup({
+      previews: {
+        'capone-2026-01.csv': [preview('KROGER #1'), preview('KROGER #1')],
+        'discover-2026-02.csv': [preview('KROGER #1')],
+      },
+    });
+
+    const comboboxes = all('[data-testid="review-row"] [role="combobox"]');
+    expect(comboboxes.length).toBe(6);
+    const labelIds = comboboxes.map((c) => c.getAttribute('aria-labelledby'));
+    expect(new Set(labelIds).size).toBe(6);
+    for (const id of labelIds) {
+      expect(id).toBeTruthy();
+      const label = document.getElementById(id!);
+      expect(label).not.toBeNull();
+      expect(text(label!)).toMatch(/^(Merchant|Category) for KROGER #1, Jan 5, 2026$/);
+    }
+    // p-select also writes its shown value to aria-label; aria-labelledby wins in the
+    // accessible-name computation, so the row-specific label is what is announced
+    for (const c of comboboxes) expect(c.tabIndex).toBe(0);
+    const ids = all('[id]').map((e) => e.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it.skipIf(!inBrowser)(
+    'should change only the edited row’s category, by keyboard, leaving a same-description row as it was',
+    async () => {
+      await setup({
+        previews: {
+          'capone-2026-01.csv': [
+            preview('WALGREENS #123', {
+              suggestedCategory: PHARMACY,
+              suggestedMerchant: WALGREENS,
+            }),
+            preview('WALGREENS #123', {
+              suggestedCategory: PHARMACY,
+              suggestedMerchant: WALGREENS,
+            }),
+          ],
+        },
+      });
+      const { userEvent } = await import('vitest/browser');
+
+      const [first] = rowsFor('WALGREENS #123');
+      const categorySelect = first.querySelector<HTMLElement>(
+        '[data-testid="row-category"] [role="combobox"]',
+      )!;
+      categorySelect.focus();
+      await userEvent.keyboard('{Enter}');
+      await settle();
+      // the overlay opens with focus in its filter box
+      await vi.waitFor(() =>
+        expect(document.activeElement?.classList.contains('p-select-filter')).toBe(true),
+      );
+      await userEvent.keyboard('Shop');
+      await vi.waitFor(() =>
+        expect(
+          Array.from(document.querySelectorAll('[role="option"]')).map((o) => text(o)),
+        ).toEqual(['Shopping']),
+      );
+      await userEvent.keyboard('{ArrowDown}');
+      await vi.waitFor(() =>
+        expect(document.querySelector('[role="option"].p-focus')?.textContent?.trim()).toBe(
+          'Shopping',
+        ),
+      );
+      await userEvent.keyboard('{Enter}');
+      await settle();
+
+      const [edited, untouched] = store.items()[0].rows;
+      expect(edited.category?.id).toBe(SHOPPING.id);
+      expect(edited.origin).toBe('edited');
+      expect(edited.merchant?.id).toBe(WALGREENS.id);
+      expect(untouched.category?.id).toBe(PHARMACY.id);
+      expect(untouched.origin).toBe('rule');
+      const [firstRow, secondRow] = rowsFor('WALGREENS #123');
+      expect(text(statusOf(firstRow))).toBe('Edited');
+      expect(text(firstRow)).toContain('Shopping');
+      expect(text(statusOf(secondRow))).toBe('Rule applied');
+      expect(text(secondRow)).toContain('Pharmacy');
+      expect(document.querySelector('p-dialog, [role="dialog"]')).toBeNull();
+    },
+  );
+
+  it.skipIf(!inBrowser)(
+    'should change only the edited row’s merchant when a merchant is picked',
+    async () => {
+      await setup({
+        previews: { 'capone-2026-01.csv': [preview('KROGER #1'), preview('KROGER #1')] },
+      });
+
+      const [first] = rowsFor('KROGER #1');
+      first.querySelector<HTMLElement>('[data-testid="row-merchant"] [role="combobox"]')!.click();
+      await settle();
+      const option = await vi.waitFor((): HTMLElement => {
+        const found = Array.from(document.querySelectorAll<HTMLElement>('[role="option"]')).find(
+          (o) => text(o) === 'Kroger',
+        );
+        if (!found) throw new Error('Kroger option not rendered yet');
+        return found;
+      });
+      option.click();
+      await settle();
+
+      const [edited, untouched] = store.items()[0].rows;
+      expect(edited.merchant?.id).toBe(KROGER.id);
+      expect(edited.origin).toBe('edited');
+      expect(untouched.merchant).toBeNull();
+      expect(untouched.origin).toBe('none');
+    },
+  );
+
+  it.skipIf(!inBrowser)(
+    'should render only a window of a 3000-row batch and reach the last row by scrolling',
+    async () => {
+      const many = (prefix: string, n: number): TransactionPreview[] =>
+        Array.from({ length: n }, (_, i) => preview(`${prefix} ${i}`, { amount: -(i + 1) }));
+      await setup({
+        previews: {
+          'capone-2026-01.csv': many('CAP', 1500),
+          'discover-2026-01.csv': many('DIS', 1500),
+        },
+      });
+
+      expect(text(fixture.nativeElement.querySelector('[data-testid="review-summary"]'))).toContain(
+        '3000 transactions in 2 files',
+      );
+      const rendered = rows().length;
+      expect(rendered).toBeGreaterThan(0);
+      expect(rendered).toBeLessThan(60);
+
+      const scroller = fixture.nativeElement.querySelector(
+        '[data-testid="review-scroller"]',
+      ) as HTMLElement;
+      scroller.scrollTop = scroller.scrollHeight;
+      scroller.dispatchEvent(new Event('scroll'));
+      await settle();
+
+      expect(rows().length).toBeLessThan(60);
+      expect(rowsFor('DIS 1499').length).toBe(1);
+      expect(rowsFor('CAP 0').length).toBe(0);
+    },
+  );
+
+  it.skipIf(!inBrowser)(
+    'should stack each row as a card inside a 375px viewport with no horizontal scroll',
+    async () => {
+      const { page } = await import('vitest/browser');
+      await page.viewport(375, 812);
+      await setup({
+        previews: {
+          'capone-2026-01.csv': [
+            preview('A VERY LONG BANK DESCRIPTION THAT GOES ON AND ON FOR A WHILE #12345', {
+              suggestedMerchant: WALGREENS,
+              suggestedCategory: PHARMACY,
+            }),
+            preview('SHORT'),
+          ],
+        },
+      });
+      await settle();
+
+      expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(375);
+      for (const row of rows()) {
+        const card = row.getBoundingClientRect();
+        expect(card.left).toBeGreaterThanOrEqual(0);
+        expect(card.right).toBeLessThanOrEqual(375);
+        const selects = all<HTMLElement>('p-select', row);
+        expect(selects.length).toBe(2);
+        const [merchantBox, categoryBox] = selects.map((s) => s.getBoundingClientRect());
+        // stacked: category sits below merchant, both full card width-ish
+        expect(categoryBox.top).toBeGreaterThanOrEqual(merchantBox.bottom);
+        for (const box of [merchantBox, categoryBox]) {
+          expect(box.width).toBeGreaterThan(200);
+          expect(box.left).toBeGreaterThanOrEqual(card.left);
+          expect(box.right).toBeLessThanOrEqual(card.right);
+          expect(box.bottom).toBeLessThanOrEqual(card.bottom);
+        }
+        const status = statusOf(row).getBoundingClientRect();
+        expect(status.bottom).toBeLessThanOrEqual(card.bottom);
+      }
+      // the desktop column headings are not shown on a phone
+      const columns = fixture.nativeElement.querySelector('[data-testid="column-headers"]');
+      expect(columns.getBoundingClientRect().height).toBe(0);
+    },
+  );
+
+  it.skipIf(!inBrowser)('should lay rows out as one line per transaction on desktop', async () => {
+    await setup({
+      previews: {
+        'capone-2026-01.csv': [preview('KROGER', { suggestedCategory: GROCERIES })],
+      },
+    });
+
+    const row = rows()[0];
+    const [merchantBox, categoryBox] = all<HTMLElement>('p-select', row).map((s) =>
+      s.getBoundingClientRect(),
+    );
+    expect(Math.abs(merchantBox.top - categoryBox.top)).toBeLessThan(2);
+    expect(categoryBox.left).toBeGreaterThan(merchantBox.right);
+    const columns = fixture.nativeElement.querySelector('[data-testid="column-headers"]');
+    expect(columns.getBoundingClientRect().height).toBeGreaterThan(0);
+  });
+});
