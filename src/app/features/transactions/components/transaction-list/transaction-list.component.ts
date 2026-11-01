@@ -58,6 +58,9 @@ export class TransactionListComponent {
   /** Emits the transaction whose "Choose category" pill was clicked. */
   readonly pickCategory: OutputEmitterRef<Transaction> = output<Transaction>();
 
+  /** Emits the transaction whose "Create rule" action was used (it is not opened or selected). */
+  readonly createRule: OutputEmitterRef<Transaction> = output<Transaction>();
+
   readonly TransactionType = TransactionType;
 
   readonly columns: SortColumn[] = [
@@ -180,6 +183,12 @@ export class TransactionListComponent {
   onPickCategory(txn: Transaction, event: Event): void {
     event.stopPropagation();
     this.pickCategory.emit(txn);
+  }
+
+  /** Starts a rule from the row without opening it in the edit panel. */
+  onCreateRule(txn: Transaction, event: Event): void {
+    event.stopPropagation();
+    this.createRule.emit(txn);
   }
 
   /** Index of a row in the flat loaded page (for shift-click ranges). */

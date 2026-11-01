@@ -30,5 +30,7 @@ export class TransactionBulkBarComponent {
   readonly markTransfer: OutputEmitterRef<void> = output<void>();
   readonly unmarkTransfer: OutputEmitterRef<void> = output<void>();
   readonly editMore: OutputEmitterRef<void> = output<void>();
+  /** Starts one rule for the selection (its keyword is left for the user to type). */
+  readonly createRule: OutputEmitterRef<void> = output<void>();
   readonly clear: OutputEmitterRef<void> = output<void>();
 }

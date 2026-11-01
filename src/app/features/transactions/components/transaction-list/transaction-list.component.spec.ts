@@ -120,6 +120,78 @@ describe('TransactionListComponent', () => {
     expect(picked).toHaveBeenCalledWith(rows[0]);
   });
 
+  describe('Create rule action', () => {
+    const ruleButtons = (): HTMLButtonElement[] =>
+      all<HTMLButtonElement>('button').filter((b) =>
+        (b.getAttribute('aria-label') ?? '').startsWith('Create rule from'),
+      );
+
+    it('should offer Create rule on each row, named after its raw description', () => {
+      // act
+      render([
+        txn({ id: 1, description: 'NETFLIX.COM 866-579' }),
+        txn({ id: 2, description: 'SHELL OIL 123' }),
+      ]);
+
+      // assert & verify
+      expect(ruleButtons().map((b) => b.getAttribute('aria-label'))).toEqual([
+        'Create rule from NETFLIX.COM 866-579',
+        'Create rule from SHELL OIL 123',
+      ]);
+    });
+
+    it('should keep the action in the compact list beside the panel', () => {
+      // act
+      render([txn({ id: 1, description: 'NETFLIX.COM' })], { compact: true });
+
+      // assert & verify
+      expect(ruleButtons().length).toBe(1);
+    });
+
+    it('should emit the row without opening it or changing the selection', () => {
+      // arrange
+      const rows = [txn({ id: 1, description: 'NETFLIX.COM' })];
+      render(rows);
+      const created = vi.fn();
+      const opened = vi.fn();
+      const selected = vi.fn();
+      component.createRule.subscribe(created);
+      component.openTransaction.subscribe(opened);
+      component.selectionChange.subscribe(selected);
+
+      // act
+      ruleButtons()[0].click();
+
+      // assert & verify
+      expect(created).toHaveBeenCalledWith(rows[0]);
+      expect(opened).not.toHaveBeenCalled();
+      expect(selected).not.toHaveBeenCalled();
+    });
+
+    it('should be a real button reachable by keyboard, opening on Enter', async () => {
+      // arrange
+      const rows = [txn({ id: 1, description: 'NETFLIX.COM' })];
+      render(rows);
+      document.body.appendChild(fixture.nativeElement);
+      const created = vi.fn();
+      const opened = vi.fn();
+      component.createRule.subscribe(created);
+      component.openTransaction.subscribe(opened);
+      const { userEvent } = await import('vitest/browser');
+      all<HTMLButtonElement>('[data-testid="open-transaction"]')[0].focus();
+
+      // act
+      await userEvent.tab();
+      await userEvent.keyboard('{Enter}');
+
+      // assert & verify
+      expect(document.activeElement).toBe(ruleButtons()[0]);
+      expect(created).toHaveBeenCalledWith(rows[0]);
+      expect(opened).not.toHaveBeenCalled();
+      fixture.nativeElement.remove();
+    });
+  });
+
   it('should emit the full new selection from a row checkbox and from the header checkbox', () => {
     // arrange
     render([txn({ id: 1 }), txn({ id: 2 }), txn({ id: 3 })], { selectedIds: [1] });

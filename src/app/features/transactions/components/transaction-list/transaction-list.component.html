@@ -149,14 +149,26 @@
               </td>
             }
             <td class="px-2 py-2 sm:px-3">
-              <button
-                type="button"
-                data-testid="open-transaction"
-                class="max-w-28 cursor-pointer break-words text-left font-medium text-surface-900 sm:max-w-none sm:break-normal dark:text-surface-0"
-                (click)="$event.stopPropagation(); openTransaction.emit(txn)"
-              >
-                {{ txn.merchant?.name ?? txn.description }}
-              </button>
+              <span class="flex items-start gap-1">
+                <button
+                  type="button"
+                  data-testid="open-transaction"
+                  class="max-w-28 cursor-pointer break-words text-left font-medium text-surface-900 sm:max-w-none sm:break-normal dark:text-surface-0"
+                  (click)="$event.stopPropagation(); openTransaction.emit(txn)"
+                >
+                  {{ txn.merchant?.name ?? txn.description }}
+                </button>
+                <button
+                  type="button"
+                  data-testid="create-rule"
+                  class="shrink-0 cursor-pointer rounded-md px-1 text-muted-color hover:bg-surface-100 hover:text-surface-900 dark:hover:bg-surface-800 dark:hover:text-surface-0"
+                  title="Create rule"
+                  [attr.aria-label]="'Create rule from ' + txn.description"
+                  (click)="onCreateRule(txn, $event)"
+                >
+                  <i class="pi pi-bolt text-xs" aria-hidden="true"></i>
+                </button>
+              </span>
             </td>
             @if (!compact()) {
               <td class="hidden max-w-64 truncate px-2 py-2 sm:px-3 text-muted-color sm:table-cell">
