@@ -128,8 +128,9 @@ export class CsvImportFilesStepComponent {
     return /\.xlsx?$/i.test(item.file.name);
   }
 
+  /** A spreadsheet is never uploaded, so it needs no account; it fails at Preview with the reason. */
   needsAccount(item: BatchFile): boolean {
-    return item.accountId === null;
+    return !this.isUnsupported(item) && item.accountId === null;
   }
 
   reasonFor(item: BatchFile): string {

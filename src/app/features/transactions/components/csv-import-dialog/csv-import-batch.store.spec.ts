@@ -164,6 +164,31 @@ describe('CsvImportBatchStore', () => {
       expect(store.canPreview()).toBe(false);
     });
 
+    it('does not let an Excel file without an account or bank block Preview', async () => {
+      store.addFiles([csv('capone-2026-01.csv'), csv('capone-2026-02.xlsx')]);
+
+      expect(fileByName('capone-2026-02.xlsx').accountId).toBeNull();
+      expect(store.canPreview()).toBe(true);
+      expect(store.summary().needsAccountCount).toBe(0);
+
+      await store.previewAll();
+
+      expect(fileByName('capone-2026-01.csv').status).toBe('ready');
+      expect(fileByName('capone-2026-02.xlsx')).toMatchObject({ status: 'failed' });
+      expect(fileByName('capone-2026-02.xlsx').error).toContain('.xls');
+      expect(importService.uploadCsv).toHaveBeenCalledTimes(1);
+    });
+
+    it('can preview a batch of only Excel files, which all fail with the reason', async () => {
+      store.addFiles([csv('statement.xls')]);
+
+      expect(store.canPreview()).toBe(true);
+      await store.previewAll();
+
+      expect(fileByName('statement.xls').status).toBe('failed');
+      expect(fileByName('statement.xls').error).toContain('.xls');
+    });
+
     it('applies an account and bank to only the selected files', () => {
       store.addFiles([csv('a.csv'), csv('b.csv'), csv('c.csv')]);
       const ids: string[] = [fileByName('a.csv').id, fileByName('b.csv').id];

@@ -143,6 +143,11 @@ function withSkips(files: BatchFile[]): BatchFile[] {
   });
 }
 
+/** Excel files cannot be read; Preview fails them with {@link EXCEL_ERROR} without uploading. */
+function isExcel(file: BatchFile): boolean {
+  return EXCEL_PATTERN.test(file.file.name);
+}
+
 function nextMonth(month: string): string {
   const [year, m] = month.split('-').map(Number);
   return m === 12 ? `${year + 1}-01` : `${year}-${String(m + 1).padStart(2, '0')}`;
@@ -198,7 +203,10 @@ export class CsvImportBatchStore {
       !this.previewRunning() &&
       !this.commitRunning() &&
       files.length > 0 &&
-      files.every((f: BatchFile): boolean => f.accountId !== null && f.bankName !== null)
+      // an Excel file is never uploaded (previewAll fails it with the reason), so it needs neither
+      files.every(
+        (f: BatchFile): boolean => isExcel(f) || (f.accountId !== null && f.bankName !== null),
+      )
     );
   });
 
@@ -235,7 +243,9 @@ export class CsvImportBatchStore {
       firstMonth,
       lastMonth,
       missingMonths,
-      needsAccountCount: files.filter((f: BatchFile): boolean => f.accountId === null).length,
+      needsAccountCount: files.filter(
+        (f: BatchFile): boolean => !isExcel(f) && f.accountId === null,
+      ).length,
     };
   });
 
@@ -328,7 +338,7 @@ export class CsvImportBatchStore {
     try {
       const uploadable: string[] = [];
       for (const target of targets) {
-        if (EXCEL_PATTERN.test(target.file.name)) {
+        if (isExcel(target)) {
           this.failPreview(target.id, EXCEL_ERROR);
         } else {
           uploadable.push(target.id);

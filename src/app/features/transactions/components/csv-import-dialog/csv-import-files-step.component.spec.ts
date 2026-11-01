@@ -306,6 +306,13 @@ describe('CsvImportFilesStepComponent', () => {
     expect(rowFor('capone-2026-03.csv').textContent).not.toContain('unsupported');
   });
 
+  it('should not ask for an account on a spreadsheet file, which is never uploaded', async () => {
+    await addFiles('capone-2026-01.xlsx');
+
+    expect(rowFor('capone-2026-01.xlsx').querySelector('[data-testid="needs-account"]')).toBeNull();
+    expect(text()).not.toContain('needs an account');
+  });
+
   it('should add files chosen through the file picker', async () => {
     const input: HTMLInputElement = fixture.nativeElement.querySelector('input[type="file"]');
     Object.defineProperty(input, 'files', { value: [file('capone-2026-05.csv')] });

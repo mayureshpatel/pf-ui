@@ -895,11 +895,18 @@ export class TransactionsComponent implements OnInit {
   }
 
   /**
-   * Handles the completion of the import process.
+   * Reloads the list once an import has saved transactions. The import dialog stays open on its
+   * Result step; the transfer review is offered there, not opened here (PF-898).
    */
   onImportComplete(): void {
-    this.showImportDialog.set(false);
-    this.showTransferDialog.set(true);
     this.loadTransactions();
+  }
+
+  /**
+   * Opens the transfer review the user asked for from the import's Result step. The import dialog
+   * has already closed by then, so focus returns to the page before this dialog takes it.
+   */
+  onImportReviewTransfers(): void {
+    this.showTransferDialog.set(true);
   }
 }

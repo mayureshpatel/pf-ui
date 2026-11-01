@@ -1,8 +1,12 @@
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
+  ElementRef,
   inject,
+  Injector,
   input,
   InputSignal,
   model,
@@ -11,416 +15,218 @@ import {
   OutputEmitterRef,
   Signal,
   signal,
+  untracked,
+  viewChild,
   WritableSignal,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { HttpErrorResponse } from '@angular/common/http';
-import { forkJoin, from, of } from 'rxjs';
-import { catchError, concatMap, finalize, map, toArray } from 'rxjs/operators';
-import { DialogModule } from 'primeng/dialog';
-import { ButtonModule } from 'primeng/button';
-import { Select } from 'primeng/select';
-import { TableModule } from 'primeng/table';
-import { MessageModule } from 'primeng/message';
-import { ProgressSpinnerModule } from 'primeng/progressspinner';
-import { TagModule } from 'primeng/tag';
-import { TooltipModule } from 'primeng/tooltip';
+import { ConfirmationService } from 'primeng/api';
+import { Dialog, DialogModule } from 'primeng/dialog';
 
-import {
-  BankOption,
-  SaveTransactionRequest,
-  TransactionDto,
-  TransactionPreview,
-  TransactionType,
-} from '@models/transaction.model';
-import { Account, BankName } from '@models/account.model';
-import { TransactionImportService } from '@features/transactions/services/transaction-import.service';
-import { ToastService } from '@core/services/toast.service';
-import { FileSelectEvent, FileUpload } from 'primeng/fileupload';
+import { Account } from '@models/account.model';
 import { RestoreFocusOnHideDirective } from '@shared/directives/restore-focus-on-hide.directive';
+import { BatchFile, CsvImportBatchStore, ReviewRow } from './csv-import-batch.store';
+import { CsvImportFilesStepComponent } from './csv-import-files-step.component';
+import { CsvImportResultStepComponent } from './csv-import-result-step.component';
+import { CsvImportReviewStepComponent } from './csv-import-review-step.component';
 
-/**
- * Represents a single file in a multi-file import batch.
- */
-interface BatchImportItem {
-  id: string;
-  file: File;
-  accountId: number;
-  bankName: BankName | null;
-  previews: TransactionPreview[];
-  status: 'pending' | 'uploading' | 'ready' | 'saving' | 'success' | 'error';
-  error?: string;
+export type ImportStep = 'files' | 'review' | 'result';
+
+interface StepInfo {
+  id: ImportStep;
+  label: string;
+  heading: string;
 }
 
+const STEPS: StepInfo[] = [
+  { id: 'files', label: 'Files', heading: 'Choose files' },
+  { id: 'review', label: 'Review & edit', heading: 'Review & edit transactions' },
+  { id: 'result', label: 'Result', heading: 'Import result' },
+];
+
 /**
- * Sophisticated dialog for processing and mapping CSV transaction exports.
+ * The Transactions page's CSV import dialog (PF-898): a three-step wizard, Files -> Review & edit
+ * -> Result, over a {@link CsvImportBatchStore} scoped to this dialog. Nothing is saved until the
+ * user imports from the Review step; the Result step reports every file's outcome and offers,
+ * without opening it, the transfer review.
  *
- * Supports multi-file batches, automatic bank format detection,
- * and a comprehensive preview ledger before final persistence.
+ * Cancel, the close button and Escape all ask before throwing away chosen files or review edits;
+ * once the batch has been committed there is nothing left to lose and they just close.
  */
 @Component({
   selector: 'app-csv-import-dialog',
   standalone: true,
   imports: [
-    CommonModule,
-    FormsModule,
     DialogModule,
-    ButtonModule,
-    Select,
-    TableModule,
-    MessageModule,
-    ProgressSpinnerModule,
-    TagModule,
-    TooltipModule,
-    FileUpload,
     RestoreFocusOnHideDirective,
+    CsvImportFilesStepComponent,
+    CsvImportReviewStepComponent,
+    CsvImportResultStepComponent,
   ],
+  providers: [CsvImportBatchStore],
   templateUrl: './csv-import-dialog.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '(document:keydown.escape)': 'onEscape($event)' },
 })
 export class CsvImportDialogComponent {
-  private readonly importService: TransactionImportService = inject(TransactionImportService);
-  private readonly toast: ToastService = inject(ToastService);
+  private readonly store: CsvImportBatchStore = inject(CsvImportBatchStore);
+  private readonly confirmationService: ConfirmationService = inject(ConfirmationService);
+  private readonly injector: Injector = inject(Injector);
 
   /** Two-way binding for dialog visibility. */
   readonly visible: ModelSignal<boolean> = model.required<boolean>();
 
-  /** Available bank accounts for mapping. */
+  /** The user's accounts, for file-name matching and the per-file account choice. */
   readonly accounts: InputSignal<Account[]> = input.required<Account[]>();
 
-  /** Emitted when the entire batch is successfully imported. */
+  /** Emitted once per commit (or retry) that imported at least one file, so the list reloads. */
   readonly importComplete: OutputEmitterRef<void> = output<void>();
 
-  /** Current workflow step (0: Setup, 1: Preview). */
-  readonly currentStep: WritableSignal<number> = signal(0);
+  /** The user asked to review possible transfers; emitted after this dialog has closed. */
+  readonly reviewTransfers: OutputEmitterRef<void> = output<void>();
 
-  /** Active batch of files being processed. */
-  readonly importItems: WritableSignal<BatchImportItem[]> = signal([]);
-
-  /** Global overrides for the current batch. */
-  readonly globalAccountId: WritableSignal<number | null> = signal(null);
-  readonly globalBankName: WritableSignal<BankName | null> = signal(null);
-
-  readonly uploading: WritableSignal<boolean> = signal(false);
-  readonly saving: WritableSignal<boolean> = signal(false);
-
-  /** System-wide feedback message for the import process. */
-  readonly generalMessage: WritableSignal<{
-    severity: 'success' | 'info' | 'warn' | 'error';
-    text: string;
-  } | null> = signal(null);
-
-  readonly bankOptions: BankOption[] = [
-    {
-      label: 'Standard CSV',
-      value: BankName.STANDARD,
-      description: 'Generic format (Date, Description, Amount)',
-    },
-    {
-      label: 'Capital One',
-      value: BankName.CAPITAL_ONE,
-      description: 'Official bank export format',
-    },
-    { label: 'Discover', value: BankName.DISCOVER, description: 'Official card export format' },
-    { label: 'Synovus', value: BankName.SYNOVUS, description: 'Official bank export format' },
-    {
-      label: 'Universal CSV',
-      value: BankName.UNIVERSAL,
-      description: 'Intelligent auto-detection',
-    },
-  ];
-
-  readonly accountOptions = computed(() =>
-    this.accounts().map((a: Account) => ({ label: a.name, value: a.id })),
+  readonly steps: StepInfo[] = STEPS;
+  readonly step: WritableSignal<ImportStep> = signal('files');
+  readonly currentStep: Signal<StepInfo> = computed((): StepInfo =>
+    STEPS.find((s: StepInfo): boolean => s.id === this.step())!,
+  );
+  readonly stepIndex: Signal<number> = computed((): number =>
+    STEPS.findIndex((s: StepInfo): boolean => s.id === this.step()),
   );
 
-  readonly canProceedToPreview: Signal<boolean> = computed((): boolean => {
-    const items: BatchImportItem[] = this.importItems();
-    return (
-      items.length > 0 &&
-      items.every((i: BatchImportItem): boolean => i.accountId !== -1 && i.bankName !== null)
-    );
-  });
+  readonly previewing: Signal<boolean> = this.store.previewing;
+  readonly committing: Signal<boolean> = this.store.committing;
+  readonly canPreview: Signal<boolean> = this.store.canPreview;
+  readonly canCommit: Signal<boolean> = this.store.canCommit;
+  readonly previewProgress = this.store.previewProgress;
 
-  readonly canSave: Signal<boolean> = computed((): boolean =>
-    this.importItems().some(
-      (i: BatchImportItem): boolean => i.status === 'ready' && i.previews.length > 0,
-    ),
+  /** Files whose preview failed, listed on the Files step so a failed Preview never strands. */
+  readonly unreadableFiles: Signal<BatchFile[]> = computed((): BatchFile[] =>
+    this.store
+      .items()
+      .filter((f: BatchFile): boolean => f.status === 'failed' && f.failedAt === 'preview'),
   );
 
-  readonly hasItems: Signal<boolean> = computed((): boolean => this.importItems().length > 0);
-
-  /** Flattens all file previews into a single master ledger for review. */
-  readonly allPreviews = computed(() =>
-    this.importItems().flatMap((item: BatchImportItem) =>
-      item.previews.map((p: TransactionPreview) => ({ ...p, _sourceFile: item.file.name })),
-    ),
-  );
-
-  /**
-   * Resets and closes the dialog.
-   */
-  onHide(): void {
-    this.visible.set(false);
-    this.resetDialog();
-  }
-
-  /**
-   * Processes file selection and attempts automatic metadata detection.
-   */
-  onFilesSelect(event: FileSelectEvent): void {
-    const files: File[] = event.files;
-    if (!files?.length) return;
-
-    const newItems: BatchImportItem[] = [];
-    for (const file of files) {
-      if (!this.importItems().some((i: BatchImportItem): boolean => i.file.name === file.name)) {
-        const detectedBank: BankName | null = this.detectBankName(file.name);
-        let suggestedAccountId = -1;
-
-        if (detectedBank) {
-          const match: Account | undefined = this.accounts().find(
-            (a: Account): boolean => a.bank === detectedBank,
-          );
-          if (match) suggestedAccountId = match.id;
-        }
-
-        newItems.push({
-          id: crypto.randomUUID(),
-          file,
-          accountId: suggestedAccountId,
-          bankName: detectedBank,
-          previews: [],
-          status: 'pending',
-        });
-      }
-    }
-    this.importItems.update((current: BatchImportItem[]): BatchImportItem[] => [
-      ...current,
-      ...newItems,
-    ]);
-    this.generalMessage.set(null);
-  }
-
-  /**
-   * Synchronizes per-file account selection.
-   */
-  onAccountChange(index: number, accountId: number): void {
-    this.importItems.update((items: BatchImportItem[]): BatchImportItem[] => {
-      const updated: BatchImportItem[] = [...items];
-      const account: Account | undefined = this.accounts().find(
-        (a: Account): boolean => a.id === accountId,
-      );
-      updated[index] = {
-        ...updated[index],
-        accountId,
-        bankName: account?.bank || updated[index].bankName,
-      };
-      return updated;
-    });
-  }
-
-  /**
-   * Synchronizes per-file bank selection.
-   */
-  onBankChange(index: number, bankName: BankName): void {
-    this.importItems.update((items: BatchImportItem[]): BatchImportItem[] => {
-      const updated: BatchImportItem[] = [...items];
-      updated[index] = {
-        ...updated[index],
-        bankName,
-      };
-      return updated;
-    });
-  }
-
-  /**
-   * Removes a file from the current batch.
-   */
-  removeItem(index: number): void {
-    this.importItems.update((items: BatchImportItem[]): BatchImportItem[] =>
-      items.filter((_: BatchImportItem, i: number): boolean => i !== index),
-    );
-  }
-
-  /**
-   * Heuristic engine for bank format detection based on filenames.
-   */
-  private detectBankName(fileName: string): BankName | null {
-    const name: string = fileName.toLowerCase();
-    if (name.includes('discover')) return BankName.DISCOVER;
-    if (name.includes('capital')) return BankName.CAPITAL_ONE;
-    if (name.includes('synovus')) return BankName.SYNOVUS;
-    return null;
-  }
-
-  applyGlobalAccount(): void {
-    const id: number | null = this.globalAccountId();
-    if (id)
-      this.importItems.update((items: BatchImportItem[]) =>
-        items.map((i: BatchImportItem) => ({
-          ...i,
-          accountId: id,
-        })),
-      );
-  }
-
-  applyGlobalBank(): void {
-    const bank: BankName | null = this.globalBankName();
-    if (bank)
-      this.importItems.update((items: BatchImportItem[]) =>
-        items.map((i: BatchImportItem) => ({
-          ...i,
-          bankName: bank,
-        })),
-      );
-  }
-
-  /**
-   * Uploads all files in parallel and retrieves transaction previews.
-   */
-  uploadAndPreview(): void {
-    if (!this.canProceedToPreview()) return;
-
-    this.uploading.set(true);
-    this.importItems.update((items: BatchImportItem[]) =>
-      items.map((i: BatchImportItem) => ({
-        ...i,
-        status: 'uploading',
-        error: undefined,
-      })),
-    );
-
-    const tasks = this.importItems().map((item: BatchImportItem) =>
-      this.importService.uploadCsv(item.accountId, item.file, item.bankName!).pipe(
-        map((previews: TransactionPreview[]) => ({
-          id: item.id,
-          status: 'ready' as const,
-          previews,
-        })),
-        catchError((err: HttpErrorResponse) =>
-          of({
-            id: item.id,
-            status: 'error' as const,
-            previews: [],
-            error: err.error?.detail || 'Format Mismatch',
-          }),
-        ),
+  /** Rows the Import button will send: rows of ready files not flagged to be skipped. */
+  readonly importCount: Signal<number> = computed((): number =>
+    this.store
+      .items()
+      .filter((f: BatchFile): boolean => f.status === 'ready')
+      .reduce(
+        (sum: number, f: BatchFile): number =>
+          sum + f.rows.filter((r: ReviewRow): boolean => r.skip === null).length,
+        0,
       ),
-    );
+  );
 
-    forkJoin(tasks)
-      .pipe(finalize((): void => this.uploading.set(false)))
-      .subscribe({
-        next: (results): void => {
-          this.importItems.update((items: BatchImportItem[]) =>
-            items.map((i: BatchImportItem) => ({ ...i, ...results.find((r) => r.id === i.id) })),
-          );
+  private readonly committedCount: Signal<number> = computed(
+    (): number =>
+      this.store.items().filter((f: BatchFile): boolean => f.status === 'committed').length,
+  );
 
-          if (results.some((r) => r.status === 'ready')) {
-            this.currentStep.set(1);
-          } else {
-            this.generalMessage.set({
-              severity: 'error',
-              text: 'All files failed to parse. Verify bank formats.',
-            });
-          }
-        },
-      });
+  private readonly dialog = viewChild(Dialog);
+  private readonly heading = viewChild<ElementRef<HTMLElement>>('stepHeading');
+
+  /** Committed files already reported through {@link importComplete}. */
+  private reportedCommitted = 0;
+  /** Set when the user chose to review transfers; {@link reviewTransfers} waits for the hide. */
+  private transfersRequested = false;
+
+  constructor() {
+    effect((): void => this.store.setAccounts(this.accounts()));
+    effect((): void => {
+      const committed: number = this.committedCount();
+      if (committed > this.reportedCommitted) {
+        untracked((): void => this.importComplete.emit());
+      }
+      this.reportedCommitted = committed;
+    });
   }
 
-  /**
-   * Finalizes the import by calculating hashes and persisting data to the ledger.
-   */
-  saveTransactions(): void {
-    if (!this.canSave()) return;
-
-    this.saving.set(true);
-    const itemsToSave: BatchImportItem[] = this.importItems().filter(
-      (i: BatchImportItem): boolean => i.status === 'ready',
+  /** Previews the batch, then moves to Review when at least one file can be reviewed. */
+  async preview(): Promise<void> {
+    if (!this.canPreview()) return;
+    await this.store.previewAll();
+    if (this.step() !== 'files') return;
+    const items: BatchFile[] = this.store.items();
+    const unfinished: boolean = items.some(
+      (f: BatchFile): boolean => f.status === 'pending' || f.status === 'previewing',
     );
-
-    from(itemsToSave)
-      .pipe(
-        concatMap((item: BatchImportItem) =>
-          from(this.importService.calculateFileHash(item.file)).pipe(
-            map((fileHash: string) => {
-              item.status = 'saving';
-              const transactions: TransactionDto[] = item.previews.map(
-                (p: TransactionPreview) =>
-                  ({
-                    date: p.date,
-                    postDate: p.postDate,
-                    type: p.type,
-                    amount: Math.abs(p.amount),
-                    description: p.description,
-                    merchant: p.suggestedMerchant,
-                    category: p.suggestedCategory,
-                  }) as TransactionDto,
-              );
-
-              return {
-                transactions,
-                fileName: item.file.name,
-                fileHash,
-                accountId: item.accountId,
-              } as SaveTransactionRequest;
-            }),
-          ),
-        ),
-        toArray(),
-        concatMap((requests: SaveTransactionRequest[]) => {
-          if (requests.length === 0) return of(true);
-          return this.importService.saveBulkTransactions(requests).pipe(
-            map(() => true),
-            catchError(() => of(false)),
-          );
-        }),
-        finalize((): void => this.saving.set(false)),
-      )
-      .subscribe((success) => {
-        if (success) {
-          this.importItems.update((items) => items.map((item) => ({ ...item, status: 'success' })));
-          this.toast.success(`Batch complete: ${itemsToSave.length} files imported.`);
-          this.importComplete.emit();
-          this.onHide();
-        } else {
-          this.importItems.update((items) => items.map((item) => ({ ...item, status: 'error' })));
-          this.generalMessage.set({
-            severity: 'warn',
-            text: `Import failed to process the transaction batch. Please review and try again.`,
-          });
-        }
-      });
-  }
-
-  /**
-   * Returns to the previous step
-   */
-  goBack(): void {
-    if (this.currentStep() > 0) {
-      this.currentStep.set(this.currentStep() - 1);
-      this.generalMessage.set(null);
+    // a cancelled run leaves pending files; with nothing readable the failures stay on Files
+    if (!unfinished && items.some((f: BatchFile): boolean => f.status === 'ready')) {
+      this.goTo('review');
     }
   }
 
-  private resetDialog(): void {
-    this.currentStep.set(0);
-    this.importItems.set([]);
-    this.uploading.set(false);
-    this.saving.set(false);
-    this.generalMessage.set(null);
+  /** Stops a running preview; finished files keep their results. */
+  stopPreview(): void {
+    this.store.cancelPreview();
   }
 
-  getTransactionTypeStyles(type: TransactionType): string {
-    switch (type) {
-      case TransactionType.INCOME:
-        return 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20';
-      case TransactionType.EXPENSE:
-        return 'text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/20';
-      default:
-        return 'text-surface-500 bg-surface-100';
+  back(): void {
+    if (this.committing()) return;
+    this.goTo('files');
+  }
+
+  async commit(): Promise<void> {
+    if (!this.canCommit()) return;
+    await this.store.commit();
+    this.goTo('result');
+  }
+
+  /** Cancel, the close button and Escape: asks first when files or edits would be lost. */
+  requestClose(): void {
+    if (this.committing()) return;
+    if (this.step() === 'result' || this.store.items().length === 0) {
+      this.close();
+      return;
     }
+    this.confirmationService.confirm({
+      header: 'Discard import?',
+      message: 'The files you chose and any edits you made will be lost. Discard them?',
+      acceptLabel: 'Discard',
+      rejectLabel: 'Keep importing',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: (): void => this.close(),
+    });
+  }
+
+  /** Escape inside this dialog (not in a dropdown, which handles its own) acts like Cancel. */
+  onEscape(event: Event): void {
+    if (!this.visible() || event.defaultPrevented) return;
+    const container: HTMLElement | null | undefined = this.dialog()?.container();
+    if (!container || !container.contains(event.target as Node)) return;
+    event.preventDefault();
+    this.requestClose();
+  }
+
+  /** Closes this dialog first, so focus returns to the page before the transfer dialog opens. */
+  onReviewTransfers(): void {
+    this.transfersRequested = true;
+    this.close();
+  }
+
+  onShow(): void {
+    this.focusHeading();
+  }
+
+  onHide(): void {
+    if (!this.transfersRequested) return;
+    this.transfersRequested = false;
+    this.reviewTransfers.emit();
+  }
+
+  private close(): void {
+    this.store.reset();
+    this.step.set('files');
+    this.visible.set(false);
+  }
+
+  private goTo(step: ImportStep): void {
+    this.step.set(step);
+    this.focusHeading();
+  }
+
+  private focusHeading(): void {
+    afterNextRender((): void => this.heading()?.nativeElement.focus(), { injector: this.injector });
   }
 }
