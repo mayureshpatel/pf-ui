@@ -53,183 +53,187 @@
       <i class="pi pi-check-circle text-primary-700 dark:text-primary-400" aria-hidden="true"></i>
       Every row has a category from a rule or from you.
     </p>
-  }
-
-  <div
-    role="table"
-    data-testid="review-table"
-    aria-label="Transactions to review"
-    [attr.aria-rowcount]="items().length + 1"
-    class="overflow-hidden rounded-2xl border border-surface-200 bg-surface-0 dark:border-surface-800 dark:bg-surface-900"
-  >
-    <div role="rowgroup" data-testid="column-headers" class="hidden md:block">
-      <div
-        role="row"
-        aria-rowindex="1"
-        class="flex items-center gap-3 bg-surface-100 px-4 py-2 text-sm font-semibold dark:bg-surface-800"
-      >
-        <span role="columnheader" class="w-24 shrink-0">Date</span>
-        <span role="columnheader" class="min-w-0 flex-2">Description</span>
-        <span role="columnheader" class="min-w-0 flex-1">Merchant</span>
-        <span role="columnheader" class="min-w-0 flex-1">Category</span>
-        <span role="columnheader" class="w-28 shrink-0 text-right">Amount</span>
-        <span role="columnheader" class="w-40 shrink-0">Status</span>
-      </div>
-    </div>
-
+  } @else {
     <div
-      #scroller
-      role="rowgroup"
-      tabindex="0"
-      aria-label="Transactions, scroll for more"
-      data-testid="review-scroller"
-      class="h-120 overflow-y-auto overscroll-contain focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-700 dark:focus-visible:outline-primary-400"
-      (scroll)="onScroll($event)"
+      role="table"
+      data-testid="review-table"
+      aria-label="Transactions to review"
+      [attr.aria-rowcount]="items().length + 1"
+      class="overflow-hidden rounded-2xl border border-surface-200 bg-surface-0 dark:border-surface-800 dark:bg-surface-900"
     >
-      <div class="relative" [style.height.px]="totalHeight()">
-        <div [style.transform]="windowOffset()">
-          @for (item of visibleItems(); track item.key; let i = $index) {
-            @if (item.kind === 'header') {
-              <div
-                role="row"
-                data-testid="file-header"
-                [attr.aria-rowindex]="firstVisible() + i + 2"
-                class="flex h-20 flex-col justify-center gap-0.5 overflow-hidden border-t border-surface-200 bg-surface-100 px-4 text-sm md:h-16 dark:border-surface-700 dark:bg-surface-800"
-              >
-                <span role="rowheader" class="flex min-w-0 flex-col gap-0.5">
-                  <span class="flex min-w-0 items-center gap-2">
-                    <i class="pi pi-file text-muted-color" aria-hidden="true"></i>
-                    <span class="truncate font-semibold text-surface-900 dark:text-surface-0">{{
-                      item.file.file.name
-                    }}</span>
-                    @if (item.file.alreadyImported) {
-                      <span
-                        class="shrink-0 rounded-full bg-surface-200 px-2 text-xs font-medium text-surface-700 dark:bg-surface-700 dark:text-surface-200"
-                        >Already imported</span
-                      >
-                    }
+      <div role="rowgroup" data-testid="column-headers" class="hidden md:block">
+        <div
+          role="row"
+          aria-rowindex="1"
+          class="flex items-center gap-3 bg-surface-100 px-4 py-2 text-sm font-semibold dark:bg-surface-800"
+        >
+          <span role="columnheader" class="w-24 shrink-0">Date</span>
+          <span role="columnheader" class="min-w-0 flex-2">Description</span>
+          <span role="columnheader" class="min-w-0 flex-1">Merchant</span>
+          <span role="columnheader" class="min-w-0 flex-1">Category</span>
+          <span role="columnheader" class="w-28 shrink-0 text-right">Amount</span>
+          <span role="columnheader" class="w-40 shrink-0">Status</span>
+        </div>
+      </div>
+
+      <div
+        #scroller
+        role="rowgroup"
+        tabindex="0"
+        aria-label="Transactions, scroll for more"
+        data-testid="review-scroller"
+        class="h-120 overflow-y-auto overscroll-contain focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-700 dark:focus-visible:outline-primary-400"
+        (scroll)="onScroll($event)"
+      >
+        <div class="relative" [style.height.px]="totalHeight()">
+          <div [style.transform]="windowOffset()">
+            @for (item of visibleItems(); track item.key; let i = $index) {
+              @if (item.kind === 'header') {
+                <div
+                  role="row"
+                  data-testid="file-header"
+                  [attr.aria-rowindex]="firstVisible() + i + 2"
+                  class="flex h-20 flex-col justify-center gap-0.5 overflow-hidden border-t border-surface-200 bg-surface-100 px-4 text-sm md:h-16 dark:border-surface-700 dark:bg-surface-800"
+                >
+                  <span role="rowheader" class="flex min-w-0 flex-col gap-0.5">
+                    <span class="flex min-w-0 items-center gap-2">
+                      <i class="pi pi-file text-muted-color" aria-hidden="true"></i>
+                      <span class="truncate font-semibold text-surface-900 dark:text-surface-0">{{
+                        item.file.file.name
+                      }}</span>
+                      @if (item.file.alreadyImported) {
+                        <span
+                          class="shrink-0 rounded-full bg-surface-200 px-2 text-xs font-medium text-surface-700 dark:bg-surface-700 dark:text-surface-200"
+                          >Already imported</span
+                        >
+                      }
+                    </span>
+                    <span class="line-clamp-2 text-xs text-muted-color">
+                      @if (item.accountName) {
+                        {{ item.accountName }} &middot;
+                      }
+                      @if (item.file.statementMonth) {
+                        {{ item.file.statementMonth }} &middot;
+                      }
+                      {{ item.counts.rows }} {{ item.counts.rows === 1 ? 'row' : 'rows' }},
+                      {{ item.counts.willImport }} will import, {{ item.counts.skipped }} skipped
+                    </span>
                   </span>
-                  <span class="line-clamp-2 text-xs text-muted-color">
-                    @if (item.accountName) {
-                      {{ item.accountName }} &middot;
-                    }
-                    @if (item.file.statementMonth) {
-                      {{ item.file.statementMonth }} &middot;
-                    }
-                    {{ item.counts.rows }} {{ item.counts.rows === 1 ? 'row' : 'rows' }},
-                    {{ item.counts.willImport }} will import, {{ item.counts.skipped }} skipped
+                </div>
+              } @else if (item.kind === 'message') {
+                <div
+                  role="row"
+                  [attr.aria-rowindex]="firstVisible() + i + 2"
+                  class="flex h-14 items-center border-t border-surface-100 px-4 text-sm text-muted-color dark:border-surface-800"
+                >
+                  <span role="cell" data-testid="empty-file">{{ item.text }}</span>
+                </div>
+              } @else {
+                <div
+                  role="row"
+                  data-testid="review-row"
+                  [attr.data-skipped]="item.row.skip !== null"
+                  [attr.aria-rowindex]="firstVisible() + i + 2"
+                  class="grid h-60 grid-cols-2 content-start gap-x-3 gap-y-2 overflow-hidden border-t border-surface-100 px-4 py-3 text-sm md:flex md:h-14 md:items-center md:gap-3 md:py-0 dark:border-surface-800"
+                  [class.opacity-60]="item.row.skip !== null"
+                >
+                  <span
+                    role="cell"
+                    class="order-1 text-xs text-muted-color md:order-1 md:w-24 md:shrink-0 md:text-sm"
+                    >{{ item.row.preview.date | date: 'MMM d, y' }}</span
+                  >
+                  <span
+                    role="cell"
+                    data-testid="row-description"
+                    class="order-3 col-span-2 min-w-0 truncate font-medium text-surface-900 md:order-2 md:flex-2 dark:text-surface-0"
+                    [title]="item.row.preview.description"
+                    >{{ item.row.preview.description }}</span
+                  >
+                  <span
+                    role="cell"
+                    data-testid="row-merchant"
+                    class="order-5 col-span-2 flex min-w-0 flex-col gap-1 md:order-3 md:flex-1"
+                  >
+                    <span
+                      [id]="labelId(item, 'merchant')"
+                      class="text-xs text-muted-color md:sr-only"
+                      >Merchant<span class="sr-only">
+                        for {{ item.row.preview.description }},
+                        {{ item.row.preview.date | date: 'MMM d, y' }}</span
+                      ></span
+                    >
+                    <p-select
+                      [ariaLabelledBy]="labelId(item, 'merchant')"
+                      [options]="merchantOptions()"
+                      optionLabel="label"
+                      optionValue="value"
+                      placeholder="No merchant"
+                      [filter]="true"
+                      filterBy="label"
+                      [showClear]="true"
+                      [virtualScroll]="true"
+                      [virtualScrollItemSize]="40"
+                      appendTo="body"
+                      styleClass="w-full"
+                      [ngModel]="item.row.merchant?.id ?? null"
+                      (ngModelChange)="setMerchant(item, $event)"
+                      [disabled]="!item.editable"
+                    />
                   </span>
-                </span>
-              </div>
-            } @else if (item.kind === 'message') {
-              <div
-                role="row"
-                [attr.aria-rowindex]="firstVisible() + i + 2"
-                class="flex h-14 items-center border-t border-surface-100 px-4 text-sm text-muted-color dark:border-surface-800"
-              >
-                <span role="cell" data-testid="empty-file">{{ item.text }}</span>
-              </div>
-            } @else {
-              <div
-                role="row"
-                data-testid="review-row"
-                [attr.data-skipped]="item.row.skip !== null"
-                [attr.aria-rowindex]="firstVisible() + i + 2"
-                class="grid h-60 grid-cols-2 content-start gap-x-3 gap-y-2 overflow-hidden border-t border-surface-100 px-4 py-3 text-sm md:flex md:h-14 md:items-center md:gap-3 md:py-0 dark:border-surface-800"
-                [class.opacity-60]="item.row.skip !== null"
-              >
-                <span
-                  role="cell"
-                  class="order-1 text-xs text-muted-color md:order-1 md:w-24 md:shrink-0 md:text-sm"
-                  >{{ item.row.preview.date | date: 'MMM d, y' }}</span
-                >
-                <span
-                  role="cell"
-                  data-testid="row-description"
-                  class="order-3 col-span-2 min-w-0 truncate font-medium text-surface-900 md:order-2 md:flex-2 dark:text-surface-0"
-                  [title]="item.row.preview.description"
-                  >{{ item.row.preview.description }}</span
-                >
-                <span
-                  role="cell"
-                  data-testid="row-merchant"
-                  class="order-5 col-span-2 flex min-w-0 flex-col gap-1 md:order-3 md:flex-1"
-                >
-                  <span [id]="labelId(item, 'merchant')" class="text-xs text-muted-color md:sr-only"
-                    >Merchant<span class="sr-only">
-                      for {{ item.row.preview.description }},
-                      {{ item.row.preview.date | date: 'MMM d, y' }}</span
-                    ></span
+                  <span
+                    role="cell"
+                    data-testid="row-category"
+                    class="order-6 col-span-2 flex min-w-0 flex-col gap-1 md:order-4 md:flex-1"
                   >
-                  <p-select
-                    [ariaLabelledBy]="labelId(item, 'merchant')"
-                    [options]="merchantOptions()"
-                    optionLabel="label"
-                    optionValue="value"
-                    placeholder="No merchant"
-                    [filter]="true"
-                    filterBy="label"
-                    [showClear]="true"
-                    [virtualScroll]="true"
-                    [virtualScrollItemSize]="40"
-                    appendTo="body"
-                    styleClass="w-full"
-                    [ngModel]="item.row.merchant?.id ?? null"
-                    (ngModelChange)="setMerchant(item, $event)"
-                    [disabled]="!item.editable"
-                  />
-                </span>
-                <span
-                  role="cell"
-                  data-testid="row-category"
-                  class="order-6 col-span-2 flex min-w-0 flex-col gap-1 md:order-4 md:flex-1"
-                >
-                  <span [id]="labelId(item, 'category')" class="text-xs text-muted-color md:sr-only"
-                    >Category<span class="sr-only">
-                      for {{ item.row.preview.description }},
-                      {{ item.row.preview.date | date: 'MMM d, y' }}</span
-                    ></span
+                    <span
+                      [id]="labelId(item, 'category')"
+                      class="text-xs text-muted-color md:sr-only"
+                      >Category<span class="sr-only">
+                        for {{ item.row.preview.description }},
+                        {{ item.row.preview.date | date: 'MMM d, y' }}</span
+                      ></span
+                    >
+                    <p-select
+                      [ariaLabelledBy]="labelId(item, 'category')"
+                      [options]="categoryOptions()"
+                      optionLabel="label"
+                      optionValue="value"
+                      placeholder="Uncategorized"
+                      [filter]="true"
+                      filterBy="label"
+                      [showClear]="true"
+                      appendTo="body"
+                      styleClass="w-full"
+                      [ngModel]="item.row.category?.id ?? null"
+                      (ngModelChange)="setCategory(item, $event)"
+                      [disabled]="!item.editable"
+                    />
+                  </span>
+                  <span
+                    role="cell"
+                    data-testid="row-amount"
+                    class="order-2 text-right font-mono font-semibold tabular-nums md:order-5 md:w-28 md:shrink-0"
+                    [class]="amountTone(item.row.preview.type)"
+                    >{{
+                      abs(item.row.preview.amount)
+                        | formatTransactionTypeAmount: item.row.preview.type
+                    }}</span
                   >
-                  <p-select
-                    [ariaLabelledBy]="labelId(item, 'category')"
-                    [options]="categoryOptions()"
-                    optionLabel="label"
-                    optionValue="value"
-                    placeholder="Uncategorized"
-                    [filter]="true"
-                    filterBy="label"
-                    [showClear]="true"
-                    appendTo="body"
-                    styleClass="w-full"
-                    [ngModel]="item.row.category?.id ?? null"
-                    (ngModelChange)="setCategory(item, $event)"
-                    [disabled]="!item.editable"
-                  />
-                </span>
-                <span
-                  role="cell"
-                  data-testid="row-amount"
-                  class="order-2 text-right font-mono font-semibold tabular-nums md:order-5 md:w-28 md:shrink-0"
-                  [class]="amountTone(item.row.preview.type)"
-                  >{{
-                    abs(item.row.preview.amount)
-                      | formatTransactionTypeAmount: item.row.preview.type
-                  }}</span
-                >
-                <span
-                  role="cell"
-                  data-testid="row-status"
-                  class="order-4 col-span-2 flex items-center gap-1 text-xs font-medium md:order-6 md:w-40 md:shrink-0"
-                  [class]="status(item.row).tone"
-                >
-                  <i class="pi shrink-0" [class]="status(item.row).icon" aria-hidden="true"></i>
-                  <span class="line-clamp-2">{{ status(item.row).label }}</span>
-                </span>
-              </div>
+                  <span
+                    role="cell"
+                    data-testid="row-status"
+                    class="order-4 col-span-2 flex items-center gap-1 text-xs font-medium md:order-6 md:w-40 md:shrink-0"
+                    [class]="status(item.row).tone"
+                  >
+                    <i class="pi shrink-0" [class]="status(item.row).icon" aria-hidden="true"></i>
+                    <span class="line-clamp-2">{{ status(item.row).label }}</span>
+                  </span>
+                </div>
+              }
             }
-          }
+          </div>
         </div>
       </div>
     </div>
-  </div>
+  }
 </div>

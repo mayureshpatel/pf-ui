@@ -200,6 +200,7 @@ describe('CsvImportReviewStepComponent', () => {
   }
 
   afterEach(async () => {
+    document.documentElement.style.fontSize = '';
     if (inBrowser) {
       const { page } = await import('vitest/browser');
       await page.viewport(1280, 800);
@@ -395,6 +396,9 @@ describe('CsvImportReviewStepComponent', () => {
     expect(text(fixture.nativeElement)).toContain(
       'Every row has a category from a rule or from you',
     );
+    // only the message: no empty table frame or column headings
+    expect(fixture.nativeElement.querySelector('[data-testid="review-table"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-testid="column-headers"]')).toBeNull();
   });
 
   it('should load categories and merchants once for every row’s options', async () => {
@@ -558,6 +562,73 @@ describe('CsvImportReviewStepComponent', () => {
     },
   );
 
+  /** Scrolls the list to its end and checks the last row shows fully, with no overlapping rows. */
+  async function expectLastRowReachable(lastDescription: string): Promise<void> {
+    const scroller = fixture.nativeElement.querySelector(
+      '[data-testid="review-scroller"]',
+    ) as HTMLElement;
+    scroller.scrollTop = scroller.scrollHeight;
+    scroller.dispatchEvent(new Event('scroll'));
+    await settle();
+    await new Promise((r) => requestAnimationFrame(() => r(null)));
+    await settle();
+
+    expect(rows().length).toBeLessThan(60);
+    const [last] = rowsFor(lastDescription);
+    expect(last).toBeDefined();
+    const view = scroller.getBoundingClientRect();
+    const box = last.getBoundingClientRect();
+    expect(box.top).toBeGreaterThanOrEqual(view.top - 1);
+    expect(box.bottom).toBeLessThanOrEqual(view.bottom + 1);
+    // the rendered items sit edge to edge: no overlap and no gap
+    const boxes = all('[data-testid="file-header"], [data-testid="review-row"]').map((el) =>
+      el.getBoundingClientRect(),
+    );
+    for (let i = 1; i < boxes.length; i++) {
+      expect(Math.abs(boxes[i].top - boxes[i - 1].bottom)).toBeLessThan(1);
+    }
+    // the contents of the last card fit inside it
+    for (const select of all<HTMLElement>('p-select', last)) {
+      expect(select.getBoundingClientRect().bottom).toBeLessThanOrEqual(box.bottom);
+    }
+  }
+
+  const manyPreviews = (prefix: string, n: number): TransactionPreview[] =>
+    Array.from({ length: n }, (_, i) => preview(`${prefix} ${i}`, { amount: -(i + 1) }));
+
+  it.skipIf(!inBrowser)(
+    'should keep the window aligned with a larger browser font size',
+    async () => {
+      document.documentElement.style.fontSize = '20px';
+      await setup({
+        previews: {
+          'capone-2026-01.csv': manyPreviews('CAP', 1500),
+          'discover-2026-01.csv': manyPreviews('DIS', 1500),
+        },
+      });
+
+      await expectLastRowReachable('DIS 1499');
+    },
+  );
+
+  it.skipIf(!inBrowser)(
+    'should window a 3000-row batch at phone width and reach the last card',
+    async () => {
+      const { page } = await import('vitest/browser');
+      await page.viewport(375, 812);
+      await setup({
+        previews: {
+          'capone-2026-01.csv': manyPreviews('CAP', 1500),
+          'discover-2026-01.csv': manyPreviews('DIS', 1500),
+        },
+      });
+      expect(rows().length).toBeGreaterThan(0);
+      expect(rows().length).toBeLessThan(30);
+
+      await expectLastRowReachable('DIS 1499');
+    },
+  );
+
   it.skipIf(!inBrowser)(
     'should stack each row as a card inside a 375px viewport with no horizontal scroll',
     async () => {
@@ -617,4 +688,132 @@ describe('CsvImportReviewStepComponent', () => {
     const columns = fixture.nativeElement.querySelector('[data-testid="column-headers"]');
     expect(columns.getBoundingClientRect().height).toBeGreaterThan(0);
   });
+  const toggleNeedsLook = async (): Promise<void> => {
+    fixture.nativeElement.querySelector('[data-testid="needs-look-toggle"]').click();
+    await settle();
+  };
+  const toggleText = (): string =>
+    text(fixture.nativeElement.querySelector('[data-testid="needs-look-toggle"]'));
+
+  async function pickOption(row: HTMLElement, field: 'merchant' | 'category', label: string) {
+    row.querySelector<HTMLElement>(`[data-testid="row-${field}"] [role="combobox"]`)!.click();
+    await settle();
+    const option = await vi.waitFor((): HTMLElement => {
+      const found = Array.from(document.querySelectorAll<HTMLElement>('[role="option"]')).find(
+        (o) => text(o) === label,
+      );
+      if (!found) throw new Error(`${label} option not rendered yet`);
+      return found;
+    });
+    option.click();
+    await settle();
+  }
+
+  it.skipIf(!inBrowser)(
+    'should keep a row that only had its merchant set in Needs a look while it has no category',
+    async () => {
+      await setup({
+        previews: {
+          'capone-2026-01.csv': [
+            preview('KROGER #1'),
+            preview('KROGER #2'),
+            preview('RULED', { suggestedCategory: GROCERIES }),
+          ],
+        },
+      });
+
+      await pickOption(rowsFor('KROGER #1')[0], 'merchant', 'Kroger');
+
+      expect(store.items()[0].rows[0].origin).toBe('edited');
+      expect(store.items()[0].rows[0].category).toBeNull();
+      expect(text(statusOf(rowsFor('KROGER #1')[0]))).toBe('Edited - Uncategorized');
+      expect(toggleText()).toContain('Needs a look (2)');
+      await toggleNeedsLook();
+      expect(rows().map((r) => text(r.querySelector('[data-testid="row-description"]')!))).toEqual([
+        'KROGER #1',
+        'KROGER #2',
+      ]);
+    },
+  );
+
+  it.skipIf(!inBrowser)(
+    'should show a row whose category was cleared as uncategorized and needing a look',
+    async () => {
+      await setup({
+        previews: {
+          'capone-2026-01.csv': [
+            preview('WALGREENS #1', { suggestedCategory: PHARMACY }),
+            preview('WALGREENS #1', { suggestedCategory: PHARMACY }),
+          ],
+        },
+      });
+      expect(toggleText()).toContain('Needs a look (0)');
+
+      rowsFor('WALGREENS #1')[0]
+        .querySelector('[data-testid="row-category"] .p-select-clear-icon')!
+        .dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await settle();
+
+      const [cleared, untouched] = store.items()[0].rows;
+      expect(cleared.category).toBeNull();
+      expect(untouched.category?.id).toBe(PHARMACY.id);
+      const [first, second] = rowsFor('WALGREENS #1');
+      expect(text(statusOf(first))).toBe('Edited - Uncategorized');
+      expect(statusOf(first).querySelector('i.pi-exclamation-triangle')).not.toBeNull();
+      expect(text(statusOf(second))).toBe('Rule applied');
+      expect(toggleText()).toContain('Needs a look (1)');
+      await toggleNeedsLook();
+      expect(rows().length).toBe(1);
+    },
+  );
+
+  it.skipIf(!inBrowser)(
+    'should keep a row fixed under Needs a look listed, with focus in it, until the filter is toggled',
+    async () => {
+      await setup({
+        previews: {
+          'capone-2026-01.csv': [
+            preview('KROGER #1'),
+            preview('KROGER #2'),
+            preview('RULED', { suggestedCategory: GROCERIES }),
+          ],
+        },
+      });
+      await toggleNeedsLook();
+      expect(rows().length).toBe(2);
+      const { userEvent } = await import('vitest/browser');
+
+      const row = rowsFor('KROGER #1')[0];
+      row.querySelector<HTMLElement>('[data-testid="row-category"] [role="combobox"]')!.focus();
+      await userEvent.keyboard('{Enter}');
+      await vi.waitFor(() =>
+        expect(document.activeElement?.classList.contains('p-select-filter')).toBe(true),
+      );
+      await userEvent.keyboard('Groc');
+      await vi.waitFor(() =>
+        expect(
+          Array.from(document.querySelectorAll('[role="option"]')).map((o) => text(o)),
+        ).toEqual(['Groceries']),
+      );
+      await userEvent.keyboard('{ArrowDown}');
+      await vi.waitFor(() =>
+        expect(document.querySelector('[role="option"].p-focus')).not.toBeNull(),
+      );
+      await userEvent.keyboard('{Enter}');
+      await settle();
+
+      expect(store.items()[0].rows[0].category?.id).toBe(GROCERIES.id);
+      const [stillListed] = rowsFor('KROGER #1');
+      expect(stillListed).toBe(row);
+      expect(text(statusOf(stillListed))).toBe('Edited');
+      expect(stillListed.contains(document.activeElement)).toBe(true);
+      expect(rowsFor('KROGER #2').length).toBe(1);
+      expect(toggleText()).toContain('Needs a look (1)');
+
+      await toggleNeedsLook();
+      await toggleNeedsLook();
+      expect(rowsFor('KROGER #1').length).toBe(0);
+      expect(rowsFor('KROGER #2').length).toBe(1);
+    },
+  );
 });

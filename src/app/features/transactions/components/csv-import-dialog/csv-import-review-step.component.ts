@@ -70,21 +70,27 @@ interface RowStatus {
 }
 
 /**
- * Fixed heights (px) of each windowed item, matching the `h-*` classes in the template: the
- * window is computed from these, so the two must change together.
+ * Fixed heights (rem) of each windowed item, matching the `h-*` classes in the template (`h-14` is
+ * 3.5rem, `h-16` 4rem, `h-20` 5rem, `h-60` 15rem): the window is computed from these, so the two
+ * must change together. They are rem, not px, so a raised browser font size scales both alike.
  */
-const ITEM_HEIGHTS: Record<'desktop' | 'mobile', Record<ReviewItem['kind'], number>> = {
-  desktop: { header: 64, row: 56, message: 56 },
-  mobile: { header: 80, row: 240, message: 56 },
+const ITEM_HEIGHTS_REM: Record<'desktop' | 'mobile', Record<ReviewItem['kind'], number>> = {
+  desktop: { header: 4, row: 3.5, message: 3.5 },
+  mobile: { header: 5, row: 15, message: 3.5 },
 };
-/** Height of the scroll viewport (`h-120`) before it has been measured. */
-const DEFAULT_VIEWPORT = 480;
+/** Height of the scroll viewport (`h-120`, 30rem) before it has been measured. */
+const DEFAULT_VIEWPORT_REM = 30;
 /** Items rendered beyond each edge of the viewport, so Tab always has a next row to land on. */
 const OVERSCAN = 4;
 /** One request, at Spring's default maximum page size; see the PF-898 task 9 report. */
 const MERCHANT_PAGE_SIZE = 2000;
 const DESKTOP_QUERY = '(min-width: 48rem)';
 
+const EDITED_UNCATEGORIZED: RowStatus = {
+  label: 'Edited - Uncategorized',
+  icon: 'pi-exclamation-triangle',
+  tone: 'text-amber-700 dark:text-amber-400',
+};
 const STATUS: Record<ReviewRow['origin'], RowStatus> = {
   rule: {
     label: 'Rule applied',
@@ -124,8 +130,13 @@ function plural(n: number, one: string, many: string): string {
   return `${n} ${n === 1 ? one : many}`;
 }
 
+/** A row still to be imported that has no category, or only a guessed one. */
 function needsALook(row: ReviewRow): boolean {
-  return row.skip === null && (row.origin === 'none' || row.origin === 'guess');
+  return row.skip === null && (row.category === null || row.origin === 'guess');
+}
+
+function rootFontSize(): number {
+  return parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
 }
 
 function categoryLabel(c: Category): string {
@@ -168,10 +179,17 @@ export class CsvImportReviewStepComponent {
   );
 
   readonly needsLookOnly = signal(false);
+  /**
+   * Rows edited while "Needs a look" is on: they stay listed (so the row, and keyboard focus in
+   * it, does not vanish mid-edit) until the filter is toggled again.
+   */
+  private readonly stickyKeys = signal<ReadonlySet<string>>(new Set());
 
   private readonly scroller = viewChild<ElementRef<HTMLElement>>('scroller');
   private readonly scrollTop = signal(0);
-  private readonly viewportHeight = signal(DEFAULT_VIEWPORT);
+  /** Pixels per rem, re-read whenever the scroller resizes (a root font-size change resizes it). */
+  private readonly remPx = signal(rootFontSize());
+  private readonly viewportHeight = signal(DEFAULT_VIEWPORT_REM * rootFontSize());
   private readonly desktop = signal(true);
 
   /** Files whose preview failed; listed above the table and left out of it. */
@@ -252,6 +270,7 @@ export class CsvImportReviewStepComponent {
   /** Headers, rows and per-file messages, flattened in display order. */
   readonly items = computed((): ReviewItem[] => {
     const onlyNeedsLook: boolean = this.needsLookOnly();
+    const sticky: ReadonlySet<string> = this.stickyKeys();
     const committing: boolean = this.store.committing();
     const accounts: Account[] = this.store.accountList();
     const out: ReviewItem[] = [];
@@ -261,10 +280,11 @@ export class CsvImportReviewStepComponent {
       let skipped = 0;
       file.rows.forEach((row: ReviewRow, rowIndex: number): void => {
         if (row.skip !== null) skipped++;
-        if (onlyNeedsLook && !needsALook(row)) return;
+        const key = `${file.id}:${rowIndex}`;
+        if (onlyNeedsLook && !needsALook(row) && !sticky.has(key)) return;
         rowItems.push({
           kind: 'row',
-          key: `${file.id}:${rowIndex}`,
+          key,
           file,
           rowIndex,
           row,
@@ -295,9 +315,13 @@ export class CsvImportReviewStepComponent {
 
   /** `offsets[i]` is the top of item `i`; the last entry is the total height. */
   private readonly offsets = computed((): number[] => {
-    const heights = ITEM_HEIGHTS[this.desktop() ? 'desktop' : 'mobile'];
+    const rem: Record<ReviewItem['kind'], number> =
+      ITEM_HEIGHTS_REM[this.desktop() ? 'desktop' : 'mobile'];
+    const px: number = this.remPx();
     const offsets: number[] = [0];
-    for (const item of this.items()) offsets.push(offsets[offsets.length - 1] + heights[item.kind]);
+    for (const item of this.items()) {
+      offsets.push(offsets[offsets.length - 1] + rem[item.kind] * px);
+    }
     return offsets;
   });
 
@@ -331,9 +355,11 @@ export class CsvImportReviewStepComponent {
     effect((onCleanup): void => {
       const el: HTMLElement | undefined = this.scroller()?.nativeElement;
       if (!el) return;
-      const observer = new ResizeObserver((): void =>
-        this.viewportHeight.set(el.clientHeight || DEFAULT_VIEWPORT),
-      );
+      const observer = new ResizeObserver((): void => {
+        const px: number = rootFontSize();
+        this.remPx.set(px);
+        this.viewportHeight.set(el.clientHeight || DEFAULT_VIEWPORT_REM * px);
+      });
       observer.observe(el);
       onCleanup(() => observer.disconnect());
     });
@@ -347,6 +373,7 @@ export class CsvImportReviewStepComponent {
 
   toggleNeedsLook(): void {
     this.needsLookOnly.update((on: boolean): boolean => !on);
+    this.stickyKeys.set(new Set());
     const el: HTMLElement | undefined = this.scroller()?.nativeElement;
     if (el) el.scrollTop = 0;
     this.scrollTop.set(0);
@@ -354,16 +381,27 @@ export class CsvImportReviewStepComponent {
 
   setMerchant(item: RowItem, id: number | null): void {
     const merchant: Merchant | null = id === null ? null : (this.merchantById().get(id) ?? null);
+    this.keepListed(item);
     this.store.editRow(item.file.id, item.rowIndex, { merchant });
   }
 
   setCategory(item: RowItem, id: number | null): void {
     const category: Category | null = id === null ? null : (this.categoryById().get(id) ?? null);
+    this.keepListed(item);
     this.store.editRow(item.file.id, item.rowIndex, { category });
   }
 
   status(row: ReviewRow): RowStatus {
-    return row.skip ? SKIPPED[row.skip] : STATUS[row.origin];
+    if (row.skip) return SKIPPED[row.skip];
+    if (row.category === null) return row.origin === 'edited' ? EDITED_UNCATEGORIZED : STATUS.none;
+    return STATUS[row.origin];
+  }
+
+  private keepListed(item: RowItem): void {
+    if (!this.needsLookOnly()) return;
+    this.stickyKeys.update(
+      (keys: ReadonlySet<string>): ReadonlySet<string> => new Set([...keys, item.key]),
+    );
   }
 
   amountTone(type: TransactionType): string {
