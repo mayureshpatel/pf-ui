@@ -146,9 +146,13 @@
                       [title]="item.row.preview.description"
                       >{{ item.row.preview.description }}</span
                     >
-                    <span data-testid="row-date" class="text-xs text-muted-color">{{
-                      item.date | date: 'MMM d, y'
-                    }}</span>
+                    <span data-testid="row-date" class="text-xs text-muted-color">
+                      @if (item.date) {
+                        {{ item.date | date: 'MMM d, y' }}
+                      } @else {
+                        <span aria-hidden="true">–</span><span class="sr-only">Date unknown</span>
+                      }
+                    </span>
                   </span>
                   <span
                     role="cell"
@@ -160,7 +164,7 @@
                       class="text-xs text-muted-color md:sr-only"
                       >Merchant<span class="sr-only">
                         for {{ item.row.preview.description }},
-                        {{ item.date | date: 'MMM d, y' }}</span
+                        {{ item.date ? (item.date | date: 'MMM d, y') : 'date unknown' }}</span
                       ></span
                     >
                     <p-select
@@ -191,7 +195,7 @@
                       class="text-xs text-muted-color md:sr-only"
                       >Category<span class="sr-only">
                         for {{ item.row.preview.description }},
-                        {{ item.date | date: 'MMM d, y' }}</span
+                        {{ item.date ? (item.date | date: 'MMM d, y') : 'date unknown' }}</span
                       ></span
                     >
                     <p-select

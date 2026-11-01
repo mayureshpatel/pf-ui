@@ -864,6 +864,42 @@ describe('CsvImportReviewStepComponent', () => {
     },
   );
 
+  it('should show a dash for a missing or invalid date and still render every row', async () => {
+    const bad: [string, unknown][] = [
+      ['EMPTY DATE', ''],
+      ['NULL DATE', null],
+      ['UNDEFINED DATE', undefined],
+      ['GARBAGE DATE', 'garbage'],
+      ['MONTH ONLY', '2026-01'],
+      ['IMPOSSIBLE DATE', '2026-02-31'],
+    ];
+    await setup({
+      previews: {
+        'capone-2026-01.csv': [
+          ...bad.map(([description, date]) => preview(description, { date: date as string })),
+          preview('GOOD DATE', { date: '2026-01-05T00:00:00Z' }),
+        ],
+      },
+    });
+
+    expect(rows().length).toBe(bad.length + 1);
+    for (const [description] of bad) {
+      const [row] = rowsFor(description);
+      const date = row.querySelector('[data-testid="row-date"]')!;
+      expect(text(date.querySelector('[aria-hidden="true"]')!)).toBe('–');
+      expect(text(date.querySelector('.sr-only')!)).toBe('Date unknown');
+      const labelId = row
+        .querySelector('[data-testid="row-category"] [role="combobox"]')!
+        .getAttribute('aria-labelledby')!;
+      expect(text(document.getElementById(labelId)!)).toBe(
+        `Category for ${description}, date unknown`,
+      );
+    }
+    expect(text(rowsFor('GOOD DATE')[0].querySelector('[data-testid="row-date"]')!)).toBe(
+      'Jan 5, 2026',
+    );
+  });
+
   it('should show the calendar date of the file, whatever offset the parser gave it', async () => {
     await setup({
       previews: {

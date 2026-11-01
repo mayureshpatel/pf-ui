@@ -66,8 +66,8 @@ interface RowItem {
   /** Index into `file.rows`, which is what {@link CsvImportBatchStore.editRow} takes. */
   rowIndex: number;
   row: ReviewRow;
-  /** The row's calendar date, at local midnight, for `DatePipe`; see {@link calendarDate}. */
-  date: Date;
+  /** The row's calendar date, at local midnight, for `DatePipe`; null when it is not a valid date. */
+  date: Date | null;
   editable: boolean;
 }
 
@@ -155,13 +155,27 @@ function rootFontSize(): number {
   return parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
 }
 
+const CALENDAR_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
 /**
  * The calendar date of an ISO date or date-time, as the ledger shows it (`date.substring(0, 10)`),
  * at local midnight. Formatting the ISO string itself would shift a UTC-midnight date back a day
  * west of UTC.
+ * @returns null for a missing, malformed or impossible date (e.g. `2026-02-31`), which `DatePipe`
+ *   would otherwise throw on and take the whole step down with it
  */
-function calendarDate(iso: string): Date {
-  return fromLocalDateString(iso.substring(0, 10));
+function calendarDate(iso: string | null | undefined): Date | null {
+  if (typeof iso !== 'string') return null;
+  const day: string = iso.substring(0, 10);
+  if (!CALENDAR_DATE.test(day)) return null;
+  const date: Date = fromLocalDateString(day);
+  const [year, month, dayOfMonth] = day.split('-').map(Number);
+  const valid: boolean =
+    !Number.isNaN(date.getTime()) &&
+    date.getFullYear() === year &&
+    date.getMonth() === month - 1 &&
+    date.getDate() === dayOfMonth;
+  return valid ? date : null;
 }
 
 function categoryLabel(c: Category): string {
