@@ -183,6 +183,7 @@ export class CsvImportDialogComponent {
       this.close();
       return;
     }
+    const asker: Element | null = document.activeElement;
     this.confirmationService.confirm({
       header: 'Discard import?',
       message: 'The files you chose and any edits you made will be lost. Discard them?',
@@ -190,6 +191,8 @@ export class CsvImportDialogComponent {
       rejectLabel: 'Keep importing',
       acceptButtonStyleClass: 'p-button-danger',
       accept: (): void => this.close(),
+      // Keep importing, its close button or Escape
+      reject: (): void => this.restoreFocus(asker),
     });
   }
 
@@ -239,6 +242,32 @@ export class CsvImportDialogComponent {
   private goTo(step: ImportStep): void {
     this.step.set(step);
     this.focusHeading();
+  }
+
+  /**
+   * After the discard confirmation is dismissed, its focused button is removed and focus would
+   * fall to the page body. Return it to the control in this dialog that asked, else the step
+   * heading. Waits a frame for the confirmation to finish closing (its own focus trap would
+   * otherwise keep focus until it has hidden).
+   */
+  private restoreFocus(asker: Element | null): void {
+    const container: HTMLElement | null | undefined = this.dialog()?.container();
+    const focus = (): void => {
+      if (!this.visible()) return;
+      // never take focus back from somewhere the user has already moved it to
+      const active: Element | null = document.activeElement;
+      if (active && active !== document.body && !active.closest('.p-confirmdialog')) return;
+      const target: Element | null =
+        asker instanceof HTMLElement && asker.isConnected && !!container?.contains(asker)
+          ? asker
+          : (this.heading()?.nativeElement ?? null);
+      if (target instanceof HTMLElement && document.activeElement !== target) target.focus();
+    };
+    requestAnimationFrame((): void => {
+      focus();
+      // the confirmation's leave animation can finish after the first frame
+      setTimeout(focus, 300);
+    });
   }
 
   private focusHeading(): void {

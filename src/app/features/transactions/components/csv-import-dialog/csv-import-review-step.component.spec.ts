@@ -863,4 +863,78 @@ describe('CsvImportReviewStepComponent', () => {
       expect(rowsFor('KROGER #2').length).toBe(1);
     },
   );
+
+  it('should show the calendar date of the file, whatever offset the parser gave it', async () => {
+    await setup({
+      previews: {
+        'capone-2026-01.csv': [
+          preview('UTC MIDNIGHT', { date: '2026-01-05T00:00:00Z' }),
+          preview('EASTERN MIDNIGHT', { date: '2026-01-05T00:00:00-05:00' }),
+          preview('PLAIN DATE', { date: '2026-01-05' }),
+          preview('LATE UTC', { date: '2026-01-31T23:30:00Z' }),
+        ],
+      },
+    });
+
+    const dateOf = (description: string): string =>
+      text(rowsFor(description)[0].querySelector('[data-testid="row-date"]')!);
+    expect(dateOf('UTC MIDNIGHT')).toBe('Jan 5, 2026');
+    expect(dateOf('EASTERN MIDNIGHT')).toBe('Jan 5, 2026');
+    expect(dateOf('PLAIN DATE')).toBe('Jan 5, 2026');
+    expect(dateOf('LATE UTC')).toBe('Jan 31, 2026');
+    // the editors' labels name the same date
+    const labelId = rowsFor('UTC MIDNIGHT')[0]
+      .querySelector('[data-testid="row-category"] [role="combobox"]')!
+      .getAttribute('aria-labelledby')!;
+    expect(text(document.getElementById(labelId)!)).toBe('Category for UTC MIDNIGHT, Jan 5, 2026');
+  });
+
+  it.skipIf(!inBrowser)(
+    'should give merchant and category room at the dialog width, the description truncating first',
+    async () => {
+      const HOME = category(103, 'Home & Garden');
+      const HOUSEHOLD = category(4, 'Household Supplies', HOME);
+      await setup({
+        previews: {
+          'capone-2026-01.csv': [
+            preview('A RATHER LONG RAW BANK DESCRIPTION FROM THE STATEMENT #000123 ATLANTA GA', {
+              suggestedMerchant: WALGREENS,
+              suggestedCategory: HOUSEHOLD,
+            }),
+            preview('KROGER'),
+          ],
+        },
+      });
+      fixture.nativeElement.style.display = 'block';
+      fixture.nativeElement.style.width = '982px';
+      await settle();
+
+      for (const row of rows()) {
+        const rowBox = row.getBoundingClientRect();
+        expect(row.scrollWidth).toBeLessThanOrEqual(row.clientWidth);
+        const [merchantSelect, categorySelect] = all<HTMLElement>('p-select', row);
+        for (const select of [merchantSelect, categorySelect]) {
+          const box = select.getBoundingClientRect();
+          expect(box.width).toBeGreaterThanOrEqual(200);
+          expect(box.right).toBeLessThanOrEqual(rowBox.right);
+          // the shown value or placeholder is not cut to an ellipsis
+          const label = select.querySelector<HTMLElement>('.p-select-label')!;
+          expect(label.scrollWidth).toBeLessThanOrEqual(label.clientWidth);
+        }
+      }
+      const [longRow] = rows();
+      const categoryLabel = longRow.querySelector<HTMLElement>(
+        '[data-testid="row-category"] .p-select-label',
+      )!;
+      expect(text(categoryLabel)).toBe('Household Supplies');
+      // the full Parent / Child name stays available
+      expect(categoryLabel.querySelector('[title]')!.getAttribute('title')).toBe(
+        'Home & Garden / Household Supplies',
+      );
+      // the description gives way, with its full text on hover
+      const description = longRow.querySelector<HTMLElement>('[data-testid="row-description"]')!;
+      expect(description.scrollWidth).toBeGreaterThan(description.clientWidth);
+      expect(description.getAttribute('title')).toContain('A RATHER LONG RAW BANK DESCRIPTION');
+    },
+  );
 });

@@ -1,6 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { ConfirmationService, MessageService } from 'primeng/api';
+import { providePrimeNG } from 'primeng/config';
 import { App } from './app';
+import { FinancePreset } from './custom-presets';
 
 describe('App', () => {
   beforeEach(async () => {
@@ -63,5 +65,52 @@ describe('App', () => {
       // assert & verify
       expect(unnamedAlertDialogs()).toEqual([]);
     });
+  });
+
+  // PF-898 live check D5: on a phone the confirmation touched both screen edges.
+  describe('with the app theme', () => {
+    beforeEach(() => {
+      TestBed.configureTestingModule({
+        providers: [providePrimeNG({ theme: { preset: FinancePreset } })],
+      });
+    });
+
+    it.skipIf(/jsdom/i.test(navigator.userAgent))(
+      'should keep a side margin around a confirmation on a phone',
+      async () => {
+        const { page } = await import('vitest/browser');
+        await page.viewport(375, 812);
+        try {
+          // arrange
+          const fixture = TestBed.createComponent(App);
+          await fixture.whenStable();
+
+          // act
+          TestBed.inject(ConfirmationService).confirm({
+            header: 'Discard import?',
+            message: 'The files you chose and any edits you made will be lost. Discard them?',
+            acceptLabel: 'Discard',
+            rejectLabel: 'Keep importing',
+          });
+          fixture.detectChanges();
+          await fixture.whenStable();
+
+          // assert & verify
+          // measured once the opening (scale) animation has finished
+          const box = await vi.waitFor((): DOMRect => {
+            const el = document.querySelector<HTMLElement>('.p-confirmdialog');
+            const rect = el?.getBoundingClientRect();
+            if (!el || !rect || rect.width === 0) throw new Error('not shown yet');
+            if (Math.abs(rect.width - el.offsetWidth) > 0.5) throw new Error('still animating');
+            return rect;
+          });
+          expect(box.left).toBeGreaterThanOrEqual(12);
+          expect(box.right).toBeLessThanOrEqual(375 - 12);
+          fixture.destroy();
+        } finally {
+          await page.viewport(1280, 800);
+        }
+      },
+    );
   });
 });

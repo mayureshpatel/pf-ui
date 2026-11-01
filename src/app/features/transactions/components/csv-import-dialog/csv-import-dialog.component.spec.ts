@@ -321,6 +321,43 @@ describe('CsvImportDialogComponent', () => {
     expect(host.visible()).toBe(true);
   });
 
+  /** What the real confirmation does: takes focus, then its button is removed on close. */
+  function confirmationTakesFocus(): () => void {
+    const button = document.createElement('button');
+    document.body.appendChild(button);
+    button.focus();
+    return (): void => button.remove();
+  }
+
+  it('returns focus to the control that asked, once the user keeps importing', async () => {
+    await toReview();
+    const closeX = byTestId('close-x')!;
+    closeX.focus();
+
+    await click('close-x');
+    const removeConfirmation = confirmationTakesFocus();
+    (confirmSpy.mock.calls[0][0] as Confirmation).reject!();
+    removeConfirmation();
+    await settle();
+
+    await vi.waitFor(() => expect(document.activeElement).toBe(closeX));
+    expect(host.visible()).toBe(true);
+  });
+
+  it('returns focus to the step heading when Escape on the page asked, then the user kept importing', async () => {
+    await toReview();
+    (document.activeElement as HTMLElement | null)?.blur();
+
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await settle();
+    const removeConfirmation = confirmationTakesFocus();
+    (confirmSpy.mock.calls[0][0] as Confirmation).reject!();
+    removeConfirmation();
+    await settle();
+
+    await vi.waitFor(() => expect(document.activeElement).toBe(byTestId('step-heading')));
+  });
+
   it('goes back to Files keeping the batch', async () => {
     await toReview();
 

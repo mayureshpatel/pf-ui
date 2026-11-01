@@ -67,12 +67,11 @@
           aria-rowindex="1"
           class="flex items-center gap-3 bg-surface-100 px-4 py-2 text-sm font-semibold dark:bg-surface-800"
         >
-          <span role="columnheader" class="w-24 shrink-0">Date</span>
-          <span role="columnheader" class="min-w-0 flex-2">Description</span>
-          <span role="columnheader" class="min-w-0 flex-1">Merchant</span>
-          <span role="columnheader" class="min-w-0 flex-1">Category</span>
+          <span role="columnheader" class="min-w-20 flex-1">Description and date</span>
+          <span role="columnheader" class="min-w-32 flex-1">Merchant</span>
+          <span role="columnheader" class="min-w-32 flex-1">Category</span>
           <span role="columnheader" class="w-28 shrink-0 text-right">Amount</span>
-          <span role="columnheader" class="w-40 shrink-0">Status</span>
+          <span role="columnheader" class="w-28 shrink-0 lg:w-36">Status</span>
         </div>
       </div>
 
@@ -139,27 +138,29 @@
                 >
                   <span
                     role="cell"
-                    class="order-1 text-xs text-muted-color md:order-1 md:w-24 md:shrink-0 md:text-sm"
-                    >{{ item.row.preview.date | date: 'MMM d, y' }}</span
+                    class="order-1 col-span-2 flex min-w-0 flex-col-reverse gap-0.5 md:order-1 md:min-w-20 md:flex-1 md:flex-col"
                   >
-                  <span
-                    role="cell"
-                    data-testid="row-description"
-                    class="order-3 col-span-2 min-w-0 truncate font-medium text-surface-900 md:order-2 md:flex-2 dark:text-surface-0"
-                    [title]="item.row.preview.description"
-                    >{{ item.row.preview.description }}</span
-                  >
+                    <span
+                      data-testid="row-description"
+                      class="min-w-0 truncate font-medium text-surface-900 dark:text-surface-0"
+                      [title]="item.row.preview.description"
+                      >{{ item.row.preview.description }}</span
+                    >
+                    <span data-testid="row-date" class="text-xs text-muted-color">{{
+                      item.date | date: 'MMM d, y'
+                    }}</span>
+                  </span>
                   <span
                     role="cell"
                     data-testid="row-merchant"
-                    class="order-5 col-span-2 flex min-w-0 flex-col gap-1 md:order-3 md:flex-1"
+                    class="order-4 col-span-2 flex min-w-0 flex-col gap-1 md:order-2 md:min-w-32 md:flex-1"
                   >
                     <span
                       [id]="labelId(item, 'merchant')"
                       class="text-xs text-muted-color md:sr-only"
                       >Merchant<span class="sr-only">
                         for {{ item.row.preview.description }},
-                        {{ item.row.preview.date | date: 'MMM d, y' }}</span
+                        {{ item.date | date: 'MMM d, y' }}</span
                       ></span
                     >
                     <p-select
@@ -183,14 +184,14 @@
                   <span
                     role="cell"
                     data-testid="row-category"
-                    class="order-6 col-span-2 flex min-w-0 flex-col gap-1 md:order-4 md:flex-1"
+                    class="order-5 col-span-2 flex min-w-0 flex-col gap-1 md:order-3 md:min-w-32 md:flex-1"
                   >
                     <span
                       [id]="labelId(item, 'category')"
                       class="text-xs text-muted-color md:sr-only"
                       >Category<span class="sr-only">
                         for {{ item.row.preview.description }},
-                        {{ item.row.preview.date | date: 'MMM d, y' }}</span
+                        {{ item.date | date: 'MMM d, y' }}</span
                       ></span
                     >
                     <p-select
@@ -215,12 +216,15 @@
                       <ng-template pTemplate="item" let-option>
                         <span>{{ option.name }}</span>
                       </ng-template>
+                      <ng-template pTemplate="selectedItem" let-option>
+                        <span [title]="option.label">{{ option.name }}</span>
+                      </ng-template>
                     </p-select>
                   </span>
                   <span
                     role="cell"
                     data-testid="row-amount"
-                    class="order-2 text-right font-mono font-semibold tabular-nums md:order-5 md:w-28 md:shrink-0"
+                    class="order-3 self-center text-right font-mono font-semibold tabular-nums md:order-4 md:w-28 md:shrink-0"
                     [class]="amountTone(item.row.preview.type)"
                     >{{
                       abs(item.row.preview.amount)
@@ -230,7 +234,7 @@
                   <span
                     role="cell"
                     data-testid="row-status"
-                    class="order-4 col-span-2 flex items-center gap-1 text-xs font-medium md:order-6 md:w-40 md:shrink-0"
+                    class="order-2 flex min-w-0 items-center gap-1 text-xs font-medium md:order-5 md:w-28 md:shrink-0 lg:w-36"
                     [class]="status(item.row).tone"
                   >
                     <i class="pi shrink-0" [class]="status(item.row).icon" aria-hidden="true"></i>

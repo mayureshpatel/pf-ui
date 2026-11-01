@@ -24,6 +24,7 @@ import { Merchant } from '@models/merchant.model';
 import { TransactionType } from '@models/transaction.model';
 import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
 import { FormatTransactionTypeAmountPipe } from '@shared/pipes/format-transaction-type-amount.pipe';
+import { fromLocalDateString } from '@shared/utils/transaction.utils';
 import { BatchFile, CsvImportBatchStore, ReviewRow } from './csv-import-batch.store';
 
 interface SelectOption {
@@ -65,6 +66,8 @@ interface RowItem {
   /** Index into `file.rows`, which is what {@link CsvImportBatchStore.editRow} takes. */
   rowIndex: number;
   row: ReviewRow;
+  /** The row's calendar date, at local midnight, for `DatePipe`; see {@link calendarDate}. */
+  date: Date;
   editable: boolean;
 }
 
@@ -150,6 +153,15 @@ function needsALook(row: ReviewRow): boolean {
 
 function rootFontSize(): number {
   return parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+}
+
+/**
+ * The calendar date of an ISO date or date-time, as the ledger shows it (`date.substring(0, 10)`),
+ * at local midnight. Formatting the ISO string itself would shift a UTC-midnight date back a day
+ * west of UTC.
+ */
+function calendarDate(iso: string): Date {
+  return fromLocalDateString(iso.substring(0, 10));
 }
 
 function categoryLabel(c: Category): string {
@@ -346,6 +358,7 @@ export class CsvImportReviewStepComponent {
           file,
           rowIndex,
           row,
+          date: calendarDate(row.preview.date),
           editable: !committing && !final && row.skip === null,
         });
       });
