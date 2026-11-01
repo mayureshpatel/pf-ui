@@ -35,7 +35,7 @@ function normalise(token: string): string {
 export function parseStatementFileName(fileName: string): ParsedStatementFileName | null {
   const parts: RegExpExecArray | null = FILE_NAME_PATTERN.exec(fileName);
   if (!parts) return null;
-  const month: number = Number(parts[3]);
+  const month = Number(parts[3]);
   if (month < 1 || month > 12) return null;
   return { bankToken: parts[1], year: Number(parts[2]), month };
 }

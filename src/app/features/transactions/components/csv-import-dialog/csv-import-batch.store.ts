@@ -185,6 +185,8 @@ export class CsvImportBatchStore {
   /** Cancels for in-flight uploads, by file id. */
   private readonly inFlight = new Map<string, () => void>();
 
+  /** The accounts last given to {@link setAccounts}, for the files step's account options. */
+  readonly accountList: Signal<Account[]> = this.accounts.asReadonly();
   readonly items: Signal<BatchFile[]> = this.files.asReadonly();
   readonly previewing: Signal<boolean> = this.previewRunning.asReadonly();
   readonly committing: Signal<boolean> = this.commitRunning.asReadonly();
