@@ -123,102 +123,111 @@ test.describe('Create a category rule from a transaction', () => {
     const data = await seed(page, token);
     await openTransactionsFor(page, token);
 
-    await test.step('Filter to uncategorized: only the two uncategorized rows remain', async () => {
-      await page.getByRole('tab', { name: /Needs a category/ }).click();
-      await expect(createRuleAction(page, data.plain)).toBeVisible();
-      await expect(createRuleAction(page, data.conflicting)).toBeVisible();
-      await expect(page.getByText(data.categorized.slice(0, -14))).toHaveCount(0);
-    });
-
-    const panel = page.getByRole('complementary', { name: 'Create rule' });
-    const keywords = panel.locator('#rule-keywords');
-
-    await test.step('Open Create rule from the row: titled panel, keyword prefilled and focused', async () => {
-      await createRuleAction(page, data.plain).click();
-      await expect(panel).toBeVisible();
-      await expect(panel.getByRole('heading', { name: 'Create rule' })).toBeVisible();
-      await expect(keywords).toHaveValue(data.plain);
-      await expect(keywords).toBeFocused();
-      // the row's own match is the only one for its raw description
-      await expect(page.locator('app-rule-match-list [data-match-row]')).toHaveCount(1);
-    });
-
-    await test.step('Widen the keyword to the shared prefix: three matches with a verdict each', async () => {
-      await keywords.fill(data.sharedKeyword);
-      const summary = page.getByTestId('match-summary');
-      await expect(summary).toContainText('3 matches');
-      await expect(summary).toContainText('1 will be categorized by this rule');
-      await expect(summary).toContainText('1 would lose to another rule');
-      await expect(summary).toContainText('1 already categorized - Apply rules leaves them alone');
-      await expect(page.locator('app-rule-match-list [data-match-row]')).toHaveCount(3);
-
-      await expect(matchRow(page, '#101')).toContainText('Will be categorized');
-      await expect(matchRow(page, '#202')).toContainText(
-        `Loses to ${data.higherKeyword} (priority ${HIGHER_PRIORITY})`,
-      );
-      await expect(matchRow(page, '#303')).toContainText(
-        'Already categorized - Apply rules leaves it alone',
-      );
-    });
-
-    await test.step('Choose a category and add the rule: the panel closes, the page stays as it was', async () => {
-      await chooseCategory(page, panel, data.target.name);
-      await panel.getByRole('button', { name: 'Add rule' }).click();
-      try {
-        await expect(page.getByText('Rule added')).toBeVisible();
-      } finally {
-        // tracked even when the assertion above fails, so the rule never outlives the test
-        await trackRuleByKeyword(page, data.sharedKeyword);
-      }
-      await expect(panel).toBeHidden();
-
-      await expect(page.getByRole('tab', { name: /Needs a category/ })).toHaveAttribute(
-        'aria-selected',
-        'true',
-      );
-      await expect(
-        page.getByRole('searchbox', { name: 'Search description or merchant' }),
-      ).toHaveValue(token);
-      await expect(createRuleAction(page, data.plain)).toBeVisible();
-      await expect(createRuleAction(page, data.conflicting)).toBeVisible();
-    });
-
-    await test.step('The rule was only stored: the matched transactions are still uncategorized', async () => {
-      const response = await page.request.get(
-        `${API_URL}/transactions?accountId=${data.accountId}&size=100`,
-        { headers: { Authorization: `Bearer ${await getAuthToken(page)}` } },
-      );
-      expect(response.ok()).toBeTruthy();
-      const rows = (
-        (await response.json()) as {
-          content: { description: string; category: { id: number } | null }[];
-        }
-      ).content;
-      for (const description of [data.plain, data.conflicting]) {
-        const row = rows.find((r) => r.description === description);
-        expect(row, description).toBeDefined();
-        expect(row?.category, description).toBeNull();
-      }
-    });
-
-    await test.step('The rule exists, with the chosen category, and Settings lists it', async () => {
-      const response = await page.request.get(`${API_URL}/category-rules`, {
-        headers: { Authorization: `Bearer ${await getAuthToken(page)}` },
+    try {
+      await test.step('Filter to uncategorized: only the two uncategorized rows remain', async () => {
+        await page.getByRole('tab', { name: /Needs a category/ }).click();
+        await expect(createRuleAction(page, data.plain)).toBeVisible();
+        await expect(createRuleAction(page, data.conflicting)).toBeVisible();
+        // the categorized row's description carries a timestamp suffix: match it by token instead
+        await expect(page.getByText(new RegExp(`${data.token} COFFEE #303`))).toHaveCount(0);
       });
-      const rules = (await response.json()) as {
-        keywords: string[];
-        category: { id: number } | null;
-        priority: number;
-      }[];
-      const created = rules.find((r) => r.keywords.includes(data.sharedKeyword));
-      expect(created?.category?.id).toBe(data.target.id);
-      expect(created?.priority).toBe(0);
 
-      await page.goto('/settings?section=rules');
-      await page.getByLabel('Search rules').fill(data.sharedKeyword);
-      const row = page.locator('[data-rule-row]', { hasText: data.sharedKeyword });
-      await expect(row).toContainText(data.target.name);
-    });
+      const panel = page.getByRole('complementary', { name: 'Create rule' });
+      const keywords = panel.locator('#rule-keywords');
+
+      await test.step('Open Create rule from the row: titled panel, keyword prefilled and focused', async () => {
+        await createRuleAction(page, data.plain).click();
+        await expect(panel).toBeVisible();
+        await expect(panel.getByRole('heading', { name: 'Create rule' })).toBeVisible();
+        await expect(keywords).toHaveValue(data.plain);
+        await expect(keywords).toBeFocused();
+        // the row's own match is the only one for its raw description
+        await expect(page.locator('app-rule-match-list [data-match-row]')).toHaveCount(1);
+      });
+
+      await test.step('Widen the keyword to the shared prefix: three matches with a verdict each', async () => {
+        await keywords.fill(data.sharedKeyword);
+        const summary = page.getByTestId('match-summary');
+        await expect(summary).toContainText('3 matches');
+        await expect(summary).toContainText('1 will be categorized by this rule');
+        await expect(summary).toContainText('1 would lose to another rule');
+        await expect(summary).toContainText(
+          '1 already categorized - Apply rules leaves them alone',
+        );
+        await expect(page.locator('app-rule-match-list [data-match-row]')).toHaveCount(3);
+
+        await expect(matchRow(page, '#101')).toContainText('Will be categorized');
+        await expect(matchRow(page, '#202')).toContainText(
+          `Loses to ${data.higherKeyword} (priority ${HIGHER_PRIORITY})`,
+        );
+        await expect(matchRow(page, '#303')).toContainText(
+          'Already categorized - Apply rules leaves it alone',
+        );
+      });
+
+      await test.step('Choose a category and add the rule: the panel closes, the page stays as it was', async () => {
+        await chooseCategory(page, panel, data.target.name);
+        await panel.getByRole('button', { name: 'Add rule' }).click();
+        try {
+          await expect(page.getByText('Rule added')).toBeVisible();
+        } finally {
+          // tracked even when the assertion above fails, so the rule never outlives the test
+          await trackRuleByKeyword(page, data.sharedKeyword);
+        }
+        await expect(panel).toBeHidden();
+
+        await expect(page.getByRole('tab', { name: /Needs a category/ })).toHaveAttribute(
+          'aria-selected',
+          'true',
+        );
+        await expect(
+          page.getByRole('searchbox', { name: 'Search description or merchant' }),
+        ).toHaveValue(token);
+        await expect(createRuleAction(page, data.plain)).toBeVisible();
+        await expect(createRuleAction(page, data.conflicting)).toBeVisible();
+      });
+
+      await test.step('The rule was only stored: the matched transactions are still uncategorized', async () => {
+        const response = await page.request.get(
+          `${API_URL}/transactions?accountId=${data.accountId}&size=100`,
+          { headers: { Authorization: `Bearer ${await getAuthToken(page)}` } },
+        );
+        expect(response.ok()).toBeTruthy();
+        const rows = (
+          (await response.json()) as {
+            content: { description: string; category: { id: number } | null }[];
+          }
+        ).content;
+        for (const description of [data.plain, data.conflicting]) {
+          const row = rows.find((r) => r.description === description);
+          expect(row, description).toBeDefined();
+          expect(row?.category, description).toBeNull();
+        }
+      });
+
+      await test.step('The rule exists, with the chosen category, and Settings lists it', async () => {
+        const response = await page.request.get(`${API_URL}/category-rules`, {
+          headers: { Authorization: `Bearer ${await getAuthToken(page)}` },
+        });
+        const rules = (await response.json()) as {
+          keywords: string[];
+          category: { id: number } | null;
+          priority: number;
+        }[];
+        const created = rules.find((r) => r.keywords.includes(data.sharedKeyword));
+        expect(created?.category?.id).toBe(data.target.id);
+        expect(created?.priority).toBe(0);
+
+        await page.goto('/settings?section=rules');
+        await page.getByLabel('Search rules').fill(data.sharedKeyword);
+        const row = page.locator('[data-rule-row]', { hasText: data.sharedKeyword });
+        await expect(row).toContainText(data.target.name);
+      });
+    } finally {
+      // tracked again at the end, so a save that landed after the toast check still gets cleaned up
+      // (tracking is idempotent)
+      await trackRuleByKeyword(page, data.sharedKeyword);
+    }
   });
 
   test('from several selected rows: keyword starts empty and the selection is listed', async ({

@@ -11,15 +11,23 @@ interface Created {
   id: number;
 }
 
+/** A transaction as the list endpoint returns it, as far as the cleanup reads it. */
+interface ListedTransaction {
+  id: number;
+  account?: { id: number } | null;
+}
+
 /** Everything one test created, keyed by its browser context (a test's pages share one). */
 const created = new WeakMap<BrowserContext, Created[]>();
 
 /**
- * Remembers a row a test created, so the `test` fixture in `fixtures/test.ts` deletes it after the
+ * Remembers a row a test created (once, however often it is called), so the `test` fixture in `fixtures/test.ts` deletes it after the
  * test whether it passed or failed. The `createTestX` helpers call this themselves.
  */
 export function track(page: Page, kind: CreatedKind, id: number): void {
   const list = created.get(page.context()) ?? [];
+  // tracking the same row twice is harmless: it is deleted once
+  if (list.some((item) => item.kind === kind && item.id === id)) return;
   list.push({ kind, id });
   created.set(page.context(), list);
 }
@@ -81,9 +89,12 @@ export async function cleanupTracked(
         .get(`${API_URL}/transactions?accountId=${accountId}&size=1000`, { headers })
         .catch(() => null);
       if (!listed?.ok()) break;
-      const rows = ((await listed.json()) as { content: { id: number }[] }).content;
-      if (rows.length === 0) break;
-      await bulkDelete(rows.map((row) => row.id));
+      const rows = ((await listed.json()) as { content?: ListedTransaction[] }).content ?? [];
+      // the shared user is real: delete only rows that say they are on this account, so an
+      // ignored filter (or a response without account info) deletes nothing instead of everything
+      const own = rows.filter((row) => row.account?.id === accountId);
+      if (own.length === 0) break;
+      await bulkDelete(own.map((row) => row.id));
     }
   }
 
