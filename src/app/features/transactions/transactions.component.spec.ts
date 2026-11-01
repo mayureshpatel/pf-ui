@@ -1504,6 +1504,53 @@ describe('TransactionsComponent', () => {
         expect(component.selectedIds()).toEqual([1, 2]);
       });
 
+      it('should prefill the keyword from the one selected row when the bulk bar starts a rule', async () => {
+        // arrange
+        open();
+        component.onSelectionChange([2]);
+        fixture.detectChanges();
+
+        // act
+        buttonNamed('app-transaction-bulk-bar', 'Create rule')!.click();
+        await settle();
+
+        // assert & verify
+        expect(component.panelMode()).toBe('rule');
+        expect(keyword().value).toBe('SHELL OIL 57444');
+        expect(component.selectedIds()).toEqual([2]);
+      });
+
+      it('should drop the rule form state when a row is opened for editing instead', async () => {
+        // arrange
+        open();
+        rowAction('NETFLIX.COM 866-579').click();
+        await settle();
+        expect(component.ruleDraft()).not.toBeNull();
+
+        // act
+        component.openEditDialog(shell());
+        await settle();
+
+        // assert & verify
+        expect(component.panelMode()).toBe('single');
+        expect(q('aside h2')?.textContent?.trim()).toBe('Edit transaction');
+        expect(q('app-rule-edit-form')).toBeNull();
+        expect(component.ruleStart()).toBeNull();
+        expect(component.ruleDraft()).toBeNull();
+
+        // act -- closing the edit drawer does not send focus to the stale rule opener
+        document.body.appendChild(fixture.nativeElement);
+        const stale = rowAction('NETFLIX.COM 866-579');
+        buttonNamed('aside', 'Close')!.click();
+        await settle();
+        await new Promise((resolve) => setTimeout(resolve));
+
+        // assert & verify
+        expect(component.panelMode()).toBe('closed');
+        expect(document.activeElement).not.toBe(stale);
+        fixture.nativeElement.remove();
+      });
+
       it("should show the second transaction's keyword when a rule is started for another one", async () => {
         // arrange
         open();

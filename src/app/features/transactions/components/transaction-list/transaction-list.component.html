@@ -149,7 +149,7 @@
               </td>
             }
             <td class="px-2 py-2 sm:px-3">
-              <span class="flex items-start gap-1">
+              <span class="flex items-center gap-1">
                 <button
                   type="button"
                   data-testid="open-transaction"
@@ -161,12 +161,12 @@
                 <button
                   type="button"
                   data-testid="create-rule"
-                  class="shrink-0 cursor-pointer rounded-md px-1 text-muted-color hover:bg-surface-100 hover:text-surface-900 dark:hover:bg-surface-800 dark:hover:text-surface-0"
+                  class="-my-1.5 inline-flex min-h-8 min-w-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-color hover:bg-surface-100 hover:text-surface-900 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary-700 dark:hover:bg-surface-800 dark:hover:text-surface-0 dark:focus-visible:outline-primary-400"
                   title="Create rule"
                   [attr.aria-label]="'Create rule from ' + txn.description"
                   (click)="onCreateRule(txn, $event)"
                 >
-                  <i class="pi pi-bolt text-xs" aria-hidden="true"></i>
+                  <i class="pi pi-bolt text-sm" aria-hidden="true"></i>
                 </button>
               </span>
             </td>

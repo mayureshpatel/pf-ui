@@ -237,6 +237,19 @@ describe('RuleEditFormComponent', () => {
     expect(component.form.controls.keywordsInput.touched).toBe(true);
   });
 
+  it('should move focus to the keywords field on request', () => {
+    // arrange
+    render(null, false, 'NETFLIX.COM');
+    document.body.appendChild(fixture.nativeElement);
+
+    // act
+    component.focusKeywords();
+
+    // assert & verify
+    expect(document.activeElement).toBe(fixture.nativeElement.querySelector('#rule-keywords'));
+    fixture.nativeElement.remove();
+  });
+
   it('should show the server message', () => {
     // arrange
     render(rule);

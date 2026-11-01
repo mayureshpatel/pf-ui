@@ -635,7 +635,10 @@ export class TransactionsComponent implements OnInit {
     if (rows.length === 1) {
       this.openEditDialog(rows[0]);
     } else {
-      this.confirmDiscardIfDirty((): void => this.panelMode.set('bulk'));
+      this.confirmDiscardIfDirty((): void => {
+        this.clearRuleState();
+        this.panelMode.set('bulk');
+      });
     }
   }
 
@@ -678,11 +681,9 @@ export class TransactionsComponent implements OnInit {
     const wasRule: boolean = this.panelMode() === 'rule';
     this.panelMode.set('closed');
     this.selectedTransaction.set(null);
-    this.ruleStart.set(null);
-    this.ruleDraft.set(null);
-    if (!wasRule) return;
     const opener: HTMLElement | null = this.ruleOpener;
-    this.ruleOpener = null;
+    this.clearRuleState();
+    if (!wasRule) return;
     // runs after the panel's own hand-back, which only knows what had focus when it first opened
     afterNextRender(
       { read: (): void => (opener?.isConnected ? opener.focus() : undefined) },
@@ -715,9 +716,24 @@ export class TransactionsComponent implements OnInit {
     if (txn) this.openRuleForm(txn.description, []);
   }
 
-  /** Starts one rule for the selection: the keyword starts empty and the rows show as context. */
+  /**
+   * Starts one rule for the selection. One selected row counts as starting from that transaction
+   * (its description is the keyword); several start with an empty keyword and show as context.
+   */
   onCreateRuleFromSelection(): void {
-    this.openRuleForm('', this.selectedTransactions());
+    const rows: Transaction[] = this.selectedTransactions();
+    if (rows.length === 1) {
+      this.openRuleForm(rows[0].description, []);
+    } else {
+      this.openRuleForm('', rows);
+    }
+  }
+
+  /** Forgets the rule form's start, draft and opener, whenever the panel leaves rule mode. */
+  private clearRuleState(): void {
+    this.ruleStart.set(null);
+    this.ruleDraft.set(null);
+    this.ruleOpener = null;
   }
 
   /**
@@ -736,15 +752,10 @@ export class TransactionsComponent implements OnInit {
       this.panelMode.set('rule');
       // the read phase runs after the panel's own move of focus to itself on opening
       afterNextRender(
-        { read: (): void => this.panelKeywordField()?.focus() },
+        { read: (): void => this.ruleForm()?.focusKeywords() },
         { injector: this.injector },
       );
     });
-  }
-
-  /** The rule form's keyword field, once rendered. */
-  private panelKeywordField(): HTMLInputElement | null {
-    return document.querySelector<HTMLInputElement>('app-side-panel #rule-keywords');
   }
 
   /** Loads the grouped categories the rule form chooses from, once. */
@@ -813,6 +824,7 @@ export class TransactionsComponent implements OnInit {
    */
   openCreateDialog(): void {
     this.confirmDiscardIfDirty((): void => {
+      this.clearRuleState();
       this.selectedTransaction.set(null);
       this.panelMode.set('create');
     });
@@ -826,6 +838,7 @@ export class TransactionsComponent implements OnInit {
     // clicking the row that is already open must not ask, or reset, anything
     if (this.panelMode() === 'single' && this.selectedTransaction()?.id === txn.id) return;
     this.confirmDiscardIfDirty((): void => {
+      this.clearRuleState();
       this.selectedTransaction.set(txn);
       this.panelMode.set('single');
     });

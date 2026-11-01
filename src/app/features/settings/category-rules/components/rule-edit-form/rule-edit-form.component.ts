@@ -3,6 +3,7 @@ import {
   Component,
   computed,
   effect,
+  ElementRef,
   input,
   InputSignal,
   OnInit,
@@ -11,6 +12,7 @@ import {
   signal,
   Signal,
   untracked,
+  viewChild,
   WritableSignal,
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
@@ -192,6 +194,8 @@ export class RuleEditFormComponent implements OnInit {
   });
 
   private lastDraft: string | null = null;
+  private readonly keywordsField: Signal<ElementRef<HTMLInputElement> | undefined> =
+    viewChild<ElementRef<HTMLInputElement>>('keywordsField');
 
   constructor() {
     this.form.valueChanges.pipe(takeUntilDestroyed()).subscribe((): void => this.emitDraft());
@@ -260,6 +264,11 @@ export class RuleEditFormComponent implements OnInit {
       .flatMap((g: CategoryGroup): Category[] => g.items)
       .find((c: Category): boolean => c.id === rule.category?.id);
     return known ?? rule.category ?? null;
+  }
+
+  /** Moves focus to the keywords field (a host that opens the form calls this). */
+  focusKeywords(): void {
+    this.keywordsField()?.nativeElement.focus();
   }
 
   /** Submits from outside (the panel's Save button). */

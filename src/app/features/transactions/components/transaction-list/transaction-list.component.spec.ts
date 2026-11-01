@@ -168,6 +168,45 @@ describe('TransactionListComponent', () => {
       expect(selected).not.toHaveBeenCalled();
     });
 
+    it('should be a comfortable tap target that never overlaps the merchant button', async () => {
+      // arrange
+      const { page } = await import('vitest/browser');
+      const before = { width: window.innerWidth, height: window.innerHeight };
+      document.body.appendChild(fixture.nativeElement);
+      const check = (): void => {
+        const action = ruleButtons()[0].getBoundingClientRect();
+        const merchant = all<HTMLButtonElement>(
+          '[data-testid="open-transaction"]',
+        )[0].getBoundingClientRect();
+        expect(action.width).toBeGreaterThanOrEqual(32);
+        expect(action.height).toBeGreaterThanOrEqual(32);
+        const overlaps =
+          action.left < merchant.right &&
+          merchant.left < action.right &&
+          action.top < merchant.bottom &&
+          merchant.top < action.bottom;
+        expect(overlaps).toBe(false);
+      };
+
+      try {
+        // act -- desktop
+        render([txn({ id: 1, description: 'NETFLIX.COM 866-579' })]);
+
+        // assert & verify
+        check();
+
+        // act -- a phone, with the list compacted beside the panel
+        await page.viewport(375, 812);
+        render([txn({ id: 1, description: 'NETFLIX.COM 866-579' })], { compact: true });
+
+        // assert & verify
+        check();
+      } finally {
+        await page.viewport(before.width, before.height);
+        fixture.nativeElement.remove();
+      }
+    });
+
     it('should be a real button reachable by keyboard, opening on Enter', async () => {
       // arrange
       const rows = [txn({ id: 1, description: 'NETFLIX.COM' })];
