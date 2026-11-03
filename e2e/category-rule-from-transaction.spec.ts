@@ -80,8 +80,28 @@ async function seed(page: Page, token: string): Promise<Seed> {
 /** Opens Transactions over all time, narrowed to this test's rows with the search box. */
 async function openTransactionsFor(page: Page, token: string): Promise<void> {
   await page.goto('/transactions');
+  // the page keeps no cancellation: a slow response for an earlier filter overwrites the rows of a
+  // later one. Let the unfiltered all-time load land before searching, so the search result is last.
+  const allTime = page.waitForResponse(
+    (response) =>
+      response.url().includes('/transactions') &&
+      !response.url().includes('description=') &&
+      response.request().method() === 'GET',
+  );
   await page.getByRole('button', { name: 'All time', exact: true }).click();
+  await allTime;
+  await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
+  // the search is debounced: wait for the request that carries it, or the first assertions race the
+  // unfiltered list of the whole account
+  const filtered = page.waitForResponse(
+    (response) =>
+      response.url().includes('/transactions') &&
+      response.url().includes(token) &&
+      response.request().method() === 'GET',
+  );
   await page.getByRole('searchbox', { name: 'Search description or merchant' }).fill(token);
+  await filtered;
+  await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
 }
 
 /** The table row that carries a transaction's "Create rule from ..." action. */
