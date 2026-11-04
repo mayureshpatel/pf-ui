@@ -8,14 +8,18 @@
       formControlName="keywordsInput"
       class="w-full"
       placeholder="netflix, spotify"
-      aria-describedby="rule-keywords-help"
+      aria-describedby="rule-keywords-help rule-keywords-error"
     />
     <small id="rule-keywords-help" class="text-muted-color">
       Separate several with commas. A transaction matches when its description contains one.
     </small>
-    @if (keywordsError(); as error) {
-      <small class="text-rose-700 dark:text-rose-400">{{ error }}</small>
-    }
+    <!-- always present, so a screen reader hears it once each time the reason changes -->
+    <small
+      id="rule-keywords-error"
+      aria-live="polite"
+      class="text-rose-700 empty:hidden dark:text-rose-400"
+      >{{ keywordsError() ?? '' }}</small
+    >
   </div>
 
   <div class="flex flex-col gap-1">

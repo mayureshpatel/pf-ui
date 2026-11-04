@@ -125,6 +125,12 @@ export class RuleMatchListComponent {
   protected readonly preview: WritableSignal<RuleMatchPreview | null> = signal(null);
   protected readonly loading: WritableSignal<boolean> = signal(false);
   protected readonly failed: WritableSignal<boolean> = signal(false);
+  /**
+   * The list's height when a new draft arrived, kept as its minimum until that draft settles, so
+   * the panel does not jump while the answer is on its way (e.g. an error alert giving way to the
+   * loading line). Null when nothing is held.
+   */
+  protected readonly heldHeight: WritableSignal<number | null> = signal<number | null>(null);
 
   private readonly active: Signal<RuleDraft | null> = computed(() => activeDraft(this.draft()), {
     equal: sameDraft,
@@ -182,6 +188,7 @@ export class RuleMatchListComponent {
       distinctUntilChanged(sameDraft),
       // a new draft replaces the failed one at once, not only when its own request settles
       tap((): void => {
+        this.holdHeight();
         this.failed.set(false);
         this.retryHadFocus = false;
       }),
@@ -210,8 +217,18 @@ export class RuleMatchListComponent {
     this.retry$.next();
   }
 
+  /**
+   * Another rule's keywords, each quoted and joined by " + ". The preview does not say whether that
+   * rule needs any or all of them, so a plain comma (which reads as "or") would claim too much.
+   */
   protected keywordsText(ruleRef: RuleRef): string {
-    return ruleRef.keywords.join(', ');
+    return ruleRef.keywords.map((k: string): string => `"${k}"`).join(' + ');
+  }
+
+  /** Keeps the list at least as tall as it is now, until the next outcome settles. */
+  private holdHeight(): void {
+    const height: number | undefined = this.region()?.nativeElement.offsetHeight;
+    this.heldHeight.set(height ? height : null);
   }
 
   private fetch({ draft, debounce }: Trigger): Observable<Outcome> {
@@ -227,6 +244,7 @@ export class RuleMatchListComponent {
   }
 
   private settle(outcome: Outcome): void {
+    this.heldHeight.set(null);
     this.loading.set(false);
     this.failed.set(outcome.kind === 'error');
     this.preview.set(outcome.kind === 'ok' ? outcome.preview : null);

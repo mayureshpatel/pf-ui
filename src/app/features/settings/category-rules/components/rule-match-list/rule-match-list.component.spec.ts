@@ -225,12 +225,12 @@ describe('RuleMatchListComponent', () => {
     verdicts.forEach((v) => expect(v.querySelector('i.pi[aria-hidden="true"]')).not.toBeNull());
     expect(verdicts[0].textContent).toContain('Will be categorized');
     expect(verdicts[1].textContent!.replace(/\s+/g, ' ')).toContain(
-      'Loses to costco, gas (priority 7)',
+      'Loses to "costco" + "gas" (priority 7)',
     );
     expect(verdicts[2].textContent).toContain('Already categorized - Apply rules leaves it alone');
-    expect(rowText(1)).toContain('Also matches: whse');
+    expect(rowText(1)).toContain('Also matches: "whse"');
     expect(rowText(1)).toContain('Bulk (priority 2)');
-    expect(rowText(2)).toContain('Also matches: costco');
+    expect(rowText(2)).toContain('Also matches: "costco"');
     expect(rowText(2)).toContain('Groceries (priority 3)');
     expect(rowText(0)).not.toContain('Also matches');
   });
@@ -517,5 +517,154 @@ describe('RuleMatchListComponent', () => {
     // assert & verify
     expect(rowText(0)).toContain('Account: (no account)');
     expect(rowText(0)).toContain('(no category) (priority 2)');
+  });
+
+  it('shows a count line only when it is above zero', () => {
+    // act
+    search(draft(['costco']), preview([row(1), row(2)]));
+
+    // assert & verify
+    const s = summary().textContent!.replace(/\s+/g, ' ');
+    expect(s).toContain('2 matches');
+    expect(s).toContain('2 will be categorized by this rule');
+    expect(s).not.toContain('would lose to another rule');
+    expect(s).not.toContain('already categorized');
+
+    // act -- none would be categorized: that line stays, the others appear
+    search(
+      draft(['costco whse']),
+      preview([
+        row(3, { verdict: 'LOSES_TO_OTHER_RULE', otherRules: [ref(9, ['whse'], 'Bulk', 5)] }),
+        row(4, { verdict: 'ALREADY_CATEGORIZED', currentCategory: groceries }),
+      ]),
+    );
+
+    // assert & verify
+    const t = summary().textContent!.replace(/\s+/g, ' ');
+    expect(t).toContain('0 will be categorized by this rule');
+    expect(t).toContain('1 would lose to another rule');
+    expect(t).toContain('1 already categorized - Apply rules leaves them alone');
+  });
+
+  it('quotes each keyword of another rule, so several never read like one list', () => {
+    // act
+    search(
+      draft(['costco']),
+      preview([
+        row(1, {
+          verdict: 'LOSES_TO_OTHER_RULE',
+          otherRules: [ref(9, ['kroger', '431'], 'Groceries', 5), ref(4, ['whse'], 'Bulk', 2)],
+        }),
+      ]),
+    );
+
+    // assert & verify
+    const verdict = rows()[0].querySelector('[data-testid="verdict"]')!;
+    expect(verdict.textContent!.replace(/\s+/g, ' ')).toContain(
+      'Loses to "kroger" + "431" (priority 5)',
+    );
+    expect(rowText(0)).toContain('Also matches: "whse"');
+    expect(rowText(0)).not.toContain('kroger, 431');
+  });
+
+  describe('in a real layout', () => {
+    const many = (n: number): RuleMatchRow[] => Array.from({ length: n }, (_, i) => row(i + 1));
+    const rowsBox = (): HTMLElement | null => el().querySelector('[data-testid="match-rows"]');
+    const section = (): HTMLElement => el().querySelector('section')!;
+
+    beforeEach(() => {
+      document.body.appendChild(el());
+    });
+    afterEach(() => {
+      el().remove();
+    });
+
+    it('scrolls a long list inside a bounded, keyboard-scrollable box under the summary', async () => {
+      // arrange
+      const { page } = await import('vitest/browser');
+      const before = { width: window.innerWidth, height: window.innerHeight };
+      const check = (): void => {
+        const box = rowsBox()!;
+        expect(box).not.toBeNull();
+        expect(box.getAttribute('tabindex')).toBe('0');
+        expect(box.getAttribute('aria-label')).toBeTruthy();
+        expect(box.contains(summary())).toBe(false);
+        expect(box.querySelectorAll('[data-match-row]').length).toBe(50);
+        expect(box.scrollHeight).toBeGreaterThan(box.clientHeight);
+        expect(box.clientHeight).toBeLessThanOrEqual(400);
+        expect(el().getBoundingClientRect().height).toBeLessThan(700);
+        expect(box.scrollWidth).toBeLessThanOrEqual(box.clientWidth);
+        // nothing inside (e.g. the rows' screen-reader labels) escapes the box to stretch the page
+        expect(document.documentElement.scrollHeight).toBeLessThan(
+          window.innerHeight + el().getBoundingClientRect().bottom,
+        );
+      };
+
+      try {
+        // act
+        search(
+          draft(['costco']),
+          preview(many(50), { totalMatches: 137, willCategorizeCount: 137, truncated: true }),
+        );
+
+        // assert & verify
+        check();
+
+        // act -- loading the next draft keeps the bounded box
+        setDraft(draft(['costco whse']));
+        vi.advanceTimersByTime(300);
+        fixture.detectChanges();
+
+        // assert & verify
+        expect(el().querySelector('[data-testid="match-results"]')!.getAttribute('aria-busy')).toBe(
+          'true',
+        );
+        check();
+
+        // act -- a phone
+        await page.viewport(375, 812);
+        answer(preview(many(50), { totalMatches: 60, willCategorizeCount: 60, truncated: true }));
+
+        // assert & verify
+        check();
+      } finally {
+        await page.viewport(before.width, before.height);
+      }
+    });
+
+    it('holds the height of what was shown while the next draft loads, then lets it go', () => {
+      // arrange
+      search(draft(['costco']), preview(many(50)));
+      failNext(draft(['costc']));
+      const shown = section().getBoundingClientRect().height;
+      search(draft(['costco']), preview(many(50)));
+      const tall = section().getBoundingClientRect().height;
+      expect(tall).toBeGreaterThan(shown);
+
+      // act -- a new draft: the old list stays (dimmed) until the answer
+      setDraft(draft(['zzqqxx']));
+      vi.advanceTimersByTime(300);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(section().getBoundingClientRect().height).toBeGreaterThanOrEqual(tall - 1);
+
+      // act -- a failed request's alert gives way to the loading state at once
+      failNext(draft(['zzq']));
+      const alertHeight = section().getBoundingClientRect().height;
+      setDraft(draft(['zzqq']));
+
+      // assert & verify
+      expect(text()).not.toContain("Couldn't load matching transactions");
+      expect(section().getBoundingClientRect().height).toBeGreaterThanOrEqual(alertHeight - 1);
+
+      // act
+      vi.advanceTimersByTime(300);
+      answer(preview([]));
+
+      // assert & verify -- settled: no held height is left behind
+      expect(section().style.minHeight).toBe('');
+      expect(section().getBoundingClientRect().height).toBeLessThan(alertHeight);
+    });
   });
 });

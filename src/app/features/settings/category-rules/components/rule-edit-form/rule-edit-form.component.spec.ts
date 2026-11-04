@@ -183,6 +183,53 @@ describe('RuleEditFormComponent', () => {
     expect(component.form.controls.keywordsInput.valid).toBe(true);
   });
 
+  it('should say why the keywords are refused while still typing, not only after leaving the field', () => {
+    // arrange
+    render();
+    const many = (n: number): string => Array.from({ length: n }, (_, i) => `k${i}`).join(', ');
+    const field = (): HTMLInputElement => fixture.nativeElement.querySelector('#rule-keywords');
+    const message = (): HTMLElement => fixture.nativeElement.querySelector('#rule-keywords-error');
+    const type = (value: string): void => {
+      field().value = value;
+      field().dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+    };
+
+    // act -- typing, focus never leaves the field
+    type(many(21));
+
+    // assert & verify
+    expect(component.form.controls.keywordsInput.touched).toBe(false);
+    expect(message().textContent?.trim()).toBe('Use at most 20 keywords.');
+    expect(message().getAttribute('aria-live')).toBe('polite');
+    expect(field().getAttribute('aria-describedby')).toContain('rule-keywords-error');
+    const observer = new MutationObserver(() => undefined);
+    observer.observe(message(), { childList: true, characterData: true, subtree: true });
+
+    // act -- another keystroke with the same reason does not rewrite (re-announce) the message
+    type(many(22));
+
+    // assert & verify
+    expect(message().textContent?.trim()).toBe('Use at most 20 keywords.');
+    expect(observer.takeRecords().length).toBe(0);
+    observer.disconnect();
+
+    // act -- a keyword over the length limit
+    type('a'.repeat(256));
+
+    // assert & verify
+    expect(message().textContent?.trim()).toBe('Each keyword must be 255 characters or fewer.');
+
+    // act -- merely empty says nothing until the field is left
+    type('');
+
+    // assert & verify
+    expect(message().textContent?.trim()).toBe('');
+    field().dispatchEvent(new Event('blur'));
+    fixture.detectChanges();
+    expect(message().textContent?.trim()).toBe('Enter at least one keyword.');
+  });
+
   it('should reject a negative priority and negative amounts', () => {
     // arrange
     render();

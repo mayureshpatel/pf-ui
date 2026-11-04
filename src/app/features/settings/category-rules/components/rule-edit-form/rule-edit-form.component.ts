@@ -170,14 +170,17 @@ export class RuleEditFormComponent implements OnInit {
   /** Re-evaluates the messages below whenever the form's value or state changes. */
   private readonly formEvents = toSignal(this.form.events);
 
+  /**
+   * Why the keywords are refused. Too many or too long shows while typing (the match list waits on
+   * a fix, so the reason must be there at once); merely empty waits until the field is left.
+   */
   readonly keywordsError: Signal<string | null> = computed((): string | null => {
     this.formEvents();
     const control = this.form.controls.keywordsInput;
-    if (!control.errors || !control.touched) return null;
+    if (!control.errors) return null;
     if (control.errors['maxcount']) return `Use at most ${MAX_KEYWORDS} keywords.`;
-    return control.errors['maxlength']
-      ? 'Each keyword must be 255 characters or fewer.'
-      : 'Enter at least one keyword.';
+    if (control.errors['maxlength']) return 'Each keyword must be 255 characters or fewer.';
+    return control.touched ? 'Enter at least one keyword.' : null;
   });
 
   /**
