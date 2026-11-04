@@ -115,10 +115,11 @@
         <div
           data-testid="match-rows"
           tabindex="0"
-          aria-label="Matching transactions, scrollable"
+          role="region"
+          aria-label="Matching transactions"
           class="relative -mx-1 max-h-96 min-w-0 overflow-y-auto overscroll-contain rounded-xl px-1 py-0.5 focus-visible:outline-2 focus-visible:outline-primary-700 dark:focus-visible:outline-primary-400"
         >
-          <ul aria-label="Matching transactions" class="m-0 flex list-none flex-col gap-2 p-0">
+          <ul class="m-0 flex list-none flex-col gap-2 p-0">
             @for (item of rows(); track item.row.transactionId) {
               <li
                 data-match-row

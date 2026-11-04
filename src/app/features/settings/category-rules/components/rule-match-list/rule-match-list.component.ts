@@ -218,11 +218,13 @@ export class RuleMatchListComponent {
   }
 
   /**
-   * Another rule's keywords, each quoted and joined by " + ". The preview does not say whether that
-   * rule needs any or all of them, so a plain comma (which reads as "or") would claim too much.
+   * Names another rule by its keywords, e.g. `a rule with keywords "kroger", "431"`. The preview
+   * does not say whether that rule needs any or all of them, so the wording is neutral: each keyword
+   * is quoted and the list is labelled as the rule's keywords, never joined by "+" or "or".
    */
   protected keywordsText(ruleRef: RuleRef): string {
-    return ruleRef.keywords.map((k: string): string => `"${k}"`).join(' + ');
+    const quoted: string = ruleRef.keywords.map((k: string): string => `"${k}"`).join(', ');
+    return `a rule with ${ruleRef.keywords.length === 1 ? 'keyword' : 'keywords'} ${quoted}`;
   }
 
   /** Keeps the list at least as tall as it is now, until the next outcome settles. */

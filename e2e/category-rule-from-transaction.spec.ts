@@ -178,7 +178,7 @@ test.describe('Create a category rule from a transaction', () => {
 
         await expect(matchRow(page, '#101')).toContainText('Will be categorized');
         await expect(matchRow(page, '#202')).toContainText(
-          `Loses to "${data.higherKeyword}" (priority ${HIGHER_PRIORITY})`,
+          `Loses to a rule with keyword "${data.higherKeyword}" (priority ${HIGHER_PRIORITY})`,
         );
         await expect(matchRow(page, '#303')).toContainText(
           'Already categorized - Apply rules leaves it alone',
@@ -307,7 +307,9 @@ test.describe('Create a category rule from a transaction', () => {
     const list = page.locator('app-rule-match-list');
     await expect(list.getByTestId('match-summary')).toContainText('3 matches');
     await expect(list.locator('[data-match-row]')).toHaveCount(3);
-    await expect(matchRow(page, '#202')).toContainText(`Loses to "${data.higherKeyword}"`);
+    await expect(matchRow(page, '#202')).toContainText(
+      `Loses to a rule with keyword "${data.higherKeyword}"`,
+    );
     await expect(matchRow(page, '#303')).toContainText('Already categorized');
     // nothing is saved: no rule with the shared keyword exists
     const rules = await page.request.get(`${API_URL}/category-rules`, {

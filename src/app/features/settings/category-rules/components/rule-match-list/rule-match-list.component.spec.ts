@@ -225,12 +225,12 @@ describe('RuleMatchListComponent', () => {
     verdicts.forEach((v) => expect(v.querySelector('i.pi[aria-hidden="true"]')).not.toBeNull());
     expect(verdicts[0].textContent).toContain('Will be categorized');
     expect(verdicts[1].textContent!.replace(/\s+/g, ' ')).toContain(
-      'Loses to "costco" + "gas" (priority 7)',
+      'Loses to a rule with keywords "costco", "gas" (priority 7)',
     );
     expect(verdicts[2].textContent).toContain('Already categorized - Apply rules leaves it alone');
-    expect(rowText(1)).toContain('Also matches: "whse"');
+    expect(rowText(1)).toContain('Also matches: a rule with keyword "whse"');
     expect(rowText(1)).toContain('Bulk (priority 2)');
-    expect(rowText(2)).toContain('Also matches: "costco"');
+    expect(rowText(2)).toContain('Also matches: a rule with keyword "costco"');
     expect(rowText(2)).toContain('Groceries (priority 3)');
     expect(rowText(0)).not.toContain('Also matches');
   });
@@ -389,8 +389,13 @@ describe('RuleMatchListComponent', () => {
     );
 
     // assert & verify
-    const list = el().querySelector('ul[aria-label="Matching transactions"]');
+    const region = el().querySelector('[data-testid="match-rows"]')!;
+    expect(region.getAttribute('role')).toBe('region');
+    expect(region.getAttribute('aria-label')).toBe('Matching transactions');
+    const list = region.querySelector('ul');
     expect(list).not.toBeNull();
+    // the list inside does not repeat the region's name
+    expect(list!.getAttribute('aria-label')).not.toBe(region.getAttribute('aria-label'));
     const line = rowText(0);
     const order = ['Oct 5, 2026', 'COSTCO WHSE #1', '-$42.50', 'Will be categorized'].map((part) =>
       line.indexOf(part),
@@ -546,7 +551,7 @@ describe('RuleMatchListComponent', () => {
     expect(t).toContain('1 already categorized - Apply rules leaves them alone');
   });
 
-  it('quotes each keyword of another rule, so several never read like one list', () => {
+  it("names another rule's keywords neutrally, since its match type is not known", () => {
     // act
     search(
       draft(['costco']),
@@ -561,9 +566,11 @@ describe('RuleMatchListComponent', () => {
     // assert & verify
     const verdict = rows()[0].querySelector('[data-testid="verdict"]')!;
     expect(verdict.textContent!.replace(/\s+/g, ' ')).toContain(
-      'Loses to "kroger" + "431" (priority 5)',
+      'Loses to a rule with keywords "kroger", "431" (priority 5)',
     );
-    expect(rowText(0)).toContain('Also matches: "whse"');
+    expect(rowText(0)).toContain('Also matches: a rule with keyword "whse"');
+    // neither "+" (reads as all) nor a bare comma list (reads as one rule's alternatives)
+    expect(rowText(0)).not.toContain('+');
     expect(rowText(0)).not.toContain('kroger, 431');
   });
 
