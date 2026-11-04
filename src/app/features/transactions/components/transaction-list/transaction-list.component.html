@@ -149,11 +149,20 @@
               </td>
             }
             <td class="px-2 py-2 sm:px-3">
-              <span class="flex items-center gap-1">
+              <!-- the rule action goes under the name on a phone and beside the panel, so it never
+                   adds a column width to a list that has none to spare -->
+              <span
+                class="flex"
+                [class]="
+                  compact()
+                    ? 'flex-col items-start gap-0.5'
+                    : 'flex-col items-start gap-0.5 sm:flex-row sm:items-center sm:gap-1'
+                "
+              >
                 <button
                   type="button"
                   data-testid="open-transaction"
-                  class="max-w-28 cursor-pointer break-words text-left font-medium text-surface-900 sm:max-w-none sm:break-normal dark:text-surface-0"
+                  class="max-w-28 min-w-25 cursor-pointer wrap-anywhere text-left font-medium text-surface-900 sm:max-w-none sm:min-w-0 sm:wrap-normal dark:text-surface-0"
                   (click)="$event.stopPropagation(); openTransaction.emit(txn)"
                 >
                   {{ txn.merchant?.name ?? txn.description }}
@@ -161,7 +170,8 @@
                 <button
                   type="button"
                   data-testid="create-rule"
-                  class="-my-1.5 inline-flex min-h-8 min-w-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-color hover:bg-surface-100 hover:text-surface-900 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary-700 dark:hover:bg-surface-800 dark:hover:text-surface-0 dark:focus-visible:outline-primary-400"
+                  [class]="compact() ? '' : 'sm:-mt-1.5'"
+                  class="-mb-1.5 inline-flex min-h-8 min-w-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-color hover:bg-surface-100 hover:text-surface-900 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary-700 dark:hover:bg-surface-800 dark:hover:text-surface-0 dark:focus-visible:outline-primary-400"
                   title="Create rule"
                   [attr.aria-label]="'Create rule from ' + txn.description"
                   (click)="onCreateRule(txn, $event)"

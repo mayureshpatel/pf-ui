@@ -5,6 +5,7 @@ import {
   computed,
   DestroyRef,
   effect,
+  ElementRef,
   inject,
   Injector,
   OnInit,
@@ -155,6 +156,7 @@ export class TransactionsComponent implements OnInit {
   private readonly router: Router = inject(Router);
   private readonly destroyRef: DestroyRef = inject(DestroyRef);
   private readonly injector: Injector = inject(Injector);
+  private readonly host: ElementRef<HTMLElement> = inject(ElementRef<HTMLElement>);
   private readonly ruleApi: CategoryRuleApiService = inject(CategoryRuleApiService);
 
   /** The master state object for the transaction view. */
@@ -676,6 +678,8 @@ export class TransactionsComponent implements OnInit {
       proceed();
       return;
     }
+    // the dialog takes focus and drops it when it closes: keeping on goes back to where it was
+    const focused: HTMLElement | null = document.activeElement as HTMLElement | null;
     this.confirmationService.confirm({
       header: 'Discard changes?',
       message: `You have unsaved changes to this ${mode === 'rule' ? 'rule' : 'transaction'}. Discard them?`,
@@ -683,7 +687,17 @@ export class TransactionsComponent implements OnInit {
       rejectLabel: 'Keep editing',
       acceptButtonStyleClass: 'p-button-danger',
       accept: proceed,
+      reject: (): void => this.refocus(focused),
     });
+  }
+
+  /** Focuses the element after the next render, if it is still on the page. */
+  private refocus(target: HTMLElement | null): void {
+    if (!target || target === document.body) return;
+    afterNextRender(
+      { read: (): void => (target.isConnected ? target.focus() : undefined) },
+      { injector: this.injector },
+    );
   }
 
   /** Opens the panel on the row whose "Choose category" pill was clicked. */
@@ -699,9 +713,20 @@ export class TransactionsComponent implements OnInit {
     const opener: HTMLElement | null = this.ruleOpener;
     this.clearRuleState();
     if (!wasRule) return;
-    // runs after the panel's own hand-back, which only knows what had focus when it first opened
+    // runs after the panel's own hand-back, which only knows what had focus when it first opened.
+    // The bulk bar hides while the panel is open, so a rule it started returns to its new Create
+    // rule button, else to the first selected row.
     afterNextRender(
-      { read: (): void => (opener?.isConnected ? opener.focus() : undefined) },
+      {
+        read: (): void => {
+          const page: HTMLElement = this.host.nativeElement;
+          const target: HTMLElement | null | undefined = opener?.isConnected
+            ? opener
+            : (page.querySelector<HTMLElement>('[data-testid="bulk-create-rule"]') ??
+              page.querySelector<HTMLElement>('[data-testid="row-checkbox"]:checked'));
+          target?.focus();
+        },
+      },
       { injector: this.injector },
     );
   }

@@ -1767,6 +1767,68 @@ describe('TransactionsComponent', () => {
         fixture.nativeElement.remove();
       });
 
+      it('should put focus back in the rule form when the user keeps editing after a dirty Escape', async () => {
+        // arrange
+        open();
+        await settle();
+        document.body.appendChild(fixture.nativeElement);
+        const { userEvent } = await import('vitest/browser');
+        rowAction('NETFLIX.COM 866-579').focus();
+        rowAction('NETFLIX.COM 866-579').click();
+        await settle();
+        await new Promise((resolve) => setTimeout(resolve));
+        typeKeyword('NETFLIX');
+        keyword().focus();
+
+        // act -- Escape asks; the dialog takes focus, then "Keep editing"
+        await userEvent.keyboard('{Escape}');
+        await settle();
+        expect(mockConfirmationService.confirm).toHaveBeenCalledTimes(1);
+        (document.activeElement as HTMLElement | null)?.blur();
+        mockConfirmationService.confirm.mock.calls[0][0].reject!();
+        await settle();
+        await new Promise((resolve) => setTimeout(resolve));
+
+        // assert & verify
+        expect(component.panelMode()).toBe('rule');
+        expect(document.activeElement).toBe(keyword());
+
+        // act -- a second Escape reaches the panel again
+        await userEvent.keyboard('{Escape}');
+        await settle();
+
+        // assert & verify
+        expect(mockConfirmationService.confirm).toHaveBeenCalledTimes(2);
+        fixture.nativeElement.remove();
+      });
+
+      it('should return focus to the bulk bar when a rule started from it closes', async () => {
+        // arrange
+        open();
+        component.onSelectionChange([1, 2]);
+        await settle();
+        document.body.appendChild(fixture.nativeElement);
+        const { userEvent } = await import('vitest/browser');
+        const start = buttonNamed('app-transaction-bulk-bar', 'Create rule')!;
+        start.focus();
+        start.click();
+        await settle();
+        await new Promise((resolve) => setTimeout(resolve));
+        expect(document.activeElement).toBe(keyword());
+
+        // act
+        await userEvent.keyboard('{Escape}');
+        await settle();
+        await new Promise((resolve) => setTimeout(resolve));
+
+        // assert & verify
+        expect(component.panelMode()).toBe('closed');
+        expect(component.selectedIds()).toEqual([1, 2]);
+        expect(document.activeElement).not.toBe(document.body);
+        expect(document.activeElement).toBe(buttonNamed('app-transaction-bulk-bar', 'Create rule'));
+        fixture.nativeElement.remove();
+      });
+
       it('should return focus to the row action even when the panel was already open', async () => {
         // arrange
         open();

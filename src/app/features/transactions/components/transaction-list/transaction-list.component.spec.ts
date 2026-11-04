@@ -170,6 +170,7 @@ describe('TransactionListComponent', () => {
 
     it('should be a comfortable tap target that never overlaps the merchant button', async () => {
       // arrange
+      render([]); // inputs are set before the first await lets the page render
       const { page } = await import('vitest/browser');
       const before = { width: window.innerWidth, height: window.innerHeight };
       document.body.appendChild(fixture.nativeElement);
@@ -205,6 +206,85 @@ describe('TransactionListComponent', () => {
         await page.viewport(before.width, before.height);
         fixture.nativeElement.remove();
       }
+    });
+
+    it('should not widen the list past a phone screen, so Amount stays in view', async () => {
+      // arrange -- the list's width on a 375px phone (page gutters taken off)
+      render([]); // inputs are set before the first await lets the page render
+      const { page } = await import('vitest/browser');
+      const before = { width: window.innerWidth, height: window.innerHeight };
+      const frame = document.createElement('div');
+      frame.style.width = '343px';
+      frame.appendChild(fixture.nativeElement);
+      document.body.appendChild(frame);
+      const rows = [
+        txn({
+          id: 1,
+          description: 'Balance Reconciliation',
+          merchant: null as never,
+          category: null as never,
+          amount: 2000,
+        }),
+        txn({ id: 2, description: 'TST*BROOKLYN BAGEL & COFFEE CO', merchant: null as never }),
+        txn({
+          id: 3,
+          merchant: { id: 7, name: 'Wholefoodsmarketplace' } as never,
+          amount: 1234.56,
+        }),
+      ];
+      const check = (): void => {
+        const wrapper = fixture.nativeElement.querySelector('table').parentElement as HTMLElement;
+        const table = fixture.nativeElement.querySelector('table') as HTMLTableElement;
+        expect(ruleButtons().length).toBe(3);
+        expect(table.scrollWidth).toBeLessThanOrEqual(wrapper.clientWidth);
+        expect(wrapper.scrollWidth).toBeLessThanOrEqual(wrapper.clientWidth);
+        const right = wrapper.getBoundingClientRect().right;
+        all<HTMLTableCellElement>('tbody td.text-right').forEach((amount) =>
+          expect(amount.getBoundingClientRect().right).toBeLessThanOrEqual(right + 0.5),
+        );
+        ruleButtons().forEach((b) => {
+          expect(b.getBoundingClientRect().width).toBeGreaterThanOrEqual(32);
+          expect(b.getBoundingClientRect().height).toBeGreaterThanOrEqual(32);
+        });
+      };
+
+      try {
+        // act
+        render(rows);
+        await page.viewport(375, 812);
+        fixture.detectChanges();
+
+        // assert & verify
+        check();
+
+        // act -- compacted beside the panel
+        render(rows, { compact: true });
+
+        // assert & verify
+        check();
+      } finally {
+        await page.viewport(before.width, before.height);
+        frame.remove();
+      }
+    });
+
+    it('should not add a column width to the compact list beside the panel', () => {
+      // arrange
+      document.body.appendChild(fixture.nativeElement);
+      render([txn({ id: 1, description: 'NETFLIX.COM 866-579' })], { compact: true });
+      const merchantCell = all<HTMLButtonElement>('[data-testid="open-transaction"]')[0]
+        .parentElement!.parentElement as HTMLTableCellElement;
+
+      // act
+      const name = all<HTMLButtonElement>('[data-testid="open-transaction"]')[0];
+      const action = ruleButtons()[0];
+
+      // assert & verify -- the action sits under the name, not beside it
+      expect(action.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+        name.getBoundingClientRect().bottom - 0.5,
+      );
+      expect(merchantCell.contains(action)).toBe(true);
+      fixture.nativeElement.remove();
     });
 
     it('should be a real button reachable by keyboard, opening on Enter', async () => {
