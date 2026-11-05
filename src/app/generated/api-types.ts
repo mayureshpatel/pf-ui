@@ -127,17 +127,17 @@ export interface paths {
          * List merchant rules
          * @description Returns the authenticated user's merchant rules in priority order
          */
-        get: operations["getRules"];
+        get: operations["getMerchantRules"];
         /**
          * Update a merchant rule
          * @description Updates a merchant rule owned by the authenticated user
          */
-        put: operations["updateRule"];
+        put: operations["updateMerchantRule"];
         /**
          * Create a merchant rule
          * @description Creates a new merchant rule for the authenticated user
          */
-        post: operations["createRule"];
+        post: operations["createMerchantRule"];
         delete?: never;
         options?: never;
         head?: never;
@@ -155,17 +155,17 @@ export interface paths {
          * List category rules
          * @description Returns the authenticated user's category rules
          */
-        get: operations["getRules_1"];
+        get: operations["getRules"];
         /**
          * Update a category rule
          * @description Updates a category rule owned by the authenticated user
          */
-        put: operations["updateRule_1"];
+        put: operations["updateRule"];
         /**
          * Create a category rule
          * @description Creates a new category rule for the authenticated user
          */
-        post: operations["createRule_1"];
+        post: operations["createRule"];
         delete?: never;
         options?: never;
         head?: never;
@@ -449,7 +449,7 @@ export interface paths {
          * Preview a draft merchant rule's matches
          * @description Shows which transactions a draft merchant rule would match and whether it would assign a merchant, lose to another rule, or leave the transaction alone; read-only
          */
-        post: operations["matchPreview"];
+        post: operations["matchMerchantRulePreview"];
         delete?: never;
         options?: never;
         head?: never;
@@ -469,7 +469,7 @@ export interface paths {
          * Apply merchant rules
          * @description Gives a merchant to the merchant-less transactions the current rules match and returns how many changed; never touches a transaction that already has a merchant
          */
-        post: operations["applyRules"];
+        post: operations["applyMerchantRules"];
         delete?: never;
         options?: never;
         head?: never;
@@ -489,7 +489,7 @@ export interface paths {
          * Preview a draft rule's matches
          * @description Shows which transactions a draft rule would match and whether it would categorize each, lose to another rule, or leave it alone; read-only
          */
-        post: operations["matchPreview_1"];
+        post: operations["matchPreview"];
         delete?: never;
         options?: never;
         head?: never;
@@ -509,7 +509,7 @@ export interface paths {
          * Apply rules
          * @description Applies the current rule set, recategorizing matching transactions
          */
-        post: operations["applyRules_1"];
+        post: operations["applyRules"];
         delete?: never;
         options?: never;
         head?: never;
@@ -851,7 +851,7 @@ export interface paths {
          * Preview applying merchant rules
          * @description Lists the merchant-less transactions the current rules would give a merchant, and the rule that decided each; read-only
          */
-        get: operations["previewApply"];
+        get: operations["previewMerchantRuleApply"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1011,7 +1011,7 @@ export interface paths {
          * Preview applying rules
          * @description Shows which transactions would be recategorized if the rule set were applied, without changing anything
          */
-        get: operations["previewApply_1"];
+        get: operations["previewApply"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1234,7 +1234,7 @@ export interface paths {
          * Delete a merchant rule
          * @description Deletes a merchant rule owned by the authenticated user
          */
-        delete: operations["deleteRule"];
+        delete: operations["deleteMerchantRule"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1254,7 +1254,7 @@ export interface paths {
          * Delete a category rule
          * @description Deletes a category rule owned by the authenticated user
          */
-        delete: operations["deleteRule_1"];
+        delete: operations["deleteRule"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2542,7 +2542,7 @@ export interface operations {
             };
         };
     };
-    getRules: {
+    getMerchantRules: {
         parameters: {
             query?: never;
             header?: never;
@@ -2562,7 +2562,7 @@ export interface operations {
             };
         };
     };
-    updateRule: {
+    updateMerchantRule: {
         parameters: {
             query?: never;
             header?: never;
@@ -2613,7 +2613,7 @@ export interface operations {
             };
         };
     };
-    createRule: {
+    createMerchantRule: {
         parameters: {
             query?: never;
             header?: never;
@@ -2655,7 +2655,7 @@ export interface operations {
             };
         };
     };
-    getRules_1: {
+    getRules: {
         parameters: {
             query?: never;
             header?: never;
@@ -2675,7 +2675,7 @@ export interface operations {
             };
         };
     };
-    updateRule_1: {
+    updateRule: {
         parameters: {
             query?: never;
             header?: never;
@@ -2708,7 +2708,7 @@ export interface operations {
             };
         };
     };
-    createRule_1: {
+    createRule: {
         parameters: {
             query?: never;
             header?: never;
@@ -3304,7 +3304,7 @@ export interface operations {
             };
         };
     };
-    matchPreview: {
+    matchMerchantRulePreview: {
         parameters: {
             query?: never;
             header?: never;
@@ -3346,7 +3346,7 @@ export interface operations {
             };
         };
     };
-    applyRules: {
+    applyMerchantRules: {
         parameters: {
             query?: never;
             header?: never;
@@ -3366,7 +3366,7 @@ export interface operations {
             };
         };
     };
-    matchPreview_1: {
+    matchPreview: {
         parameters: {
             query?: never;
             header?: never;
@@ -3408,7 +3408,7 @@ export interface operations {
             };
         };
     };
-    applyRules_1: {
+    applyRules: {
         parameters: {
             query?: never;
             header?: never;
@@ -3903,7 +3903,7 @@ export interface operations {
             };
         };
     };
-    previewApply: {
+    previewMerchantRuleApply: {
         parameters: {
             query?: never;
             header?: never;
@@ -4116,7 +4116,7 @@ export interface operations {
             };
         };
     };
-    previewApply_1: {
+    previewApply: {
         parameters: {
             query?: never;
             header?: never;
@@ -4395,7 +4395,7 @@ export interface operations {
             };
         };
     };
-    deleteRule: {
+    deleteMerchantRule: {
         parameters: {
             query?: never;
             header?: never;
@@ -4422,7 +4422,7 @@ export interface operations {
             };
         };
     };
-    deleteRule_1: {
+    deleteRule: {
         parameters: {
             query?: never;
             header?: never;
