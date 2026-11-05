@@ -156,7 +156,7 @@ describe('CsvImportReviewStepComponent', () => {
     await settle();
   }
 
-  /** A store double whose rows carry any origin, including `'guess'` (the real store has none yet). */
+  /** A store double whose rows carry any origin, including `'edited'`. */
   async function setupWithOrigins(origins: ReviewRowOrigin[]): Promise<void> {
     const reviewRows: ReviewRow[] = origins.map(
       (origin: ReviewRowOrigin, i: number): ReviewRow => ({
@@ -357,40 +357,37 @@ describe('CsvImportReviewStepComponent', () => {
     expect(summary).toContain('1 will be skipped');
   });
 
-  it('should label rule, guess, edited and uncategorized rows distinctly, in text and icon', async () => {
-    await setupWithOrigins(['rule', 'guess', 'edited', 'none']);
+  it('should label rule, edited and uncategorized rows distinctly, in text and icon', async () => {
+    await setupWithOrigins(['rule', 'edited', 'none']);
 
-    const labels = ['RULE', 'GUESS', 'EDITED', 'NONE'].map((o, i) =>
-      statusOf(rowsFor(`ROW ${o} ${i}`)[0]),
-    );
-    expect(labels.map(text)).toEqual(['Rule applied', 'Suggested', 'Edited', 'Uncategorized']);
+    const labels = ['RULE', 'EDITED', 'NONE'].map((o, i) => statusOf(rowsFor(`ROW ${o} ${i}`)[0]));
+    expect(labels.map(text)).toEqual(['Rule applied', 'Edited', 'Uncategorized']);
     const icons = labels.map((l) => l.querySelector('i.pi')!.className);
-    expect(new Set(icons).size).toBe(4);
+    expect(new Set(icons).size).toBe(3);
   });
 
-  it('should show only uncategorized and guessed rows with Needs a look', async () => {
-    await setupWithOrigins(['rule', 'guess', 'edited', 'none', 'none']);
+  it('should show only uncategorized rows with Needs a look', async () => {
+    await setupWithOrigins(['rule', 'edited', 'none', 'none']);
     const toggle = (): HTMLButtonElement =>
       fixture.nativeElement.querySelector('[data-testid="needs-look-toggle"]');
 
-    expect(text(toggle())).toContain('Needs a look (3)');
+    expect(text(toggle())).toContain('Needs a look (2)');
     expect(toggle().getAttribute('aria-pressed')).toBe('false');
-    expect(rows().length).toBe(6);
+    expect(rows().length).toBe(5);
 
     toggle().click();
     await settle();
 
     expect(toggle().getAttribute('aria-pressed')).toBe('true');
     expect(rows().map((r) => text(r.querySelector('[data-testid="row-description"]')!))).toEqual([
-      'ROW GUESS 1',
+      'ROW NONE 2',
       'ROW NONE 3',
-      'ROW NONE 4',
     ]);
     expect(headers().length).toBe(1);
 
     toggle().click();
     await settle();
-    expect(rows().length).toBe(6);
+    expect(rows().length).toBe(5);
   });
 
   it('should say when nothing needs a look', async () => {
