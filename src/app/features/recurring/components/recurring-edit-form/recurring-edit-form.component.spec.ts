@@ -50,7 +50,14 @@ describe('RecurringEditFormComponent', () => {
       nextDate: new Date(2026, 10, 3),
     });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   beforeEach(async () => {
+    // pin the clock: dates show their year only when it is not the current one
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 25));
     await TestBed.configureTestingModule({
       imports: [RecurringEditFormComponent, NoopAnimationsModule],
     }).compileComponents();
