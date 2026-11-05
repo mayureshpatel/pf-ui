@@ -20,7 +20,7 @@ import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Params, Router } from '@angular/router';
-import { finalize, forkJoin, Observable, of, skip, switchMap } from 'rxjs';
+import { finalize, forkJoin, Observable, of, skip, Subscription, switchMap } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { PaginatorModule } from 'primeng/paginator';
 import { ConfirmationService, SelectItemGroup } from 'primeng/api';
@@ -396,6 +396,9 @@ export class TransactionsComponent implements OnInit {
   private readonly ruleForm: Signal<RuleEditFormComponent | undefined> =
     viewChild<RuleEditFormComponent>('ruleForm');
 
+  /** The list request in flight, cancelled when a newer load starts. */
+  private listRequest: Subscription | null = null;
+
   private ruleSessions = 0;
   private ruleGroupsRequested = false;
   /** The control that started the rule form, to hand focus back to when it closes. */
@@ -460,12 +463,16 @@ export class TransactionsComponent implements OnInit {
    * Fetches the transaction dataset from the API based on current state.
    */
   loadTransactions(): void {
+    // the newest request wins: cancel the one still in flight so its late (or failed) response can
+    // never overwrite the list, clear the selection or drop the loading flag. This runs before
+    // loading is set, because cancelling fires the old request's finalize
+    this.listRequest?.unsubscribe();
     this.loading.set(true);
     this.loadError.set(false);
     this.loadReviewCounts();
     const { filter, page, size, sort } = this.state();
 
-    this.transactionApi
+    this.listRequest = this.transactionApi
       .getTransactions(filter, { page, size, sort })
       .pipe(
         takeUntilDestroyed(this.destroyRef),
