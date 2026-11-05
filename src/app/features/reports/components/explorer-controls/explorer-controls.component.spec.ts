@@ -25,10 +25,17 @@ describe('ExplorerControlsComponent', () => {
   };
 
   beforeEach(() => {
+    // pin the clock: the range presets read the real date, so expected dates must not depend on it
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 25));
     TestBed.configureTestingModule({ imports: [ExplorerControlsComponent, NoopAnimationsModule] });
     fixture = TestBed.createComponent(ExplorerControlsComponent);
     emitted = [];
     fixture.componentInstance.stateChange.subscribe((c: Partial<ExploreState>) => emitted.push(c));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('should pressed-mark the active measure', () => {

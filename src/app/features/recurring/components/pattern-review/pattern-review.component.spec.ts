@@ -66,7 +66,14 @@ describe('PatternReviewComponent', () => {
   const button = (name: string): HTMLButtonElement | undefined =>
     all<HTMLButtonElement>('button').find((b) => text(b) === name);
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   beforeEach(async () => {
+    // pin the clock: dates show their year only when it is not the current one
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 25));
     await TestBed.configureTestingModule({
       imports: [PatternReviewComponent, NoopAnimationsModule],
     }).compileComponents();
