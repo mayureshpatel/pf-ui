@@ -380,6 +380,49 @@ describe('TransactionEditFormComponent', () => {
     });
   });
 
+  describe('Create rule from this transaction', () => {
+    const existing = {
+      id: 1,
+      account: { id: 1, name: 'Checking' },
+      category: null,
+      amount: 42.5,
+      date: '2026-03-15T00:00:00Z',
+      description: 'NETFLIX.COM',
+      type: 'EXPENSE',
+      merchant: null,
+      tags: [],
+    };
+    const ruleButton = (): HTMLButtonElement | undefined =>
+      Array.from<HTMLButtonElement>(fixture.nativeElement.querySelectorAll('button')).find(
+        (b) => b.textContent?.trim() === 'Create rule from this transaction',
+      );
+
+    it('should offer the action for a saved transaction and emit it without saving', () => {
+      // arrange
+      fixture.componentRef.setInput('transaction', existing);
+      fixture.detectChanges();
+      const created = vi.fn();
+      const saved = vi.fn();
+      component.createRule.subscribe(created);
+      component.save.subscribe(saved);
+
+      // act
+      ruleButton()!.click();
+
+      // assert & verify
+      expect(created).toHaveBeenCalledTimes(1);
+      expect(saved).not.toHaveBeenCalled();
+    });
+
+    it('should not offer it for a new transaction, which has no description yet', () => {
+      // act
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(ruleButton()).toBeUndefined();
+    });
+  });
+
   describe('background refreshes while editing', () => {
     const existing = {
       id: 1,

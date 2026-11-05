@@ -109,6 +109,7 @@
             (selectionChange)="onSelectionChange($event)"
             (openTransaction)="openEditDialog($event)"
             (pickCategory)="onPickCategory($event)"
+            (createRule)="onCreateRuleFromRow($event)"
           />
           <div [class.pointer-events-none]="loading()" [class.opacity-60]="loading()">
             <p-paginator
@@ -131,6 +132,7 @@
           (markTransfer)="onMarkAsTransfer()"
           (unmarkTransfer)="onUnmarkAsTransfer()"
           (editMore)="onEditMore()"
+          (createRule)="onCreateRuleFromSelection()"
           (clear)="onSelectionChange([])"
         />
       </div>
@@ -138,14 +140,16 @@
       @if (panelMode() !== 'closed') {
         <app-side-panel
           [title]="panelTitle()"
-          [saving]="savingTransaction() || bulkSaving()"
+          [saving]="savingTransaction() || bulkSaving() || savingRule()"
           [valid]="panelValid()"
           [saveLabel]="
             panelMode() === 'create'
               ? 'Post transaction'
               : panelMode() === 'bulk'
                 ? 'Apply to ' + selectedIds().length
-                : 'Save changes'
+                : panelMode() === 'rule'
+                  ? 'Add rule'
+                  : 'Save changes'
           "
           [showDelete]="panelMode() === 'single'"
           (save)="onPanelSave()"
@@ -193,12 +197,32 @@
                 (onClick)="onSelectionChange([])"
               />
             </div>
+          } @else if (panelMode() === 'rule') {
+            <!-- one pass per start: a new key recreates the form, whose keyword prefill applies only then -->
+            @for (start of ruleStart() ? [ruleStart()!] : []; track start.key) {
+              <app-rule-edit-form
+                #ruleForm
+                [rule]="null"
+                [groups]="ruleGroups()"
+                [saving]="savingRule()"
+                [initialKeyword]="start.keyword"
+                (save)="onSaveRule($event)"
+                (draftChange)="ruleDraft.set($event)"
+              />
+              <app-rule-match-list
+                class="mt-4 block"
+                [draft]="ruleDraft()"
+                [invalid]="ruleForm.keywordsInvalid()"
+                [context]="start.context"
+              />
+            }
           } @else {
             <app-transaction-edit-form
               #editForm
               [transaction]="selectedTransaction()"
               [saving]="savingTransaction()"
               (save)="onSave($event)"
+              (createRule)="onCreateRuleFromEditForm()"
             />
           }
         </app-side-panel>

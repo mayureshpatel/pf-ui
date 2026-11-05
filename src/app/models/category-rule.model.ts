@@ -91,3 +91,90 @@ export interface RuleChangePreview {
   oldValue: string;
   newValue: string;
 }
+
+/**
+ * What the rule engine would do with a transaction a draft rule matches.
+ * `WILL_CATEGORIZE`: the draft would assign its category. `LOSES_TO_OTHER_RULE`: a higher-ranked
+ * rule also matches and wins. `ALREADY_CATEGORIZED`: the transaction already has a category and is
+ * left alone.
+ */
+export type RuleVerdict = 'WILL_CATEGORIZE' | 'LOSES_TO_OTHER_RULE' | 'ALREADY_CATEGORIZED';
+
+/**
+ * A rule that competes with a draft for the same transaction.
+ *
+ * @property id - The rule's id.
+ * @property keywords - The rule's keyword set.
+ * @property categoryName - The name of the category the rule assigns, or null when the rule has no
+ * category.
+ * @property priority - The rule's priority.
+ */
+export interface RuleRef {
+  id: number;
+  keywords: string[];
+  categoryName: string | null;
+  priority: number;
+}
+
+/**
+ * One transaction matched by a draft rule, with the engine's verdict for it.
+ *
+ * @property transactionId - The matched transaction's id.
+ * @property date - The transaction date (ISO string).
+ * @property description - The transaction description.
+ * @property amount - The transaction amount.
+ * @property accountName - The name of the account the transaction belongs to, or null when it has
+ * none.
+ * @property currentCategory - The transaction's current category, or null if uncategorized.
+ * @property verdict - What the engine would do with the transaction.
+ * @property otherRules - Other rules matching this transaction (relevant to `LOSES_TO_OTHER_RULE`).
+ */
+export interface RuleMatchRow {
+  transactionId: number;
+  date: string;
+  description: string;
+  amount: number;
+  accountName: string | null;
+  currentCategory: Category | null;
+  verdict: RuleVerdict;
+  otherRules: RuleRef[];
+}
+
+/**
+ * The result of previewing a draft rule against the user's transactions.
+ *
+ * @property totalMatches - How many transactions the draft matches.
+ * @property willCategorizeCount - Matches the draft would categorize.
+ * @property losesToOtherRuleCount - Matches that a higher-ranked rule would win.
+ * @property alreadyCategorizedCount - Matches that already have a category.
+ * @property truncated - True when `rows` holds only part of the matches.
+ * @property rows - The matched transactions (possibly capped).
+ */
+export interface RuleMatchPreview {
+  totalMatches: number;
+  willCategorizeCount: number;
+  losesToOtherRuleCount: number;
+  alreadyCategorizedCount: number;
+  truncated: boolean;
+  rows: RuleMatchRow[];
+}
+
+/**
+ * A rule being drafted, sent to the match preview. The category is irrelevant to matching and so
+ * is omitted.
+ *
+ * @property ruleId - The id of the rule being edited, or null for a new rule.
+ * @property keywords - The draft's keyword set.
+ * @property matchType - How `keywords` combine.
+ * @property priority - The draft's priority.
+ * @property minAmount - Optional lower bound (inclusive), or null.
+ * @property maxAmount - Optional upper bound (inclusive), or null.
+ */
+export interface RuleDraft {
+  ruleId: number | null;
+  keywords: string[];
+  matchType: MatchType;
+  priority: number;
+  minAmount: number | null;
+  maxAmount: number | null;
+}

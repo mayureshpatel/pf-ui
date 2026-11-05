@@ -97,6 +97,9 @@ export class TransactionEditFormComponent {
   /** Emitted when the form is validated and ready for persistence. */
   readonly save: OutputEmitterRef<TransactionFormSaveEvent> = output<TransactionFormSaveEvent>();
 
+  /** Emitted when the user wants a category rule started from the transaction being edited. */
+  readonly createRule: OutputEmitterRef<void> = output<void>();
+
   /** Available bank accounts for transaction association. */
   readonly accounts: WritableSignal<Account[]> = signal<Account[]>([]);
 

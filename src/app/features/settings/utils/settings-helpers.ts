@@ -6,6 +6,8 @@ export type SettingsSection = 'appearance' | 'rules' | 'tags';
 
 const SECTIONS: SettingsSection[] = ['appearance', 'rules', 'tags'];
 const MAX_KEYWORD_LENGTH = 255;
+/** The most keywords one rule may hold, as the server allows. */
+export const MAX_KEYWORDS = 20;
 
 /** The section a `section` query parameter names; anything unknown shows the category rules. */
 export function sectionFromParam(value: unknown): SettingsSection {

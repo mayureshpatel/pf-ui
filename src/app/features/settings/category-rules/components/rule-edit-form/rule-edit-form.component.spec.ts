@@ -1,7 +1,7 @@
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Category, CategoryGroup } from '@models/category.model';
-import { CategoryRule } from '@models/category-rule.model';
+import { CategoryRule, RuleDraft } from '@models/category-rule.model';
 import { RuleEditFormComponent } from './rule-edit-form.component';
 
 const food = { id: 5, name: 'Food' } as Category;
@@ -23,17 +23,21 @@ describe('RuleEditFormComponent', () => {
   let component: RuleEditFormComponent;
   let saved: unknown[];
   let removed: number;
+  let drafts: (RuleDraft | null)[];
 
-  function render(current: CategoryRule | null = null, saving = false): void {
+  function render(current: CategoryRule | null = null, saving = false, initial = ''): void {
     fixture = TestBed.createComponent(RuleEditFormComponent);
     component = fixture.componentInstance;
     saved = [];
     removed = 0;
+    drafts = [];
+    component.draftChange.subscribe((d) => drafts.push(d));
     component.save.subscribe((v) => saved.push(v));
     component.remove.subscribe(() => removed++);
     fixture.componentRef.setInput('rule', current);
     fixture.componentRef.setInput('groups', groups);
     fixture.componentRef.setInput('saving', saving);
+    fixture.componentRef.setInput('initialKeyword', initial);
     fixture.detectChanges();
   }
 
@@ -162,6 +166,70 @@ describe('RuleEditFormComponent', () => {
     expect(component.form.controls.keywordsInput.valid).toBe(true);
   });
 
+  it('should allow at most 20 keywords', () => {
+    // arrange
+    render();
+    const many = (n: number): string => Array.from({ length: n }, (_, i) => `k${i}`).join(', ');
+
+    // act
+    fill({ keywordsInput: many(21) });
+    component.form.controls.keywordsInput.markAsTouched();
+    fixture.detectChanges();
+
+    // assert & verify
+    expect(component.form.controls.keywordsInput.valid).toBe(false);
+    expect(fixture.nativeElement.textContent).toContain('Use at most 20 keywords.');
+    fill({ keywordsInput: many(20) });
+    expect(component.form.controls.keywordsInput.valid).toBe(true);
+  });
+
+  it('should say why the keywords are refused while still typing, not only after leaving the field', () => {
+    // arrange
+    render();
+    const many = (n: number): string => Array.from({ length: n }, (_, i) => `k${i}`).join(', ');
+    const field = (): HTMLInputElement => fixture.nativeElement.querySelector('#rule-keywords');
+    const message = (): HTMLElement => fixture.nativeElement.querySelector('#rule-keywords-error');
+    const type = (value: string): void => {
+      field().value = value;
+      field().dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+    };
+
+    // act -- typing, focus never leaves the field
+    type(many(21));
+
+    // assert & verify
+    expect(component.form.controls.keywordsInput.touched).toBe(false);
+    expect(message().textContent?.trim()).toBe('Use at most 20 keywords.');
+    expect(message().getAttribute('aria-live')).toBe('polite');
+    expect(field().getAttribute('aria-describedby')).toContain('rule-keywords-error');
+    const observer = new MutationObserver(() => undefined);
+    observer.observe(message(), { childList: true, characterData: true, subtree: true });
+
+    // act -- another keystroke with the same reason does not rewrite (re-announce) the message
+    type(many(22));
+
+    // assert & verify
+    expect(message().textContent?.trim()).toBe('Use at most 20 keywords.');
+    expect(observer.takeRecords().length).toBe(0);
+    observer.disconnect();
+
+    // act -- a keyword over the length limit
+    type('a'.repeat(256));
+
+    // assert & verify
+    expect(message().textContent?.trim()).toBe('Each keyword must be 255 characters or fewer.');
+
+    // act -- merely empty says nothing until the field is left
+    type('');
+
+    // assert & verify
+    expect(message().textContent?.trim()).toBe('');
+    field().dispatchEvent(new Event('blur'));
+    fixture.detectChanges();
+    expect(message().textContent?.trim()).toBe('Enter at least one keyword.');
+  });
+
   it('should reject a negative priority and negative amounts', () => {
     // arrange
     render();
@@ -231,6 +299,19 @@ describe('RuleEditFormComponent', () => {
     // assert & verify
     expect(saved).toEqual([]);
     expect(component.form.controls.keywordsInput.touched).toBe(true);
+  });
+
+  it('should move focus to the keywords field on request', () => {
+    // arrange
+    render(null, false, 'NETFLIX.COM');
+    document.body.appendChild(fixture.nativeElement);
+
+    // act
+    component.focusKeywords();
+
+    // assert & verify
+    expect(document.activeElement).toBe(fixture.nativeElement.querySelector('#rule-keywords'));
+    fixture.nativeElement.remove();
   });
 
   it('should show the server message', () => {
@@ -335,5 +416,139 @@ describe('RuleEditFormComponent', () => {
       Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]
     ).find((b) => b.textContent?.includes('Delete rule'))!;
     expect(del.disabled).toBe(true);
+  });
+
+  describe('draft', () => {
+    const last = (): RuleDraft | null => drafts[drafts.length - 1];
+
+    it('should emit a draft as keywords, match type, priority and range change', () => {
+      // arrange
+      render();
+
+      // act
+      component.form.patchValue({ keywordsInput: ' costco , , gas ' });
+      component.form.patchValue({ matchType: 'AND' });
+      component.form.patchValue({ priority: 4 });
+      component.form.patchValue({ minAmount: 5, maxAmount: 50 });
+
+      // assert & verify
+      expect(last()).toEqual({
+        ruleId: null,
+        keywords: ['costco', 'gas'],
+        matchType: 'AND',
+        priority: 4,
+        minAmount: 5,
+        maxAmount: 50,
+      });
+    });
+
+    it('should emit null for an empty keyword list', () => {
+      // arrange
+      render();
+      component.form.patchValue({ keywordsInput: 'costco' });
+      expect(last()).not.toBeNull();
+
+      // act
+      component.form.patchValue({ keywordsInput: ' , ' });
+
+      // assert & verify
+      expect(last()).toBeNull();
+      expect(drafts[0]).toBeNull();
+    });
+
+    it('should emit null and flag the keywords as invalid for more than 20 keywords', () => {
+      // arrange
+      render();
+      component.form.patchValue({ keywordsInput: 'costco' });
+      expect(last()).not.toBeNull();
+      expect(component.keywordsInvalid()).toBe(false);
+
+      // act
+      component.form.patchValue({
+        keywordsInput: Array.from({ length: 21 }, (_, i) => `k${i}`).join(', '),
+      });
+
+      // assert & verify
+      expect(last()).toBeNull();
+      expect(component.keywordsInvalid()).toBe(true);
+    });
+
+    it('should emit null and flag the keywords as invalid for a keyword over 255 characters', () => {
+      // arrange
+      render();
+      component.form.patchValue({ keywordsInput: 'costco' });
+
+      // act
+      component.form.patchValue({ keywordsInput: `costco, ${'a'.repeat(256)}` });
+
+      // assert & verify
+      expect(last()).toBeNull();
+      expect(component.keywordsInvalid()).toBe(true);
+    });
+
+    it('should emit null when editing a rule that has more than 20 keywords', () => {
+      // act
+      render({ ...rule, keywords: Array.from({ length: 21 }, (_, i) => `k${i}`) });
+
+      // assert & verify
+      expect(drafts.every((d) => d === null)).toBe(true);
+      expect(component.keywordsInvalid()).toBe(true);
+    });
+
+    it('should not flag an empty keyword field as invalid input', () => {
+      // act
+      render();
+      component.form.patchValue({ keywordsInput: ' , ' });
+
+      // assert & verify
+      expect(last()).toBeNull();
+      expect(component.keywordsInvalid()).toBe(false);
+    });
+
+    it('should prefill the keyword field for a new rule and ignore initialKeyword when editing', () => {
+      // act
+      render(null, false, 'COSTCO');
+
+      // assert & verify
+      expect(component.form.controls.keywordsInput.value).toBe('COSTCO');
+      expect(component.form.dirty).toBe(false);
+      expect(last()?.keywords).toEqual(['COSTCO']);
+
+      // act
+      render(rule, false, 'COSTCO');
+
+      // assert & verify
+      expect(component.form.controls.keywordsInput.value).toBe('whole foods, kroger');
+      expect(last()?.keywords).toEqual(['whole foods', 'kroger']);
+    });
+
+    it("should emit the existing rule's id when editing", () => {
+      // act
+      render(rule);
+
+      // assert & verify
+      expect(last()).toEqual({
+        ruleId: 9,
+        keywords: ['whole foods', 'kroger'],
+        matchType: 'AND',
+        priority: 3,
+        minAmount: 10,
+        maxAmount: 200,
+      });
+    });
+
+    it('should not emit duplicate consecutive drafts', () => {
+      // arrange
+      render();
+      component.form.patchValue({ keywordsInput: 'costco' });
+      const count = drafts.length;
+
+      // act -- same draft again, and a change that is not part of it
+      component.form.patchValue({ keywordsInput: ' costco ' });
+      component.form.patchValue({ category: groceries });
+
+      // assert & verify
+      expect(drafts).toHaveLength(count);
+    });
   });
 });

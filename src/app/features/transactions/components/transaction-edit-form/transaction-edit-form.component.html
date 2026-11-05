@@ -208,3 +208,15 @@
       ></textarea>
     </div>
   </form>
+
+  @if (isEditMode()) {
+    <div class="border-t border-surface-200 pt-3 dark:border-surface-800">
+      <button
+        type="button"
+        class="cursor-pointer rounded-lg border border-surface-300 px-3 py-1.5 text-sm hover:bg-surface-100 dark:border-surface-700 dark:hover:bg-surface-800"
+        (click)="createRule.emit()"
+      >
+        <i class="pi pi-bolt mr-1" aria-hidden="true"></i>Create rule from this transaction
+      </button>
+    </div>
+  }

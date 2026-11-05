@@ -26,8 +26,11 @@ import {
   TransactionUpdateRequest,
 } from '@models/transaction.model';
 import { BulkEditData } from './components/transaction-bulk-form/transaction-bulk-form.component';
-import { Category } from '@models/category.model';
+import { Category, CategoryGroup } from '@models/category.model';
 import { Merchant } from '@models/merchant.model';
+import { RuleMatchPreview } from '@models/category-rule.model';
+import { CategoryRuleApiService } from '@features/settings/category-rules/services/category-rule-api.service';
+import { RuleEditFormComponent } from '@features/settings/category-rules/components/rule-edit-form/rule-edit-form.component';
 
 /** Reproduces just the 2 ActivatedRoute members this component actually reads. */
 interface MockActivatedRoute {
@@ -70,6 +73,7 @@ describe('TransactionsComponent', () => {
   let mockConfirmationService: { confirm: Mock<(confirmation: Confirmation) => void> };
   let mockRouter: Mocked<Pick<Router, 'navigate'>>;
   let mockActivatedRoute: MockActivatedRoute;
+  let mockRuleApi: Mocked<Pick<CategoryRuleApiService, 'createRule' | 'previewMatches'>>;
 
   /**
    * The list loads (page size above 1). A period-only page that comes back empty also sends a
@@ -126,6 +130,18 @@ describe('TransactionsComponent', () => {
       snapshot: { queryParams: {} },
       queryParams: of({}),
     };
+    const emptyPreview: RuleMatchPreview = {
+      totalMatches: 0,
+      willCategorizeCount: 0,
+      losesToOtherRuleCount: 0,
+      alreadyCategorizedCount: 0,
+      truncated: false,
+      rows: [],
+    };
+    mockRuleApi = {
+      createRule: vi.fn().mockReturnValue(of(77)),
+      previewMatches: vi.fn().mockReturnValue(of(emptyPreview)),
+    };
 
     await TestBed.configureTestingModule({
       imports: [TransactionsComponent, NoopAnimationsModule],
@@ -141,6 +157,7 @@ describe('TransactionsComponent', () => {
         { provide: MessageService, useValue: {} },
         { provide: Router, useValue: mockRouter },
         { provide: ActivatedRoute, useValue: mockActivatedRoute },
+        { provide: CategoryRuleApiService, useValue: mockRuleApi },
       ],
     }).compileComponents();
 
@@ -1390,6 +1407,451 @@ describe('TransactionsComponent', () => {
         expect(
           fixture.nativeElement.querySelector('[data-testid="selection-net"]').textContent,
         ).toContain('+$70.00');
+      });
+    });
+
+    describe('create a rule from a transaction (PF-900)', () => {
+      const streaming = { id: 9, name: 'Streaming' } as Category;
+      const groups: CategoryGroup[] = [
+        { parent: { id: 8, name: 'Entertainment' } as Category, items: [streaming] },
+      ];
+      const netflix = (): Transaction =>
+        row(1, { description: 'NETFLIX.COM 866-579', category: null as never });
+      const shell = (): Transaction =>
+        row(2, { description: 'SHELL OIL 57444', category: null as never });
+
+      const open = (): void => {
+        mockCategoryApi.getGroupedCategories.mockReturnValue(of(groups));
+        openAt({ categoryName: 'null' }, [netflix(), shell()]);
+      };
+      const settle = async (): Promise<void> => {
+        fixture.detectChanges();
+        await fixture.whenStable();
+        fixture.detectChanges();
+      };
+      const q = <T extends HTMLElement>(selector: string): T | null =>
+        fixture.nativeElement.querySelector(selector);
+      const buttonNamed = (scope: string, name: string): HTMLButtonElement | undefined =>
+        Array.from<HTMLButtonElement>(
+          fixture.nativeElement.querySelectorAll(`${scope} button`),
+        ).find((b) => (b.getAttribute('aria-label') ?? b.textContent ?? '').trim() === name);
+      const rowAction = (description: string): HTMLButtonElement =>
+        buttonNamed('app-transaction-list', `Create rule from ${description}`)!;
+      const keyword = (): HTMLInputElement => q<HTMLInputElement>('aside #rule-keywords')!;
+      const ruleForm = (): RuleEditFormComponent =>
+        fixture.debugElement.query(By.directive(RuleEditFormComponent))
+          .componentInstance as RuleEditFormComponent;
+      const typeKeyword = (value: string): void => {
+        keyword().value = value;
+        keyword().dispatchEvent(new Event('input'));
+        fixture.detectChanges();
+      };
+
+      it("should open the panel in rule mode from a row's action, keyword prefilled from the description", async () => {
+        // arrange
+        open();
+        component.onSelectionChange([2]);
+
+        // act
+        rowAction('NETFLIX.COM 866-579').click();
+        await settle();
+
+        // assert & verify
+        expect(component.panelMode()).toBe('rule');
+        expect(q('aside h2')?.textContent?.trim()).toBe('Create rule');
+        expect(keyword().value).toBe('NETFLIX.COM 866-579');
+        expect(buttonNamed('aside', 'Add rule')).toBeTruthy();
+        // no edit drawer for that row, the selection stays, and the list stays beside the panel
+        expect(fixture.debugElement.query(By.directive(TransactionEditFormComponent))).toBeNull();
+        expect(component.selectedIds()).toEqual([2]);
+        expect(q('app-transaction-list')).not.toBeNull();
+        expect(q('app-rule-match-list')).not.toBeNull();
+        expect(mockCategoryApi.getGroupedCategories).toHaveBeenCalled();
+      });
+
+      it("should open rule mode from the edit panel with that transaction's description", async () => {
+        // arrange
+        open();
+        component.openEditDialog(netflix());
+        await settle();
+
+        // act
+        buttonNamed('aside', 'Create rule from this transaction')!.click();
+        await settle();
+
+        // assert & verify
+        expect(component.panelMode()).toBe('rule');
+        expect(keyword().value).toBe('NETFLIX.COM 866-579');
+        expect(fixture.debugElement.query(By.directive(TransactionEditFormComponent))).toBeNull();
+      });
+
+      it('should start with an empty keyword for several selected, listing them as context', async () => {
+        // arrange
+        open();
+        component.onSelectionChange([1, 2]);
+        fixture.detectChanges();
+
+        // act
+        buttonNamed('app-transaction-bulk-bar', 'Create rule')!.click();
+        await settle();
+
+        // assert & verify
+        expect(component.panelMode()).toBe('rule');
+        expect(keyword().value).toBe('');
+        const context = q('app-rule-match-list [aria-label="Selected transactions"]');
+        expect(context?.textContent).toContain('NETFLIX.COM 866-579');
+        expect(context?.textContent).toContain('SHELL OIL 57444');
+        expect(component.selectedIds()).toEqual([1, 2]);
+      });
+
+      it('should prefill the keyword from the one selected row when the bulk bar starts a rule', async () => {
+        // arrange
+        open();
+        component.onSelectionChange([2]);
+        fixture.detectChanges();
+
+        // act
+        buttonNamed('app-transaction-bulk-bar', 'Create rule')!.click();
+        await settle();
+
+        // assert & verify
+        expect(component.panelMode()).toBe('rule');
+        expect(keyword().value).toBe('SHELL OIL 57444');
+        expect(component.selectedIds()).toEqual([2]);
+      });
+
+      describe('a description with commas', () => {
+        const paypal = (): Transaction =>
+          row(3, { description: 'PAYPAL *ACME, SAN JOSE CA', category: null as never });
+        const openWithPaypal = (): void => {
+          mockCategoryApi.getGroupedCategories.mockReturnValue(of(groups));
+          openAt({ categoryName: 'null' }, [netflix(), paypal()]);
+        };
+
+        it("should prefill one keyword, the description's longest comma-free part, from a row", async () => {
+          // arrange
+          openWithPaypal();
+
+          // act
+          rowAction('PAYPAL *ACME, SAN JOSE CA').click();
+          await settle();
+
+          // assert & verify
+          expect(keyword().value).toBe('PAYPAL *ACME');
+          expect(component.ruleDraft()?.keywords).toEqual(['PAYPAL *ACME']);
+        });
+
+        it('should prefill the same single keyword from the edit panel', async () => {
+          // arrange
+          openWithPaypal();
+          component.openEditDialog(paypal());
+          await settle();
+
+          // act
+          buttonNamed('aside', 'Create rule from this transaction')!.click();
+          await settle();
+
+          // assert & verify
+          expect(keyword().value).toBe('PAYPAL *ACME');
+        });
+
+        it('should prefill the same single keyword from one selected row', async () => {
+          // arrange
+          openWithPaypal();
+          component.onSelectionChange([3]);
+          fixture.detectChanges();
+
+          // act
+          buttonNamed('app-transaction-bulk-bar', 'Create rule')!.click();
+          await settle();
+
+          // assert & verify
+          expect(keyword().value).toBe('PAYPAL *ACME');
+        });
+      });
+
+      it('should ask to fix the keywords in the match list when there are too many', async () => {
+        // arrange
+        open();
+        rowAction('NETFLIX.COM 866-579').click();
+        await settle();
+
+        // act
+        typeKeyword(Array.from({ length: 21 }, (_, i) => `k${i}`).join(', '));
+        await settle();
+
+        // assert & verify
+        expect(component.ruleDraft()).toBeNull();
+        expect(q('app-rule-match-list')?.textContent).toContain('Fix the keywords to see matches');
+      });
+
+      it('should drop the rule form state when a row is opened for editing instead', async () => {
+        // arrange
+        open();
+        rowAction('NETFLIX.COM 866-579').click();
+        await settle();
+        expect(component.ruleDraft()).not.toBeNull();
+
+        // act
+        component.openEditDialog(shell());
+        await settle();
+
+        // assert & verify
+        expect(component.panelMode()).toBe('single');
+        expect(q('aside h2')?.textContent?.trim()).toBe('Edit transaction');
+        expect(q('app-rule-edit-form')).toBeNull();
+        expect(component.ruleStart()).toBeNull();
+        expect(component.ruleDraft()).toBeNull();
+
+        // act -- closing the edit drawer does not send focus to the stale rule opener
+        document.body.appendChild(fixture.nativeElement);
+        const stale = rowAction('NETFLIX.COM 866-579');
+        buttonNamed('aside', 'Close')!.click();
+        await settle();
+        await new Promise((resolve) => setTimeout(resolve));
+
+        // assert & verify
+        expect(component.panelMode()).toBe('closed');
+        expect(document.activeElement).not.toBe(stale);
+        fixture.nativeElement.remove();
+      });
+
+      it("should show the second transaction's keyword when a rule is started for another one", async () => {
+        // arrange
+        open();
+        rowAction('NETFLIX.COM 866-579').click();
+        await settle();
+        buttonNamed('aside', 'Close')!.click();
+        await settle();
+
+        // act
+        rowAction('SHELL OIL 57444').click();
+        await settle();
+
+        // assert & verify
+        expect(keyword().value).toBe('SHELL OIL 57444');
+
+        // act -- straight from one row to another while the panel is open
+        rowAction('NETFLIX.COM 866-579').click();
+        await settle();
+
+        // assert & verify
+        expect(keyword().value).toBe('NETFLIX.COM 866-579');
+      });
+
+      it('should create the rule, close the panel and leave the page exactly as it was', async () => {
+        // arrange
+        open();
+        component.onPageChange({ first: 0, rows: 50 });
+        await settle();
+        component.onSelectionChange([2]);
+        rowAction('NETFLIX.COM 866-579').click();
+        await settle();
+        typeKeyword('NETFLIX');
+        ruleForm().form.controls.category.setValue(streaming);
+        const stateBefore = component.state();
+        const loadsBefore = listLoads().length;
+
+        // act
+        buttonNamed('aside', 'Add rule')!.click();
+        await settle();
+
+        // assert & verify
+        expect(mockRuleApi.createRule).toHaveBeenCalledWith({
+          keywords: ['NETFLIX'],
+          matchType: 'OR',
+          categoryId: 9,
+          priority: 0,
+          minAmount: null,
+          maxAmount: null,
+        });
+        expect(mockToast.success).toHaveBeenCalledWith('Rule added');
+        expect(component.panelMode()).toBe('closed');
+        expect(q('aside')).toBeNull();
+        expect(listLoads().length).toBe(loadsBefore);
+        expect(component.state()).toBe(stateBefore);
+        expect(component.selectedIds()).toEqual([2]);
+        expect(mockConfirmationService.confirm).not.toHaveBeenCalled();
+      });
+
+      it('should keep the panel open with the error, and the form as typed, when saving fails', async () => {
+        // arrange
+        open();
+        mockRuleApi.createRule.mockReturnValue(
+          throwError(() => ({ status: 400, error: { detail: 'That rule already exists.' } })),
+        );
+        rowAction('NETFLIX.COM 866-579').click();
+        await settle();
+        typeKeyword('NETFLIX');
+        ruleForm().form.controls.category.setValue(streaming);
+
+        // act
+        buttonNamed('aside', 'Add rule')!.click();
+        await settle();
+
+        // assert & verify
+        expect(component.panelMode()).toBe('rule');
+        expect(q('aside [role="alert"]')?.textContent).toContain('That rule already exists.');
+        expect(keyword().value).toBe('NETFLIX');
+        expect(mockToast.success).not.toHaveBeenCalled();
+      });
+
+      it('should ask before discarding a dirty rule form, and not for a clean one', async () => {
+        // arrange
+        open();
+        rowAction('NETFLIX.COM 866-579').click();
+        await settle();
+
+        // act -- the prefilled keyword alone is not an edit
+        buttonNamed('aside', 'Close')!.click();
+        await settle();
+
+        // assert & verify
+        expect(mockConfirmationService.confirm).not.toHaveBeenCalled();
+        expect(component.panelMode()).toBe('closed');
+
+        // arrange
+        rowAction('NETFLIX.COM 866-579').click();
+        await settle();
+        typeKeyword('NETFLIX');
+
+        // act
+        buttonNamed('aside', 'Close')!.click();
+        await settle();
+
+        // assert & verify
+        expect(mockConfirmationService.confirm).toHaveBeenCalledTimes(1);
+        expect(component.panelMode()).toBe('rule');
+
+        // act -- opening a row's edit drawer asks too
+        component.openEditDialog(shell());
+        expect(mockConfirmationService.confirm).toHaveBeenCalledTimes(2);
+        expect(component.panelMode()).toBe('rule');
+        mockConfirmationService.confirm.mock.calls[0][0].accept!();
+        await settle();
+
+        // assert & verify
+        expect(component.panelMode()).toBe('closed');
+      });
+
+      it('should reach the row action by keyboard, focus the keyword, and return focus on close', async () => {
+        // arrange
+        open();
+        await settle();
+        document.body.appendChild(fixture.nativeElement);
+        const { userEvent } = await import('vitest/browser');
+        Array.from<HTMLButtonElement>(
+          fixture.nativeElement.querySelectorAll('[data-testid="open-transaction"]'),
+        )[0].focus();
+
+        // act
+        await userEvent.tab();
+        const reached = document.activeElement;
+        await userEvent.keyboard('{Enter}');
+        await settle();
+        await new Promise((resolve) => setTimeout(resolve));
+
+        // assert & verify
+        expect(reached).toBe(rowAction('NETFLIX.COM 866-579'));
+        expect(component.panelMode()).toBe('rule');
+        expect(document.activeElement).toBe(keyword());
+
+        // act
+        await userEvent.keyboard('{Escape}');
+        await settle();
+        await new Promise((resolve) => setTimeout(resolve));
+
+        // assert & verify
+        expect(component.panelMode()).toBe('closed');
+        expect(document.activeElement).toBe(rowAction('NETFLIX.COM 866-579'));
+        fixture.nativeElement.remove();
+      });
+
+      it('should put focus back in the rule form when the user keeps editing after a dirty Escape', async () => {
+        // arrange
+        open();
+        await settle();
+        document.body.appendChild(fixture.nativeElement);
+        const { userEvent } = await import('vitest/browser');
+        rowAction('NETFLIX.COM 866-579').focus();
+        rowAction('NETFLIX.COM 866-579').click();
+        await settle();
+        await new Promise((resolve) => setTimeout(resolve));
+        typeKeyword('NETFLIX');
+        keyword().focus();
+
+        // act -- Escape asks; the dialog takes focus, then "Keep editing"
+        await userEvent.keyboard('{Escape}');
+        await settle();
+        expect(mockConfirmationService.confirm).toHaveBeenCalledTimes(1);
+        (document.activeElement as HTMLElement | null)?.blur();
+        mockConfirmationService.confirm.mock.calls[0][0].reject!();
+        await settle();
+        await new Promise((resolve) => setTimeout(resolve));
+
+        // assert & verify
+        expect(component.panelMode()).toBe('rule');
+        expect(document.activeElement).toBe(keyword());
+
+        // act -- a second Escape reaches the panel again
+        await userEvent.keyboard('{Escape}');
+        await settle();
+
+        // assert & verify
+        expect(mockConfirmationService.confirm).toHaveBeenCalledTimes(2);
+        fixture.nativeElement.remove();
+      });
+
+      it('should return focus to the bulk bar when a rule started from it closes', async () => {
+        // arrange
+        open();
+        component.onSelectionChange([1, 2]);
+        await settle();
+        document.body.appendChild(fixture.nativeElement);
+        const { userEvent } = await import('vitest/browser');
+        const start = buttonNamed('app-transaction-bulk-bar', 'Create rule')!;
+        start.focus();
+        start.click();
+        await settle();
+        await new Promise((resolve) => setTimeout(resolve));
+        expect(document.activeElement).toBe(keyword());
+
+        // act
+        await userEvent.keyboard('{Escape}');
+        await settle();
+        await new Promise((resolve) => setTimeout(resolve));
+
+        // assert & verify
+        expect(component.panelMode()).toBe('closed');
+        expect(component.selectedIds()).toEqual([1, 2]);
+        expect(document.activeElement).not.toBe(document.body);
+        expect(document.activeElement).toBe(buttonNamed('app-transaction-bulk-bar', 'Create rule'));
+        fixture.nativeElement.remove();
+      });
+
+      it('should return focus to the row action even when the panel was already open', async () => {
+        // arrange
+        open();
+        component.openEditDialog(shell());
+        await settle();
+        document.body.appendChild(fixture.nativeElement);
+        const opener = rowAction('NETFLIX.COM 866-579');
+        opener.focus();
+
+        // act
+        opener.click();
+        await settle();
+        await new Promise((resolve) => setTimeout(resolve));
+        const focusedInPanel = document.activeElement;
+        const keywordField = keyword();
+        buttonNamed('aside', 'Close')!.click();
+        await settle();
+        await new Promise((resolve) => setTimeout(resolve));
+
+        // assert & verify
+        expect(focusedInPanel).toBe(keywordField);
+        expect(document.activeElement).toBe(rowAction('NETFLIX.COM 866-579'));
+        fixture.nativeElement.remove();
       });
     });
 

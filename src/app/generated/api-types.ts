@@ -408,6 +408,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/category-rules/match-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview a draft rule's matches
+         * @description Shows which transactions a draft rule would match and whether it would categorize each, lose to another rule, or leave it alone; read-only
+         */
+        post: operations["matchPreview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/category-rules/apply": {
         parameters: {
             query?: never;
@@ -1475,6 +1495,50 @@ export interface components {
             priority?: number;
             minAmount?: number;
             maxAmount?: number;
+        };
+        RuleMatchPreviewRequest: {
+            /** Format: int64 */
+            ruleId?: number;
+            keywords: string[];
+            /** @enum {string} */
+            matchType?: "AND" | "OR";
+            /** Format: int32 */
+            priority?: number;
+            minAmount?: number;
+            maxAmount?: number;
+        };
+        RuleMatchPreviewDto: {
+            /** Format: int32 */
+            totalMatches?: number;
+            /** Format: int32 */
+            willCategorizeCount?: number;
+            /** Format: int32 */
+            losesToOtherRuleCount?: number;
+            /** Format: int32 */
+            alreadyCategorizedCount?: number;
+            truncated?: boolean;
+            rows?: components["schemas"]["RuleMatchRowDto"][];
+        };
+        RuleMatchRowDto: {
+            /** Format: int64 */
+            transactionId?: number;
+            /** Format: date-time */
+            date?: string;
+            description?: string;
+            amount?: number;
+            accountName?: string;
+            currentCategory?: components["schemas"]["CategoryDto"];
+            /** @enum {string} */
+            verdict?: "WILL_CATEGORIZE" | "LOSES_TO_OTHER_RULE" | "ALREADY_CATEGORIZED";
+            otherRules?: components["schemas"]["RuleRefDto"][];
+        };
+        RuleRefDto: {
+            /** Format: int64 */
+            id?: number;
+            keywords?: string[];
+            categoryName?: string;
+            /** Format: int32 */
+            priority?: number;
         };
         CategoryCreateRequest: {
             /** Format: int64 */
@@ -2917,6 +2981,48 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    matchPreview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleMatchPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Preview returned (possibly empty) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RuleMatchPreviewDto"];
+                };
+            };
+            /** @description Validation failed, for example a blank keyword or more than 20 keywords */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RuleMatchPreviewDto"];
+                };
+            };
+            /** @description ruleId is not one of the authenticated user's rules */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RuleMatchPreviewDto"];
+                };
             };
         };
     };

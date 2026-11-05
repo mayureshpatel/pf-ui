@@ -120,6 +120,197 @@ describe('TransactionListComponent', () => {
     expect(picked).toHaveBeenCalledWith(rows[0]);
   });
 
+  describe('Create rule action', () => {
+    const ruleButtons = (): HTMLButtonElement[] =>
+      all<HTMLButtonElement>('button').filter((b) =>
+        (b.getAttribute('aria-label') ?? '').startsWith('Create rule from'),
+      );
+
+    it('should offer Create rule on each row, named after its raw description', () => {
+      // act
+      render([
+        txn({ id: 1, description: 'NETFLIX.COM 866-579' }),
+        txn({ id: 2, description: 'SHELL OIL 123' }),
+      ]);
+
+      // assert & verify
+      expect(ruleButtons().map((b) => b.getAttribute('aria-label'))).toEqual([
+        'Create rule from NETFLIX.COM 866-579',
+        'Create rule from SHELL OIL 123',
+      ]);
+    });
+
+    it('should keep the action in the compact list beside the panel', () => {
+      // act
+      render([txn({ id: 1, description: 'NETFLIX.COM' })], { compact: true });
+
+      // assert & verify
+      expect(ruleButtons().length).toBe(1);
+    });
+
+    it('should emit the row without opening it or changing the selection', () => {
+      // arrange
+      const rows = [txn({ id: 1, description: 'NETFLIX.COM' })];
+      render(rows);
+      const created = vi.fn();
+      const opened = vi.fn();
+      const selected = vi.fn();
+      component.createRule.subscribe(created);
+      component.openTransaction.subscribe(opened);
+      component.selectionChange.subscribe(selected);
+
+      // act
+      ruleButtons()[0].click();
+
+      // assert & verify
+      expect(created).toHaveBeenCalledWith(rows[0]);
+      expect(opened).not.toHaveBeenCalled();
+      expect(selected).not.toHaveBeenCalled();
+    });
+
+    it('should be a comfortable tap target that never overlaps the merchant button', async () => {
+      // arrange
+      render([]); // inputs are set before the first await lets the page render
+      const { page } = await import('vitest/browser');
+      const before = { width: window.innerWidth, height: window.innerHeight };
+      document.body.appendChild(fixture.nativeElement);
+      const check = (): void => {
+        const action = ruleButtons()[0].getBoundingClientRect();
+        const merchant = all<HTMLButtonElement>(
+          '[data-testid="open-transaction"]',
+        )[0].getBoundingClientRect();
+        expect(action.width).toBeGreaterThanOrEqual(32);
+        expect(action.height).toBeGreaterThanOrEqual(32);
+        const overlaps =
+          action.left < merchant.right &&
+          merchant.left < action.right &&
+          action.top < merchant.bottom &&
+          merchant.top < action.bottom;
+        expect(overlaps).toBe(false);
+      };
+
+      try {
+        // act -- desktop
+        render([txn({ id: 1, description: 'NETFLIX.COM 866-579' })]);
+
+        // assert & verify
+        check();
+
+        // act -- a phone, with the list compacted beside the panel
+        await page.viewport(375, 812);
+        render([txn({ id: 1, description: 'NETFLIX.COM 866-579' })], { compact: true });
+
+        // assert & verify
+        check();
+      } finally {
+        await page.viewport(before.width, before.height);
+        fixture.nativeElement.remove();
+      }
+    });
+
+    it('should not widen the list past a phone screen, so Amount stays in view', async () => {
+      // arrange -- the list's width on a 375px phone (page gutters taken off)
+      render([]); // inputs are set before the first await lets the page render
+      const { page } = await import('vitest/browser');
+      const before = { width: window.innerWidth, height: window.innerHeight };
+      const frame = document.createElement('div');
+      frame.style.width = '343px';
+      frame.appendChild(fixture.nativeElement);
+      document.body.appendChild(frame);
+      const rows = [
+        txn({
+          id: 1,
+          description: 'Balance Reconciliation',
+          merchant: null as never,
+          category: null as never,
+          amount: 2000,
+        }),
+        txn({ id: 2, description: 'TST*BROOKLYN BAGEL & COFFEE CO', merchant: null as never }),
+        txn({
+          id: 3,
+          merchant: { id: 7, name: 'Wholefoodsmarketplace' } as never,
+          amount: 1234.56,
+        }),
+      ];
+      const check = (): void => {
+        const wrapper = fixture.nativeElement.querySelector('table').parentElement as HTMLElement;
+        const table = fixture.nativeElement.querySelector('table') as HTMLTableElement;
+        expect(ruleButtons().length).toBe(3);
+        expect(table.scrollWidth).toBeLessThanOrEqual(wrapper.clientWidth);
+        expect(wrapper.scrollWidth).toBeLessThanOrEqual(wrapper.clientWidth);
+        const right = wrapper.getBoundingClientRect().right;
+        all<HTMLTableCellElement>('tbody td.text-right').forEach((amount) =>
+          expect(amount.getBoundingClientRect().right).toBeLessThanOrEqual(right + 0.5),
+        );
+        ruleButtons().forEach((b) => {
+          expect(b.getBoundingClientRect().width).toBeGreaterThanOrEqual(32);
+          expect(b.getBoundingClientRect().height).toBeGreaterThanOrEqual(32);
+        });
+      };
+
+      try {
+        // act
+        render(rows);
+        await page.viewport(375, 812);
+        fixture.detectChanges();
+
+        // assert & verify
+        check();
+
+        // act -- compacted beside the panel
+        render(rows, { compact: true });
+
+        // assert & verify
+        check();
+      } finally {
+        await page.viewport(before.width, before.height);
+        frame.remove();
+      }
+    });
+
+    it('should not add a column width to the compact list beside the panel', () => {
+      // arrange
+      document.body.appendChild(fixture.nativeElement);
+      render([txn({ id: 1, description: 'NETFLIX.COM 866-579' })], { compact: true });
+      const merchantCell = all<HTMLButtonElement>('[data-testid="open-transaction"]')[0]
+        .parentElement!.parentElement as HTMLTableCellElement;
+
+      // act
+      const name = all<HTMLButtonElement>('[data-testid="open-transaction"]')[0];
+      const action = ruleButtons()[0];
+
+      // assert & verify -- the action sits under the name, not beside it
+      expect(action.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+        name.getBoundingClientRect().bottom - 0.5,
+      );
+      expect(merchantCell.contains(action)).toBe(true);
+      fixture.nativeElement.remove();
+    });
+
+    it('should be a real button reachable by keyboard, opening on Enter', async () => {
+      // arrange
+      const rows = [txn({ id: 1, description: 'NETFLIX.COM' })];
+      render(rows);
+      document.body.appendChild(fixture.nativeElement);
+      const created = vi.fn();
+      const opened = vi.fn();
+      component.createRule.subscribe(created);
+      component.openTransaction.subscribe(opened);
+      const { userEvent } = await import('vitest/browser');
+      all<HTMLButtonElement>('[data-testid="open-transaction"]')[0].focus();
+
+      // act
+      await userEvent.tab();
+      await userEvent.keyboard('{Enter}');
+
+      // assert & verify
+      expect(document.activeElement).toBe(ruleButtons()[0]);
+      expect(created).toHaveBeenCalledWith(rows[0]);
+      expect(opened).not.toHaveBeenCalled();
+      fixture.nativeElement.remove();
+    });
+  });
+
   it('should emit the full new selection from a row checkbox and from the header checkbox', () => {
     // arrange
     render([txn({ id: 1 }), txn({ id: 2 }), txn({ id: 3 })], { selectedIds: [1] });

@@ -25,6 +25,7 @@ import {
   CategoryRuleCreateRequest,
   CategoryRuleUpdateRequest,
   RuleChangePreview,
+  RuleDraft,
 } from '@models/category-rule.model';
 import { PageErrorStateComponent } from '@shared/components/page-error-state/page-error-state.component';
 import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen-toolbar';
@@ -37,6 +38,7 @@ import {
   RuleCreateValue,
   RuleEditFormComponent,
 } from './components/rule-edit-form/rule-edit-form.component';
+import { RuleMatchListComponent } from './components/rule-match-list/rule-match-list.component';
 import { CategoryRuleApiService } from './services/category-rule-api.service';
 
 type RulePanelMode = 'overview' | 'rule' | 'add';
@@ -54,6 +56,7 @@ type RulePanelMode = 'overview' | 'rule' | 'add';
     ScreenToolbarComponent,
     SidePanelComponent,
     RuleEditFormComponent,
+    RuleMatchListComponent,
     ApplyRulesDialogComponent,
     PageErrorStateComponent,
   ],
@@ -81,6 +84,8 @@ export class CategoryRulesComponent implements OnInit {
   protected readonly panelMode: WritableSignal<RulePanelMode> = signal('overview');
   protected readonly selectedRuleId: WritableSignal<number | null> = signal(null);
   protected readonly showApplyDialog: WritableSignal<boolean> = signal(false);
+  /** The open form's draft, for the match list; null whenever no form is showing. */
+  protected readonly draft: WritableSignal<RuleDraft | null> = signal(null);
   protected readonly previewItems: WritableSignal<RuleChangePreview[]> = signal([]);
 
   protected readonly visibleRules: Signal<CategoryRule[]> = computed((): CategoryRule[] =>
@@ -407,6 +412,8 @@ export class CategoryRulesComponent implements OnInit {
     if (this.panelMode() === 'overview' && mode !== 'overview') {
       this.focusReturn = document.activeElement as HTMLElement | null;
     }
+    // a form that stays mounted (rule to rule) re-emits its own draft; one that goes or comes does not
+    if (mode !== this.panelMode()) this.draft.set(null);
     this.panelMode.set(mode);
     afterNextRender(
       (): void => {

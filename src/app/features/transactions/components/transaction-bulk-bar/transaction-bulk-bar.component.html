@@ -34,6 +34,14 @@
         Mark as transfer
       </button>
     }
+    <button
+      type="button"
+      data-testid="bulk-create-rule"
+      class="cursor-pointer text-sm underline"
+      (click)="createRule.emit()"
+    >
+      Create rule
+    </button>
     <button type="button" class="cursor-pointer text-sm underline" (click)="editMore.emit()">
       Edit more
     </button>

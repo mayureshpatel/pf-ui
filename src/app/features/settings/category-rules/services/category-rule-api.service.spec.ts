@@ -4,6 +4,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { environment } from '@env';
 import { AuthService } from '@core/auth/auth.service';
 import { SKIP_GENERIC_ERROR_TOAST } from '@core/auth/error.interceptor';
+import { RuleDraft, RuleMatchPreview } from '@models/category-rule.model';
 import { CategoryRuleApiService } from './category-rule-api.service';
 
 describe('CategoryRuleApiService', () => {
@@ -94,5 +95,78 @@ describe('CategoryRuleApiService', () => {
     const req = httpMock.expectOne(apiUrl);
     expect(req.request.context.get(SKIP_GENERIC_ERROR_TOAST)).toBe(true);
     req.flush(1);
+  });
+
+  describe('previewMatches', () => {
+    const draft: RuleDraft = {
+      ruleId: null,
+      keywords: ['netflix', 'hulu'],
+      matchType: 'OR',
+      priority: 3,
+      minAmount: 5,
+      maxAmount: null,
+    };
+    const preview: RuleMatchPreview = {
+      totalMatches: 1,
+      willCategorizeCount: 1,
+      losesToOtherRuleCount: 0,
+      alreadyCategorizedCount: 0,
+      truncated: false,
+      rows: [
+        {
+          transactionId: 7,
+          date: '2026-10-01T00:00:00Z',
+          description: 'NETFLIX.COM',
+          amount: 15.49,
+          accountName: 'Checking',
+          currentCategory: null,
+          verdict: 'WILL_CATEGORIZE',
+          otherRules: [],
+        },
+      ],
+    };
+
+    it('previewMatches posts the draft to category-rules/match-preview and returns the parsed preview', () => {
+      // arrange
+      let result: RuleMatchPreview | undefined;
+
+      // act
+      service.previewMatches(draft).subscribe((value) => (result = value));
+
+      // assert & verify
+      const req = httpMock.expectOne(`${apiUrl}/match-preview`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({
+        ruleId: null,
+        keywords: ['netflix', 'hulu'],
+        matchType: 'OR',
+        priority: 3,
+        minAmount: 5,
+        maxAmount: null,
+      });
+      expect(req.request.context.get(SKIP_GENERIC_ERROR_TOAST)).toBe(true);
+      req.flush(preview);
+      expect(result).toEqual(preview);
+    });
+
+    it('previewMatches sends ruleId null for a new draft', () => {
+      // act
+      service.previewMatches(draft).subscribe();
+
+      // assert & verify
+      const req = httpMock.expectOne(`${apiUrl}/match-preview`);
+      expect(req.request.body.ruleId).toBeNull();
+      req.flush(preview);
+    });
+
+    it("previewMatches sends the edited rule's id", () => {
+      // act
+      service.previewMatches({ ...draft, ruleId: 12 }).subscribe();
+
+      // assert & verify
+      const req = httpMock.expectOne(`${apiUrl}/match-preview`);
+      expect(req.request.body.ruleId).toBe(12);
+      req.flush(preview);
+    });
   });
 });

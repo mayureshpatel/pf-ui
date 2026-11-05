@@ -7,7 +7,7 @@ import { Confirmation, ConfirmationService } from 'primeng/api';
 import { CategoryApiService } from '@features/categories/services/category-api.service';
 import { ToastService } from '@core/services/toast.service';
 import { Category, CategoryGroup } from '@models/category.model';
-import { CategoryRule } from '@models/category-rule.model';
+import { CategoryRule, RuleDraft, RuleMatchPreview } from '@models/category-rule.model';
 import { CategoryRulesComponent } from './category-rules.component';
 import { CategoryRuleApiService } from './services/category-rule-api.service';
 import { SettingsGuard } from '../settings.guard';
@@ -38,13 +38,28 @@ const rule = (
 const netflix = rule(1, 1, ['netflix'], streaming);
 const shell = rule(2, 5, ['shell', 'chevron'], gas, { minAmount: 10 });
 
+const emptyPreview: RuleMatchPreview = {
+  totalMatches: 0,
+  willCategorizeCount: 0,
+  losesToOtherRuleCount: 0,
+  alreadyCategorizedCount: 0,
+  truncated: false,
+  rows: [],
+};
+
 describe('CategoryRulesComponent', () => {
   let fixture: ComponentFixture<CategoryRulesComponent>;
   let component: CategoryRulesComponent;
   let api: Mocked<
     Pick<
       CategoryRuleApiService,
-      'getRules' | 'createRule' | 'updateRule' | 'deleteRule' | 'previewApply' | 'applyRules'
+      | 'getRules'
+      | 'createRule'
+      | 'updateRule'
+      | 'deleteRule'
+      | 'previewApply'
+      | 'applyRules'
+      | 'previewMatches'
     >
   >;
   let toast: Mocked<Pick<ToastService, 'success' | 'error' | 'info'>>;
@@ -85,6 +100,7 @@ describe('CategoryRulesComponent', () => {
         .fn()
         .mockReturnValue(of([{ description: 'NETFLIX', oldValue: 'None', newValue: 'Streaming' }])),
       applyRules: vi.fn().mockReturnValue(of(undefined)),
+      previewMatches: vi.fn().mockReturnValue(of(emptyPreview)),
     };
     toast = { success: vi.fn(), error: vi.fn(), info: vi.fn() };
     confirmation = { confirm: vi.fn() };
@@ -613,6 +629,106 @@ describe('CategoryRulesComponent', () => {
   });
 
   // PF-890
+  describe('match list', () => {
+    const matchList = (): HTMLElement | null =>
+      fixture.nativeElement.querySelector('app-rule-match-list');
+    const lastDraft = (): RuleDraft | undefined =>
+      api.previewMatches.mock.calls[api.previewMatches.mock.calls.length - 1]?.[0];
+
+    const manyKeywords = (n: number): string =>
+      Array.from({ length: n }, (_, i) => `k${i}`).join(', ');
+    /** the match list's 300 ms debounce, run on fake timers installed before the draft changes */
+    const elapse = (): void => {
+      fixture.detectChanges();
+      vi.advanceTimersByTime(300);
+      fixture.detectChanges();
+    };
+
+    afterEach(() => vi.useRealTimers());
+
+    it('should show the match list while adding a rule', async () => {
+      // arrange
+      await create();
+      expect(matchList()).toBeNull();
+      button('Add rule')!.click();
+      await settle();
+      vi.useFakeTimers();
+
+      // act
+      component['ruleForm']()!.form.patchValue({ keywordsInput: 'costco' });
+      elapse();
+
+      // assert & verify
+      expect(matchList()).not.toBeNull();
+      expect(lastDraft()).toEqual(expect.objectContaining({ ruleId: null, keywords: ['costco'] }));
+    });
+
+    it("should show the match list while editing and send the edited rule's id", async () => {
+      // arrange
+      await create();
+      vi.useFakeTimers();
+
+      // act
+      rows()[0].click();
+      elapse();
+
+      // assert & verify -- the sort puts the priority-5 rule first
+      expect(matchList()).not.toBeNull();
+      expect(lastDraft()).toEqual(
+        expect.objectContaining({ ruleId: 2, keywords: ['shell', 'chevron'] }),
+      );
+    });
+
+    it('should preview the second rule when switching straight from one rule to another', async () => {
+      // arrange
+      await create();
+      vi.useFakeTimers();
+      rows()[0].click();
+      elapse();
+      expect(lastDraft()).toEqual(expect.objectContaining({ ruleId: 2 }));
+
+      // act
+      rows()[1].click();
+      elapse();
+
+      // assert & verify
+      expect(lastDraft()).toEqual(expect.objectContaining({ ruleId: 1, keywords: ['netflix'] }));
+    });
+
+    it('should ask to fix the keywords, sending nothing, when there are too many', async () => {
+      // arrange
+      await create();
+      button('Add rule')!.click();
+      await settle();
+      vi.useFakeTimers();
+      const before = api.previewMatches.mock.calls.length;
+
+      // act
+      component['ruleForm']()!.form.patchValue({ keywordsInput: manyKeywords(21) });
+      elapse();
+
+      // assert & verify
+      expect(matchList()!.textContent).toContain('Fix the keywords to see matches');
+      expect(api.previewMatches.mock.calls.length).toBe(before);
+    });
+
+    it('should clear the draft when the panel closes', async () => {
+      // arrange
+      await create();
+      rows()[0].click();
+      await settle();
+      expect(component['draft']()).not.toBeNull();
+
+      // act
+      button('Back to overview')!.click();
+      await settle();
+
+      // assert & verify
+      expect(component['draft']()).toBeNull();
+      expect(matchList()).toBeNull();
+    });
+  });
+
   describe('after the review', () => {
     const openFirst = async (): Promise<void> => {
       rows()[0].focus();

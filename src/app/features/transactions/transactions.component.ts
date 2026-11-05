@@ -1,10 +1,13 @@
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
   DestroyRef,
   effect,
+  ElementRef,
   inject,
+  Injector,
   OnInit,
   Signal,
   signal,
@@ -33,7 +36,12 @@ import {
   TransactionUpdateRequest,
 } from '@models/transaction.model';
 import { Account } from '@models/account.model';
-import { Category } from '@models/category.model';
+import { Category, CategoryGroup } from '@models/category.model';
+import {
+  CategoryRuleCreateRequest,
+  CategoryRuleUpdateRequest,
+  RuleDraft,
+} from '@models/category-rule.model';
 import { Merchant } from '@models/merchant.model';
 import { Tag } from '@models/tag.model';
 import { TransactionApiService } from './services/transaction-api.service';
@@ -71,6 +79,38 @@ import { BulkEditData } from './components/transaction-bulk-form/transaction-bul
 import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
 import { toApiDateTimeString } from '@shared/utils/transaction.utils';
 import { PageErrorStateComponent } from '@shared/components/page-error-state/page-error-state.component';
+import { CategoryRuleApiService } from '@features/settings/category-rules/services/category-rule-api.service';
+import {
+  RuleCreateValue,
+  RuleEditFormComponent,
+} from '@features/settings/category-rules/components/rule-edit-form/rule-edit-form.component';
+import { RuleMatchListComponent } from '@features/settings/category-rules/components/rule-match-list/rule-match-list.component';
+
+/** What the side panel is showing. */
+export type TransactionPanelMode = 'closed' | 'single' | 'create' | 'bulk' | 'rule';
+
+/** One start of the Create rule form: what it is prefilled with and which rows it shows as context. */
+interface RuleStart {
+  /** Changes on every start, so the form is created afresh (its keyword prefill applies only then). */
+  key: number;
+  keyword: string;
+  context: Transaction[];
+}
+
+/**
+ * One keyword from a description: the description itself, or when it has commas (which the rule
+ * form reads as separate OR keywords) its longest comma-separated part, trimmed. That part is still
+ * in the description, so the transaction it came from still matches.
+ */
+function singleKeyword(description: string): string {
+  if (!description.includes(',')) return description;
+  return description
+    .split(',')
+    .map((part: string): string => part.trim())
+    .reduce((longest: string, part: string): string =>
+      part.length > longest.length ? part : longest,
+    );
+}
 
 /**
  * Component for managing and auditing the master transaction ledger.
@@ -98,6 +138,8 @@ import { PageErrorStateComponent } from '@shared/components/page-error-state/pag
     CsvImportDialogComponent,
     TransferMatchingDialogComponent,
     PageErrorStateComponent,
+    RuleEditFormComponent,
+    RuleMatchListComponent,
   ],
   templateUrl: './transactions.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -113,6 +155,9 @@ export class TransactionsComponent implements OnInit {
   private readonly route: ActivatedRoute = inject(ActivatedRoute);
   private readonly router: Router = inject(Router);
   private readonly destroyRef: DestroyRef = inject(DestroyRef);
+  private readonly injector: Injector = inject(Injector);
+  private readonly host: ElementRef<HTMLElement> = inject(ElementRef<HTMLElement>);
+  private readonly ruleApi: CategoryRuleApiService = inject(CategoryRuleApiService);
 
   /** The master state object for the transaction view. */
   readonly state: WritableSignal<TransactionState> = signal({
@@ -155,8 +200,23 @@ export class TransactionsComponent implements OnInit {
   /** Indicates if a manual unmark-as-transfer operation is currently in flight. */
   readonly unmarkingAsTransfer: WritableSignal<boolean> = signal(false);
 
-  /** What the docked side panel is showing: closed, one transaction, a new one, or a bulk edit. */
-  readonly panelMode: WritableSignal<'closed' | 'single' | 'create' | 'bulk'> = signal('closed');
+  /**
+   * What the docked side panel is showing: closed, one transaction, a new one, a bulk edit, or a new
+   * category rule started from the page.
+   */
+  readonly panelMode: WritableSignal<TransactionPanelMode> = signal('closed');
+
+  /** The current Create rule start (null outside rule mode). */
+  readonly ruleStart: WritableSignal<RuleStart | null> = signal<RuleStart | null>(null);
+
+  /** The rule form's draft, for the match list under it. */
+  readonly ruleDraft: WritableSignal<RuleDraft | null> = signal<RuleDraft | null>(null);
+
+  /** Categories grouped under their parents, for the rule form; loaded on the first Create rule. */
+  readonly ruleGroups: WritableSignal<CategoryGroup[]> = signal<CategoryGroup[]>([]);
+
+  /** Indicates if a new rule is being saved. */
+  readonly savingRule: WritableSignal<boolean> = signal(false);
 
   /** Counts for the review tabs (global, from the same data the dashboard banner uses). */
   readonly reviewCounts: WritableSignal<{ uncategorized: number; transfers: number }> = signal({
@@ -321,6 +381,8 @@ export class TransactionsComponent implements OnInit {
         return 'New transaction';
       case 'bulk':
         return `${this.selectedTransactions().length} selected`;
+      case 'rule':
+        return 'Create rule';
       default:
         return 'Edit transaction';
     }
@@ -331,6 +393,13 @@ export class TransactionsComponent implements OnInit {
     viewChild<TransactionEditFormComponent>('editForm');
   private readonly bulkForm: Signal<TransactionBulkFormComponent | undefined> =
     viewChild<TransactionBulkFormComponent>('bulkForm');
+  private readonly ruleForm: Signal<RuleEditFormComponent | undefined> =
+    viewChild<RuleEditFormComponent>('ruleForm');
+
+  private ruleSessions = 0;
+  private ruleGroupsRequested = false;
+  /** The control that started the rule form, to hand focus back to when it closes. */
+  private ruleOpener: HTMLElement | null = null;
 
   /** Whether the visible panel form can be saved. */
   readonly panelValid: Signal<boolean> = computed((): boolean => {
@@ -583,7 +652,10 @@ export class TransactionsComponent implements OnInit {
     if (rows.length === 1) {
       this.openEditDialog(rows[0]);
     } else {
-      this.confirmDiscardIfDirty((): void => this.panelMode.set('bulk'));
+      this.confirmDiscardIfDirty((): void => {
+        this.clearRuleState();
+        this.panelMode.set('bulk');
+      });
     }
   }
 
@@ -597,19 +669,35 @@ export class TransactionsComponent implements OnInit {
    * confirm if that form has unsaved changes. Anything else runs straight away.
    */
   private confirmDiscardIfDirty(proceed: () => void): void {
-    const editing: boolean = this.panelMode() === 'single' || this.panelMode() === 'create';
-    if (!editing || !this.editForm()?.form.dirty) {
+    const mode: TransactionPanelMode = this.panelMode();
+    const editing: boolean = mode === 'single' || mode === 'create';
+    const dirty: boolean =
+      (editing && !!this.editForm()?.form.dirty) ||
+      (mode === 'rule' && !!this.ruleForm()?.form.dirty);
+    if (!dirty) {
       proceed();
       return;
     }
+    // the dialog takes focus and drops it when it closes: keeping on goes back to where it was
+    const focused: HTMLElement | null = document.activeElement as HTMLElement | null;
     this.confirmationService.confirm({
       header: 'Discard changes?',
-      message: 'You have unsaved changes to this transaction. Discard them?',
+      message: `You have unsaved changes to this ${mode === 'rule' ? 'rule' : 'transaction'}. Discard them?`,
       acceptLabel: 'Discard',
       rejectLabel: 'Keep editing',
       acceptButtonStyleClass: 'p-button-danger',
       accept: proceed,
+      reject: (): void => this.refocus(focused),
     });
+  }
+
+  /** Focuses the element after the next render, if it is still on the page. */
+  private refocus(target: HTMLElement | null): void {
+    if (!target || target === document.body) return;
+    afterNextRender(
+      { read: (): void => (target.isConnected ? target.focus() : undefined) },
+      { injector: this.injector },
+    );
   }
 
   /** Opens the panel on the row whose "Choose category" pill was clicked. */
@@ -617,19 +705,142 @@ export class TransactionsComponent implements OnInit {
     this.openEditDialog(txn);
   }
 
-  /** Closes the side panel. */
+  /** Closes the side panel; a closing rule form hands focus back to the control that started it. */
   closePanel(): void {
+    const wasRule: boolean = this.panelMode() === 'rule';
     this.panelMode.set('closed');
     this.selectedTransaction.set(null);
+    const opener: HTMLElement | null = this.ruleOpener;
+    this.clearRuleState();
+    if (!wasRule) return;
+    // runs after the panel's own hand-back, which only knows what had focus when it first opened.
+    // The bulk bar hides while the panel is open, so a rule it started returns to its new Create
+    // rule button, else to the first selected row.
+    afterNextRender(
+      {
+        read: (): void => {
+          const page: HTMLElement = this.host.nativeElement;
+          const target: HTMLElement | null | undefined = opener?.isConnected
+            ? opener
+            : (page.querySelector<HTMLElement>('[data-testid="bulk-create-rule"]') ??
+              page.querySelector<HTMLElement>('[data-testid="row-checkbox"]:checked'));
+          target?.focus();
+        },
+      },
+      { injector: this.injector },
+    );
   }
 
   /** Saves whichever form the panel is showing. */
   onPanelSave(): void {
-    if (this.panelMode() === 'bulk') {
-      this.bulkForm()?.submit();
-    } else {
-      this.editForm()?.submit();
+    switch (this.panelMode()) {
+      case 'bulk':
+        this.bulkForm()?.submit();
+        break;
+      case 'rule':
+        this.ruleForm()?.submit();
+        break;
+      default:
+        this.editForm()?.submit();
     }
+  }
+
+  /** Starts a rule from a row's Create rule action: its description becomes the keyword. */
+  onCreateRuleFromRow(txn: Transaction): void {
+    this.openRuleForm(txn.description, []);
+  }
+
+  /** Starts a rule from the transaction open in the edit panel. */
+  onCreateRuleFromEditForm(): void {
+    const txn: Transaction | null = this.selectedTransaction();
+    if (txn) this.openRuleForm(txn.description, []);
+  }
+
+  /**
+   * Starts one rule for the selection. One selected row counts as starting from that transaction
+   * (its description is the keyword); several start with an empty keyword and show as context.
+   */
+  onCreateRuleFromSelection(): void {
+    const rows: Transaction[] = this.selectedTransactions();
+    if (rows.length === 1) {
+      this.openRuleForm(rows[0].description, []);
+    } else {
+      this.openRuleForm('', rows);
+    }
+  }
+
+  /** Forgets the rule form's start, draft and opener, whenever the panel leaves rule mode. */
+  private clearRuleState(): void {
+    this.ruleStart.set(null);
+    this.ruleDraft.set(null);
+    this.ruleOpener = null;
+  }
+
+  /**
+   * Opens the panel on a fresh Create rule form, leaving the page's selection, filters and list
+   * alone. Focus moves to the keyword field. The keyword is reduced to one comma-free part (see
+   * {@link singleKeyword}), since the form reads commas as separate keywords.
+   */
+  private openRuleForm(description: string, context: Transaction[]): void {
+    const keyword: string = singleKeyword(description);
+    // captured before any discard prompt takes focus
+    const opener: HTMLElement | null = document.activeElement as HTMLElement | null;
+    this.confirmDiscardIfDirty((): void => {
+      this.loadRuleGroups();
+      this.ruleOpener = opener && opener !== document.body ? opener : null;
+      this.selectedTransaction.set(null);
+      this.ruleDraft.set(null);
+      this.ruleStart.set({ key: ++this.ruleSessions, keyword, context });
+      this.panelMode.set('rule');
+      // the read phase runs after the panel's own move of focus to itself on opening
+      afterNextRender(
+        { read: (): void => this.ruleForm()?.focusKeywords() },
+        { injector: this.injector },
+      );
+    });
+  }
+
+  /** Loads the grouped categories the rule form chooses from, once. */
+  private loadRuleGroups(): void {
+    if (this.ruleGroupsRequested) return;
+    this.ruleGroupsRequested = true;
+    this.categoryApi
+      .getGroupedCategories()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (groups: CategoryGroup[]): void => this.ruleGroups.set(groups),
+        error: (err: unknown): void => {
+          console.error('Failed to load categories:', err);
+          this.ruleGroupsRequested = false;
+          this.toast.error('Failed to load categories.');
+        },
+      });
+  }
+
+  /**
+   * Stores the new rule. Nothing else changes: the rule is not applied, and the list, filters,
+   * page and selection stay as they are (applying stays on Settings, "Apply rules").
+   */
+  onSaveRule(value: RuleCreateValue | CategoryRuleUpdateRequest): void {
+    if (this.savingRule() || 'id' in value) return;
+    this.savingRule.set(true);
+    this.ruleApi
+      .createRule(value as CategoryRuleCreateRequest)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize((): void => this.savingRule.set(false)),
+      )
+      .subscribe({
+        next: (): void => {
+          this.ruleForm()?.form.markAsPristine();
+          this.toast.success('Rule added');
+          this.closePanel();
+        },
+        error: (err: HttpErrorResponse): void => {
+          console.error('Saving the rule failed:', err);
+          this.ruleForm()?.errorMessage.set(err.error?.detail || 'Failed to save the rule.');
+        },
+      });
   }
 
   /** Loads the counts shown on the review tabs. */
@@ -655,6 +866,7 @@ export class TransactionsComponent implements OnInit {
    */
   openCreateDialog(): void {
     this.confirmDiscardIfDirty((): void => {
+      this.clearRuleState();
       this.selectedTransaction.set(null);
       this.panelMode.set('create');
     });
@@ -668,6 +880,7 @@ export class TransactionsComponent implements OnInit {
     // clicking the row that is already open must not ask, or reset, anything
     if (this.panelMode() === 'single' && this.selectedTransaction()?.id === txn.id) return;
     this.confirmDiscardIfDirty((): void => {
+      this.clearRuleState();
       this.selectedTransaction.set(txn);
       this.panelMode.set('single');
     });
