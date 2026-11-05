@@ -15,7 +15,7 @@ describe('SettingsNavComponent', () => {
     fixture.detectChanges();
   });
 
-  it('should list the three sections in a labelled nav', () => {
+  it('should list the sections in a labelled nav', () => {
     // assert & verify
     expect(fixture.nativeElement.querySelector('nav').getAttribute('aria-label')).toBe(
       'Settings sections',
@@ -23,13 +23,19 @@ describe('SettingsNavComponent', () => {
     expect(buttons().map((b) => b.textContent?.trim())).toEqual([
       'Appearance',
       'Category rules',
+      'Merchant rules',
       'Tags',
     ]);
   });
 
   it('should mark the active section with aria-current', () => {
     // assert & verify
-    expect(buttons().map((b) => b.getAttribute('aria-current'))).toEqual([null, null, 'page']);
+    expect(buttons().map((b) => b.getAttribute('aria-current'))).toEqual([
+      null,
+      null,
+      null,
+      'page',
+    ]);
   });
 
   it('should emit the chosen section', () => {
@@ -43,5 +49,26 @@ describe('SettingsNavComponent', () => {
 
     // assert & verify
     expect(chosen).toEqual(['appearance', 'rules']);
+  });
+
+  it('should offer merchant rules after category rules and mark it when active', () => {
+    // arrange
+    const chosen: SettingsSection[] = [];
+    fixture.componentInstance.sectionChange.subscribe((s: SettingsSection) => chosen.push(s));
+
+    // act
+    buttons()[2].click();
+    fixture.componentRef.setInput('section', 'merchant-rules');
+    fixture.detectChanges();
+
+    // assert & verify
+    expect(chosen).toEqual(['merchant-rules']);
+    expect(buttons()[2].textContent?.trim()).toBe('Merchant rules');
+    expect(buttons().map((b) => b.getAttribute('aria-current'))).toEqual([
+      null,
+      null,
+      'page',
+      null,
+    ]);
   });
 });

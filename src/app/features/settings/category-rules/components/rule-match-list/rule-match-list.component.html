@@ -81,8 +81,8 @@
             </p>
             <ul class="m-0 mt-1 flex list-none flex-col gap-0.5 p-0 text-muted-color">
               <li>
-                <span class="tabular-nums">{{ p.willCategorizeCount }}</span> will be categorized by
-                this rule
+                <span class="tabular-nums">{{ p.willApplyCount }}</span>
+                {{ labels.willSummary(p.targetName) }}
                 @if (unopposedCount(); as unopposed) {
                   <span class="block pl-3"
                     ><span class="tabular-nums">{{ unopposed }}</span> of them: no other rule
@@ -96,10 +96,16 @@
                   another rule
                 </li>
               }
-              @if (p.alreadyCategorizedCount > 0) {
+              @if (p.alreadySetCount > 0) {
                 <li>
-                  <span class="tabular-nums">{{ p.alreadyCategorizedCount }}</span> already
-                  categorized - Apply rules leaves them alone
+                  <span class="tabular-nums">{{ p.alreadySetCount }}</span>
+                  {{ labels.alreadySummary }}
+                </li>
+              }
+              @if (p.linkedCount > 0) {
+                <li>
+                  <span class="tabular-nums">{{ p.linkedCount }}</span>
+                  {{ labels.linkedSummary }}
                 </li>
               }
             </ul>
@@ -146,20 +152,20 @@
                     >{{ item.row.accountName ?? '(no account)' }}</span
                   >
                   <span class="min-w-0 break-words"
-                    ><span class="sr-only">Current category: </span
-                    >{{ item.row.currentCategory?.name || 'Uncategorized' }}</span
+                    ><span class="sr-only">{{ labels.currentLabel }}</span
+                    >{{ item.row.currentName || labels.currentNone }}</span
                   >
                 </span>
                 <span data-testid="verdict" class="flex items-start gap-1.5 text-xs font-medium">
                   @switch (item.row.verdict) {
-                    @case ('WILL_CATEGORIZE') {
+                    @case ('WILL_APPLY') {
                       <i
                         class="pi pi-check-circle mt-0.5 text-xs text-primary-700 dark:text-primary-400"
                         aria-hidden="true"
                       ></i>
-                      <span class="text-primary-700 dark:text-primary-400"
-                        >Will be categorized</span
-                      >
+                      <span class="text-primary-700 dark:text-primary-400">{{
+                        labels.willRow(preview()?.targetName ?? null)
+                      }}</span>
                     }
                     @case ('LOSES_TO_OTHER_RULE') {
                       <i
@@ -174,14 +180,16 @@
                         }
                       </span>
                     }
-                    @case ('ALREADY_CATEGORIZED') {
+                    @case ('ALREADY_SET') {
                       <i
                         class="pi pi-minus-circle mt-0.5 text-xs text-muted-color"
                         aria-hidden="true"
                       ></i>
-                      <span class="text-muted-color"
-                        >Already categorized - Apply rules leaves it alone</span
-                      >
+                      <span class="text-muted-color">{{ labels.alreadyRow }}</span>
+                    }
+                    @case ('LINKED') {
+                      <i class="pi pi-link mt-0.5 text-xs text-muted-color" aria-hidden="true"></i>
+                      <span class="text-muted-color">{{ labels.linkedRow }}</span>
                     }
                   }
                 </span>
@@ -191,7 +199,7 @@
                     @for (other of item.alsoMatches; track other.id; let last = $last) {
                       {{ keywordsText(other) }} <span aria-hidden="true">→</span
                       ><span class="sr-only">sets</span>
-                      {{ other.categoryName ?? '(no category)' }} (priority {{ other.priority }}){{
+                      {{ other.targetName ?? labels.targetNone }} (priority {{ other.priority }}){{
                         last ? '' : ';'
                       }}
                     }

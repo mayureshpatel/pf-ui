@@ -1,9 +1,12 @@
 import { Category } from '@models/category.model';
 import { CategoryRule } from '@models/category-rule.model';
+import { Merchant } from '@models/merchant.model';
+import { MerchantRule } from '@models/merchant-rule.model';
 import { Tag } from '@models/tag.model';
 import {
   amountLimitText,
   amountRangeError,
+  filterMerchantRules,
   filterRules,
   filterTags,
   joinKeywords,
@@ -11,6 +14,7 @@ import {
   normalizeHex,
   parseKeywords,
   readableTextColor,
+  ruleKeywordsText,
   sectionFromParam,
   sortRules,
   sortTags,
@@ -28,6 +32,16 @@ const rule = (id: number, priority: number, keywords: string[], category = 'Food
     minAmount: null,
     maxAmount: null,
   }) as CategoryRule;
+const merchantRule = (id: number, keywords: string[], merchant: string | null): MerchantRule => ({
+  id,
+  userId: 1,
+  keywords,
+  matchType: 'OR',
+  priority: 0,
+  merchant: merchant ? ({ id: 9, userId: 1, name: merchant } as Merchant) : null,
+  minAmount: null,
+  maxAmount: null,
+});
 const tag = (id: number, name: string): Tag => ({ id, userId: 1, name, color: null });
 
 describe('settings helpers', () => {
@@ -37,6 +51,8 @@ describe('settings helpers', () => {
       expect(sectionFromParam('appearance')).toBe('appearance');
       expect(sectionFromParam('rules')).toBe('rules');
       expect(sectionFromParam('tags')).toBe('tags');
+      expect(sectionFromParam('merchant-rules')).toBe('merchant-rules');
+      expect(sectionFromParam(['merchant-rules'])).toBe('merchant-rules');
       expect(sectionFromParam(undefined)).toBe('rules');
       expect(sectionFromParam('')).toBe('rules');
       expect(sectionFromParam('nope')).toBe('rules');
@@ -91,6 +107,33 @@ describe('settings helpers', () => {
       expect(filterRules(rules, 'GAS').map((r) => r.id)).toEqual([2]);
       expect(filterRules(rules, '  ')).toHaveLength(2);
       expect(filterRules(rules, 'zzz')).toEqual([]);
+    });
+
+    it('should sort merchant rules by priority as well', () => {
+      // assert & verify
+      expect(
+        sortRules([
+          merchantRule(2, ['b'], 'B'),
+          { ...merchantRule(1, ['a'], 'A'), priority: 4 },
+        ]).map((r) => r.id),
+      ).toEqual([1, 2]);
+    });
+
+    it('should filter merchant rules by keyword or merchant name, case-insensitively', () => {
+      // arrange
+      const rules = [merchantRule(1, ['kroger'], 'Kroger Fuel'), merchantRule(2, ['shell'], null)];
+
+      // assert & verify
+      expect(filterMerchantRules(rules, 'FUEL').map((r) => r.id)).toEqual([1]);
+      expect(filterMerchantRules(rules, 'she').map((r) => r.id)).toEqual([2]);
+      expect(filterMerchantRules(rules, ' ')).toHaveLength(2);
+      expect(filterMerchantRules(rules, 'zzz')).toEqual([]);
+    });
+
+    it('should name a rule by its keywords without saying how they combine', () => {
+      // assert & verify
+      expect(ruleKeywordsText(['kroger'])).toBe('a rule with keyword "kroger"');
+      expect(ruleKeywordsText(['kroger', '431'])).toBe('a rule with keywords "kroger", "431"');
     });
 
     it('should word the amount limits', () => {

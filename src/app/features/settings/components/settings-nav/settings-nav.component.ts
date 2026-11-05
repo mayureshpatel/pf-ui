@@ -22,6 +22,7 @@ export class SettingsNavComponent {
   protected readonly items: { key: SettingsSection; label: string; icon: string }[] = [
     { key: 'appearance', label: 'Appearance', icon: 'pi-palette' },
     { key: 'rules', label: 'Category rules', icon: 'pi-filter' },
+    { key: 'merchant-rules', label: 'Merchant rules', icon: 'pi-shop' },
     { key: 'tags', label: 'Tags', icon: 'pi-hashtag' },
   ];
 }

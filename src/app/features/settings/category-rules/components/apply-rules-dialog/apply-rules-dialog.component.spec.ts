@@ -174,4 +174,30 @@ describe('ApplyRulesDialogComponent', () => {
       expect(text).toContain('Groceries');
     });
   });
+
+  describe('decided by', () => {
+    const column = (): HTMLElement | null => fixture.nativeElement.querySelector('th#rule');
+
+    it('should show no rule column for changes that do not name a rule', () => {
+      setPreviewItems([preview('AMZN', 'Uncategorized', 'Shopping')]);
+
+      expect(component.showsRule()).toBe(false);
+      expect(column()).toBeNull();
+    });
+
+    it('should show the rule that decides each change when the changes name one', () => {
+      fixture.componentRef.setInput('fieldLabel', 'Merchant');
+      setPreviewItems([
+        {
+          ...preview('KROGER #431', '', 'Kroger'),
+          decidedBy: 'a rule with keyword "kroger" (priority 5)',
+        },
+      ]);
+
+      expect(component.showsRule()).toBe(true);
+      expect(column()!.textContent).toContain('Decided by');
+      expect(fixture.nativeElement.textContent).toContain('a rule with keyword "kroger"');
+      expect(fixture.nativeElement.textContent).toContain('Apply Merchant Rules');
+    });
+  });
 });

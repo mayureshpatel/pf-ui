@@ -14,12 +14,13 @@ import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen
 import { AppearanceSettingsComponent } from './components/appearance-settings/appearance-settings.component';
 import { SettingsNavComponent } from './components/settings-nav/settings-nav.component';
 import { CategoryRulesComponent } from './category-rules/category-rules.component';
+import { MerchantRulesComponent } from './merchant-rules/merchant-rules.component';
 import { TagsComponent } from './tags/tags.component';
 import { SettingsGuard } from './settings.guard';
 import { SettingsSection, sectionFromParam } from './utils/settings-helpers';
 
 /**
- * The Settings page: a section list (Appearance, Category rules, Tags) and the chosen section. The section
+ * The Settings page: a section list (Appearance, Category rules, Merchant rules, Tags) and the chosen section. The section
  * lives in the URL (`?section=`) so Back and Forward move between sections, and leaving a section that
  * holds unsaved changes asks first.
  */
@@ -31,6 +32,7 @@ import { SettingsSection, sectionFromParam } from './utils/settings-helpers';
     SettingsNavComponent,
     AppearanceSettingsComponent,
     CategoryRulesComponent,
+    MerchantRulesComponent,
     TagsComponent,
   ],
   providers: [SettingsGuard],
