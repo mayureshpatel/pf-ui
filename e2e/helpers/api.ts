@@ -458,3 +458,52 @@ export async function createTestCategoryRule(
   track(page, 'rule', id);
   return id;
 }
+
+/**
+ * Creates a merchant rule via the real API and tracks it for cleanup (it is deleted before its
+ * merchant). The owner comes from the session, so the body carries no user id. `keyword` should embed
+ * a unique token so previews only ever match this test's data.
+ */
+export async function createTestMerchantRule(
+  page: Page,
+  merchantId: number,
+  keyword: string,
+  priority: number,
+  options?: {matchType?: 'AND' | 'OR'; minAmount?: number; maxAmount?: number}
+): Promise<number> {
+  const token = await getAuthToken(page);
+
+  const response = await page.request.post(`${API_URL}/merchant-rules`, {
+    headers: {Authorization: `Bearer ${token}`},
+    data: {
+      merchantId,
+      keywords: [keyword],
+      matchType: options?.matchType ?? 'OR',
+      priority,
+      minAmount: options?.minAmount,
+      maxAmount: options?.maxAmount
+    }
+  });
+
+  if (!response.ok()) {
+    throw new Error(`Failed to create test merchant rule: ${response.status()} ${await response.text()}`);
+  }
+  const id = (await response.json()) as number;
+  track(page, 'merchant-rule', id);
+  return id;
+}
+
+/**
+ * Links a raw description to a merchant via the real API. The link is removed with its merchant, which
+ * the cleanup deletes.
+ */
+export async function createTestDescriptionLink(page: Page, merchantId: number, description: string): Promise<void> {
+  const token = await getAuthToken(page);
+  const response = await page.request.post(`${API_URL}/merchants/${merchantId}/description-links`, {
+    headers: {Authorization: `Bearer ${token}`},
+    data: {description}
+  });
+  if (!response.ok()) {
+    throw new Error(`Failed to create test description link: ${response.status()} ${await response.text()}`);
+  }
+}
