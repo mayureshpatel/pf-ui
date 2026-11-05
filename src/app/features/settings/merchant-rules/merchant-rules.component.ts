@@ -1,0 +1,458 @@
+import {
+  afterNextRender,
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  DestroyRef,
+  inject,
+  Injector,
+  OnInit,
+  Signal,
+  signal,
+  viewChild,
+  WritableSignal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { HttpErrorResponse } from '@angular/common/http';
+import { finalize, Subscription } from 'rxjs';
+import { ConfirmationService } from 'primeng/api';
+import { SkeletonModule } from 'primeng/skeleton';
+import { MerchantApiService } from '@features/merchants/services/merchant-api.service';
+import { ToastService } from '@core/services/toast.service';
+import { Merchant } from '@models/merchant.model';
+import { PageResponse } from '@models/transaction.model';
+import { RuleChangePreview } from '@models/category-rule.model';
+import {
+  MerchantRule,
+  MerchantRuleChangePreview,
+  MerchantRuleCreateRequest,
+  MerchantRuleDraft,
+  MerchantRuleUpdateRequest,
+} from '@models/merchant-rule.model';
+import { PageErrorStateComponent } from '@shared/components/page-error-state/page-error-state.component';
+import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen-toolbar';
+import { SidePanelComponent } from '@shared/components/side-panel/side-panel.component';
+import { SettingsGuard } from '../settings.guard';
+import {
+  amountLimitText,
+  filterMerchantRules,
+  ruleKeywordsText,
+  sortRules,
+} from '../utils/settings-helpers';
+import { ApplyRulesDialogComponent } from '../category-rules/components/apply-rules-dialog/apply-rules-dialog.component';
+import {
+  merchantMatchConfig,
+  RULE_MATCH_CONFIG,
+} from '../category-rules/components/rule-match-list/rule-match-config';
+import { RuleMatchListComponent } from '../category-rules/components/rule-match-list/rule-match-list.component';
+import { MerchantRuleEditFormComponent } from './components/merchant-rule-edit-form/merchant-rule-edit-form.component';
+import { MerchantRuleApiService } from './merchant-rule-api.service';
+
+/** One request, at Spring's default maximum page size; the CSV import review step loads the same way. */
+const MERCHANT_PAGE_SIZE = 2000;
+
+type RulePanelMode = 'overview' | 'rule' | 'add';
+
+/**
+ * The Merchant rules section: the rules sorted by priority beside an always-present panel (overview, the
+ * selected rule, add). Rules give a merchant to transactions whose description contains a keyword.
+ * Owns loading, the discard prompt, saving, deleting and the Apply preview. It follows the Category
+ * rules section, sharing its form fields, match list and apply dialog.
+ */
+@Component({
+  selector: 'app-merchant-rules',
+  standalone: true,
+  imports: [
+    SkeletonModule,
+    ScreenToolbarComponent,
+    SidePanelComponent,
+    MerchantRuleEditFormComponent,
+    RuleMatchListComponent,
+    ApplyRulesDialogComponent,
+    PageErrorStateComponent,
+  ],
+  templateUrl: './merchant-rules.component.html',
+  providers: [
+    {
+      provide: RULE_MATCH_CONFIG,
+      useFactory: () => merchantMatchConfig(inject(MerchantRuleApiService)),
+    },
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class MerchantRulesComponent implements OnInit {
+  private readonly api: MerchantRuleApiService = inject(MerchantRuleApiService);
+  private readonly merchantApi: MerchantApiService = inject(MerchantApiService);
+  private readonly toast: ToastService = inject(ToastService);
+  private readonly confirmationService: ConfirmationService = inject(ConfirmationService);
+  private readonly destroyRef: DestroyRef = inject(DestroyRef);
+  private readonly injector: Injector = inject(Injector);
+  private readonly guard: SettingsGuard | null = inject(SettingsGuard, { optional: true });
+
+  protected readonly rules: WritableSignal<MerchantRule[]> = signal([]);
+  protected readonly merchants: WritableSignal<Merchant[]> = signal([]);
+  protected readonly loading: WritableSignal<boolean> = signal(false);
+  protected readonly loadError: WritableSignal<boolean> = signal(false);
+  /** First-load skeleton only; later reloads dim the list and keep the panel mounted. */
+  protected readonly loadedOnce: WritableSignal<boolean> = signal(false);
+  protected readonly saving: WritableSignal<boolean> = signal(false);
+  protected readonly applying: WritableSignal<boolean> = signal(false);
+  protected readonly search: WritableSignal<string> = signal('');
+  protected readonly panelMode: WritableSignal<RulePanelMode> = signal('overview');
+  protected readonly selectedRuleId: WritableSignal<number | null> = signal(null);
+  protected readonly showApplyDialog: WritableSignal<boolean> = signal(false);
+  /** The open form's draft, for the match list; null whenever no form is showing. */
+  protected readonly draft: WritableSignal<MerchantRuleDraft | null> = signal(null);
+  protected readonly previewItems: WritableSignal<RuleChangePreview[]> = signal([]);
+
+  protected readonly visibleRules: Signal<MerchantRule[]> = computed((): MerchantRule[] =>
+    sortRules(filterMerchantRules(this.rules(), this.search())),
+  );
+  protected readonly selectedRule: Signal<MerchantRule | null> = computed(
+    (): MerchantRule | null =>
+      this.rules().find((r: MerchantRule): boolean => r.id === this.selectedRuleId()) ?? null,
+  );
+  /** With no rules the add form is the only useful mode, so it has no Back or Close. */
+  protected readonly onlyAddMode: Signal<boolean> = computed(
+    (): boolean =>
+      this.loadedOnce() &&
+      this.rules().length === 0 &&
+      !this.loading() &&
+      !this.loadError() &&
+      this.panelMode() === 'add',
+  );
+  protected readonly panelTitle: Signal<string> = computed((): string => {
+    switch (this.panelMode()) {
+      case 'add':
+        return 'Add rule';
+      case 'rule':
+        return 'Edit rule';
+      default:
+        return 'Overview';
+    }
+  });
+
+  private readonly panel = viewChild(SidePanelComponent);
+  protected readonly ruleForm = viewChild<MerchantRuleEditFormComponent>('ruleForm');
+  private loadSubscription: Subscription | null = null;
+  private loadRun = 0;
+  /** The element that had focus when the panel left the overview, to hand focus back to. */
+  private focusReturn: HTMLElement | null = null;
+
+  private readonly isDirty = (): boolean =>
+    this.panelMode() !== 'overview' && !!this.ruleForm()?.form.dirty;
+
+  constructor() {
+    this.guard?.register(this.isDirty);
+    this.destroyRef.onDestroy((): void => this.guard?.unregister(this.isDirty));
+  }
+
+  ngOnInit(): void {
+    this.loadRules();
+    this.loadMerchants();
+  }
+
+  // ---- loading ----
+
+  /** Loads the rules; a newer load replaces an older one. `afterLoad` runs once they have arrived. */
+  loadRules(afterLoad?: () => void): void {
+    this.loadSubscription?.unsubscribe();
+    const run: number = ++this.loadRun;
+    this.loading.set(true);
+    this.loadError.set(false);
+    this.loadSubscription = this.api
+      .getRules()
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize((): void => {
+          if (run === this.loadRun) this.loading.set(false);
+        }),
+      )
+      .subscribe({
+        next: (data: MerchantRule[]): void => {
+          this.rules.set(data);
+          this.loadedOnce.set(true);
+          this.afterRulesLoaded(data);
+          afterLoad?.();
+        },
+        error: (err: unknown): void => {
+          console.error('Failed to load rules:', err);
+          this.toast.error('Failed to load merchant rules.');
+          // with a form open, the rules and the form stay (the banner offers a retry); otherwise the
+          // page falls back to the error state rather than showing stale rules
+          if (this.panelMode() === 'overview') this.rules.set([]);
+          this.loadError.set(true);
+        },
+      });
+  }
+
+  private afterRulesLoaded(data: MerchantRule[]): void {
+    if (data.length === 0) {
+      if (this.panelMode() === 'rule') this.toast.info('That rule no longer exists.');
+      this.selectedRuleId.set(null);
+      this.panelMode.set('add');
+      return;
+    }
+    if (
+      this.panelMode() === 'rule' &&
+      !data.some((r: MerchantRule) => r.id === this.selectedRuleId())
+    ) {
+      this.toast.info('That rule no longer exists.');
+      this.closePanel();
+    }
+  }
+
+  private loadMerchants(): void {
+    this.merchantApi
+      .getMerchants(null, { page: 0, size: MERCHANT_PAGE_SIZE, sort: 'name' })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (page: PageResponse<Merchant>): void => this.merchants.set(page.content),
+        error: (err: unknown): void => {
+          console.error('Failed to load merchants:', err);
+          this.toast.error('Failed to load merchants.');
+        },
+      });
+  }
+
+  // ---- panel ----
+
+  readonly limitText = amountLimitText;
+
+  openRule(rule: MerchantRule): void {
+    if (this.panelMode() === 'rule' && this.selectedRuleId() === rule.id) return;
+    this.confirmDiscardIfDirty((): void => {
+      this.selectedRuleId.set(rule.id);
+      this.go('rule');
+    });
+  }
+
+  startAdd(): void {
+    if (this.panelMode() === 'add') return;
+    this.confirmDiscardIfDirty((): void => {
+      this.selectedRuleId.set(null);
+      this.go('add');
+    });
+  }
+
+  /** Back: add returns to the overview, as does an open rule. */
+  back(): void {
+    if (this.panelMode() === 'overview') return;
+    this.confirmDiscardIfDirty((): void => this.closePanel());
+  }
+
+  closePanel(): void {
+    this.selectedRuleId.set(null);
+    this.go('overview');
+  }
+
+  /** Close button and Escape: asks first when there are unsaved edits; the overview ignores them. */
+  onPanelClose(): void {
+    if (this.panelMode() === 'overview' || this.onlyAddMode()) return;
+    this.back();
+  }
+
+  /** The panel's Save button: submits the form that is showing. */
+  onPanelSave(): void {
+    this.ruleForm()?.submit();
+  }
+
+  clearSearch(): void {
+    this.search.set('');
+  }
+
+  // ---- saving and deleting ----
+
+  /** Saves the form: an update when a rule is open, otherwise a create. */
+  saveRule(request: MerchantRuleCreateRequest | MerchantRuleUpdateRequest): void {
+    if (this.saving()) return;
+    this.saving.set(true);
+    const editing: boolean = 'id' in request;
+    const call =
+      'id' in request
+        ? this.api.updateRule(request)
+        : this.api.createRule(request as MerchantRuleCreateRequest);
+    call
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize((): void => this.saving.set(false)),
+      )
+      .subscribe({
+        next: (created: number | null | undefined): void => {
+          // an update answers with the number of rows it changed, not an id, so the open rule's own
+          // id stays selected
+          const id: number = 'id' in request ? request.id : (created as number);
+          this.ruleForm()?.form.markAsPristine();
+          this.toast.success(editing ? 'Rule saved' : 'Rule added');
+          // select it at once (the panel shows a skeleton until the reload lands), so what the user
+          // does during the reload is never overwritten and the add form cannot be sent twice
+          this.selectedRuleId.set(id);
+          this.go('rule');
+          this.loadRules();
+        },
+        error: (err: HttpErrorResponse): void => {
+          console.error('Saving the rule failed:', err);
+          if (this.isGone(err)) {
+            // a rule deleted elsewhere answers 403 or 404: reload, which reports that it is gone
+            this.ruleForm()?.form.markAsPristine();
+            this.loadRules();
+            return;
+          }
+          this.ruleForm()?.errorMessage.set(err.error?.detail || 'Failed to save the rule.');
+        },
+      });
+  }
+
+  /** Asks, then deletes the open rule. */
+  deleteSelected(): void {
+    const rule: MerchantRule | null = this.selectedRule();
+    if (!rule) return;
+    this.confirmationService.confirm({
+      header: 'Delete rule?',
+      message: `Delete the rule for "${rule.keywords.join(', ')}"?`,
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Delete',
+      rejectLabel: 'Cancel',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: (): void => this.performDelete(rule),
+    });
+  }
+
+  private performDelete(rule: MerchantRule): void {
+    if (this.saving()) return;
+    this.saving.set(true);
+    this.api
+      .deleteRule(rule.id)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize((): void => this.saving.set(false)),
+      )
+      .subscribe({
+        next: (): void => {
+          this.toast.success('Rule deleted');
+          this.ruleForm()?.form.markAsPristine();
+          // the row that opened the panel is about to disappear, so focus goes to the panel instead
+          this.focusReturn = null;
+          this.closePanel();
+          this.loadRules();
+        },
+        error: (err: HttpErrorResponse): void => {
+          console.error('Delete failed:', err);
+          if (this.isGone(err)) {
+            this.ruleForm()?.form.markAsPristine();
+            this.loadRules();
+            return;
+          }
+          this.toast.error(err.error?.detail || 'Failed to delete rule.');
+        },
+      });
+  }
+
+  /** A rule deleted elsewhere answers an update or delete with 403 (ownership check) or 404. */
+  private isGone(err: HttpErrorResponse): boolean {
+    return err.status === 403 || err.status === 404;
+  }
+
+  // ---- apply ----
+
+  /** Previews the transactions the current rules would change; opens the dialog when there are any. */
+  openApplyPreview(): void {
+    if (this.applying()) return;
+    this.applying.set(true);
+    this.api
+      .previewApply()
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize((): void => this.applying.set(false)),
+      )
+      .subscribe({
+        next: (items: MerchantRuleChangePreview[]): void => {
+          if (items.length === 0) {
+            this.toast.info('No transactions without a merchant match your current rules.');
+            return;
+          }
+          this.previewItems.set(
+            items.map((item: MerchantRuleChangePreview): RuleChangePreview => ({
+              description: item.description,
+              oldValue: '',
+              newValue: item.merchant?.name ?? '',
+              decidedBy: item.rule
+                ? `${ruleKeywordsText(item.rule.keywords)} (priority ${item.rule.priority})`
+                : '',
+            })),
+          );
+          this.showApplyDialog.set(true);
+        },
+        error: (err: HttpErrorResponse): void => {
+          console.error('Preview failed:', err);
+          this.toast.error(err.error?.detail || 'Failed to generate rule preview.');
+        },
+      });
+  }
+
+  confirmApply(): void {
+    if (this.applying()) return;
+    this.applying.set(true);
+    this.api
+      .applyRules()
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize((): void => this.applying.set(false)),
+      )
+      .subscribe({
+        next: (changed: number): void => {
+          this.showApplyDialog.set(false);
+          this.toast.success(
+            changed === 1
+              ? '1 transaction got a merchant.'
+              : `${changed} transactions got a merchant.`,
+          );
+        },
+        error: (err: HttpErrorResponse): void => {
+          console.error('Rule application failed:', err);
+          this.toast.error(err.error?.detail || 'Failed to apply rules.');
+        },
+      });
+  }
+
+  // ---- internals ----
+
+  /** Runs an action that would replace a form, after asking when that form has unsaved changes. */
+  private confirmDiscardIfDirty(proceed: () => void): void {
+    if (!this.isDirty()) {
+      proceed();
+      return;
+    }
+    this.confirmationService.confirm({
+      header: 'Discard changes?',
+      message: 'You have unsaved changes. Discard them?',
+      acceptLabel: 'Discard',
+      rejectLabel: 'Keep editing',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: proceed,
+    });
+  }
+
+  /** Switches mode and moves focus: into the panel for any step, back to the opener for overview. */
+  private go(mode: RulePanelMode): void {
+    if (mode === 'overview' && this.panelMode() === 'overview') return;
+    if (this.panelMode() === 'overview' && mode !== 'overview') {
+      this.focusReturn = document.activeElement as HTMLElement | null;
+    }
+    // a form that stays mounted (rule to rule) re-emits its own draft; one that goes or comes does not
+    if (mode !== this.panelMode()) this.draft.set(null);
+    this.panelMode.set(mode);
+    afterNextRender(
+      (): void => {
+        const target: HTMLElement | null = this.focusReturn;
+        if (mode === 'overview' && target?.isConnected) {
+          target.focus();
+        } else {
+          this.panel()?.focus();
+        }
+        if (mode === 'overview') this.focusReturn = null;
+      },
+      { injector: this.injector },
+    );
+  }
+}

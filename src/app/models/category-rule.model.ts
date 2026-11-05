@@ -85,11 +85,14 @@ export interface CategoryRuleUpdateRequest {
  * "Uncategorized" — `CategoryRuleService.previewApply()` only ever considers already-uncategorized
  * transactions, so this is never actually null despite the field's name suggesting it might be.
  * @property newValue - The projected value after rule application.
+ * @property decidedBy - Optional wording for the rule that decides the change; when any item has
+ * one, the apply dialog shows a "Decided by" column. Category rules leave it out.
  */
 export interface RuleChangePreview {
   description: string;
   oldValue: string;
   newValue: string;
+  decidedBy?: string;
 }
 
 /**

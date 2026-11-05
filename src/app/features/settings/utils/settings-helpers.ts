@@ -1,10 +1,11 @@
 import { Params } from '@angular/router';
 import { CategoryRule } from '@models/category-rule.model';
+import { MerchantRule } from '@models/merchant-rule.model';
 import { Tag } from '@models/tag.model';
 
-export type SettingsSection = 'appearance' | 'rules' | 'tags';
+export type SettingsSection = 'appearance' | 'rules' | 'merchant-rules' | 'tags';
 
-const SECTIONS: SettingsSection[] = ['appearance', 'rules', 'tags'];
+const SECTIONS: SettingsSection[] = ['appearance', 'rules', 'merchant-rules', 'tags'];
 const MAX_KEYWORD_LENGTH = 255;
 /** The most keywords one rule may hold, as the server allows. */
 export const MAX_KEYWORDS = 20;
@@ -35,21 +36,43 @@ export const keywordTooLong = (keywords: string[]): boolean =>
   keywords.some((keyword: string): boolean => keyword.length > MAX_KEYWORD_LENGTH);
 
 /** Highest priority first (it wins), then oldest first. Returns a new array. */
-export function sortRules(rules: CategoryRule[]): CategoryRule[] {
-  return [...rules].sort(
-    (a: CategoryRule, b: CategoryRule) => b.priority - a.priority || a.id - b.id,
-  );
+export function sortRules<T extends { id: number; priority: number }>(rules: T[]): T[] {
+  return [...rules].sort((a: T, b: T) => b.priority - a.priority || a.id - b.id);
 }
 
-/** Rules whose keywords or category name contain the term, ignoring case; a blank term keeps all. */
-export function filterRules(rules: CategoryRule[], term: string): CategoryRule[] {
+/** Rules whose keywords or target name contain the term, ignoring case; a blank term keeps all. */
+function filterByTerm<T extends { keywords: string[] }>(
+  rules: T[],
+  term: string,
+  targetName: (rule: T) => string | undefined,
+): T[] {
   const needle: string = term.trim().toLowerCase();
   if (needle === '') return rules;
   return rules.filter(
-    (rule: CategoryRule): boolean =>
-      rule.category?.name.toLowerCase().includes(needle) ||
+    (rule: T): boolean =>
+      targetName(rule)?.toLowerCase().includes(needle) ||
       rule.keywords.some((keyword: string): boolean => keyword.toLowerCase().includes(needle)),
   );
+}
+
+/** Category rules whose keywords or category name contain the term, ignoring case; a blank term keeps all. */
+export function filterRules(rules: CategoryRule[], term: string): CategoryRule[] {
+  return filterByTerm(rules, term, (rule: CategoryRule) => rule.category?.name);
+}
+
+/** Merchant rules whose keywords or merchant name contain the term, ignoring case; a blank term keeps all. */
+export function filterMerchantRules(rules: MerchantRule[], term: string): MerchantRule[] {
+  return filterByTerm(rules, term, (rule: MerchantRule) => rule.merchant?.name);
+}
+
+/**
+ * Names a rule by its keywords, e.g. `a rule with keywords "kroger", "431"`. The previews do not say
+ * whether a rule needs any or all of them, so the wording is neutral: each keyword is quoted and the
+ * list is labelled as the rule's keywords, never joined by "+" or "or".
+ */
+export function ruleKeywordsText(keywords: string[]): string {
+  const quoted: string = keywords.map((k: string): string => `"${k}"`).join(', ');
+  return `a rule with ${keywords.length === 1 ? 'keyword' : 'keywords'} ${quoted}`;
 }
 
 const dollars = (value: number): string =>

@@ -4,7 +4,7 @@ const API_URL = process.env['E2E_API_URL'] ?? 'http://localhost:8080/api/v1';
 
 /** What a spec can create and that the cleanup knows how to delete. */
 export type CreatedKind =
-  'transaction' | 'budget' | 'tag' | 'category' | 'merchant' | 'account' | 'rule';
+  'transaction' | 'budget' | 'tag' | 'category' | 'merchant' | 'account' | 'rule' | 'merchant-rule';
 
 interface Created {
   kind: CreatedKind;
@@ -61,7 +61,7 @@ async function remove(
 /**
  * Deletes what a test created, in an order the API accepts: every transaction on a tracked account
  * (and each tracked transaction) first, then category rules, budgets, tags, categories (children before their
- * parents), merchants, and accounts last (an account with transactions is refused). Best effort: a
+ * parents), merchant rules, merchants, and accounts last (an account with transactions is refused). Best effort: a
  * failure here must never hide the test's own result, so every call swallows its error.
  */
 export async function cleanupTracked(
@@ -104,6 +104,8 @@ export async function cleanupTracked(
   for (const id of ids('tag')) await remove(request, headers, `tags/${id}`);
   // a category created later is a child of one created earlier, so delete newest first
   for (const id of ids('category').reverse()) await remove(request, headers, `categories/${id}`);
+  // a merchant rule references its merchant (deleting the merchant would cascade, but a failed run must not rely on it)
+  for (const id of ids('merchant-rule')) await remove(request, headers, `merchant-rules/${id}`);
   for (const id of ids('merchant')) await remove(request, headers, `merchants/${id}`);
   for (const id of ids('account')) await remove(request, headers, `accounts/${id}`);
 }
@@ -147,4 +149,20 @@ export async function trackRuleByKeyword(page: Page, keyword: string): Promise<v
   const rules = (await response.json()) as { id: number; keywords: string[] }[];
   for (const rule of rules.filter((r) => r.keywords.includes(keyword)))
     track(page, 'rule', rule.id);
+}
+
+/**
+ * Like {@link trackRuleByKeyword}, for a merchant rule the test made through the UI: finds it through
+ * the API by one of its keywords (which must embed a unique token) and tracks its id.
+ */
+export async function trackMerchantRuleByKeyword(page: Page, keyword: string): Promise<void> {
+  const token = await sharedUserToken(page.context());
+  if (!token) return;
+  const response = await page.request
+    .get(`${API_URL}/merchant-rules`, { headers: { Authorization: `Bearer ${token}` } })
+    .catch(() => null);
+  if (!response?.ok()) return;
+  const rules = (await response.json()) as { id: number; keywords: string[] }[];
+  for (const rule of rules.filter((r) => r.keywords.includes(keyword)))
+    track(page, 'merchant-rule', rule.id);
 }

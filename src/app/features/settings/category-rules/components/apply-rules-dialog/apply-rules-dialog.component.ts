@@ -19,8 +19,8 @@ import { RestoreFocusOnHideDirective } from '@shared/directives/restore-focus-on
 
 /**
  * Dialog for previewing and confirming bulk rule applications -- shows users which transactions
- * will be affected before execution. Currently used by category rules; the fieldLabel input keeps
- * it generic rather than hardcoded to that one field, in case another bulk-rule flow needs it.
+ * will be affected before execution. Used by category rules and merchant rules; the fieldLabel input
+ * keeps it generic rather than hardcoded to one field.
  */
 @Component({
   selector: 'app-apply-rules-dialog',
@@ -47,6 +47,11 @@ export class ApplyRulesDialogComponent {
 
   /** Total number of transactions identified for update. */
   readonly totalCount: Signal<number> = computed((): number => this.previewItems().length);
+
+  /** Whether the changes say which rule decides them, which adds a "Decided by" column. */
+  readonly showsRule: Signal<boolean> = computed((): boolean =>
+    this.previewItems().some((item: RuleChangePreview): boolean => !!item.decidedBy),
+  );
 
   /** Indicates if the update volume is high enough to warrant a warning. */
   readonly isLargeUpdate: Signal<boolean> = computed((): boolean => this.totalCount() > 50);

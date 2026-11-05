@@ -116,6 +116,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/merchant-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List merchant rules
+         * @description Returns the authenticated user's merchant rules in priority order
+         */
+        get: operations["getRules"];
+        /**
+         * Update a merchant rule
+         * @description Updates a merchant rule owned by the authenticated user
+         */
+        put: operations["updateRule"];
+        /**
+         * Create a merchant rule
+         * @description Creates a new merchant rule for the authenticated user
+         */
+        post: operations["createRule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/category-rules": {
         parameters: {
             query?: never;
@@ -127,17 +155,17 @@ export interface paths {
          * List category rules
          * @description Returns the authenticated user's category rules
          */
-        get: operations["getRules"];
+        get: operations["getRules_1"];
         /**
          * Update a category rule
          * @description Updates a category rule owned by the authenticated user
          */
-        put: operations["updateRule"];
+        put: operations["updateRule_1"];
         /**
          * Create a category rule
          * @description Creates a new category rule for the authenticated user
          */
-        post: operations["createRule"];
+        post: operations["createRule_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -408,6 +436,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/merchant-rules/match-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview a draft merchant rule's matches
+         * @description Shows which transactions a draft merchant rule would match and whether it would assign a merchant, lose to another rule, or leave the transaction alone; read-only
+         */
+        post: operations["matchPreview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/merchant-rules/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Apply merchant rules
+         * @description Gives a merchant to the merchant-less transactions the current rules match and returns how many changed; never touches a transaction that already has a merchant
+         */
+        post: operations["applyRules"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/category-rules/match-preview": {
         parameters: {
             query?: never;
@@ -421,7 +489,7 @@ export interface paths {
          * Preview a draft rule's matches
          * @description Shows which transactions a draft rule would match and whether it would categorize each, lose to another rule, or leave it alone; read-only
          */
-        post: operations["matchPreview"];
+        post: operations["matchPreview_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -441,7 +509,7 @@ export interface paths {
          * Apply rules
          * @description Applies the current rule set, recategorizing matching transactions
          */
-        post: operations["applyRules"];
+        post: operations["applyRules_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -772,6 +840,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/merchant-rules/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Preview applying merchant rules
+         * @description Lists the merchant-less transactions the current rules would give a merchant, and the rule that decided each; read-only
+         */
+        get: operations["previewApply"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dashboard/ytd": {
         parameters: {
             query?: never;
@@ -923,7 +1011,7 @@ export interface paths {
          * Preview applying rules
          * @description Shows which transactions would be recategorized if the rule set were applied, without changing anything
          */
-        get: operations["previewApply"];
+        get: operations["previewApply_1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1132,6 +1220,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/merchant-rules/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a merchant rule
+         * @description Deletes a merchant rule owned by the authenticated user
+         */
+        delete: operations["deleteRule"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/category-rules/{id}": {
         parameters: {
             query?: never;
@@ -1146,7 +1254,7 @@ export interface paths {
          * Delete a category rule
          * @description Deletes a category rule owned by the authenticated user
          */
-        delete: operations["deleteRule"];
+        delete: operations["deleteRule_1"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1280,6 +1388,19 @@ export interface components {
             state?: string;
             postalCode?: string;
             country?: string;
+        };
+        MerchantRuleUpdateRequest: {
+            /** Format: int64 */
+            id: number;
+            /** Format: int64 */
+            merchantId: number;
+            keywords: string[];
+            /** @enum {string} */
+            matchType?: "AND" | "OR";
+            /** Format: int32 */
+            priority?: number;
+            minAmount?: number;
+            maxAmount?: number;
         };
         CategoryRuleUpdateRequest: {
             /** Format: int64 */
@@ -1482,6 +1603,67 @@ export interface components {
         };
         MerchantDescriptionLinkCreateRequest: {
             description: string;
+        };
+        MerchantRuleCreateRequest: {
+            /** Format: int64 */
+            merchantId: number;
+            keywords: string[];
+            /** @enum {string} */
+            matchType?: "AND" | "OR";
+            /** Format: int32 */
+            priority?: number;
+            minAmount?: number;
+            maxAmount?: number;
+        };
+        MerchantRuleMatchPreviewRequest: {
+            /** Format: int64 */
+            ruleId?: number;
+            keywords: string[];
+            /** @enum {string} */
+            matchType?: "AND" | "OR";
+            /** Format: int32 */
+            priority?: number;
+            minAmount?: number;
+            maxAmount?: number;
+            /** Format: int64 */
+            merchantId?: number;
+        };
+        MerchantRuleMatchPreviewDto: {
+            targetMerchantName?: string;
+            /** Format: int32 */
+            totalMatches?: number;
+            /** Format: int32 */
+            willAssignCount?: number;
+            /** Format: int32 */
+            losesToOtherRuleCount?: number;
+            /** Format: int32 */
+            alreadyHasMerchantCount?: number;
+            /** Format: int32 */
+            linkedCount?: number;
+            truncated?: boolean;
+            rows?: components["schemas"]["MerchantRuleMatchRowDto"][];
+        };
+        MerchantRuleMatchRowDto: {
+            /** Format: int64 */
+            transactionId?: number;
+            /** Format: date-time */
+            date?: string;
+            description?: string;
+            amount?: number;
+            accountName?: string;
+            currentMerchant?: components["schemas"]["MerchantDto"];
+            /** @enum {string} */
+            verdict?: "WILL_ASSIGN" | "LOSES_TO_OTHER_RULE" | "ALREADY_HAS_MERCHANT" | "LINKED";
+            otherRules?: components["schemas"]["MerchantRuleRefDto"][];
+            winningRule?: components["schemas"]["MerchantRuleRefDto"];
+        };
+        MerchantRuleRefDto: {
+            /** Format: int64 */
+            id?: number;
+            keywords?: string[];
+            merchantName?: string;
+            /** Format: int32 */
+            priority?: number;
         };
         CategoryRuleCreateRequest: {
             /** Format: int64 */
@@ -1892,6 +2074,31 @@ export interface components {
             /** Format: int64 */
             merchantId?: number;
             description?: string;
+        };
+        MerchantRuleDto: {
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            userId?: number;
+            keywords?: string[];
+            /** @enum {string} */
+            matchType?: "AND" | "OR";
+            /** Format: int32 */
+            priority?: number;
+            merchant?: components["schemas"]["MerchantDto"];
+            minAmount?: number;
+            maxAmount?: number;
+        };
+        MerchantRuleChangePreviewDto: {
+            /** Format: int64 */
+            transactionId?: number;
+            /** Format: date-time */
+            date?: string;
+            description?: string;
+            amount?: number;
+            accountName?: string;
+            merchant?: components["schemas"]["MerchantDto"];
+            rule?: components["schemas"]["MerchantRuleRefDto"];
         };
         YtdSummaryDto: {
             /** Format: int32 */
@@ -2350,12 +2557,125 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["CategoryRuleDto"][];
+                    "*/*": components["schemas"]["MerchantRuleDto"][];
                 };
             };
         };
     };
     updateRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MerchantRuleUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Rule updated, rows affected returned */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": number;
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": number;
+                };
+            };
+            /** @description Forbidden -- the authenticated user does not own this rule */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": number;
+                };
+            };
+            /** @description The merchant does not exist or is not the authenticated user's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": number;
+                };
+            };
+        };
+    };
+    createRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MerchantRuleCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Rule created, id returned */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": number;
+                };
+            };
+            /** @description Validation failed, for example a blank keyword or more than 20 keywords */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": number;
+                };
+            };
+            /** @description The merchant does not exist or is not the authenticated user's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": number;
+                };
+            };
+        };
+    };
+    getRules_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Rules returned (possibly empty) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CategoryRuleDto"][];
+                };
+            };
+        };
+    };
+    updateRule_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -2388,7 +2708,7 @@ export interface operations {
             };
         };
     };
-    createRule: {
+    createRule_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -2993,6 +3313,68 @@ export interface operations {
         };
         requestBody: {
             content: {
+                "application/json": components["schemas"]["MerchantRuleMatchPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Preview returned (possibly empty) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MerchantRuleMatchPreviewDto"];
+                };
+            };
+            /** @description Validation failed, for example a blank keyword or more than 20 keywords */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MerchantRuleMatchPreviewDto"];
+                };
+            };
+            /** @description ruleId or merchantId is not the authenticated user's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MerchantRuleMatchPreviewDto"];
+                };
+            };
+        };
+    };
+    applyRules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Rules applied, number of changed transactions returned */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": number;
+                };
+            };
+        };
+    };
+    matchPreview_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
                 "application/json": components["schemas"]["RuleMatchPreviewRequest"];
             };
         };
@@ -3026,7 +3408,7 @@ export interface operations {
             };
         };
     };
-    applyRules: {
+    applyRules_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -3521,6 +3903,26 @@ export interface operations {
             };
         };
     };
+    previewApply: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Preview returned (possibly empty) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MerchantRuleChangePreviewDto"][];
+                };
+            };
+        };
+    };
     getYtdSummary: {
         parameters: {
             query?: {
@@ -3714,7 +4116,7 @@ export interface operations {
             };
         };
     };
-    previewApply: {
+    previewApply_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -3994,6 +4396,33 @@ export interface operations {
         };
     };
     deleteRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Rule deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden -- the authenticated user does not own this rule */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteRule_1: {
         parameters: {
             query?: never;
             header?: never;
