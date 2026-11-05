@@ -18,7 +18,7 @@ export type BatchFileStatus =
   'pending' | 'previewing' | 'ready' | 'failed' | 'committed' | 'skipped';
 
 /** Where a row's category came from. Every backend suggestion counts as `'rule'` (see store doc). */
-export type ReviewRowOrigin = 'rule' | 'guess' | 'edited' | 'none';
+export type ReviewRowOrigin = 'rule' | 'edited' | 'none';
 
 export type ReviewRowSkip = 'duplicate' | 'file-already-imported' | null;
 

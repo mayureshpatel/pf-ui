@@ -113,11 +113,6 @@ const STATUS: Record<ReviewRow['origin'], RowStatus> = {
     icon: 'pi-bolt',
     tone: 'text-primary-700 dark:text-primary-400',
   },
-  guess: {
-    label: 'Suggested',
-    icon: 'pi-info-circle',
-    tone: 'text-blue-700 dark:text-blue-300',
-  },
   edited: {
     label: 'Edited',
     icon: 'pi-pencil',
@@ -146,9 +141,9 @@ function plural(n: number, one: string, many: string): string {
   return `${n} ${n === 1 ? one : many}`;
 }
 
-/** A row still to be imported that has no category, or only a guessed one. */
+/** A row still to be imported that has no category. */
 function needsALook(row: ReviewRow): boolean {
-  return row.skip === null && (row.category === null || row.origin === 'guess');
+  return row.skip === null && row.category === null;
 }
 
 function rootFontSize(): number {
