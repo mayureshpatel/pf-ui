@@ -14,7 +14,7 @@ import { ActionType } from '@models/dashboard.model';
 import { toLocalDateString } from '@shared/utils/transaction.utils';
 import { Confirmation, ConfirmationService, MessageService } from 'primeng/api';
 import { ActivatedRoute, Params, Router } from '@angular/router';
-import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
+import { BehaviorSubject, Observable, of, Subject, throwError } from 'rxjs';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { vi, Mock, Mocked } from 'vitest';
 import {
@@ -2095,6 +2095,162 @@ describe('TransactionsComponent', () => {
         // assert & verify
         expect(fixture.nativeElement.querySelector('app-page-error-state')).toBeTruthy();
       });
+    });
+  });
+
+  describe('overlapping loads (PF-910)', () => {
+    const row = (id: number): Transaction =>
+      ({
+        id,
+        account: { id: 1, name: 'Checking' },
+        category: { id: 5, name: 'Groceries' },
+        amount: 10,
+        date: '2026-10-15T00:00:00Z',
+        description: `row ${id}`,
+        type: 'EXPENSE',
+        merchant: { id: 7, name: 'Test' },
+        tags: [],
+      }) as unknown as Transaction;
+    const pageOf = (rows: Transaction[], total = rows.length): PageResponse<Transaction> => ({
+      content: rows,
+      page: { totalElements: total, totalPages: 1, number: 0, size: 20 },
+    });
+
+    /** Every list load becomes a controllable request, in the order the page sent them. */
+    let requests: Subject<PageResponse<Transaction>>[];
+
+    beforeEach(() => {
+      requests = [];
+      mockTransactionApi.getTransactions.mockImplementation(() => {
+        const request = new Subject<PageResponse<Transaction>>();
+        requests.push(request);
+        return request.asObservable();
+      });
+    });
+
+    /** Starts a second load for a changed filter, the way picking a filter chip does. */
+    const changeFilter = (filter: TransactionFilter): void => {
+      component.state.update((s) => ({ ...s, filter, page: 0 }));
+      fixture.detectChanges();
+    };
+
+    it('should show only the newer response when the older one resolves last', () => {
+      // arrange -- an unfiltered load in flight, then a filtered one
+      component.loadTransactions();
+      changeFilter({ accountId: 2 });
+      expect(requests.length).toBeGreaterThanOrEqual(2);
+      const older = requests[requests.length - 2];
+      const newer = requests[requests.length - 1];
+      component.selectedTransactions.set([row(2)]);
+
+      // act -- the newer answers first, then the stale one
+      newer.next(pageOf([row(2)], 1));
+      newer.complete();
+      older.next(pageOf([row(1), row(2), row(3)], 3));
+      older.complete();
+
+      // assert & verify
+      expect(component.transactions().map((t) => t.id)).toEqual([2]);
+      expect(component.totalRecords()).toBe(1);
+      expect(component.loading()).toBe(false);
+    });
+
+    it('should not clear the selection when a stale response arrives after the newer one', () => {
+      // arrange
+      component.loadTransactions();
+      changeFilter({ accountId: 2 });
+      const older = requests[requests.length - 2];
+      const newer = requests[requests.length - 1];
+      newer.next(pageOf([row(2)], 1));
+      newer.complete();
+      component.selectedTransactions.set([row(2)]);
+
+      // act
+      older.next(pageOf([row(1), row(2)], 2));
+      older.complete();
+
+      // assert & verify
+      expect(component.selectedTransactions().map((t) => t.id)).toEqual([2]);
+    });
+
+    it('should stay loading until the latest request settles, even if an older one finishes', () => {
+      // arrange
+      component.loadTransactions();
+      changeFilter({ accountId: 2 });
+      const older = requests[requests.length - 2];
+      const newer = requests[requests.length - 1];
+
+      // act & assert
+      older.next(pageOf([row(1)]));
+      older.complete();
+      expect(component.loading()).toBe(true);
+      expect(component.transactions()).toEqual([]);
+
+      newer.next(pageOf([row(2)]));
+      newer.complete();
+      expect(component.loading()).toBe(false);
+      expect(component.transactions().map((t) => t.id)).toEqual([2]);
+    });
+
+    it('should ignore a stale error: no toast, no cleared rows, no error state', () => {
+      // arrange
+      component.loadTransactions();
+      changeFilter({ accountId: 2 });
+      const older = requests[requests.length - 2];
+      const newer = requests[requests.length - 1];
+      newer.next(pageOf([row(2)], 1));
+      newer.complete();
+
+      // act
+      older.error(new Error('boom'));
+
+      // assert & verify
+      expect(mockToast.error).not.toHaveBeenCalled();
+      expect(component.loadError()).toBe(false);
+      expect(component.transactions().map((t) => t.id)).toEqual([2]);
+      expect(component.totalRecords()).toBe(1);
+    });
+
+    it('should still report the latest request failing', () => {
+      // arrange
+      component.loadTransactions();
+      changeFilter({ accountId: 2 });
+      const newer = requests[requests.length - 1];
+
+      // act
+      newer.error(new Error('boom'));
+
+      // assert & verify
+      expect(mockToast.error).toHaveBeenCalledTimes(1);
+      expect(component.loadError()).toBe(true);
+      expect(component.loading()).toBe(false);
+    });
+
+    it('should end on the latest state after rapid filter, sort and page changes', () => {
+      // arrange
+      changeFilter({ accountId: 2 });
+      component.state.update((s) => ({ ...s, sort: 'amount,asc', page: 0 }));
+      fixture.detectChanges();
+      component.state.update((s) => ({ ...s, page: 3 }));
+      fixture.detectChanges();
+      const last = requests[requests.length - 1];
+      expect(listLoads().at(-1)).toEqual([
+        { accountId: 2 },
+        { page: 3, size: 20, sort: 'amount,asc' },
+      ]);
+
+      // act -- everything but the last request answers late, in reverse order
+      last.next(pageOf([row(9)], 1));
+      last.complete();
+      for (const stale of requests.slice(0, -1).reverse()) {
+        stale.next(pageOf([row(1), row(2)], 2));
+        stale.complete();
+      }
+
+      // assert & verify
+      expect(component.transactions().map((t) => t.id)).toEqual([9]);
+      expect(component.totalRecords()).toBe(1);
+      expect(component.loading()).toBe(false);
     });
   });
 });
