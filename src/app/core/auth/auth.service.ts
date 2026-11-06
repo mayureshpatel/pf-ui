@@ -1,15 +1,25 @@
 import { computed, inject, Injectable, Signal, signal, WritableSignal } from '@angular/core';
 import { HttpClient, HttpContext, HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { catchError, Observable, tap, throwError } from 'rxjs';
+import { catchError, firstValueFrom, Observable, tap, throwError } from 'rxjs';
 import { environment } from '@env';
 import { AuthRequest, AuthResponse, RegistrationRequest, User } from '@models/auth.model';
-import { StorageService } from '../services/storage.service';
 import { ToastService } from '../services/toast.service';
-import { getUserFromToken } from './utils/jwt.utils';
+import { getTokenExpiryMs, getUserFromToken } from './utils/jwt.utils';
 import { SKIP_GENERIC_ERROR_TOAST } from './error.interceptor';
 
-const SKIP_TOAST_OPTIONS = { context: new HttpContext().set(SKIP_GENERIC_ERROR_TOAST, true) };
+/** Legacy browser-storage keys from when the token was persisted; removed at startup. */
+const LEGACY_TOKEN_KEY = 'pf_auth_token';
+const LEGACY_STORAGE_TYPE_KEY = 'pf_storage_type';
+
+/**
+ * Auth calls: no generic error toast, and cookies enabled so the HttpOnly `pf_refresh` cookie is
+ * stored on login and sent on refresh/logout (the dev API is cross-origin; prod is same-origin).
+ */
+const AUTH_OPTIONS = {
+  context: new HttpContext().set(SKIP_GENERIC_ERROR_TOAST, true),
+  withCredentials: true,
+};
 
 /** One field-level entry in a 400 response's `validationErrors` array (see GlobalExceptionHandler). */
 interface ValidationErrorItem {
@@ -26,15 +36,28 @@ interface ValidationErrorItem {
 export class AuthService {
   private readonly http: HttpClient = inject(HttpClient);
   private readonly router: Router = inject(Router);
-  private readonly storage: StorageService = inject(StorageService);
   private readonly toast: ToastService = inject(ToastService);
 
-  private readonly _isAuthenticated: WritableSignal<boolean> = signal<boolean>(
-    this.storage.hasToken(),
-  );
-  private readonly _user: WritableSignal<User | null> = signal<User | null>(
-    getUserFromToken(this.storage.getToken()),
-  );
+  /**
+   * The access token, held in memory only. SECURITY: it is never written to localStorage or
+   * sessionStorage, so an XSS payload cannot read a persisted token. It lives 15 minutes; the
+   * session itself is kept by the HttpOnly `pf_refresh` cookie, which scripts cannot read.
+   */
+  private readonly _token: WritableSignal<string | null> = signal<string | null>(null);
+  private readonly _isAuthenticated: WritableSignal<boolean> = signal<boolean>(false);
+  private readonly _user: WritableSignal<User | null> = signal<User | null>(null);
+
+  constructor() {
+    AuthService.removeLegacyStorage();
+  }
+
+  /**
+   * Epoch milliseconds at which the held access token expires, or null when none is held.
+   */
+  readonly tokenExpiresAt: Signal<number | null> = computed((): number | null => {
+    const token: string | null = this._token();
+    return token ? getTokenExpiryMs(token) : null;
+  });
 
   /**
    * Whether the user is currently authenticated.
@@ -55,7 +78,8 @@ export class AuthService {
    * Authenticates the user with the provided credentials.
    *
    * @param credentials - The user credentials (username and password).
-   * @param rememberMe - Whether to store the token in local storage (persistent) or session storage.
+   * @param rememberMe - Sent to the server, which issues a persistent (remember-me) or
+   *   browser-session refresh cookie accordingly.
    * @returns An observable of the authentication response.
    * @throws An error if authentication fails.
    */
@@ -63,14 +87,12 @@ export class AuthService {
     return this.http
       .post<AuthResponse>(
         `${environment.apiUrl}/auth/authenticate`,
-        credentials,
-        SKIP_TOAST_OPTIONS,
+        { ...credentials, rememberMe },
+        AUTH_OPTIONS,
       )
       .pipe(
         tap((response: AuthResponse): void => {
-          this.storage.setToken(response.token, rememberMe);
-          this._isAuthenticated.set(true);
-          this._user.set(getUserFromToken(response.token));
+          this.setSession(response.token);
           this.toast.success('Welcome back!');
           this.router.navigate(['/dashboard']);
         }),
@@ -93,12 +115,10 @@ export class AuthService {
    */
   register(request: RegistrationRequest): Observable<AuthResponse> {
     return this.http
-      .post<AuthResponse>(`${environment.apiUrl}/auth/register`, request, SKIP_TOAST_OPTIONS)
+      .post<AuthResponse>(`${environment.apiUrl}/auth/register`, request, AUTH_OPTIONS)
       .pipe(
         tap((response: AuthResponse): void => {
-          this.storage.setToken(response.token, false);
-          this._isAuthenticated.set(true);
-          this._user.set(getUserFromToken(response.token));
+          this.setSession(response.token);
           this.toast.success('Welcome! Your account has been created successfully.');
           this.router.navigate(['/dashboard']);
         }),
@@ -117,12 +137,38 @@ export class AuthService {
   }
 
   /**
-   * Logs out the current user and clears all stored authentication data.
+   * Restores the session from the refresh cookie (page reload or new tab).
+   *
+   * Runs once at startup from an app initializer, before the router guards. A missing, expired or
+   * revoked cookie (401) or any other failure just leaves the user signed out: no toast, no
+   * redirect (the guards decide where to go).
+   *
+   * @returns A promise that resolves to true when a session was restored, never rejects.
+   */
+  async restoreSession(): Promise<boolean> {
+    try {
+      const response: AuthResponse = await firstValueFrom(
+        this.http.post<AuthResponse>(`${environment.apiUrl}/auth/refresh`, null, AUTH_OPTIONS),
+      );
+      this.setSession(response.token);
+      return this.isAuthenticated();
+    } catch {
+      this.clearSession();
+      return false;
+    }
+  }
+
+  /**
+   * Logs out the current user: ends the server session and clears local state.
+   *
+   * The server call is best effort; local state is cleared and the user sent to /login even
+   * when it fails.
    */
   logout(): void {
-    this.storage.clearToken();
-    this._isAuthenticated.set(false);
-    this._user.set(null);
+    this.http.post<void>(`${environment.apiUrl}/auth/logout`, null, AUTH_OPTIONS).subscribe({
+      error: (): void => undefined,
+    });
+    this.clearSession();
     this.toast.info('Logged out');
     this.router.navigate(['/login']);
   }
@@ -132,18 +178,41 @@ export class AuthService {
    */
   handleUnauthorized(): void {
     this.toast.warn('Your session has expired. Please log in again.');
-    this.storage.clearToken();
-    this._isAuthenticated.set(false);
-    this._user.set(null);
+    this.clearSession();
     this.router.navigate(['/login']);
   }
 
   /**
-   * Retrieves the current user's JWT token from storage.
+   * Returns the in-memory access token.
    *
-   * @returns The JWT token or null if no token is stored.
+   * @returns The JWT access token or null when signed out.
    */
   getToken(): string | null {
-    return this.storage.getToken();
+    return this._token();
+  }
+
+  private setSession(token: string): void {
+    const user: User | null = getUserFromToken(token);
+    this._token.set(user ? token : null);
+    this._user.set(user);
+    this._isAuthenticated.set(user !== null);
+  }
+
+  private clearSession(): void {
+    this._token.set(null);
+    this._user.set(null);
+    this._isAuthenticated.set(false);
+  }
+
+  /** Deletes the token keys earlier versions persisted; existing users simply sign in again. */
+  private static removeLegacyStorage(): void {
+    try {
+      for (const storage of [localStorage, sessionStorage]) {
+        storage.removeItem(LEGACY_TOKEN_KEY);
+        storage.removeItem(LEGACY_STORAGE_TYPE_KEY);
+      }
+    } catch {
+      // Storage can be unavailable (privacy mode); nothing to clean up then.
+    }
   }
 }

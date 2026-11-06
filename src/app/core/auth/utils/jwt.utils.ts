@@ -57,3 +57,14 @@ export function getUserFromToken(token: string | null): User | null {
     email: payload.email,
   };
 }
+
+/**
+ * Reads the expiry of a JWT token.
+ *
+ * @param token - The JWT token to process.
+ * @returns The expiry as epoch milliseconds, or null if the token is malformed.
+ */
+export function getTokenExpiryMs(token: string): number | null {
+  const payload: JwtPayload | null = decodeToken(token);
+  return payload ? payload.exp * 1000 : null;
+}
