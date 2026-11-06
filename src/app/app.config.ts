@@ -10,6 +10,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 
 import { routes } from './app.routes';
 import { jwtInterceptor } from '@core/auth/jwt.interceptor';
+import { restoreSessionOnStartup } from '@core/auth/auth.initializer';
 import { errorInterceptor } from '@core/auth/error.interceptor';
 import { FinancePreset } from './custom-presets';
 
@@ -37,6 +38,9 @@ function initPrimengLeaveAnimationFix(): void {
 export const appConfig: ApplicationConfig = {
   providers: [
     provideAppInitializer(initPrimengLeaveAnimationFix),
+    // Restore the session from the refresh cookie before the router (and its guards) starts:
+    // Angular awaits an initializer's promise, so requireAuth/guestGuard see the settled state.
+    provideAppInitializer(restoreSessionOnStartup),
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes),
     provideHttpClient(withInterceptors([jwtInterceptor, errorInterceptor])),
