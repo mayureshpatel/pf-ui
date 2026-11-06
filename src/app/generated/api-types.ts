@@ -2034,6 +2034,8 @@ export interface components {
             noTag?: boolean;
             minAmount?: number;
             maxAmount?: number;
+            /** Format: date */
+            today?: string;
         };
         ExploreResultDto: {
             rows?: components["schemas"]["ExploreRowDto"][];
@@ -2081,6 +2083,8 @@ export interface components {
             noTag?: boolean;
             minAmount?: number;
             maxAmount?: number;
+            /** Format: date */
+            today?: string;
         };
         Bucket: {
             /** Format: date */
@@ -2091,6 +2095,8 @@ export interface components {
         ExploreTrendDto: {
             current?: components["schemas"]["Bucket"][];
             comparison?: components["schemas"]["Bucket"][];
+            /** @enum {string} */
+            granularity?: "day" | "week" | "month";
         };
         PriceChangeDto: {
             previousAmount?: number;
@@ -3995,7 +4001,7 @@ export interface operations {
                     "*/*": components["schemas"]["ExploreResultDto"];
                 };
             };
-            /** @description The measure cannot be grouped that way (net and savings rate group by time only) */
+            /** @description The measure cannot be grouped that way (net and savings rate group by time only), the range is out of bounds, or today is not within a day of the server's date */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4026,6 +4032,15 @@ export interface operations {
                     "*/*": components["schemas"]["ExploreTrendDto"];
                 };
             };
+            /** @description The range is out of bounds or spans too many buckets, or today is not within a day of the server's date */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ExploreTrendDto"];
+                };
+            };
         };
     };
     exploreTransactions: {
@@ -4043,6 +4058,15 @@ export interface operations {
         responses: {
             /** @description Transactions returned */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PagedModel"];
+                };
+            };
+            /** @description The range is out of bounds, or today is not within a day of the server's date */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
