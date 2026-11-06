@@ -52,6 +52,7 @@ import { CategoryTreeComponent } from './components/category-tree/category-tree.
 import { CategoryOverviewComponent } from './components/category-overview/category-overview.component';
 import { CategoryEditFormComponent } from './components/category-edit-form/category-edit-form.component';
 import { CategoryBulkFormComponent } from './components/category-bulk-form/category-bulk-form.component';
+import { CategoryStarterFormComponent } from './components/category-starter-form/category-starter-form.component';
 import { categoryCount } from './utils/category-bulk';
 import {
   availableTypes,
@@ -69,7 +70,7 @@ import {
 } from './utils/category-helpers';
 
 /** What the docked panel is showing. */
-export type CategoryPanelMode = 'overview' | 'category' | 'add' | 'bulk' | 'selection';
+export type CategoryPanelMode = 'overview' | 'category' | 'add' | 'bulk' | 'starter' | 'selection';
 
 /**
  * The Categories page: a filterable tree of categories beside an always-present panel. The panel
@@ -90,6 +91,7 @@ export type CategoryPanelMode = 'overview' | 'category' | 'add' | 'bulk' | 'sele
     CategoryOverviewComponent,
     CategoryEditFormComponent,
     CategoryBulkFormComponent,
+    CategoryStarterFormComponent,
   ],
   templateUrl: './categories.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -174,7 +176,8 @@ export class CategoriesComponent implements OnInit {
   readonly onlyAddMode: Signal<boolean> = computed(
     (): boolean => this.categories().length === 0 && !this.loading() && this.panelMode() === 'add',
   );
-  private readonly isEmpty: Signal<boolean> = computed(
+  /** The starter set is offered only to an account with no categories. */
+  readonly isEmpty: Signal<boolean> = computed(
     (): boolean =>
       this.loadedOnce() && this.categories().length === 0 && !this.loading() && !this.loadError(),
   );
@@ -185,6 +188,8 @@ export class CategoriesComponent implements OnInit {
         return 'Add category';
       case 'bulk':
         return 'Add several categories';
+      case 'starter':
+        return 'Add a starter set';
       case 'category':
         return this.selectedCategory()?.name ?? 'Category';
       case 'selection':
@@ -208,6 +213,7 @@ export class CategoriesComponent implements OnInit {
   private loadSubscription: Subscription | null = null;
   private readonly editForm = viewChild<CategoryEditFormComponent>('editForm');
   private readonly bulkForm = viewChild(CategoryBulkFormComponent);
+  private readonly starterForm = viewChild(CategoryStarterFormComponent);
 
   /** Whether the bulk form (not its result view) is showing and can be submitted. */
   readonly bulkEditing: Signal<boolean> = computed(
@@ -215,10 +221,19 @@ export class CategoriesComponent implements OnInit {
   );
   /** Create is enabled only while the bulk form is valid. */
   readonly bulkValid: Signal<boolean> = computed((): boolean => !!this.bulkForm()?.canSubmit());
+  /** Add selected is enabled only while something is ticked in the starter checklist. */
+  readonly starterValid: Signal<boolean> = computed(
+    (): boolean => !!this.starterForm()?.canSubmit(),
+  );
 
   constructor() {
     effect((): void => {
-      if (this.isEmpty() && this.panelMode() !== 'add' && this.panelMode() !== 'bulk') {
+      if (
+        this.isEmpty() &&
+        this.panelMode() !== 'add' &&
+        this.panelMode() !== 'bulk' &&
+        this.panelMode() !== 'starter'
+      ) {
         untracked((): void => this.panelMode.set('add'));
       }
     });
@@ -346,6 +361,17 @@ export class CategoriesComponent implements OnInit {
     });
   }
 
+  /** Opens the starter-set checklist in the panel (offered only on an empty page). */
+  startStarter(): void {
+    if (this.panelMode() === 'starter') return;
+    this.confirmDiscardIfDirty((): void => {
+      this.bulkResult.set(null);
+      this.bulkError.set(null);
+      this.selectedCategoryId.set(null);
+      this.go('starter');
+    });
+  }
+
   /** Back: add returns to the category it came from, everything else to the overview. */
   back(): void {
     const mode: CategoryPanelMode = this.panelMode();
@@ -382,6 +408,7 @@ export class CategoriesComponent implements OnInit {
   /** The panel's Save button: submits the form that is showing. */
   onPanelSave(): void {
     if (this.panelMode() === 'bulk') this.bulkForm()?.submit();
+    else if (this.panelMode() === 'starter') this.starterForm()?.submit();
     else this.editForm()?.submit();
   }
 
@@ -427,7 +454,10 @@ export class CategoriesComponent implements OnInit {
       });
   }
 
-  /** Creates the groups in one request; a skipped name keeps the panel open on a result view. */
+  /**
+   * Creates the groups in one request (from the bulk form or the starter checklist); a skipped name
+   * keeps the panel open on the bulk result view.
+   */
   saveBulk(request: CategoryBatchRequest): void {
     if (this.saving() || this.loading()) return;
     this.saving.set(true);
@@ -449,10 +479,12 @@ export class CategoriesComponent implements OnInit {
             );
           }
           this.bulkForm()?.form.markAsPristine();
+          this.starterForm()?.markPristine();
           if (skipped.length === 0) {
             this.closePanel();
           } else {
             this.bulkResult.set({ ...result, skipped });
+            if (this.panelMode() === 'starter') this.go('bulk');
           }
           this.loadData();
         },
@@ -607,8 +639,8 @@ export class CategoriesComponent implements OnInit {
         const target: HTMLElement | null = this.focusReturn;
         if (mode === 'overview' && target?.isConnected) {
           target.focus();
-        } else if (mode !== 'bulk') {
-          // the bulk form puts focus on its own first field
+        } else if (mode !== 'bulk' && mode !== 'starter') {
+          // the bulk and starter forms put focus on their own first field
           this.panel()?.focus();
         }
         if (mode === 'overview') this.focusReturn = null;
@@ -681,7 +713,9 @@ export class CategoriesComponent implements OnInit {
     const dirty: boolean =
       mode === 'bulk'
         ? this.bulkEditing() && !!this.bulkForm()?.form.dirty
-        : (mode === 'category' || mode === 'add') && !!this.editForm()?.form.dirty;
+        : mode === 'starter'
+          ? !!this.starterForm()?.dirty()
+          : (mode === 'category' || mode === 'add') && !!this.editForm()?.form.dirty;
     if (!dirty) {
       proceed();
       return;

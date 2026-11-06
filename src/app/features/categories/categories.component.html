@@ -16,6 +16,16 @@
           [outlined]="true"
           (onClick)="startBulkAdd()"
         />
+        @if (isEmpty()) {
+          <p-button
+            data-testid="add-starter"
+            label="Add a starter set"
+            icon="pi pi-sparkles"
+            severity="secondary"
+            [outlined]="true"
+            (onClick)="startStarter()"
+          />
+        }
       </div>
     </div>
   </app-screen-toolbar>
@@ -50,6 +60,9 @@
             <p class="text-muted-color">
               Create categories to organize your income and expenses. You can group them under
               parent categories.
+            </p>
+            <p class="text-muted-color">
+              Not sure where to start? Add a suggested set and untick anything you do not want.
             </p>
           </div>
         } @else {
@@ -99,14 +112,23 @@
         [showClose]="panelMode() !== 'overview' && !onlyAddMode()"
         [sheet]="panelMode() !== 'overview' && panelMode() !== 'selection'"
         [moveFocus]="false"
-        [showFooter]="panelMode() === 'category' || panelMode() === 'add' || bulkEditing()"
-        [valid]="panelMode() !== 'bulk' || bulkValid()"
+        [showFooter]="
+          panelMode() === 'category' ||
+          panelMode() === 'add' ||
+          panelMode() === 'starter' ||
+          bulkEditing()
+        "
+        [valid]="
+          (panelMode() !== 'bulk' || bulkValid()) && (panelMode() !== 'starter' || starterValid())
+        "
         [saveLabel]="
           panelMode() === 'add'
             ? 'Add category'
             : panelMode() === 'bulk'
               ? 'Create'
-              : 'Save changes'
+              : panelMode() === 'starter'
+                ? 'Add selected'
+                : 'Save changes'
         "
         [showDelete]="false"
         (save)="onPanelSave()"
@@ -162,6 +184,16 @@
               [saving]="saving()"
               (save)="saveCategory($event)"
             />
+            @if (onlyAddMode()) {
+              <button
+                type="button"
+                data-testid="add-starter-inline"
+                class="mt-3 cursor-pointer text-sm underline"
+                (click)="startStarter()"
+              >
+                Or add a starter set
+              </button>
+            }
           }
           @case ('bulk') {
             <app-category-bulk-form
@@ -170,6 +202,13 @@
               [errorMessage]="bulkError()"
               (save)="saveBulk($event)"
               (done)="closePanel()"
+            />
+          }
+          @case ('starter') {
+            <app-category-starter-form
+              [saving]="saving()"
+              [errorMessage]="bulkError()"
+              (save)="saveBulk($event)"
             />
           }
           @case ('selection') {
