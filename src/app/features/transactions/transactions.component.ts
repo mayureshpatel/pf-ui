@@ -730,11 +730,23 @@ export class TransactionsComponent implements OnInit {
           const target: HTMLElement | null | undefined = opener?.isConnected
             ? opener
             : (page.querySelector<HTMLElement>('[data-testid="bulk-create-rule"]') ??
-              page.querySelector<HTMLElement>('[data-testid="row-checkbox"]:checked'));
+              this.firstVisible(
+                page,
+                '[data-testid="row-checkbox"]:checked, [data-testid="card-row-checkbox"]:checked',
+              ));
           target?.focus();
         },
       },
       { injector: this.injector },
+    );
+  }
+
+  /** First match that is actually shown: the list renders a table and cards, one is hidden. */
+  private firstVisible(root: HTMLElement, selector: string): HTMLElement | null {
+    return (
+      Array.from(root.querySelectorAll<HTMLElement>(selector)).find((el: HTMLElement): boolean =>
+        el.checkVisibility(),
+      ) ?? null
     );
   }
 
