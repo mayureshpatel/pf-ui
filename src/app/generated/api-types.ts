@@ -516,6 +516,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/categories/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create categories in a batch
+         * @description Creates parents with their subcategories in one atomic call; existing names are skipped and reported
+         */
+        post: operations["createCategoriesBatch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/register": {
         parameters: {
             query?: never;
@@ -1731,6 +1751,30 @@ export interface components {
             icon?: string;
             /** Format: int64 */
             parentId?: number;
+        };
+        CategoryBatchGroup: {
+            name: string;
+            type?: string;
+            color?: string;
+            icon?: string;
+            subcategories?: string[];
+        };
+        CategoryBatchRequest: {
+            groups: components["schemas"]["CategoryBatchGroup"][];
+        };
+        CategoryBatchResultDto: {
+            /** Format: int32 */
+            createdCount?: number;
+            /** Format: int32 */
+            createdParents?: number;
+            /** Format: int32 */
+            createdSubcategories?: number;
+            skipped?: components["schemas"]["CategoryBatchSkippedDto"][];
+        };
+        CategoryBatchSkippedDto: {
+            name?: string;
+            parentName?: string;
+            reason?: string;
         };
         BudgetCreateRequest: {
             /** Format: int64 */
@@ -3423,6 +3467,39 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    createCategoriesBatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CategoryBatchRequest"];
+            };
+        };
+        responses: {
+            /** @description Batch processed, counts and skipped names returned */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CategoryBatchResultDto"];
+                };
+            };
+            /** @description Validation failed (empty, blank or over-long names, too many names) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CategoryBatchResultDto"];
+                };
             };
         };
     };
