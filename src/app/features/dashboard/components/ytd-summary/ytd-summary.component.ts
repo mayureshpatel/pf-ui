@@ -50,11 +50,11 @@ export class YtdSummaryComponent {
     const rate: number = this.avgSavingsRate();
 
     if (rate >= 20) {
-      return 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20';
+      return 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20';
     }
 
     if (rate > 0) {
-      return 'text-amber-600 bg-amber-50 dark:bg-amber-950/20';
+      return 'text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/20';
     }
 
     return 'text-rose-600 bg-rose-50 dark:bg-rose-950/20';
