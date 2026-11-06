@@ -1,6 +1,6 @@
 import { vi, Mocked } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
 import { By } from '@angular/platform-browser';
 import { of, throwError } from 'rxjs';
 import { LoginComponent } from './login.component';
@@ -22,6 +22,7 @@ describe('LoginComponent', () => {
       providers: [provideRouter([]), { provide: AuthService, useValue: mockAuthService }],
     }).compileComponents();
 
+    vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
     fixture = TestBed.createComponent(LoginComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
@@ -138,4 +139,55 @@ describe('LoginComponent', () => {
       false,
     );
   });
+});
+
+describe('LoginComponent post-login navigation', () => {
+  function setup(returnUrl: string | null): { navigateByUrl: ReturnType<typeof vi.fn> } {
+    const navigateByUrl = vi.fn();
+    TestBed.configureTestingModule({
+      imports: [LoginComponent],
+      providers: [
+        { provide: Router, useValue: { navigateByUrl } },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: { queryParamMap: convertToParamMap(returnUrl ? { returnUrl } : {}) },
+          },
+        },
+        {
+          provide: AuthService,
+          useValue: { login: vi.fn().mockReturnValue(of({ token: 't' } as AuthResponse)) },
+        },
+      ],
+    });
+    const fixture = TestBed.createComponent(LoginComponent);
+    fixture.componentInstance.form.setValue({
+      username: 'jdoe',
+      password: 'pw',
+      rememberMe: false,
+    });
+    fixture.componentInstance.onSubmit();
+    return { navigateByUrl };
+  }
+
+  it('should go to a safe returnUrl after login', () => {
+    const { navigateByUrl } = setup('/transactions?page=2');
+
+    expect(navigateByUrl).toHaveBeenCalledWith('/transactions?page=2');
+  });
+
+  it('should go to /dashboard when there is no returnUrl', () => {
+    const { navigateByUrl } = setup(null);
+
+    expect(navigateByUrl).toHaveBeenCalledWith('/dashboard');
+  });
+
+  it.each(['//evil.com', 'https://evil.com', '/\\evil.com', '/login'])(
+    'should fall back to /dashboard for the unsafe returnUrl %s',
+    (url) => {
+      const { navigateByUrl } = setup(url);
+
+      expect(navigateByUrl).toHaveBeenCalledWith('/dashboard');
+    },
+  );
 });

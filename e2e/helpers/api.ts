@@ -4,24 +4,18 @@ import {track} from './cleanup';
 const API_URL = process.env['E2E_API_URL'] ?? 'http://localhost:8080/api/v1';
 
 /**
- * Reads the JWT that global-setup seeded into localStorage. The `request` fixture doesn't share
- * a page's localStorage (this app authenticates via a bearer token, not cookies), so API calls
- * made outside of `page`'s own navigations need this passed explicitly as an Authorization header.
+ * Gets a fresh access token for the page's session. The app keeps its access token in memory only
+ * and restores the session from the HttpOnly `pf_refresh` cookie (PF-899), so there is nothing in
+ * storage to read: this exchanges the context's cookie for a token through the real refresh
+ * endpoint, which works for the cached shared user and for a freshly registered one alike. The
+ * `request` fixture shares the browser context's cookie jar, so no page navigation is needed first.
  */
 export async function getAuthToken(page: Page): Promise<string> {
-  // Mirrors StorageService.getToken() exactly: `pf_storage_type` (always in localStorage) says
-  // which storage the token itself lives in. global-setup's cached session is always 'local',
-  // but a freshly-registered user (AuthService.register() hardcodes rememberMe: false) has its
-  // token in sessionStorage instead -- reading localStorage unconditionally would silently miss it.
-  const token = await page.evaluate(() => {
-    const storageType = localStorage.getItem('pf_storage_type');
-    const storage = storageType === 'local' ? localStorage : sessionStorage;
-    return storage.getItem('pf_auth_token');
-  });
-  if (!token) {
-    throw new Error("No 'pf_auth_token' found in local/session storage -- call page.goto() to a same-origin URL first.");
+  const response = await page.request.post(`${API_URL}/auth/refresh`);
+  if (!response.ok()) {
+    throw new Error(`Could not get an access token from the session cookie: ${response.status()} ${await response.text()}`);
   }
-  return token;
+  return ((await response.json()) as {token: string}).token;
 }
 
 /**

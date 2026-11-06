@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, signal, WritableSignal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { CheckboxModule } from 'primeng/checkbox';
@@ -9,6 +9,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
 import { MessageModule } from 'primeng/message';
 import { AuthService } from '@core/auth/auth.service';
+import { getSafeReturnUrl } from '@core/auth/utils/return-url.utils';
 
 /**
  * Component for handling user authentication via the login form.
@@ -34,6 +35,8 @@ import { AuthService } from '@core/auth/auth.service';
 })
 export class LoginComponent {
   private readonly authService: AuthService = inject(AuthService);
+  private readonly router: Router = inject(Router);
+  private readonly route: ActivatedRoute = inject(ActivatedRoute);
 
   /**
    * The reactive form group for login credentials.
@@ -84,6 +87,13 @@ export class LoginComponent {
       .login({ username, password }, rememberMe)
       .pipe(finalize((): void => this.isSubmitting.set(false)))
       .subscribe({
+        next: (): void => {
+          // Only a same-app relative path is honoured; anything else falls back to the dashboard.
+          const returnUrl: string | null = getSafeReturnUrl(
+            this.route.snapshot.queryParamMap.get('returnUrl'),
+          );
+          this.router.navigateByUrl(returnUrl ?? '/dashboard');
+        },
         error: (err: Error): void => {
           this.errorMessage.set(err.message);
         },

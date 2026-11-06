@@ -37,6 +37,11 @@ Optional env vars:
 ## Layout
 - `global-setup.ts` — logs in once, caches the session to `e2e/.auth/user.json` (gitignored).
   Every test starts already authenticated via `playwright.config.ts`'s `use.storageState`.
+  The cached session is the HttpOnly `pf_refresh` cookie (the app keeps its access token in memory
+  and restores the session from that cookie on startup, PF-899), not a token in localStorage. After
+  upgrading to this version, re-run once with `E2E_USERNAME`/`E2E_PASSWORD` set to refresh the cache
+  (an older `user.json` holds the old token format and no longer authenticates). `getAuthToken(page)`
+  in `helpers/api.ts` exchanges the cookie for an access token through `/auth/refresh`.
 - `harness.smoke.spec.ts` — proves the harness itself works (auth caching + route guards).
   Business-flow coverage lives in other spec files, not here.
 
