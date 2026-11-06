@@ -33,7 +33,7 @@
             <i
               [class]="'pi ' + option.icon + ' text-2xl mb-2 transition-transform group-hover:scale-110 ' + (form.value.type === option.value ? 'text-primary' : option.color)"></i>
             <span
-              [class]="'text-xs font-semibold ' + (form.value.type === option.value ? 'text-primary' : 'text-surface-500 dark:text-surface-400')">
+              [class]="'text-xs font-semibold ' + (form.value.type === option.value ? 'text-primary-700 dark:text-primary-400' : 'text-surface-500 dark:text-surface-400')">
               {{ option.label }}
             </span>
           </button>
@@ -85,7 +85,7 @@
       >
         <ng-template #item let-merchant>
           @if (isCreateSuggestion(merchant)) {
-            <div class="flex items-center gap-2 text-primary font-semibold">
+            <div class="flex items-center gap-2 text-primary-700 dark:text-primary-400 font-semibold">
               <i class="pi pi-plus-circle"></i>
               <span class="text-sm truncate">{{ merchant.name }}</span>
             </div>

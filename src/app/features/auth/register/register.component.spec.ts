@@ -70,4 +70,14 @@ describe('RegisterComponent', () => {
       );
     });
   });
+
+  it('PF-891: should colour the "Sign in" link with the accessible emerald pair', () => {
+    const links = Array.from(fixture.nativeElement.querySelectorAll('a')) as HTMLElement[];
+    const link = links.find((a) => a.textContent?.includes('Sign in'));
+
+    expect(link).toBeTruthy();
+    expect(link!.classList).toContain('text-primary-700');
+    expect(link!.classList).toContain('dark:text-primary-400');
+    expect(link!.classList).not.toContain('text-primary');
+  });
 });

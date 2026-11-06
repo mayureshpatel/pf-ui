@@ -85,7 +85,7 @@ describe('YtdSummaryComponent', () => {
       setInputs(2026, 10000, 8000, 20);
 
       // assert & verify
-      expect(component.savingsRateStyles()).toContain('text-emerald-600');
+      expect(component.savingsRateStyles()).toContain('text-emerald-700 dark:text-emerald-400');
     });
 
     it('should use the amber (moderate) tier between 0 and 20%', () => {
@@ -93,7 +93,7 @@ describe('YtdSummaryComponent', () => {
       setInputs(2026, 10000, 9000, 10);
 
       // assert & verify
-      expect(component.savingsRateStyles()).toContain('text-amber-600');
+      expect(component.savingsRateStyles()).toContain('text-amber-700 dark:text-amber-400');
     });
 
     it('should use the rose (poor) tier at 0% or below', () => {

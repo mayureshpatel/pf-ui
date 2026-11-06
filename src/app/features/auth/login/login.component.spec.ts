@@ -139,6 +139,27 @@ describe('LoginComponent', () => {
       false,
     );
   });
+
+  describe('PF-891: accessible link colour', () => {
+    function expectAccessibleLink(link: HTMLElement | undefined): void {
+      expect(link).toBeTruthy();
+      expect(link!.classList).toContain('text-primary-700');
+      expect(link!.classList).toContain('dark:text-primary-400');
+      expect(link!.classList).not.toContain('text-primary');
+    }
+
+    it('should colour the "Forgot password" link with the accessible emerald pair', () => {
+      const links = Array.from(fixture.nativeElement.querySelectorAll('a')) as HTMLElement[];
+
+      expectAccessibleLink(links.find((a) => a.textContent?.includes('Forgot password')));
+    });
+
+    it('should colour the "Create account" link with the accessible emerald pair', () => {
+      const links = Array.from(fixture.nativeElement.querySelectorAll('a')) as HTMLElement[];
+
+      expectAccessibleLink(links.find((a) => a.textContent?.includes('Create account')));
+    });
+  });
 });
 
 describe('LoginComponent post-login navigation', () => {

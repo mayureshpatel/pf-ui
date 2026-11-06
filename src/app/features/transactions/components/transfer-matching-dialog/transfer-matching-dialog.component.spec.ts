@@ -66,4 +66,15 @@ describe('TransferMatchingDialogComponent', () => {
     const button: HTMLButtonElement = fixture.nativeElement.querySelector('button:has(.pi-times)');
     expect(button.getAttribute('aria-label')).toBe('Ignore');
   });
+
+  it('PF-891: should colour the match-confidence pill with the accessible emerald pair', () => {
+    const pill = Array.from(document.querySelectorAll('span')).find((el) =>
+      el.textContent?.includes('% Match'),
+    );
+
+    expect(pill).toBeTruthy();
+    expect(pill!.classList).toContain('text-primary-700');
+    expect(pill!.classList).toContain('dark:text-primary-400');
+    expect(pill!.classList).not.toContain('text-primary');
+  });
 });
