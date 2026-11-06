@@ -1,4 +1,12 @@
-import { computed, inject, Injectable, Signal, signal, WritableSignal } from '@angular/core';
+import {
+  computed,
+  DestroyRef,
+  inject,
+  Injectable,
+  Signal,
+  signal,
+  WritableSignal,
+} from '@angular/core';
 import { HttpClient, HttpContext, HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { catchError, firstValueFrom, Observable, tap, throwError } from 'rxjs';
@@ -6,11 +14,21 @@ import { environment } from '@env';
 import { AuthRequest, AuthResponse, RegistrationRequest, User } from '@models/auth.model';
 import { ToastService } from '../services/toast.service';
 import { getTokenExpiryMs, getUserFromToken } from './utils/jwt.utils';
+import { getSafeReturnUrl } from './utils/return-url.utils';
 import { SKIP_GENERIC_ERROR_TOAST } from './error.interceptor';
 
 /** Legacy browser-storage keys from when the token was persisted; removed at startup. */
 const LEGACY_TOKEN_KEY = 'pf_auth_token';
 const LEGACY_STORAGE_TYPE_KEY = 'pf_storage_type';
+
+/** Same-origin channel that keeps a user's tabs in step (sign-out, renewed tokens). */
+const CHANNEL_NAME = 'pf-auth';
+
+/** Web Locks name serializing the refresh call across tabs. */
+const REFRESH_LOCK_NAME = 'pf-auth-refresh';
+
+/** Messages exchanged on the {@link CHANNEL_NAME} channel. */
+type AuthMessage = { type: 'logout' } | { type: 'token'; token: string };
 
 /**
  * Auth calls: no generic error toast, and cookies enabled so the HttpOnly `pf_refresh` cookie is
@@ -47,8 +65,21 @@ export class AuthService {
   private readonly _isAuthenticated: WritableSignal<boolean> = signal<boolean>(false);
   private readonly _user: WritableSignal<User | null> = signal<User | null>(null);
 
+  /** The single in-flight renewal shared by every caller, or null when none is running. */
+  private renewal: Promise<boolean> | null = null;
+
+  /** Set once a session has ended so concurrent failures toast and redirect only once. */
+  private sessionEnded = false;
+
+  private readonly channel: BroadcastChannel | null = AuthService.openChannel();
+
   constructor() {
     AuthService.removeLegacyStorage();
+    if (this.channel) {
+      this.channel.onmessage = (event: MessageEvent<AuthMessage>): void =>
+        this.onChannelMessage(event.data);
+      inject(DestroyRef).onDestroy((): void => this.channel?.close());
+    }
   }
 
   /**
@@ -94,7 +125,6 @@ export class AuthService {
         tap((response: AuthResponse): void => {
           this.setSession(response.token);
           this.toast.success('Welcome back!');
-          this.router.navigate(['/dashboard']);
         }),
         catchError((error: HttpErrorResponse): Observable<never> => {
           const message: string =
@@ -169,17 +199,49 @@ export class AuthService {
       error: (): void => undefined,
     });
     this.clearSession();
+    this.sessionEnded = true;
+    this.post({ type: 'logout' });
     this.toast.info('Logged out');
     this.router.navigate(['/login']);
   }
 
   /**
-   * Resets the authentication state in response to an unauthorized request (e.g., 401).
+   * Renews the access token from the refresh cookie.
+   *
+   * Single-flight: while a renewal is running every caller shares it, so any number of requests
+   * or pages cause one HTTP call. Only ever called because of activity (an expiring token or a
+   * 401), never from a timer. Refresh tokens are not rotated, so renewals racing in other tabs
+   * are harmless; where the Web Locks API exists the call is also serialized across tabs.
+   *
+   * @returns A promise resolving to true when a fresh token is held, false otherwise; never rejects.
+   */
+  renewSession(): Promise<boolean> {
+    this.renewal ??= this.withRefreshLock(() => this.refresh()).finally((): void => {
+      this.renewal = null;
+    });
+    return this.renewal;
+  }
+
+  /**
+   * Ends the session after an unauthorized request that renewal could not repair: one toast, then
+   * a redirect to /login carrying the current in-app page as `returnUrl`. Repeat calls for the
+   * same ended session do nothing.
+   *
+   * Unsaved form input is not preserved on this hard sign-out.
    */
   handleUnauthorized(): void {
+    if (this.sessionEnded) {
+      return;
+    }
+    this.sessionEnded = true;
+    const returnUrl: string | null = getSafeReturnUrl(this.router.url);
     this.toast.warn('Your session has expired. Please log in again.');
     this.clearSession();
-    this.router.navigate(['/login']);
+    if (returnUrl) {
+      this.router.navigate(['/login'], { queryParams: { returnUrl } });
+    } else {
+      this.router.navigate(['/login']);
+    }
   }
 
   /**
@@ -191,7 +253,61 @@ export class AuthService {
     return this._token();
   }
 
+  private async refresh(): Promise<boolean> {
+    try {
+      const response: AuthResponse = await firstValueFrom(
+        this.http.post<AuthResponse>(`${environment.apiUrl}/auth/refresh`, null, AUTH_OPTIONS),
+      );
+      this.setSession(response.token);
+      if (!this.isAuthenticated()) {
+        return false;
+      }
+      this.post({ type: 'token', token: response.token });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /** Runs the refresh under a cross-tab lock when the browser has Web Locks, else directly. */
+  private async withRefreshLock(task: () => Promise<boolean>): Promise<boolean> {
+    const locks: LockManager | undefined =
+      typeof navigator === 'undefined' ? undefined : navigator.locks;
+    return locks ? await locks.request(REFRESH_LOCK_NAME, task) : task();
+  }
+
+  private onChannelMessage(message: AuthMessage): void {
+    if (message?.type === 'logout') {
+      if (this.isAuthenticated()) {
+        // Another tab already called the server; just follow along, silently.
+        this.clearSession();
+        this.sessionEnded = true;
+        this.router.navigate(['/login']);
+      }
+    } else if (message?.type === 'token' && this.isAuthenticated()) {
+      const incoming: number | null =
+        typeof message.token === 'string' ? getTokenExpiryMs(message.token) : null;
+      const current: number | null = this.tokenExpiresAt();
+      if (incoming !== null && (current === null || incoming > current)) {
+        this.setSession(message.token);
+      }
+    }
+  }
+
+  private post(message: AuthMessage): void {
+    try {
+      this.channel?.postMessage(message);
+    } catch {
+      // A closed channel just means no other tab hears about it.
+    }
+  }
+
+  private static openChannel(): BroadcastChannel | null {
+    return typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel(CHANNEL_NAME);
+  }
+
   private setSession(token: string): void {
+    this.sessionEnded = false;
     const user: User | null = getUserFromToken(token);
     this._token.set(user ? token : null);
     this._user.set(user);
