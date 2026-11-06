@@ -17,8 +17,8 @@ import {
   bucketLabel,
   formatMeasure,
   Granularity,
-  granularityOf,
   MEASURE_LABELS,
+  trendGranularity,
 } from '../../utils/explore-helpers';
 
 interface Bar {
@@ -64,7 +64,7 @@ export class TrendChartComponent {
     (): boolean => (this.trend()?.comparison.length ?? 0) > 0,
   );
   protected readonly granularity: Signal<Granularity> = computed((): Granularity =>
-    granularityOf((this.trend()?.current ?? []).map((b: TrendBucket) => b.start)),
+    trendGranularity(this.trend()),
   );
 
   protected readonly bars: Signal<Bar[]> = computed((): Bar[] => {

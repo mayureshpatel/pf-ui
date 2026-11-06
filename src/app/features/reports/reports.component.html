@@ -144,6 +144,14 @@
         <p-skeleton height="9rem" borderRadius="0.75rem" />
         <p-skeleton height="16rem" borderRadius="0.75rem" />
       </div>
+    } @else if (refusal(); as reason) {
+      <div
+        data-testid="range-refused"
+        role="alert"
+        class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200"
+      >
+        {{ reason }}
+      </div>
     } @else if (loadError()) {
       <app-page-error-state message="Failed to load this report." (retry)="retry()" />
     } @else if (result(); as current) {

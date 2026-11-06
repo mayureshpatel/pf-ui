@@ -98,6 +98,7 @@
         pInputText
         id="explore-start"
         type="date"
+        min="2000-01-01"
         [value]="draftStart() || state().startDate"
         (change)="onDate('start', $any($event.target).value)"
       />
@@ -106,6 +107,7 @@
         pInputText
         id="explore-end"
         type="date"
+        min="2000-01-01"
         [value]="draftEnd() || state().endDate"
         (change)="onDate('end', $any($event.target).value)"
       />

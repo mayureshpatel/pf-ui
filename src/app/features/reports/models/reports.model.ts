@@ -178,6 +178,8 @@ export interface TrendBucket {
 export interface ExploreTrend {
   current: TrendBucket[];
   comparison: TrendBucket[];
+  /** The bucket size the server used (PF-894); absent only in a response from an older server. */
+  granularity?: 'day' | 'week' | 'month';
 }
 
 export interface ExploreTransaction {

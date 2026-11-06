@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { vi, Mocked } from 'vitest';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
@@ -875,6 +876,101 @@ describe('ReportsComponent', () => {
 
     // assert & verify
     expect(component['linkable']().ok).toBe(true);
+  });
+
+  // PF-894
+  describe('when the API refuses the range', () => {
+    const refused = (detail: unknown = 'The start date cannot be before 2000-01-01') =>
+      throwError(() => new HttpErrorResponse({ status: 400, error: { detail, status: 400 } }));
+
+    it('should show the server reason inline, not a blank report or a retry', async () => {
+      // arrange
+      api.explore.mockReturnValue(refused());
+      api.trend.mockReturnValue(refused());
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      // act
+      await create();
+
+      // assert & verify
+      const message = fixture.nativeElement.querySelector('[data-testid="range-refused"]');
+      expect(message.textContent).toContain('The start date cannot be before 2000-01-01');
+      expect(text()).not.toContain('Failed to load this report');
+      expect(fixture.nativeElement.querySelector('app-explorer-controls')).toBeTruthy();
+    });
+
+    it('should say something readable when the refusal has no detail', async () => {
+      // arrange
+      api.explore.mockReturnValue(refused(null));
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      // act
+      await create();
+
+      // assert & verify
+      expect(
+        fixture.nativeElement.querySelector('[data-testid="range-refused"]').textContent,
+      ).toContain('Try a different one');
+    });
+
+    it('should clear the message when a valid range is picked', async () => {
+      // arrange
+      api.explore.mockReturnValue(refused());
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      await create();
+      expect(fixture.nativeElement.querySelector('[data-testid="range-refused"]')).toBeTruthy();
+      api.explore.mockReturnValue(of(result()));
+
+      // act
+      component.onStateChange({
+        startDate: '2026-01-01',
+        endDate: '2026-02-01',
+        rangeLabel: 'Custom',
+      });
+      await settle();
+
+      // assert & verify
+      expect(fixture.nativeElement.querySelector('[data-testid="range-refused"]')).toBeNull();
+      expect(text()).toContain('Food');
+    });
+
+    it('should keep the generic retry for other failures', async () => {
+      // arrange
+      api.explore.mockReturnValue(
+        throwError(() => new HttpErrorResponse({ status: 500, error: { detail: 'boom' } })),
+      );
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      // act
+      await create();
+
+      // assert & verify
+      expect(fixture.nativeElement.querySelector('[data-testid="range-refused"]')).toBeNull();
+      expect(text()).toContain('Failed to load this report');
+    });
+  });
+
+  it('should filter a single trend bucket by the server granularity', async () => {
+    // arrange -- one bucket on a month start that is really a day
+    api.trend.mockReturnValue(
+      of({
+        current: [{ start: '2026-10-01', value: 5, partial: true }],
+        comparison: [],
+        granularity: 'day' as const,
+      }),
+    );
+    await create();
+
+    // act
+    component.onSelectBucket({ start: '2026-10-01', value: 5, partial: true });
+    await settle();
+
+    // assert & verify
+    expect(component.state().period).toEqual({
+      start: '2026-10-01',
+      end: '2026-10-01',
+      label: 'Oct 1',
+    });
   });
 
   it('should show an inline retry, not nothing, when the trend fails to load', async () => {

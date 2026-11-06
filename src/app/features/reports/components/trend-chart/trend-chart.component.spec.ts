@@ -47,6 +47,36 @@ describe('TrendChartComponent', () => {
     expect(bars()[1].style.height).toBe('50%');
   });
 
+  // PF-894
+  it('should label buckets by the granularity the server sent, even for a single bucket', () => {
+    // arrange
+    const one = (start: string, granularity: 'day' | 'week' | 'month'): ExploreTrend => ({
+      current: [bucket(start, 10)],
+      comparison: [],
+      granularity,
+    });
+
+    // act & assert -- 2026-11-01 alone would be guessed as a month
+    render(one('2026-11-01', 'day'));
+    expect(bars()[0].getAttribute('aria-label')).toBe('Nov 1: $10.00');
+    render(one('2026-11-02', 'week'));
+    expect(bars()[0].getAttribute('aria-label')).toBe('Week of Nov 2: $10.00');
+    render(one('2026-11-01', 'month'));
+    expect(bars()[0].getAttribute('aria-label')).toBe('Nov 2026: $10.00');
+  });
+
+  it('should trust the server over the spacing of the buckets', () => {
+    // act -- two buckets a week apart, but the server says day
+    render({
+      current: [bucket('2026-03-02', 1), bucket('2026-03-09', 2)],
+      comparison: [],
+      granularity: 'day',
+    });
+
+    // assert & verify
+    expect(bars()[1].getAttribute('aria-label')).toBe('Mar 9: $2.00');
+  });
+
   it('should stripe the partial bucket and say it is in progress', () => {
     // act
     render(MONTHS);

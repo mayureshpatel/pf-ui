@@ -16,6 +16,7 @@ import {
   bucketLabel,
   formatMeasure,
   granularityOf,
+  trendGranularity,
   isAdditive,
   changeText,
   drill,
@@ -623,6 +624,32 @@ describe('explore helpers', () => {
       expect(granularityOf(['2026-03-01', '2026-04-01'])).toBe('month');
       expect(granularityOf(['2026-03-01'])).toBe('month');
       expect(granularityOf(['2026-03-12'])).toBe('day');
+    });
+
+    it('should use the granularity the server sent, even for a single bucket', () => {
+      // assert & verify -- one bucket on a month start is a day when the server says day
+      const one = (granularity?: 'day' | 'week' | 'month') => ({
+        current: [{ start: '2026-11-01', value: 5, partial: true }],
+        comparison: [],
+        granularity,
+      });
+      expect(trendGranularity(one('day'))).toBe('day');
+      expect(trendGranularity(one('week'))).toBe('week');
+      expect(trendGranularity(one('month'))).toBe('month');
+    });
+
+    it('should fall back to the spacing only when the response has no granularity', () => {
+      // assert & verify
+      const weekly = {
+        current: [
+          { start: '2026-03-02', value: 1, partial: false },
+          { start: '2026-03-09', value: 2, partial: false },
+        ],
+        comparison: [],
+      };
+      expect(trendGranularity(weekly)).toBe('week');
+      expect(trendGranularity({ ...weekly, granularity: 'day' })).toBe('day');
+      expect(trendGranularity(null)).toBe('month');
     });
 
     it('should name a bucket', () => {

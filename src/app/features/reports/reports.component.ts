@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
@@ -62,7 +63,6 @@ import {
   GROUP_LABELS,
   Granularity,
   hydrateState,
-  granularityOf,
   isAllowed,
   isTransactionsLinkable,
   MEASURE_LABELS,
@@ -73,10 +73,20 @@ import {
   selectPeriod,
   stepBack,
   toTransactionsQuery,
+  trendGranularity,
 } from './utils/explore-helpers';
 import { defaultState, effectiveDates, TIME_GROUPINGS, toQueryParams } from './utils/explore-state';
 
 const LOOKUP_PAGE_SIZE = 20;
+
+/** The server's readable reason when it refused the request (a 400 with a `detail`), else null. */
+function refusalOf(error: unknown): string | null {
+  if (!(error instanceof HttpErrorResponse) || error.status !== 400) return null;
+  const detail: unknown = error.error?.detail;
+  return typeof detail === 'string' && detail.trim()
+    ? detail
+    : 'The server could not use this range. Try a different one.';
+}
 const LEAF_PAGE_SIZE = 20;
 
 type View = 'explorer' | 'networth';
@@ -136,6 +146,8 @@ export class ReportsComponent {
   readonly leafIndex: WritableSignal<number> = signal(0);
   readonly loading: WritableSignal<boolean> = signal(false);
   readonly loadError: WritableSignal<boolean> = signal(false);
+  /** The server's reason for refusing the range (a 400), shown in place of the report until the next load. */
+  readonly refusal: WritableSignal<string | null> = signal(null);
   /** First-load skeleton only; after that results stay visible (dimmed) while re-querying. */
   readonly loadedOnce: WritableSignal<boolean> = signal(false);
   /** Why the URL's settings were replaced by defaults, shown until the next change. */
@@ -376,9 +388,7 @@ export class ReportsComponent {
 
   /** Clicking a trend bar filters to its day, week or month. */
   onSelectBucket(bucket: TrendBucket): void {
-    const granularity: Granularity = granularityOf(
-      (this.trend()?.current ?? []).map((b) => b.start),
-    );
+    const granularity: Granularity = trendGranularity(this.trend());
     this.commit(
       selectPeriod(this.state(), bucket.start, granularity, bucketLabel(bucket.start, granularity)),
     );
@@ -493,6 +503,7 @@ export class ReportsComponent {
     const state: ExploreState = this.state();
     this.loading.set(true);
     this.loadError.set(false);
+    this.refusal.set(null);
 
     const softFail =
       <T>(label: string): ((error: unknown) => Observable<T | null>) =>
@@ -532,7 +543,9 @@ export class ReportsComponent {
           this.leafPage.set(null);
           this.trendFailed.set(false);
           this.leafFailed.set(false);
-          this.loadError.set(true);
+          const reason: string | null = refusalOf(error);
+          this.refusal.set(reason);
+          this.loadError.set(reason === null);
         },
       });
   }
