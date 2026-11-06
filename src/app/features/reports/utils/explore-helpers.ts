@@ -7,6 +7,7 @@ import {
   ExploreFilters,
   ExploreRow,
   ExploreState,
+  ExploreTrend,
   GroupBy,
   Measure,
   Period,
@@ -571,7 +572,12 @@ export const isAdditive = (measure: Measure): boolean =>
 
 export type Granularity = 'day' | 'week' | 'month';
 
-/** Day, week or month buckets, read off the spacing of the first two bucket starts. */
+/** The trend's bucket size: the server's own answer, else (an older server) a guess from the spacing. */
+export function trendGranularity(trend: ExploreTrend | null): Granularity {
+  return trend?.granularity ?? granularityOf((trend?.current ?? []).map((b) => b.start));
+}
+
+/** Fallback only: day, week or month buckets, read off the spacing of the first two bucket starts. */
 export function granularityOf(starts: string[]): Granularity {
   if (starts.length < 2) {
     return starts.length === 1 && !starts[0].endsWith('-01') ? 'day' : 'month';

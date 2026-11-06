@@ -5,6 +5,7 @@ import {
   fromQueryParams,
   toApiParams,
   toQueryParams,
+  todayParam,
 } from './explore-state';
 
 const TODAY = new Date(2026, 9, 25);
@@ -258,6 +259,26 @@ describe('explore state', () => {
         uncategorized: 'true',
         noTag: 'true',
       });
+    });
+  });
+
+  describe('todayParam (PF-894)', () => {
+    afterEach(() => vi.useRealTimers());
+
+    it('should be the local calendar date, not the UTC date, just before and after midnight', () => {
+      // assert & verify -- 23:30 and 00:30 local are on a different UTC date in some zone either way
+      expect(todayParam(new Date(2026, 11, 31, 23, 30))).toBe('2026-12-31');
+      expect(todayParam(new Date(2027, 0, 1, 0, 30))).toBe('2027-01-01');
+      expect(todayParam(new Date(2026, 2, 5, 9))).toBe('2026-03-05');
+    });
+
+    it('should read the clock by default', () => {
+      // arrange
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date(2026, 10, 30, 23, 45));
+
+      // assert & verify -- the last evening of the month, still November
+      expect(todayParam()).toBe('2026-11-30');
     });
   });
 });

@@ -74,6 +74,14 @@ export function defaultState(today: Date = new Date()): ExploreState {
 
 export const DEFAULT_STATE: ExploreState = defaultState();
 
+/**
+ * The client's local calendar date as `yyyy-MM-dd`, sent as `today` so the server clamps and buckets
+ * with the same date the range line shows (never `toISOString`, which is the UTC date).
+ */
+export function todayParam(now: Date = new Date()): string {
+  return toLocalDateString(now);
+}
+
 /** The dates a query covers: the drilled period when there is one, else the range. */
 export function effectiveDates(state: ExploreState): { startDate: string; endDate: string } {
   return state.period
