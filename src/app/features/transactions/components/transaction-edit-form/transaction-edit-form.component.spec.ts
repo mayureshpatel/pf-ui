@@ -2,6 +2,8 @@ import { vi, Mocked } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { signal } from '@angular/core';
+import { By } from '@angular/platform-browser';
+import { AutoComplete } from 'primeng/autocomplete';
 import { of } from 'rxjs';
 
 import { TransactionEditFormComponent } from './transaction-edit-form.component';
@@ -489,6 +491,47 @@ describe('TransactionEditFormComponent', () => {
 
       // assert & verify
       expect(fixture.nativeElement.querySelector('[data-testid="category-error"]')).toBeNull();
+    });
+  });
+
+  describe('PF-891: accessible emerald text', () => {
+    it('should colour the selected type label with the accessible emerald pair', () => {
+      // arrange
+      fixture.detectChanges();
+
+      // act
+      const labels = Array.from(
+        fixture.nativeElement.querySelectorAll('span.text-xs.font-semibold'),
+      ) as HTMLElement[];
+      const selected = labels.filter((el) => el.classList.contains('text-primary-700'));
+
+      // assert & verify
+      expect(selected).toHaveLength(1);
+      expect(selected[0].classList).toContain('dark:text-primary-400');
+      expect(selected[0].classList).not.toContain('text-primary');
+    });
+
+    it('should colour the "+ Create" merchant row with the accessible emerald pair', () => {
+      // arrange
+      fixture.detectChanges();
+      mockMerchantApi.getMerchants.mockReturnValue(
+        of({ content: [], page: { totalElements: 0, totalPages: 1, number: 0, size: 20 } }),
+      );
+      component.filterMerchants({ originalEvent: new Event('input'), query: 'Brand New' });
+      fixture.detectChanges();
+
+      // act
+      fixture.debugElement.query(By.directive(AutoComplete)).componentInstance.show();
+      fixture.detectChanges();
+      const row = Array.from(document.querySelectorAll('.pi-plus-circle'))
+        .map((icon) => icon.parentElement as HTMLElement)
+        .find((el) => el.textContent?.includes('+ Create'));
+
+      // assert & verify
+      expect(row).toBeTruthy();
+      expect(row!.classList).toContain('text-primary-700');
+      expect(row!.classList).toContain('dark:text-primary-400');
+      expect(row!.classList).not.toContain('text-primary');
     });
   });
 });
