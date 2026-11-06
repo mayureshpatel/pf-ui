@@ -43,33 +43,38 @@ test.describe('Session renewal (PF-899)', () => {
     await expect(page).not.toHaveURL(/\/login/);
   });
 
-  test('a revoked session returns to sign-in and back to the same page afterwards', async ({
-    page,
-  }) => {
-    // a fresh user, so revoking its session cannot affect the shared cached login
-    const { username, password } = await registerTestUser(page);
+  // a freshly registered user needs a signed-out browser: the register page redirects a signed-in user away
+  test.describe('with a fresh user', () => {
+    test.use({ storageState: { cookies: [], origins: [] } });
 
-    // end the session on the server, then make the next request look expired so the app has to renew
-    expect((await page.request.post(`${API_URL}/auth/logout`)).status()).toBe(204);
-    let failed = false;
-    await page.route(/\/api\/v1\/accounts(\?|$)/, async (route) => {
-      if (!failed) {
-        failed = true;
-        await route.fulfill(EXPIRED);
-      } else {
-        await route.continue();
-      }
+    test('a revoked session returns to sign-in and back to the same page afterwards', async ({
+      page,
+    }) => {
+      // a fresh user, so revoking its session cannot affect the shared cached login
+      const { username, password } = await registerTestUser(page);
+
+      // end the session on the server, then make the next request look expired so the app has to renew
+      expect((await page.request.post(`${API_URL}/auth/logout`)).status()).toBe(204);
+      let failed = false;
+      await page.route(/\/api\/v1\/accounts(\?|$)/, async (route) => {
+        if (!failed) {
+          failed = true;
+          await route.fulfill(EXPIRED);
+        } else {
+          await route.continue();
+        }
+      });
+
+      await page.getByRole('link', { name: 'Accounts' }).first().click();
+
+      await expect(page).toHaveURL(/\/login\?returnUrl=.*accounts/);
+
+      // id="password" lands on the <p-password> host element, not the inner native <input>
+      await page.locator('#username').fill(username);
+      await page.locator('#password input').fill(password);
+      await page.getByRole('button', { name: 'Sign In' }).click();
+
+      await expect(page).toHaveURL(/\/accounts/);
     });
-
-    await page.getByRole('link', { name: 'Accounts' }).first().click();
-
-    await expect(page).toHaveURL(/\/login\?returnUrl=.*accounts/);
-
-    // id="password" lands on the <p-password> host element, not the inner native <input>
-    await page.locator('#username').fill(username);
-    await page.locator('#password input').fill(password);
-    await page.getByRole('button', { name: 'Sign In' }).click();
-
-    await expect(page).toHaveURL(/\/accounts/);
   });
 });
