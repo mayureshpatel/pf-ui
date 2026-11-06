@@ -6,7 +6,17 @@
       </h1>
     </div>
     <div toolbarFilters>
-      <p-button label="Add category" icon="pi pi-plus" (onClick)="startAdd()" />
+      <div class="flex flex-wrap gap-2">
+        <p-button label="Add category" icon="pi pi-plus" (onClick)="startAdd()" />
+        <p-button
+          data-testid="add-several"
+          label="Add several"
+          icon="pi pi-list"
+          severity="secondary"
+          [outlined]="true"
+          (onClick)="startBulkAdd()"
+        />
+      </div>
     </div>
   </app-screen-toolbar>
 
@@ -89,8 +99,15 @@
         [showClose]="panelMode() !== 'overview' && !onlyAddMode()"
         [sheet]="panelMode() !== 'overview' && panelMode() !== 'selection'"
         [moveFocus]="false"
-        [showFooter]="panelMode() === 'category' || panelMode() === 'add'"
-        [saveLabel]="panelMode() === 'add' ? 'Add category' : 'Save changes'"
+        [showFooter]="panelMode() === 'category' || panelMode() === 'add' || bulkEditing()"
+        [valid]="panelMode() !== 'bulk' || bulkValid()"
+        [saveLabel]="
+          panelMode() === 'add'
+            ? 'Add category'
+            : panelMode() === 'bulk'
+              ? 'Create'
+              : 'Save changes'
+        "
         [showDelete]="false"
         (save)="onPanelSave()"
         (closePanel)="onPanelClose()"
@@ -144,6 +161,15 @@
               [defaultParentId]="addParentId()"
               [saving]="saving()"
               (save)="saveCategory($event)"
+            />
+          }
+          @case ('bulk') {
+            <app-category-bulk-form
+              [result]="bulkResult()"
+              [saving]="saving()"
+              [errorMessage]="bulkError()"
+              (save)="saveBulk($event)"
+              (done)="closePanel()"
             />
           }
           @case ('selection') {

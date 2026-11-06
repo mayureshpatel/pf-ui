@@ -8,6 +8,7 @@ import { Confirmation, ConfirmationService } from 'primeng/api';
 
 import { CategoriesComponent } from './categories.component';
 import { CategoryApiService } from './services/category-api.service';
+import { CategoryBulkFormComponent } from './components/category-bulk-form/category-bulk-form.component';
 import { CategoryEditFormComponent } from './components/category-edit-form/category-edit-form.component';
 import { NO_FILTER } from './utils/category-helpers';
 import { TransactionApiService } from '@features/transactions/services/transaction-api.service';
@@ -44,7 +45,11 @@ describe('CategoriesComponent', () => {
   let mockCategoryApi: Mocked<
     Pick<
       CategoryApiService,
-      'getCategories' | 'createCategory' | 'updateCategory' | 'deleteCategory'
+      | 'getCategories'
+      | 'createCategory'
+      | 'updateCategory'
+      | 'deleteCategory'
+      | 'createCategoriesBatch'
     >
   >;
   let mockTransactionApi: Mocked<Pick<TransactionApiService, 'getCountsByCategory'>>;
@@ -75,6 +80,11 @@ describe('CategoriesComponent', () => {
       createCategory: vi.fn().mockReturnValue(of(99)),
       updateCategory: vi.fn().mockReturnValue(of(1)),
       deleteCategory: vi.fn().mockReturnValue(of(undefined)),
+      createCategoriesBatch: vi
+        .fn()
+        .mockReturnValue(
+          of({ createdCount: 3, createdParents: 1, createdSubcategories: 2, skipped: [] }),
+        ),
     };
     mockTransactionApi = { getCountsByCategory: vi.fn().mockReturnValue(of(counts)) };
     mockToast = { success: vi.fn(), error: vi.fn() };
@@ -534,6 +544,142 @@ describe('CategoriesComponent', () => {
 
       // assert & verify -- unticking the child drops the parent too
       expect(component.tickedIds().size).toBe(0);
+    });
+  });
+
+  describe('bulk add', () => {
+    const request = {
+      groups: [
+        { name: 'Fun', type: 'EXPENSE', color: '#3B82F6', subcategories: ['Games', 'Film'] },
+      ],
+    };
+    const bulkForm = (): CategoryBulkFormComponent =>
+      fixture.debugElement.query(By.directive(CategoryBulkFormComponent)).componentInstance;
+
+    it('should open the panel in bulk mode from the Add several button and close it again', () => {
+      // act
+      fixture.nativeElement.querySelector('[data-testid="add-several"] button').click();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.panelMode()).toBe('bulk');
+      expect(component.panelTitle()).toBe('Add several categories');
+      expect(fixture.nativeElement.querySelector('app-category-bulk-form')).toBeTruthy();
+
+      // act
+      component.onPanelClose();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.panelMode()).toBe('overview');
+      expect(fixture.nativeElement.querySelector('app-category-bulk-form')).toBeNull();
+    });
+
+    it('should create, toast the counts, reload and close when nothing was skipped', () => {
+      // arrange
+      component.startBulkAdd();
+      fixture.detectChanges();
+      mockCategoryApi.getCategories.mockClear();
+
+      // act
+      component.saveBulk(request);
+
+      // assert & verify
+      expect(mockCategoryApi.createCategoriesBatch).toHaveBeenCalledWith(request);
+      expect(mockToast.success).toHaveBeenCalledWith(
+        'Created 3 categories (1 parent, 2 subcategories)',
+      );
+      expect(mockCategoryApi.getCategories).toHaveBeenCalledTimes(1);
+      expect(component.panelMode()).toBe('overview');
+    });
+
+    it('should switch to the result view when names were skipped, and close on Done', () => {
+      // arrange
+      const skipped = [{ name: 'Games', parentName: 'Fun', reason: 'Already exists' }];
+      mockCategoryApi.createCategoriesBatch.mockReturnValue(
+        of({ createdCount: 1, createdParents: 0, createdSubcategories: 1, skipped }),
+      );
+      component.startBulkAdd();
+      fixture.detectChanges();
+
+      // act
+      component.saveBulk(request);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(mockToast.success).toHaveBeenCalledWith(
+        'Created 1 category (0 parents, 1 subcategory)',
+      );
+      expect(component.panelMode()).toBe('bulk');
+      expect(
+        fixture.nativeElement.querySelector('[data-testid="skipped-list"]').textContent,
+      ).toContain('Already exists');
+
+      // act
+      bulkForm().done.emit();
+      fixture.detectChanges();
+
+      // assert & verify -- no discard prompt for a finished batch
+      expect(mockConfirmationService.confirm).not.toHaveBeenCalled();
+      expect(component.panelMode()).toBe('overview');
+    });
+
+    it('should keep the panel and input and report the error when the request fails', () => {
+      // arrange
+      mockCategoryApi.createCategoriesBatch.mockReturnValue(
+        throwError(() => ({ error: { detail: 'Too many names.' } })),
+      );
+      component.startBulkAdd();
+      fixture.detectChanges();
+
+      // act
+      component.saveBulk(request);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(mockToast.error).toHaveBeenCalledWith('Too many names.');
+      expect(component.panelMode()).toBe('bulk');
+      expect(component.bulkResult()).toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid="bulk-error"]')).toBeTruthy();
+      expect(component.saving()).toBe(false);
+    });
+
+    it('should ask before discarding typed input, and not when untouched', () => {
+      // arrange
+      component.startBulkAdd();
+      fixture.detectChanges();
+
+      // act -- untouched
+      component.onPanelClose();
+
+      // assert & verify
+      expect(mockConfirmationService.confirm).not.toHaveBeenCalled();
+
+      // arrange
+      component.startBulkAdd();
+      fixture.detectChanges();
+      bulkForm().form.markAsDirty();
+
+      // act
+      component.onPanelClose();
+
+      // assert & verify
+      expect(mockConfirmationService.confirm).toHaveBeenCalledTimes(1);
+      expect(component.panelMode()).toBe('bulk');
+      confirmAccept();
+      expect(component.panelMode()).toBe('overview');
+    });
+
+    it('should stay in bulk mode on an empty page instead of jumping to the add form', () => {
+      // arrange
+      loadWith([]);
+
+      // act
+      component.startBulkAdd();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.panelMode()).toBe('bulk');
     });
   });
 

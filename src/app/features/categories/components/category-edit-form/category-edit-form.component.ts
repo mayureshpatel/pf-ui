@@ -33,7 +33,7 @@ import {
 import { CATEGORY_COLORS, getCategoryColor } from '@shared/utils/category.utils';
 import { parentOptions } from '../../utils/category-helpers';
 
-const COLOR_NAMES: string[] = [
+export const COLOR_NAMES: string[] = [
   'Blue',
   'Green',
   'Purple',
@@ -44,6 +44,35 @@ const COLOR_NAMES: string[] = [
   'Red',
   'Yellow',
   'Cyan',
+];
+
+export const CATEGORY_ICONS: string[] = [
+  'pi-shopping-cart',
+  'pi-home',
+  'pi-car',
+  'pi-money-bill',
+  'pi-briefcase',
+  'pi-heart',
+  'pi-bolt',
+  'pi-globe',
+  'pi-gift',
+  'pi-users',
+  'pi-book',
+  'pi-desktop',
+  'pi-phone',
+  'pi-wrench',
+  'pi-shield',
+  'pi-tag',
+  'pi-ticket',
+  'pi-wallet',
+  'pi-star',
+  'pi-key',
+];
+
+export const CATEGORY_TYPE_OPTIONS: { label: string; value: CategoryType }[] = [
+  { label: 'Expense', value: CategoryType.EXPENSE },
+  { label: 'Income', value: CategoryType.INCOME },
+  { label: 'Both', value: CategoryType.BOTH },
 ];
 
 const notBlank = (control: AbstractControl): ValidationErrors | null =>
@@ -87,33 +116,8 @@ export class CategoryEditFormComponent implements OnInit {
 
   readonly colors: string[] = CATEGORY_COLORS;
   readonly colorNames: string[] = COLOR_NAMES;
-  readonly icons: string[] = [
-    'pi-shopping-cart',
-    'pi-home',
-    'pi-car',
-    'pi-money-bill',
-    'pi-briefcase',
-    'pi-heart',
-    'pi-bolt',
-    'pi-globe',
-    'pi-gift',
-    'pi-users',
-    'pi-book',
-    'pi-desktop',
-    'pi-phone',
-    'pi-wrench',
-    'pi-shield',
-    'pi-tag',
-    'pi-ticket',
-    'pi-wallet',
-    'pi-star',
-    'pi-key',
-  ];
-  readonly typeOptions: { label: string; value: CategoryType }[] = [
-    { label: 'Expense', value: CategoryType.EXPENSE },
-    { label: 'Income', value: CategoryType.INCOME },
-    { label: 'Both', value: CategoryType.BOTH },
-  ];
+  readonly icons: string[] = CATEGORY_ICONS;
+  readonly typeOptions = CATEGORY_TYPE_OPTIONS;
 
   readonly form = new FormGroup({
     name: new FormControl<string>('', {

@@ -34,7 +34,13 @@ import { ButtonModule } from 'primeng/button';
 import { SkeletonModule } from 'primeng/skeleton';
 import { ConfirmationService } from 'primeng/api';
 
-import { Category, CategoryCreateRequest, CategoryUpdateRequest } from '@models/category.model';
+import {
+  Category,
+  CategoryBatchRequest,
+  CategoryBatchResult,
+  CategoryCreateRequest,
+  CategoryUpdateRequest,
+} from '@models/category.model';
 import { CategoryApiService } from './services/category-api.service';
 import { TransactionApiService } from '@features/transactions/services/transaction-api.service';
 import { ToastService } from '@core/services/toast.service';
@@ -45,6 +51,8 @@ import { CategoryFiltersComponent } from './components/category-filters/category
 import { CategoryTreeComponent } from './components/category-tree/category-tree.component';
 import { CategoryOverviewComponent } from './components/category-overview/category-overview.component';
 import { CategoryEditFormComponent } from './components/category-edit-form/category-edit-form.component';
+import { CategoryBulkFormComponent } from './components/category-bulk-form/category-bulk-form.component';
+import { categoryCount } from './utils/category-bulk';
 import {
   availableTypes,
   buildNodes,
@@ -61,7 +69,7 @@ import {
 } from './utils/category-helpers';
 
 /** What the docked panel is showing. */
-export type CategoryPanelMode = 'overview' | 'category' | 'add' | 'selection';
+export type CategoryPanelMode = 'overview' | 'category' | 'add' | 'bulk' | 'selection';
 
 /**
  * The Categories page: a filterable tree of categories beside an always-present panel. The panel
@@ -81,6 +89,7 @@ export type CategoryPanelMode = 'overview' | 'category' | 'add' | 'selection';
     CategoryTreeComponent,
     CategoryOverviewComponent,
     CategoryEditFormComponent,
+    CategoryBulkFormComponent,
   ],
   templateUrl: './categories.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -112,6 +121,10 @@ export class CategoriesComponent implements OnInit {
   readonly selectedCategoryId: WritableSignal<number | null> = signal(null);
   /** The parent to pre-select when adding from a parent's panel. */
   readonly addParentId: WritableSignal<number | null> = signal(null);
+  /** What the last bulk add skipped, shown in place of the form until Done; null while editing. */
+  readonly bulkResult: WritableSignal<CategoryBatchResult | null> = signal(null);
+  /** The message from a failed bulk add, kept beside the user's input. */
+  readonly bulkError: WritableSignal<string | null> = signal(null);
 
   readonly nodes: Signal<CategoryNode[]> = computed((): CategoryNode[] =>
     buildNodes(this.categories(), this.categories()),
@@ -170,6 +183,8 @@ export class CategoriesComponent implements OnInit {
     switch (this.panelMode()) {
       case 'add':
         return 'Add category';
+      case 'bulk':
+        return 'Add several categories';
       case 'category':
         return this.selectedCategory()?.name ?? 'Category';
       case 'selection':
@@ -192,10 +207,18 @@ export class CategoriesComponent implements OnInit {
   private focusReturn: HTMLElement | null = null;
   private loadSubscription: Subscription | null = null;
   private readonly editForm = viewChild<CategoryEditFormComponent>('editForm');
+  private readonly bulkForm = viewChild(CategoryBulkFormComponent);
+
+  /** Whether the bulk form (not its result view) is showing and can be submitted. */
+  readonly bulkEditing: Signal<boolean> = computed(
+    (): boolean => this.panelMode() === 'bulk' && this.bulkResult() === null,
+  );
+  /** Create is enabled only while the bulk form is valid. */
+  readonly bulkValid: Signal<boolean> = computed((): boolean => !!this.bulkForm()?.canSubmit());
 
   constructor() {
     effect((): void => {
-      if (this.isEmpty() && this.panelMode() !== 'add') {
+      if (this.isEmpty() && this.panelMode() !== 'add' && this.panelMode() !== 'bulk') {
         untracked((): void => this.panelMode.set('add'));
       }
     });
@@ -312,6 +335,17 @@ export class CategoriesComponent implements OnInit {
     });
   }
 
+  /** Opens the bulk add form in the panel. */
+  startBulkAdd(): void {
+    if (this.panelMode() === 'bulk') return;
+    this.confirmDiscardIfDirty((): void => {
+      this.bulkResult.set(null);
+      this.bulkError.set(null);
+      this.selectedCategoryId.set(null);
+      this.go('bulk');
+    });
+  }
+
   /** Back: add returns to the category it came from, everything else to the overview. */
   back(): void {
     const mode: CategoryPanelMode = this.panelMode();
@@ -347,7 +381,8 @@ export class CategoriesComponent implements OnInit {
 
   /** The panel's Save button: submits the form that is showing. */
   onPanelSave(): void {
-    this.editForm()?.submit();
+    if (this.panelMode() === 'bulk') this.bulkForm()?.submit();
+    else this.editForm()?.submit();
   }
 
   /** Saves the form: an update when a category is open, otherwise a create. */
@@ -389,6 +424,44 @@ export class CategoriesComponent implements OnInit {
           this.loadData();
         },
         error: (error: HttpErrorResponse): void => this.saveFailed(error),
+      });
+  }
+
+  /** Creates the groups in one request; a skipped name keeps the panel open on a result view. */
+  saveBulk(request: CategoryBatchRequest): void {
+    if (this.saving() || this.loading()) return;
+    this.saving.set(true);
+    this.bulkError.set(null);
+    this.categoryApi
+      .createCategoriesBatch(request)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize((): void => this.saving.set(false)),
+      )
+      .subscribe({
+        next: (result: CategoryBatchResult): void => {
+          const skipped: CategoryBatchResult['skipped'] = result.skipped ?? [];
+          if (result.createdCount > 0) {
+            this.toast.success(
+              `Created ${categoryCount(result.createdCount)} ` +
+                `(${result.createdParents} ${result.createdParents === 1 ? 'parent' : 'parents'}, ` +
+                `${result.createdSubcategories} ${result.createdSubcategories === 1 ? 'subcategory' : 'subcategories'})`,
+            );
+          }
+          this.bulkForm()?.form.markAsPristine();
+          if (skipped.length === 0) {
+            this.closePanel();
+          } else {
+            this.bulkResult.set({ ...result, skipped });
+          }
+          this.loadData();
+        },
+        error: (error: HttpErrorResponse): void => {
+          console.error('Error creating categories:', error);
+          const message: string = error.error?.detail || 'Failed to create categories.';
+          this.bulkError.set(message);
+          this.toast.error(message);
+        },
       });
   }
 
@@ -534,7 +607,8 @@ export class CategoriesComponent implements OnInit {
         const target: HTMLElement | null = this.focusReturn;
         if (mode === 'overview' && target?.isConnected) {
           target.focus();
-        } else {
+        } else if (mode !== 'bulk') {
+          // the bulk form puts focus on its own first field
           this.panel()?.focus();
         }
         if (mode === 'overview') this.focusReturn = null;
@@ -604,7 +678,10 @@ export class CategoriesComponent implements OnInit {
   /** Runs an action that would replace a form, after asking when that form has unsaved changes. */
   private confirmDiscardIfDirty(proceed: () => void): void {
     const mode: CategoryPanelMode = this.panelMode();
-    const dirty: boolean = (mode === 'category' || mode === 'add') && !!this.editForm()?.form.dirty;
+    const dirty: boolean =
+      mode === 'bulk'
+        ? this.bulkEditing() && !!this.bulkForm()?.form.dirty
+        : (mode === 'category' || mode === 'add') && !!this.editForm()?.form.dirty;
     if (!dirty) {
       proceed();
       return;
