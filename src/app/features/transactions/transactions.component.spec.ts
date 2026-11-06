@@ -1420,6 +1420,18 @@ describe('TransactionsComponent', () => {
       const shell = (): Transaction =>
         row(2, { description: 'SHELL OIL 57444', category: null as never });
 
+      // the row actions live in the table, which is hidden below the sm breakpoint (the cards
+      // show there), so these focus tests run at a desktop width
+      const before = { width: window.innerWidth, height: window.innerHeight };
+      beforeEach(async () => {
+        const { page } = await import('vitest/browser');
+        await page.viewport(1024, 768);
+      });
+      afterEach(async () => {
+        const { page } = await import('vitest/browser');
+        await page.viewport(before.width, before.height);
+      });
+
       const open = (): void => {
         mockCategoryApi.getGroupedCategories.mockReturnValue(of(groups));
         openAt({ categoryName: 'null' }, [netflix(), shell()]);

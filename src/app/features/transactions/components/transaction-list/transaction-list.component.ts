@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -23,14 +24,14 @@ interface SortColumn {
 }
 
 /**
- * The transaction table: day groups with daily totals when sorted by date, a flat list otherwise,
+ * The transaction table (stacked cards below the `sm` breakpoint, sharing the cell content): day groups with daily totals when sorted by date, a flat list otherwise,
  * row selection (including shift-click ranges), sortable headers, and the in-place "Choose
  * category" pill. It renders what it is given; the host owns paging, loading and persistence.
  */
 @Component({
   selector: 'app-transaction-list',
   standalone: true,
-  imports: [FormatTransactionTypeAmountPipe, FormatCurrencyPipe],
+  imports: [FormatTransactionTypeAmountPipe, FormatCurrencyPipe, NgTemplateOutlet],
   providers: [FormatCurrencyPipe],
   templateUrl: './transaction-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -131,6 +132,10 @@ export class TransactionListComponent {
     return this.selectedIds().includes(id);
   }
 
+  hasTags(txn: Transaction): boolean {
+    return (txn.tags?.length ?? 0) > 0;
+  }
+
   isTransfer(txn: Transaction): boolean {
     return (
       txn.type === TransactionType.TRANSFER ||
@@ -144,6 +149,15 @@ export class TransactionListComponent {
     const direction: string =
       field === this.sortField() ? (this.sortDirection() === 'desc' ? 'asc' : 'desc') : 'desc';
     this.sortChange.emit(`${field},${direction}`);
+  }
+
+  /** The phone sort bar's field picker: a new field starts descending, Date returns to grouping. */
+  onCardSortField(field: string): void {
+    if (field === 'date') {
+      this.onShowByDate();
+    } else {
+      this.onSort(field);
+    }
   }
 
   /** Returns to the date-grouped view, newest first. */

@@ -36,7 +36,54 @@
     </div>
   }
 
-  <table class="w-full text-sm" aria-label="Transactions">
+  <!-- below sm the cards have no column headers, so sorting moves to this bar -->
+  <div
+    data-testid="card-sort-bar"
+    class="flex items-center gap-3 border-b border-surface-200 px-3 py-2 text-sm sm:hidden dark:border-surface-800"
+  >
+    <input
+      type="checkbox"
+      data-testid="card-header-checkbox"
+      aria-label="Select all transactions on this page"
+      [checked]="allSelected()"
+      [indeterminate]="someSelected()"
+      (click)="onHeaderCheckbox()"
+    />
+    <label class="flex min-w-0 flex-1 items-center gap-2 text-muted-color">
+      Sort by
+      <select
+        data-testid="card-sort-field"
+        class="min-w-0 flex-1 rounded-lg border border-surface-300 bg-surface-0 px-2 py-1 text-surface-900 dark:border-surface-700 dark:bg-surface-900 dark:text-surface-0"
+        (change)="onCardSortField($any($event.target).value)"
+      >
+        <option value="date" [selected]="sortField() === 'date'">Date</option>
+        @for (column of visibleColumns(); track column.field) {
+          <option [value]="column.field" [selected]="sortField() === column.field">
+            {{ column.label }}
+          </option>
+        }
+      </select>
+    </label>
+    <button
+      type="button"
+      data-testid="card-sort-direction"
+      class="inline-flex min-h-8 min-w-8 cursor-pointer items-center justify-center rounded-md text-muted-color hover:bg-surface-100 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary-700 dark:hover:bg-surface-800 dark:focus-visible:outline-primary-400"
+      [attr.aria-label]="
+        sortDirection() === 'asc'
+          ? 'Sorted ascending. Switch to descending'
+          : 'Sorted descending. Switch to ascending'
+      "
+      (click)="onSort(sortField())"
+    >
+      <i
+        class="pi text-sm"
+        aria-hidden="true"
+        [class]="sortDirection() === 'asc' ? 'pi-arrow-up' : 'pi-arrow-down'"
+      ></i>
+    </button>
+  </div>
+
+  <table class="hidden w-full text-sm sm:table" aria-label="Transactions">
     <thead>
       <tr class="text-left text-muted-color">
         <th scope="col" class="w-10 px-2 py-2 sm:px-3">
@@ -108,22 +155,7 @@
               [attr.colspan]="columnCount()"
               class="px-2 py-2 sm:px-3 text-left font-semibold"
             >
-              <span class="flex items-center justify-between">
-                <span>
-                  {{ group.label }}
-                  @if (group.partial) {
-                    <span class="font-normal text-muted-color">(partial)</span>
-                  }
-                </span>
-                <span
-                  class="tabular-nums"
-                  [class.text-emerald-700]="group.net > 0"
-                  [class.dark:text-emerald-400]="group.net > 0"
-                >
-                  {{ group.net > 0 ? '+' : group.net < 0 ? '-' : ''
-                  }}{{ (group.net < 0 ? -group.net : group.net) | formatCurrency }}
-                </span>
-              </span>
+              <ng-container *ngTemplateOutlet="dayHeading; context: { $implicit: group }" />
             </th>
           </tr>
         }
@@ -135,12 +167,8 @@
             (click)="openTransaction.emit(txn)"
           >
             <td class="px-2 py-2 sm:px-3" (click)="$event.stopPropagation()">
-              <input
-                type="checkbox"
-                data-testid="row-checkbox"
-                [attr.aria-label]="rowLabel(txn)"
-                [checked]="isSelected(txn.id)"
-                (click)="onRowCheckbox(indexOf(txn), $event)"
+              <ng-container
+                *ngTemplateOutlet="rowCheckbox; context: { $implicit: txn, card: false }"
               />
             </td>
             @if (!grouped()) {
@@ -149,36 +177,9 @@
               </td>
             }
             <td class="px-2 py-2 sm:px-3">
-              <!-- the rule action goes under the name on a phone and beside the panel, so it never
-                   adds a column width to a list that has none to spare -->
-              <span
-                class="flex"
-                [class]="
-                  compact()
-                    ? 'flex-col items-start gap-0.5'
-                    : 'flex-col items-start gap-0.5 sm:flex-row sm:items-center sm:gap-1'
-                "
-              >
-                <button
-                  type="button"
-                  data-testid="open-transaction"
-                  class="max-w-28 min-w-25 cursor-pointer wrap-anywhere text-left font-medium text-surface-900 sm:max-w-none sm:min-w-0 sm:wrap-normal dark:text-surface-0"
-                  (click)="$event.stopPropagation(); openTransaction.emit(txn)"
-                >
-                  {{ txn.merchant?.name ?? txn.description }}
-                </button>
-                <button
-                  type="button"
-                  data-testid="create-rule"
-                  [class]="compact() ? '' : 'sm:-mt-1.5'"
-                  class="-mb-1.5 inline-flex min-h-8 min-w-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-color hover:bg-surface-100 hover:text-surface-900 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary-700 dark:hover:bg-surface-800 dark:hover:text-surface-0 dark:focus-visible:outline-primary-400"
-                  title="Create rule"
-                  [attr.aria-label]="'Create rule from ' + txn.description"
-                  (click)="onCreateRule(txn, $event)"
-                >
-                  <i class="pi pi-bolt text-sm" aria-hidden="true"></i>
-                </button>
-              </span>
+              <ng-container
+                *ngTemplateOutlet="nameCell; context: { $implicit: txn, card: false }"
+              />
             </td>
             @if (!compact()) {
               <td class="hidden max-w-64 truncate px-2 py-2 sm:px-3 text-muted-color sm:table-cell">
@@ -186,50 +187,19 @@
               </td>
             }
             <td class="px-2 py-2 sm:px-3">
-              @if (isTransfer(txn)) {
-                <span
-                  data-testid="transfer-pill"
-                  class="rounded-full bg-surface-100 px-2 py-0.5 text-xs text-surface-700 dark:bg-surface-800 dark:text-surface-200"
-                  >Transfer</span
-                >
-              } @else if (!txn.category) {
-                <button
-                  type="button"
-                  data-testid="choose-category"
-                  class="cursor-pointer rounded-full border border-dashed border-amber-500 sm:whitespace-nowrap bg-amber-50 px-2.5 py-0.5 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-100"
-                  (click)="onPickCategory(txn, $event)"
-                >
-                  Choose category
-                </button>
-              } @else {
-                <span class="inline-flex items-center gap-1.5">
-                  <i
-                    class="inline-block h-2 w-2 rounded-full"
-                    [class]="txn.category.color || 'bg-surface-300'"
-                  ></i>
-                  {{ txn.category.name }}
-                </span>
-              }
+              <ng-container
+                *ngTemplateOutlet="categoryCell; context: { $implicit: txn, card: false }"
+              />
             </td>
             <td class="hidden px-2 py-2 sm:px-3 text-muted-color sm:table-cell">
               {{ txn.account.name }}
             </td>
-            <td
-              class="px-2 py-2 sm:px-3 text-right font-semibold tabular-nums"
-              [class.text-emerald-700]="txn.type === TransactionType.INCOME"
-              [class.dark:text-emerald-400]="txn.type === TransactionType.INCOME"
-              [class.text-surface-500]="isTransfer(txn)"
-            >
-              {{ txn.amount | formatTransactionTypeAmount: txn.type }}
+            <td class="px-2 py-2 sm:px-3 text-right font-semibold tabular-nums">
+              <ng-container *ngTemplateOutlet="amountText; context: { $implicit: txn }" />
             </td>
             @if (!compact()) {
               <td class="hidden px-2 py-2 sm:px-3 sm:table-cell">
-                @for (tag of txn.tags; track tag.id) {
-                  <span
-                    class="mr-1 rounded-full border border-surface-200 bg-surface-50 px-2 text-xs dark:border-surface-700 dark:bg-surface-800"
-                    >{{ tag.name }}</span
-                  >
-                }
+                <ng-container *ngTemplateOutlet="tagChips; context: { $implicit: txn }" />
               </td>
             }
           </tr>
@@ -237,4 +207,194 @@
       }
     </tbody>
   </table>
+
+  <div data-testid="card-list" class="sm:hidden">
+    @if (loading() && transactions().length === 0) {
+      <ul>
+        @for (row of skeletonRows; track row) {
+          <li
+            data-testid="card-skeleton-row"
+            class="border-t border-surface-100 px-3 py-4 dark:border-surface-800"
+          >
+            <div class="h-4 animate-pulse rounded bg-surface-200 dark:bg-surface-700"></div>
+          </li>
+        }
+      </ul>
+    }
+
+    @for (group of groups(); track group.key) {
+      <section>
+        @if (grouped()) {
+          <h3
+            data-testid="card-day-heading"
+            class="bg-surface-100 px-3 py-2 text-left text-sm font-semibold dark:bg-surface-800"
+          >
+            <ng-container *ngTemplateOutlet="dayHeading; context: { $implicit: group }" />
+          </h3>
+        }
+        <ul>
+          @for (txn of group.transactions; track txn.id) {
+            <li>
+              <!-- the whole card opens the transaction for a pointer; the name is the real button
+                   that keyboard and screen reader users reach, as in the table row -->
+              <div
+                role="presentation"
+                data-testid="card"
+                class="flex cursor-pointer items-start gap-3 border-t border-surface-100 px-3 py-3 text-sm hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-800/40"
+                [class]="isSelected(txn.id) ? 'bg-primary-50 dark:bg-primary-900/30' : ''"
+                (click)="openTransaction.emit(txn)"
+              >
+                <span role="presentation" class="-m-1 p-1 pt-2" (click)="$event.stopPropagation()">
+                  <ng-container
+                    *ngTemplateOutlet="rowCheckbox; context: { $implicit: txn, card: true }"
+                  />
+                </span>
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-start justify-between gap-3">
+                    <ng-container
+                      *ngTemplateOutlet="nameCell; context: { $implicit: txn, card: true }"
+                    />
+                    <span data-testid="card-amount" class="shrink-0 font-semibold tabular-nums">
+                      <ng-container *ngTemplateOutlet="amountText; context: { $implicit: txn }" />
+                    </span>
+                  </div>
+                  <div
+                    class="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-color"
+                  >
+                    <span class="tabular-nums">{{ txn.date.substring(0, 10) }}</span>
+                    <ng-container
+                      *ngTemplateOutlet="categoryCell; context: { $implicit: txn, card: true }"
+                    />
+                    <span data-testid="card-account">{{ txn.account.name }}</span>
+                  </div>
+                  @if (hasTags(txn)) {
+                    <div class="mt-1.5 flex flex-wrap gap-y-1" data-testid="card-tags">
+                      <ng-container *ngTemplateOutlet="tagChips; context: { $implicit: txn }" />
+                    </div>
+                  }
+                </div>
+              </div>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+  </div>
 </div>
+
+<!-- Cell content shared by the table row and the card, so the two layouts cannot drift apart. The
+     card variants carry a card- test id prefix because both layouts are in the DOM at once. -->
+<ng-template #rowCheckbox let-txn let-card="card">
+  <input
+    type="checkbox"
+    [attr.data-testid]="card ? 'card-row-checkbox' : 'row-checkbox'"
+    [attr.aria-label]="rowLabel(txn)"
+    [checked]="isSelected(txn.id)"
+    (click)="onRowCheckbox(indexOf(txn), $event)"
+  />
+</ng-template>
+
+<ng-template #nameCell let-txn let-card="card">
+  <!-- the rule action goes under the name on a phone table and beside the panel, so it never
+       adds a column width to a list that has none to spare; a card has the room to put it beside the first line -->
+  <span
+    class="flex"
+    [class]="
+      card
+        ? 'min-w-0 items-start gap-1'
+        : compact()
+          ? 'flex-col items-start gap-0.5'
+          : 'flex-col items-start gap-0.5 sm:flex-row sm:items-center sm:gap-1'
+    "
+  >
+    <button
+      type="button"
+      [attr.data-testid]="card ? 'card-open-transaction' : 'open-transaction'"
+      class="cursor-pointer text-left font-medium text-surface-900 dark:text-surface-0"
+      [class]="
+        card
+          ? 'min-w-0 wrap-anywhere'
+          : 'max-w-28 min-w-25 wrap-anywhere sm:max-w-none sm:min-w-0 sm:wrap-normal'
+      "
+      (click)="$event.stopPropagation(); openTransaction.emit(txn)"
+    >
+      {{ txn.merchant?.name ?? txn.description }}
+    </button>
+    <button
+      type="button"
+      [attr.data-testid]="card ? 'card-create-rule' : 'create-rule'"
+      [class]="card ? '-mt-1.5 -mb-1.5' : compact() ? '-mb-1.5' : '-mb-1.5 sm:-mt-1.5'"
+      class="inline-flex min-h-8 min-w-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-color hover:bg-surface-100 hover:text-surface-900 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary-700 dark:hover:bg-surface-800 dark:hover:text-surface-0 dark:focus-visible:outline-primary-400"
+      title="Create rule"
+      [attr.aria-label]="'Create rule from ' + txn.description"
+      (click)="onCreateRule(txn, $event)"
+    >
+      <i class="pi pi-bolt text-sm" aria-hidden="true"></i>
+    </button>
+  </span>
+</ng-template>
+
+<ng-template #categoryCell let-txn let-card="card">
+  @if (isTransfer(txn)) {
+    <span
+      [attr.data-testid]="card ? 'card-transfer-pill' : 'transfer-pill'"
+      class="rounded-full bg-surface-100 px-2 py-0.5 text-xs text-surface-700 dark:bg-surface-800 dark:text-surface-200"
+      >Transfer</span
+    >
+  } @else if (!txn.category) {
+    <button
+      type="button"
+      [attr.data-testid]="card ? 'card-choose-category' : 'choose-category'"
+      class="cursor-pointer rounded-full border border-dashed border-amber-500 sm:whitespace-nowrap bg-amber-50 px-2.5 py-0.5 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-100"
+      (click)="onPickCategory(txn, $event)"
+    >
+      Choose category
+    </button>
+  } @else {
+    <span class="inline-flex items-center gap-1.5">
+      <i
+        class="inline-block h-2 w-2 rounded-full"
+        [class]="txn.category.color || 'bg-surface-300'"
+      ></i>
+      {{ txn.category.name }}
+    </span>
+  }
+</ng-template>
+
+<ng-template #amountText let-txn>
+  <span
+    [class.text-emerald-700]="txn.type === TransactionType.INCOME"
+    [class.dark:text-emerald-400]="txn.type === TransactionType.INCOME"
+    [class.text-surface-500]="isTransfer(txn)"
+  >
+    {{ txn.amount | formatTransactionTypeAmount: txn.type }}
+  </span>
+</ng-template>
+
+<ng-template #tagChips let-txn>
+  @for (tag of txn.tags; track tag.id) {
+    <span
+      class="mr-1 rounded-full border border-surface-200 bg-surface-50 px-2 text-xs dark:border-surface-700 dark:bg-surface-800"
+      >{{ tag.name }}</span
+    >
+  }
+</ng-template>
+
+<ng-template #dayHeading let-group>
+  <span class="flex items-center justify-between">
+    <span>
+      {{ group.label }}
+      @if (group.partial) {
+        <span class="font-normal text-muted-color">(partial)</span>
+      }
+    </span>
+    <span
+      class="tabular-nums"
+      [class.text-emerald-700]="group.net > 0"
+      [class.dark:text-emerald-400]="group.net > 0"
+    >
+      {{ group.net > 0 ? '+' : group.net < 0 ? '-' : ''
+      }}{{ (group.net < 0 ? -group.net : group.net) | formatCurrency }}
+    </span>
+  </span>
+</ng-template>
