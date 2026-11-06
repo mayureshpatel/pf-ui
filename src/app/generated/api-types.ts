@@ -536,6 +536,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Refresh the session
+         * @description Exchanges the refresh cookie for a new access token
+         */
+        post: operations["refresh"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign out
+         * @description Revokes the refresh token and clears the cookie; always 204
+         */
+        post: operations["logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/authenticate": {
         parameters: {
             query?: never;
@@ -1755,6 +1795,7 @@ export interface components {
         AuthenticationRequest: {
             username: string;
             password: string;
+            rememberMe?: boolean;
         };
         AccountCreateRequest: {
             name: string;
@@ -3474,6 +3515,57 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["AuthenticationResponse"];
                 };
+            };
+        };
+    };
+    refresh: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                pf_refresh?: string;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Session renewed, new token returned */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": Record<string, never>;
+                };
+            };
+            /** @description Missing, invalid, expired or revoked refresh cookie, or the user no longer exists */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": Record<string, never>;
+                };
+            };
+        };
+    };
+    logout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                pf_refresh?: string;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Signed out (also when there was no session) */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
