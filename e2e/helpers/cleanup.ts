@@ -39,15 +39,11 @@ export function takeTracked(context: BrowserContext): Created[] {
   return list;
 }
 
-/** The shared user's token from the context's saved session, or null (a freshly registered user keeps its own, discarded with the context). */
+/** A fresh access token for the context's session (exchanged from the refresh cookie, PF-899), or null when the context has no valid session. */
 async function sharedUserToken(context: BrowserContext): Promise<string | null> {
-  const state = await context.storageState();
-  for (const origin of state.origins) {
-    const find = (key: string) => origin.localStorage.find((item) => item.name === key)?.value;
-    if (find('pf_storage_type') === 'local' && find('pf_auth_token'))
-      return find('pf_auth_token') ?? null;
-  }
-  return null;
+  const response = await context.request.post(`${API_URL}/auth/refresh`).catch(() => null);
+  if (!response?.ok()) return null;
+  return ((await response.json()) as { token: string }).token;
 }
 
 async function remove(
