@@ -45,6 +45,12 @@ describe('TransactionListComponent', () => {
   const all = <T extends HTMLElement>(selector: string): T[] =>
     Array.from(fixture.nativeElement.querySelectorAll(selector));
 
+  // the table and the cards are both in the DOM; each is checked on its own
+  const ruleButtons = (scope = 'table'): HTMLButtonElement[] =>
+    all<HTMLButtonElement>(`${scope} button`).filter((b) =>
+      (b.getAttribute('aria-label') ?? '').startsWith('Create rule from'),
+    );
+
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [TransactionListComponent],
@@ -121,11 +127,6 @@ describe('TransactionListComponent', () => {
   });
 
   describe('Create rule action', () => {
-    const ruleButtons = (): HTMLButtonElement[] =>
-      all<HTMLButtonElement>('button').filter((b) =>
-        (b.getAttribute('aria-label') ?? '').startsWith('Create rule from'),
-      );
-
     it('should offer Create rule on each row, named after its raw description', () => {
       // act
       render([
@@ -174,10 +175,10 @@ describe('TransactionListComponent', () => {
       const { page } = await import('vitest/browser');
       const before = { width: window.innerWidth, height: window.innerHeight };
       document.body.appendChild(fixture.nativeElement);
-      const check = (): void => {
-        const action = ruleButtons()[0].getBoundingClientRect();
+      const check = (scope: string, merchantId: string): void => {
+        const action = ruleButtons(scope)[0].getBoundingClientRect();
         const merchant = all<HTMLButtonElement>(
-          '[data-testid="open-transaction"]',
+          `[data-testid="${merchantId}"]`,
         )[0].getBoundingClientRect();
         expect(action.width).toBeGreaterThanOrEqual(32);
         expect(action.height).toBeGreaterThanOrEqual(32);
@@ -191,24 +192,32 @@ describe('TransactionListComponent', () => {
 
       try {
         // act -- desktop
+        await page.viewport(1024, 768);
         render([txn({ id: 1, description: 'NETFLIX.COM 866-579' })]);
 
         // assert & verify
-        check();
+        check('table', 'open-transaction');
 
-        // act -- a phone, with the list compacted beside the panel
-        await page.viewport(375, 812);
+        // act -- the narrowest table, compacted beside the panel
+        await page.viewport(640, 812);
         render([txn({ id: 1, description: 'NETFLIX.COM 866-579' })], { compact: true });
 
         // assert & verify
-        check();
+        check('table', 'open-transaction');
+
+        // act -- a phone shows cards
+        await page.viewport(375, 812);
+        render([txn({ id: 1, description: 'NETFLIX.COM 866-579' })]);
+
+        // assert & verify
+        check('[data-testid="card-list"]', 'card-open-transaction');
       } finally {
         await page.viewport(before.width, before.height);
         fixture.nativeElement.remove();
       }
     });
 
-    it('should not widen the list past a phone screen, so Amount stays in view', async () => {
+    it('should not widen the phone cards past the screen, so Amount stays in view', async () => {
       // arrange -- the list's width on a 375px phone (page gutters taken off)
       render([]); // inputs are set before the first await lets the page render
       const { page } = await import('vitest/browser');
@@ -225,24 +234,30 @@ describe('TransactionListComponent', () => {
           category: null as never,
           amount: 2000,
         }),
-        txn({ id: 2, description: 'TST*BROOKLYN BAGEL & COFFEE CO', merchant: null as never }),
+        txn({
+          id: 2,
+          description: 'TST*BROOKLYN BAGEL & COFFEE CO',
+          merchant: { id: 8, name: 'Averyveryverylongmerchantnamewithoutanyspaces' } as never,
+        }),
         txn({
           id: 3,
           merchant: { id: 7, name: 'Wholefoodsmarketplace' } as never,
           amount: 1234.56,
+          tags: [
+            { id: 1, name: 'weekly' },
+            { id: 2, name: 'groceries' },
+          ] as never,
         }),
       ];
       const check = (): void => {
-        const wrapper = fixture.nativeElement.querySelector('table').parentElement as HTMLElement;
-        const table = fixture.nativeElement.querySelector('table') as HTMLTableElement;
-        expect(ruleButtons().length).toBe(3);
-        expect(table.scrollWidth).toBeLessThanOrEqual(wrapper.clientWidth);
+        const wrapper = fixture.nativeElement.firstElementChild as HTMLElement;
+        expect(ruleButtons('[data-testid="card-list"]').length).toBe(3);
         expect(wrapper.scrollWidth).toBeLessThanOrEqual(wrapper.clientWidth);
         const right = wrapper.getBoundingClientRect().right;
-        all<HTMLTableCellElement>('tbody td.text-right').forEach((amount) =>
+        all('[data-testid="card-amount"]').forEach((amount) =>
           expect(amount.getBoundingClientRect().right).toBeLessThanOrEqual(right + 0.5),
         );
-        ruleButtons().forEach((b) => {
+        ruleButtons('[data-testid="card-list"]').forEach((b) => {
           expect(b.getBoundingClientRect().width).toBeGreaterThanOrEqual(32);
           expect(b.getBoundingClientRect().height).toBeGreaterThanOrEqual(32);
         });
@@ -257,7 +272,7 @@ describe('TransactionListComponent', () => {
         // assert & verify
         check();
 
-        // act -- compacted beside the panel
+        // act -- a phone with the panel open renders the same cards
         render(rows, { compact: true });
 
         // assert & verify
@@ -296,7 +311,9 @@ describe('TransactionListComponent', () => {
       const opened = vi.fn();
       component.createRule.subscribe(created);
       component.openTransaction.subscribe(opened);
-      const { userEvent } = await import('vitest/browser');
+      const { page, userEvent } = await import('vitest/browser');
+      const before = { width: window.innerWidth, height: window.innerHeight };
+      await page.viewport(1024, 768); // the table is hidden on a phone, where the cards show
       all<HTMLButtonElement>('[data-testid="open-transaction"]')[0].focus();
 
       // act
@@ -307,6 +324,7 @@ describe('TransactionListComponent', () => {
       expect(document.activeElement).toBe(ruleButtons()[0]);
       expect(created).toHaveBeenCalledWith(rows[0]);
       expect(opened).not.toHaveBeenCalled();
+      await page.viewport(before.width, before.height);
       fixture.nativeElement.remove();
     });
   });
@@ -464,7 +482,7 @@ describe('TransactionListComponent', () => {
     expect(headers).not.toContain('Description');
     expect(headers).not.toContain('Tags');
     expect(headers).toContain('Amount');
-    expect(fixture.nativeElement.textContent).not.toContain('weekly');
+    expect(fixture.nativeElement.querySelector('table').textContent).not.toContain('weekly');
   });
 
   it('should show every column when not compact', () => {
@@ -527,5 +545,310 @@ describe('TransactionListComponent', () => {
     const wrapper = fixture.nativeElement.firstElementChild as HTMLElement;
     expect(wrapper.getAttribute('aria-busy')).not.toBe('true');
     expect(wrapper.className).not.toContain('opacity-60');
+  });
+
+  describe('stacked cards below sm', () => {
+    const cards = (): HTMLElement[] => all('[data-testid="card"]');
+    const text = (el: Element): string => el.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+
+    it('should render one card per transaction with merchant, amount, date, category and account', () => {
+      // act
+      render([
+        txn({
+          id: 1,
+          amount: 42.5,
+          date: '2026-10-17T00:00:00Z',
+          description: 'WHOLEFDS #123',
+          account: { id: 1, name: 'Checking' } as never,
+        }),
+      ]);
+
+      // assert & verify
+      expect(cards().length).toBe(1);
+      const card = text(cards()[0]);
+      expect(card).toContain('Whole Foods');
+      expect(card).toContain('-$42.50');
+      expect(card).toContain('2026-10-17');
+      expect(card).toContain('Groceries');
+      expect(card).toContain('Checking');
+    });
+
+    it('should fall back to the description when there is no merchant', () => {
+      // act
+      render([txn({ id: 1, merchant: null as never, description: 'Balance Reconciliation' })]);
+
+      // assert & verify
+      expect(text(all('[data-testid="card-open-transaction"]')[0])).toBe('Balance Reconciliation');
+    });
+
+    it('should mark a transfer with the Transfer pill and a grey amount', () => {
+      // act
+      render([txn({ id: 1, type: TransactionType.TRANSFER, category: null as never })]);
+
+      // assert & verify
+      expect(all('[data-testid="card-transfer-pill"]').length).toBe(1);
+      expect(all('[data-testid="card-choose-category"]').length).toBe(0);
+      expect(cards()[0].querySelector('.text-surface-500')).not.toBeNull();
+    });
+
+    it('should show tag chips only on cards that have tags, even in compact mode', () => {
+      // act
+      render(
+        [
+          txn({
+            id: 1,
+            tags: [
+              { id: 1, name: 'weekly' },
+              { id: 2, name: 'fun' },
+            ] as never,
+          }),
+          txn({ id: 2 }),
+        ],
+        { compact: true },
+      );
+
+      // assert & verify
+      expect(all('[data-testid="card-tags"]').length).toBe(1);
+      expect(text(all('[data-testid="card-tags"]')[0])).toBe('weeklyfun');
+    });
+
+    it('should offer Choose category on an uncategorized card without opening it', () => {
+      // arrange
+      const rows = [txn({ id: 1, category: null as never })];
+      render(rows);
+      const opened = vi.fn();
+      const picked = vi.fn();
+      component.openTransaction.subscribe(opened);
+      component.pickCategory.subscribe(picked);
+
+      // act
+      all<HTMLButtonElement>('[data-testid="card-choose-category"]')[0].click();
+
+      // assert & verify
+      expect(picked).toHaveBeenCalledWith(rows[0]);
+      expect(opened).not.toHaveBeenCalled();
+    });
+
+    it('should open a transaction when its card is activated, but not from the checkbox', () => {
+      // arrange
+      const rows = [txn({ id: 1 }), txn({ id: 2 })];
+      render(rows);
+      const opened = vi.fn();
+      component.openTransaction.subscribe(opened);
+
+      // act
+      cards()[1].click();
+      all<HTMLInputElement>('[data-testid="card-row-checkbox"]')[0].click();
+      all<HTMLButtonElement>('[data-testid="card-open-transaction"]')[0].click();
+
+      // assert & verify -- the name button opens once (its click does not also reach the card)
+      expect(opened.mock.calls.map((c) => c[0])).toEqual([rows[1], rows[0]]);
+    });
+
+    it('should start a rule from a card without opening or selecting it', () => {
+      // arrange
+      const rows = [txn({ id: 1, description: 'NETFLIX.COM' })];
+      render(rows);
+      const created = vi.fn();
+      const opened = vi.fn();
+      component.createRule.subscribe(created);
+      component.openTransaction.subscribe(opened);
+
+      // act
+      ruleButtons('[data-testid="card-list"]')[0].click();
+
+      // assert & verify
+      expect(created).toHaveBeenCalledWith(rows[0]);
+      expect(opened).not.toHaveBeenCalled();
+    });
+
+    it('should select with the card checkbox, name it like the row checkbox, and select a shift-click range', () => {
+      // arrange
+      render([txn({ id: 1 }), txn({ id: 2 }), txn({ id: 3 }), txn({ id: 4 })], {
+        selectedIds: [4],
+      });
+      const changed = vi.fn();
+      component.selectionChange.subscribe(changed);
+      const boxes = all<HTMLInputElement>('[data-testid="card-row-checkbox"]');
+
+      // act
+      boxes[0].click();
+      boxes[2].dispatchEvent(new MouseEvent('click', { shiftKey: true, bubbles: true }));
+
+      // assert & verify
+      expect(boxes[0].getAttribute('aria-label')).toBe('Select Whole Foods, $10.00, 2026-10-17');
+      expect(changed).toHaveBeenNthCalledWith(1, [4, 1]);
+      expect(changed).toHaveBeenLastCalledWith([4, 1, 2, 3]);
+    });
+
+    it('should give a selected card the selected background, and check its checkbox', () => {
+      // act
+      render([txn({ id: 1 }), txn({ id: 2 })], { selectedIds: [1] });
+
+      // assert & verify
+      expect(cards()[0].className).toContain('bg-primary-50');
+      expect(cards()[0].className).toContain('dark:bg-primary-900/30');
+      expect(cards()[1].className).not.toContain('bg-primary-50');
+      const boxes = all<HTMLInputElement>('[data-testid="card-row-checkbox"]');
+      expect([boxes[0].checked, boxes[1].checked]).toEqual([true, false]);
+    });
+
+    it('should keep the day headings and select the whole page from the card sort bar', () => {
+      // arrange
+      render([txn({ id: 1, date: '2026-10-17' }), txn({ id: 2, date: '2026-10-15' })]);
+      const changed = vi.fn();
+      component.selectionChange.subscribe(changed);
+
+      // act
+      all<HTMLInputElement>('[data-testid="card-header-checkbox"]')[0].click();
+
+      // assert & verify
+      expect(all('[data-testid="card-day-heading"]').length).toBe(2);
+      expect(text(all('[data-testid="card-day-heading"]')[0])).toBe(
+        text(all('[data-testid="day-heading"]')[0]),
+      );
+      expect(changed).toHaveBeenLastCalledWith([1, 2]);
+    });
+
+    it('should list cards flat, with no day headings, when sorted by something other than date', () => {
+      // act
+      render([txn({ id: 1 }), txn({ id: 2 })], { sort: 'amount,desc' });
+
+      // assert & verify
+      expect(all('[data-testid="card-day-heading"]').length).toBe(0);
+      expect(cards().length).toBe(2);
+    });
+
+    describe('sort bar', () => {
+      const field = (): HTMLSelectElement =>
+        all<HTMLSelectElement>('[data-testid="card-sort-field"]')[0];
+      const direction = (): HTMLButtonElement =>
+        all<HTMLButtonElement>('[data-testid="card-sort-direction"]')[0];
+
+      it('should offer the same sorts as the table headers, plus Date', () => {
+        // act
+        render([txn({ id: 1 })]);
+
+        // assert & verify
+        expect(Array.from(field().options).map((o) => o.textContent?.trim())).toEqual([
+          'Date',
+          'Description',
+          'Category',
+          'Account',
+          'Amount',
+        ]);
+        expect(field().value).toBe('date');
+      });
+
+      it('should drop Description in compact mode, as the table does', () => {
+        // act
+        render([txn({ id: 1 })], { compact: true });
+
+        // assert & verify
+        expect(Array.from(field().options).map((o) => o.textContent?.trim())).not.toContain(
+          'Description',
+        );
+      });
+
+      it('should sort by a chosen field, starting descending, and back to Date', () => {
+        // arrange
+        render([txn({ id: 1 })], { sort: 'amount,asc' });
+        const sorted = vi.fn();
+        component.sortChange.subscribe(sorted);
+        expect(field().value).toBe('amount');
+
+        // act
+        field().value = 'category.name';
+        field().dispatchEvent(new Event('change'));
+
+        // assert & verify
+        expect(sorted).toHaveBeenLastCalledWith('category.name,desc');
+
+        // act
+        field().value = 'date';
+        field().dispatchEvent(new Event('change'));
+
+        // assert & verify
+        expect(sorted).toHaveBeenLastCalledWith('date,desc');
+      });
+
+      it('should flip the direction and say which way it is sorted', () => {
+        // arrange
+        render([txn({ id: 1 })], { sort: 'amount,desc' });
+        const sorted = vi.fn();
+        component.sortChange.subscribe(sorted);
+
+        // assert -- the name states the current sort
+        expect(direction().getAttribute('aria-label')).toBe(
+          'Sorted descending. Switch to ascending',
+        );
+
+        // act
+        direction().click();
+
+        // assert & verify
+        expect(sorted).toHaveBeenLastCalledWith('amount,asc');
+
+        // act
+        render([txn({ id: 1 })], { sort: 'amount,asc' });
+
+        // assert & verify
+        expect(direction().getAttribute('aria-label')).toBe(
+          'Sorted ascending. Switch to descending',
+        );
+      });
+    });
+
+    it('should be hidden on a wide screen while the table is shown, and the reverse on a phone', async () => {
+      // arrange
+      render([txn({ id: 1 })]);
+      document.body.appendChild(fixture.nativeElement);
+      const { page } = await import('vitest/browser');
+      const before = { width: window.innerWidth, height: window.innerHeight };
+      const shown = (selector: string): boolean =>
+        fixture.nativeElement.querySelector(selector).checkVisibility();
+
+      try {
+        // act & assert
+        await page.viewport(640, 800);
+        expect(shown('table')).toBe(true);
+        expect(shown('[data-testid="card-list"]')).toBe(false);
+        expect(shown('[data-testid="card-sort-bar"]')).toBe(false);
+
+        await page.viewport(639, 800);
+        expect(shown('table')).toBe(false);
+        expect(shown('[data-testid="card-list"]')).toBe(true);
+        expect(shown('[data-testid="card-sort-bar"]')).toBe(true);
+      } finally {
+        await page.viewport(before.width, before.height);
+        fixture.nativeElement.remove();
+      }
+    });
+
+    it('should show skeleton cards while loading with no rows, and nothing for an empty list', () => {
+      // act
+      render([], { loading: true });
+
+      // assert & verify
+      expect(all('[data-testid="card-skeleton-row"]').length).toBeGreaterThan(0);
+
+      // act
+      render([]);
+
+      // assert & verify
+      expect(all('[data-testid="card-skeleton-row"]').length).toBe(0);
+      expect(cards().length).toBe(0);
+    });
+
+    it('should dim the cards with the table while new results load', () => {
+      // act
+      render([txn({ id: 1 })], { loading: true });
+
+      // assert & verify -- one wrapper holds both layouts
+      const wrapper = fixture.nativeElement.firstElementChild as HTMLElement;
+      expect(wrapper.contains(cards()[0])).toBe(true);
+      expect(wrapper.className).toContain('opacity-60');
+      expect(wrapper.className).toContain('pointer-events-none');
+    });
   });
 });
