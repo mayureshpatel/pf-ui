@@ -1,5 +1,5 @@
 import {expect, test} from './fixtures/test';
-import {deleteTestCategoriesContaining} from './helpers/api';
+import {deleteTestCategoriesContaining, registerTestUser} from './helpers/api';
 
 /**
  * Covers PF-332/PF-878: category CRUD through the real UI -- the tree beside an always-present
@@ -72,5 +72,68 @@ test.describe('Categories', () => {
     await expect(page.getByText('Deleted 2 categories')).toBeVisible();
     await expect(page.getByTestId('open-category').filter({hasText: String(stamp)})).toHaveCount(0);
     await expect(panel).toHaveAccessibleName('Overview');
+  });
+
+  test('add a parent with subcategories in one go, then see a repeat reported as skipped', async ({page}) => {
+    stamp = Date.now();
+    const parentName = `E2E Bulk Parent ${stamp}`;
+    const subs = [`E2E Bulk Sub A ${stamp}`, `E2E Bulk Sub B ${stamp}`, `E2E Bulk Sub C ${stamp}`];
+    // the afterEach above removes every category whose name holds the stamp, children first, even if a step fails
+
+    await page.goto('/categories');
+    const panel = page.getByRole('complementary');
+    const fillAndCreate = async () => {
+      await page.getByRole('button', {name: 'Add several'}).click();
+      await expect(panel).toHaveAccessibleName('Add several categories');
+      await panel.getByLabel('Parent name').fill(parentName);
+      await panel.getByLabel('Subcategories').fill(subs.join('\n'));
+      await panel.getByRole('button', {name: 'Create', exact: true}).click();
+    };
+
+    await fillAndCreate();
+    await expect(page.getByText('Created 4 categories (1 parent, 3 subcategories)')).toBeVisible();
+    await expect(panel).toHaveAccessibleName('Overview');
+
+    // find the parent and its subcategories with the search box
+    await page.getByLabel('Search categories').fill(String(stamp));
+    await expect(page.getByTestId('open-category').filter({hasText: parentName})).toBeVisible();
+    for (const sub of subs) {
+      await expect(page.getByTestId('open-category').filter({hasText: sub})).toBeVisible();
+    }
+
+    // adding the same group again creates nothing and lists every name as skipped
+    await fillAndCreate();
+    await expect(panel.getByTestId('bulk-result')).toBeVisible();
+    await expect(panel.getByRole('heading', {name: 'Skipped (4)'})).toBeVisible();
+    await panel.getByTestId('bulk-done').click();
+    await expect(panel).toHaveAccessibleName('Overview');
+  });
+
+  test('add a starter set to an empty account, leaving one parent unticked', async ({page}) => {
+    // a freshly registered user has no categories, and there is nothing of the shared user's to clean up
+    stamp = 0;
+    await registerTestUser(page);
+    await page.goto('/categories');
+    const panel = page.getByRole('complementary');
+
+    await page.getByTestId('add-starter').click();
+    await expect(panel).toHaveAccessibleName('Add a starter set');
+    // 14 parents and 55 subcategories, all ticked
+    await expect(panel.getByTestId('starter-count')).toHaveText('69 categories selected');
+
+    // unticking Taxes unticks its 3 subcategories too
+    await panel.getByRole('checkbox', {name: /^Taxes/}).uncheck();
+    await expect(panel.getByTestId('starter-count')).toHaveText('65 categories selected');
+
+    await panel.getByRole('button', {name: 'Add selected'}).click();
+    await expect(page.getByText('Created 65 categories (13 parents, 52 subcategories)')).toBeVisible();
+    await expect(panel).toHaveAccessibleName('Overview');
+
+    const rows = page.getByTestId('open-category');
+    await expect(rows.getByText('Housing', {exact: true})).toHaveCount(1);
+    await expect(rows.getByText('Transfers', {exact: true})).toHaveCount(1);
+    await expect(rows.getByText('Taxes', {exact: true})).toHaveCount(0);
+    // the starter offer is gone once the account has categories
+    await expect(page.getByTestId('add-starter')).toHaveCount(0);
   });
 });

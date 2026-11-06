@@ -1,0 +1,76 @@
+<div class="flex min-w-0 flex-col gap-4">
+  <p class="m-0 text-sm text-muted-color">
+    A suggested set of categories to start from. Untick anything you do not want; you can add or
+    change categories later.
+  </p>
+
+  <div class="flex flex-wrap gap-3 text-sm">
+    <button
+      type="button"
+      data-testid="starter-select-all"
+      class="cursor-pointer underline"
+      (click)="selectAll()"
+    >
+      Select all
+    </button>
+    <button
+      type="button"
+      data-testid="starter-select-none"
+      class="cursor-pointer underline"
+      (click)="selectNone()"
+    >
+      Select none
+    </button>
+  </div>
+
+  @for (row of rows(); track row.parent.name; let p = $index) {
+    <fieldset
+      class="m-0 min-w-0 rounded-xl border border-surface-200 p-3 dark:border-surface-800"
+      [attr.data-testid]="'starter-group-' + p"
+    >
+      <legend class="px-1">
+        <label class="flex cursor-pointer items-center gap-2 text-sm font-semibold">
+          <input
+            type="checkbox"
+            class="size-4 shrink-0 cursor-pointer accent-primary-700"
+            [attr.data-testid]="'starter-parent-' + p"
+            [checked]="row.ticked"
+            [indeterminate]="row.indeterminate"
+            (change)="toggleParent(p)"
+          />
+          <span class="min-w-0 break-words">{{ row.parent.name }}</span>
+          <span class="font-normal text-muted-color">
+            ({{ row.tickedCount }} of {{ row.parent.subcategories.length }})
+          </span>
+        </label>
+      </legend>
+      <ul class="m-0 flex list-none flex-col gap-1 p-0 pl-6">
+        @for (name of row.parent.subcategories; track name; let c = $index) {
+          <li>
+            <label class="flex min-h-8 cursor-pointer items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                class="size-4 shrink-0 cursor-pointer accent-primary-700"
+                [attr.data-testid]="'starter-child-' + p + '-' + c"
+                [checked]="row.tickedChildren[c]"
+                (change)="toggleChild(p, c)"
+              />
+              <span class="min-w-0 break-words">{{ name }}</span>
+            </label>
+          </li>
+        }
+      </ul>
+    </fieldset>
+  }
+
+  <div class="flex flex-col gap-1 text-sm" aria-live="polite">
+    <p data-testid="starter-count" class="m-0 font-medium">
+      {{ categoryCount(selectedCount()) }} selected
+    </p>
+    @if (errorMessage(); as error) {
+      <p data-testid="starter-error" role="alert" class="m-0 text-rose-700 dark:text-rose-400">
+        {{ error }} Nothing was created.
+      </p>
+    }
+  </div>
+</div>

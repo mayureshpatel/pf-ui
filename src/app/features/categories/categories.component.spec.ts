@@ -8,6 +8,8 @@ import { Confirmation, ConfirmationService } from 'primeng/api';
 
 import { CategoriesComponent } from './categories.component';
 import { CategoryApiService } from './services/category-api.service';
+import { CategoryBulkFormComponent } from './components/category-bulk-form/category-bulk-form.component';
+import { CategoryStarterFormComponent } from './components/category-starter-form/category-starter-form.component';
 import { CategoryEditFormComponent } from './components/category-edit-form/category-edit-form.component';
 import { NO_FILTER } from './utils/category-helpers';
 import { TransactionApiService } from '@features/transactions/services/transaction-api.service';
@@ -44,7 +46,11 @@ describe('CategoriesComponent', () => {
   let mockCategoryApi: Mocked<
     Pick<
       CategoryApiService,
-      'getCategories' | 'createCategory' | 'updateCategory' | 'deleteCategory'
+      | 'getCategories'
+      | 'createCategory'
+      | 'updateCategory'
+      | 'deleteCategory'
+      | 'createCategoriesBatch'
     >
   >;
   let mockTransactionApi: Mocked<Pick<TransactionApiService, 'getCountsByCategory'>>;
@@ -75,6 +81,11 @@ describe('CategoriesComponent', () => {
       createCategory: vi.fn().mockReturnValue(of(99)),
       updateCategory: vi.fn().mockReturnValue(of(1)),
       deleteCategory: vi.fn().mockReturnValue(of(undefined)),
+      createCategoriesBatch: vi
+        .fn()
+        .mockReturnValue(
+          of({ createdCount: 3, createdParents: 1, createdSubcategories: 2, skipped: [] }),
+        ),
     };
     mockTransactionApi = { getCountsByCategory: vi.fn().mockReturnValue(of(counts)) };
     mockToast = { success: vi.fn(), error: vi.fn() };
@@ -534,6 +545,335 @@ describe('CategoriesComponent', () => {
 
       // assert & verify -- unticking the child drops the parent too
       expect(component.tickedIds().size).toBe(0);
+    });
+  });
+
+  describe('bulk add', () => {
+    const request = {
+      groups: [
+        { name: 'Fun', type: 'EXPENSE', color: '#3B82F6', subcategories: ['Games', 'Film'] },
+      ],
+    };
+    const bulkForm = (): CategoryBulkFormComponent =>
+      fixture.debugElement.query(By.directive(CategoryBulkFormComponent)).componentInstance;
+
+    it('should open the panel in bulk mode from the Add several button and close it again', () => {
+      // act
+      fixture.nativeElement.querySelector('[data-testid="add-several"] button').click();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.panelMode()).toBe('bulk');
+      expect(component.panelTitle()).toBe('Add several categories');
+      expect(fixture.nativeElement.querySelector('app-category-bulk-form')).toBeTruthy();
+
+      // act
+      component.onPanelClose();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.panelMode()).toBe('overview');
+      expect(fixture.nativeElement.querySelector('app-category-bulk-form')).toBeNull();
+    });
+
+    it('should create, toast the counts, reload and close when nothing was skipped', () => {
+      // arrange
+      component.startBulkAdd();
+      fixture.detectChanges();
+      mockCategoryApi.getCategories.mockClear();
+
+      // act
+      component.saveBulk(request);
+
+      // assert & verify
+      expect(mockCategoryApi.createCategoriesBatch).toHaveBeenCalledWith(request);
+      expect(mockToast.success).toHaveBeenCalledWith(
+        'Created 3 categories (1 parent, 2 subcategories)',
+      );
+      expect(mockCategoryApi.getCategories).toHaveBeenCalledTimes(1);
+      expect(component.panelMode()).toBe('overview');
+    });
+
+    it('should switch to the result view when names were skipped, and close on Done', () => {
+      // arrange
+      const skipped = [{ name: 'Games', parentName: 'Fun', reason: 'Already exists' }];
+      mockCategoryApi.createCategoriesBatch.mockReturnValue(
+        of({ createdCount: 1, createdParents: 0, createdSubcategories: 1, skipped }),
+      );
+      component.startBulkAdd();
+      fixture.detectChanges();
+
+      // act
+      component.saveBulk(request);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(mockToast.success).toHaveBeenCalledWith(
+        'Created 1 category (0 parents, 1 subcategory)',
+      );
+      expect(component.panelMode()).toBe('bulk');
+      expect(
+        fixture.nativeElement.querySelector('[data-testid="skipped-list"]').textContent,
+      ).toContain('Already exists');
+
+      // act
+      bulkForm().done.emit();
+      fixture.detectChanges();
+
+      // assert & verify -- no discard prompt for a finished batch
+      expect(mockConfirmationService.confirm).not.toHaveBeenCalled();
+      expect(component.panelMode()).toBe('overview');
+    });
+
+    it('should keep the panel and input and report the error when the request fails', () => {
+      // arrange
+      mockCategoryApi.createCategoriesBatch.mockReturnValue(
+        throwError(() => ({ error: { detail: 'Too many names.' } })),
+      );
+      component.startBulkAdd();
+      fixture.detectChanges();
+
+      // act
+      component.saveBulk(request);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(mockToast.error).toHaveBeenCalledWith('Too many names.');
+      expect(component.panelMode()).toBe('bulk');
+      expect(component.bulkResult()).toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid="bulk-error"]')).toBeTruthy();
+      expect(component.saving()).toBe(false);
+    });
+
+    it('should ask before discarding typed input, and not when untouched', () => {
+      // arrange
+      component.startBulkAdd();
+      fixture.detectChanges();
+
+      // act -- untouched
+      component.onPanelClose();
+
+      // assert & verify
+      expect(mockConfirmationService.confirm).not.toHaveBeenCalled();
+
+      // arrange
+      component.startBulkAdd();
+      fixture.detectChanges();
+      bulkForm().form.markAsDirty();
+
+      // act
+      component.onPanelClose();
+
+      // assert & verify
+      expect(mockConfirmationService.confirm).toHaveBeenCalledTimes(1);
+      expect(component.panelMode()).toBe('bulk');
+      confirmAccept();
+      expect(component.panelMode()).toBe('overview');
+    });
+
+    it('should stay in bulk mode on an empty page instead of jumping to the add form', () => {
+      // arrange
+      loadWith([]);
+
+      // act
+      component.startBulkAdd();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.panelMode()).toBe('bulk');
+    });
+  });
+
+  describe('starter set', () => {
+    const starterButton = (): HTMLElement | null =>
+      fixture.nativeElement.querySelector('[data-testid="add-starter"] button');
+    const starterForm = (): CategoryStarterFormComponent =>
+      fixture.debugElement.query(By.directive(CategoryStarterFormComponent)).componentInstance;
+
+    it('should offer the starter set only when there are no categories', () => {
+      // assert & verify -- the default fixture has categories
+      expect(starterButton()).toBeNull();
+
+      // act
+      loadWith([], []);
+
+      // assert & verify
+      expect(starterButton()).toBeTruthy();
+
+      // act
+      mockCategoryApi.getCategories.mockReturnValue(of([cat(99, 'First')]));
+      component.loadData();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(starterButton()).toBeNull();
+    });
+
+    it('should not offer it while loading failed', () => {
+      // act
+      mockCategoryApi.getCategories.mockReturnValue(throwError(() => new Error('down')));
+      component.loadData();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(starterButton()).toBeNull();
+    });
+
+    it('should open the checklist on an empty page, and Close returns to the add form', () => {
+      // arrange
+      loadWith([], []);
+
+      // act
+      starterButton()!.click();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.panelMode()).toBe('starter');
+      expect(component.panelTitle()).toBe('Add a starter set');
+      expect(fixture.nativeElement.querySelector('app-category-starter-form')).toBeTruthy();
+
+      // act
+      component.onPanelClose();
+      fixture.detectChanges();
+
+      // assert & verify -- an empty page has no overview, so it lands back on add
+      expect(fixture.nativeElement.querySelector('app-category-starter-form')).toBeNull();
+      expect(component.panelMode()).toBe('add');
+    });
+
+    it('should also offer it inside the add form of an empty page', () => {
+      // arrange
+      loadWith([], []);
+
+      // act
+      fixture.nativeElement.querySelector('[data-testid="add-starter-inline"]').click();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.panelMode()).toBe('starter');
+    });
+
+    it('should create only the ticked items, toast, reload and close', () => {
+      // arrange
+      loadWith([], []);
+      component.startStarter();
+      fixture.detectChanges();
+      fixture.nativeElement.querySelector('[data-testid="starter-select-none"]').click();
+      fixture.nativeElement.querySelector('[data-testid="starter-child-1-0"]').click();
+      fixture.detectChanges();
+      mockCategoryApi.getCategories.mockClear();
+      mockCategoryApi.getCategories.mockReturnValue(of([cat(50, 'Housing')]));
+
+      // act
+      component.onPanelSave();
+
+      // assert & verify
+      const request = mockCategoryApi.createCategoriesBatch.mock.calls[0][0];
+      expect(request.groups.length).toBe(1);
+      expect(request.groups[0].name).toBe('Housing');
+      expect(request.groups[0].subcategories).toEqual(['Rent or mortgage']);
+      expect(mockToast.success).toHaveBeenCalledWith(
+        'Created 3 categories (1 parent, 2 subcategories)',
+      );
+      expect(mockCategoryApi.getCategories).toHaveBeenCalledTimes(1);
+      expect(component.panelMode()).toBe('overview');
+    });
+
+    it('should keep the checklist and show the error when the request fails', () => {
+      // arrange
+      mockCategoryApi.createCategoriesBatch.mockReturnValue(
+        throwError(() => ({ error: { detail: 'Too many names.' } })),
+      );
+      loadWith([], []);
+      component.startStarter();
+      fixture.detectChanges();
+      fixture.nativeElement.querySelector('[data-testid="starter-parent-0"]').click();
+      fixture.detectChanges();
+
+      // act
+      component.onPanelSave();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(mockToast.error).toHaveBeenCalledWith('Too many names.');
+      expect(component.panelMode()).toBe('starter');
+      expect(fixture.nativeElement.querySelector('[data-testid="starter-error"]')).toBeTruthy();
+      expect(starterForm().canSubmit()).toBe(true);
+      expect(
+        (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
+          '[data-testid="starter-parent-0"]',
+        )!.checked,
+      ).toBe(false);
+    });
+
+    it('should show the skipped result view when the server skipped a name', () => {
+      // arrange
+      mockCategoryApi.createCategoriesBatch.mockReturnValue(
+        of({
+          createdCount: 68,
+          createdParents: 13,
+          createdSubcategories: 55,
+          skipped: [{ name: 'Income', reason: 'Already exists' }],
+        }),
+      );
+      loadWith([], []);
+      component.startStarter();
+      fixture.detectChanges();
+
+      // act
+      component.onPanelSave();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.panelMode()).toBe('bulk');
+      expect(fixture.nativeElement.querySelector('[data-testid="skipped-list"]')).toBeTruthy();
+    });
+
+    it('should disable Add selected when nothing is ticked', () => {
+      // arrange
+      loadWith([], []);
+      component.startStarter();
+      fixture.detectChanges();
+      const addSelected = (): HTMLButtonElement =>
+        Array.from(
+          (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>(
+            'aside button',
+          ),
+        ).find((b) => b.textContent?.trim() === 'Add selected')!;
+      expect(addSelected().disabled).toBe(false);
+
+      // act
+      fixture.nativeElement.querySelector('[data-testid="starter-select-none"]').click();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(addSelected().disabled).toBe(true);
+    });
+
+    it('should ask before discarding a changed selection, and not an untouched one', () => {
+      // arrange
+      loadWith([], []);
+      component.startStarter();
+      fixture.detectChanges();
+
+      // act
+      component.onPanelClose();
+
+      // assert & verify
+      expect(mockConfirmationService.confirm).not.toHaveBeenCalled();
+
+      // arrange
+      component.startStarter();
+      fixture.detectChanges();
+      fixture.nativeElement.querySelector('[data-testid="starter-parent-0"]').click();
+      fixture.detectChanges();
+
+      // act
+      component.onPanelClose();
+
+      // assert & verify
+      expect(mockConfirmationService.confirm).toHaveBeenCalledTimes(1);
+      expect(component.panelMode()).toBe('starter');
     });
   });
 
