@@ -10,7 +10,7 @@ import {
   ExploreTrend,
 } from '../models/reports.model';
 import { PageResponse } from '@models/transaction.model';
-import { toApiParams } from '../utils/explore-state';
+import { toApiParams, todayParam } from '../utils/explore-state';
 import { NetWorthState, toBreakdownParams } from '../utils/net-worth-state';
 import { SKIP_GENERIC_ERROR_TOAST } from '@core/auth/error.interceptor';
 
@@ -47,7 +47,7 @@ export class ReportApiService {
    */
   explore(state: ExploreState): Observable<ExploreResult> {
     return this.http.get<ExploreResult>(`${this.apiUrl}/explore`, {
-      params: new HttpParams({ fromObject: toApiParams(state) }),
+      params: new HttpParams({ fromObject: { ...toApiParams(state), today: todayParam() } }),
       context: SKIP_TOAST_CONTEXT,
     });
   }
@@ -60,6 +60,7 @@ export class ReportApiService {
   trend(state: ExploreState): Observable<ExploreTrend> {
     const params: Record<string, string> = toApiParams(state);
     delete params['groupBy'];
+    params['today'] = todayParam();
     return this.http.get<ExploreTrend>(`${this.apiUrl}/explore/trend`, {
       params: new HttpParams({ fromObject: params }),
       context: SKIP_TOAST_CONTEXT,
@@ -81,6 +82,7 @@ export class ReportApiService {
     const params: Record<string, string> = toApiParams(state);
     delete params['groupBy'];
     delete params['compare'];
+    params['today'] = todayParam();
     return this.http.get<PageResponse<ExploreTransaction>>(`${this.apiUrl}/explore/transactions`, {
       params: new HttpParams({ fromObject: { ...params, page: String(page), size: String(size) } }),
       context: SKIP_TOAST_CONTEXT,

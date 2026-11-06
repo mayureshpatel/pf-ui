@@ -25,7 +25,10 @@ describe('ReportApiService (explorer)', () => {
     httpMock = TestBed.inject(HttpTestingController);
   });
 
-  afterEach(() => httpMock.verify());
+  afterEach(() => {
+    httpMock.verify();
+    vi.useRealTimers();
+  });
 
   it('should explore with the grouping, range, comparison and filters', () => {
     // act
@@ -68,6 +71,42 @@ describe('ReportApiService (explorer)', () => {
     expect(req.request.params.has('compare')).toBe(false);
     expect(req.request.params.get('categoryId')).toBe('5');
     req.flush({ content: [], page: { totalElements: 0, totalPages: 0, number: 2, size: 20 } });
+  });
+
+  // PF-894
+  it('should send the local calendar date as today on the groups, trend and transactions', () => {
+    // arrange -- 23:30 on the last evening of the month: the UTC date is another day in some zones
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 31, 23, 30));
+
+    // act
+    service.explore(state).subscribe();
+    service.trend(state).subscribe();
+    service.transactions(state, 0, 20).subscribe();
+
+    // assert & verify
+    const explore = httpMock.expectOne((r) => r.url === `${apiUrl}/explore`);
+    const trend = httpMock.expectOne((r) => r.url === `${apiUrl}/explore/trend`);
+    const transactions = httpMock.expectOne((r) => r.url === `${apiUrl}/explore/transactions`);
+    for (const req of [explore, trend, transactions]) {
+      expect(req.request.params.get('today')).toBe('2026-10-31');
+    }
+    explore.flush({ rows: [] });
+    trend.flush({ current: [], comparison: [] });
+    transactions.flush({
+      content: [],
+      page: { totalElements: 0, totalPages: 0, number: 0, size: 20 },
+    });
+  });
+
+  it('should not send today on the net worth breakdown', () => {
+    // act
+    service.getNetWorthBreakdown(defaultNetWorthState(new Date(2026, 9, 25))).subscribe();
+
+    // assert & verify
+    const req = httpMock.expectOne((r) => r.url === `${apiUrl}/net-worth/breakdown`);
+    expect(req.request.params.has('today')).toBe(false);
+    req.flush({});
   });
 
   // PF-887
