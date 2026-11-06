@@ -96,3 +96,45 @@ export interface CategoryGroup {
   parent: Category;
   items: Category[];
 }
+
+/**
+ * One parent to create in a batch, with the subcategories that inherit its type, color and icon.
+ *
+ * @property name - The parent's name.
+ * @property type - The type shared by the parent and its subcategories.
+ * @property color - The color shared by the group.
+ * @property icon - The icon shared by the group.
+ * @property subcategories - The subcategory names, already trimmed and without blanks.
+ */
+export interface CategoryBatchGroup {
+  name: string;
+  type: string;
+  color?: string;
+  icon?: string;
+  subcategories: string[];
+}
+
+/** Represents a request to create several parents and their subcategories atomically. */
+export interface CategoryBatchRequest {
+  groups: CategoryBatchGroup[];
+}
+
+/**
+ * A name the batch skipped.
+ *
+ * @property parentName - The parent it was meant for, absent for a skipped parent.
+ * @property reason - Why it was skipped (for example "Already exists").
+ */
+export interface CategoryBatchSkipped {
+  name: string;
+  parentName?: string;
+  reason: string;
+}
+
+/** What a batch created and what it skipped. */
+export interface CategoryBatchResult {
+  createdCount: number;
+  createdParents: number;
+  createdSubcategories: number;
+  skipped: CategoryBatchSkipped[];
+}

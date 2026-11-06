@@ -4,6 +4,8 @@ import { map, Observable } from 'rxjs';
 import { environment } from '@env';
 import {
   Category,
+  CategoryBatchRequest,
+  CategoryBatchResult,
   CategoryCreateRequest,
   CategoryGroup,
   CategoryUpdateRequest,
@@ -89,6 +91,15 @@ export class CategoryApiService {
   createCategory(data: CategoryCreateRequest): Observable<number> {
     const userId: number | undefined = this.authService.user()?.id;
     return this.http.post<number>(this.apiUrl, { ...data, userId }, SKIP_TOAST_OPTIONS);
+  }
+
+  /**
+   * Creates several parent categories and their subcategories in one atomic call.
+   * @param data the groups to create.
+   * @returns the counts created and the names skipped.
+   */
+  createCategoriesBatch(data: CategoryBatchRequest): Observable<CategoryBatchResult> {
+    return this.http.post<CategoryBatchResult>(`${this.apiUrl}/batch`, data, SKIP_TOAST_OPTIONS);
   }
 
   /**
