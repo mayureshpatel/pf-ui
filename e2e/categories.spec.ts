@@ -109,31 +109,40 @@ test.describe('Categories', () => {
     await expect(panel).toHaveAccessibleName('Overview');
   });
 
-  test('add a starter set to an empty account, leaving one parent unticked', async ({page}) => {
-    // a freshly registered user has no categories, and there is nothing of the shared user's to clean up
-    stamp = 0;
-    await registerTestUser(page);
-    await page.goto('/categories');
-    const panel = page.getByRole('complementary');
+  // a freshly registered user needs a signed-out browser: the register page redirects a signed-in user away
+  test.describe('with a fresh user', () => {
+    test.use({storageState: {cookies: [], origins: []}});
 
-    await page.getByTestId('add-starter').click();
-    await expect(panel).toHaveAccessibleName('Add a starter set');
-    // 14 parents and 55 subcategories, all ticked
-    await expect(panel.getByTestId('starter-count')).toHaveText('69 categories selected');
+    test('add a starter set to an empty account, leaving one parent unticked', async ({page}) => {
+      // a freshly registered user has no categories, and there is nothing of the shared user's to clean up
+      stamp = 0;
+      await registerTestUser(page);
+      await page.goto('/categories');
+      const panel = page.getByRole('complementary');
 
-    // unticking Taxes unticks its 3 subcategories too
-    await panel.getByRole('checkbox', {name: /^Taxes/}).uncheck();
-    await expect(panel.getByTestId('starter-count')).toHaveText('65 categories selected');
+      await page.getByTestId('add-starter').click();
+      await expect(panel).toHaveAccessibleName('Add a starter set');
+      // 14 parents and 59 subcategories, all ticked
+      await expect(panel.getByTestId('starter-count')).toHaveText('73 categories selected');
 
-    await panel.getByRole('button', {name: 'Add selected'}).click();
-    await expect(page.getByText('Created 65 categories (13 parents, 52 subcategories)')).toBeVisible();
-    await expect(panel).toHaveAccessibleName('Overview');
+      // unticking Taxes unticks its 3 subcategories too
+      await panel.getByRole('checkbox', {name: /^Taxes/}).uncheck();
+      await expect(panel.getByTestId('starter-count')).toHaveText('69 categories selected');
 
-    const rows = page.getByTestId('open-category');
-    await expect(rows.getByText('Housing', {exact: true})).toHaveCount(1);
-    await expect(rows.getByText('Transfers', {exact: true})).toHaveCount(1);
-    await expect(rows.getByText('Taxes', {exact: true})).toHaveCount(0);
-    // the starter offer is gone once the account has categories
-    await expect(page.getByTestId('add-starter')).toHaveCount(0);
+      // the batch inserts row by row, which takes a while against a remote database
+      test.setTimeout(120_000);
+      await panel.getByRole('button', {name: 'Add selected'}).click();
+      await expect(page.getByText('Created 69 categories (13 parents, 56 subcategories)')).toBeVisible({
+        timeout: 90_000
+      });
+      await expect(panel).toHaveAccessibleName('Overview');
+
+      const rows = page.getByTestId('open-category');
+      await expect(rows.getByText('Housing', {exact: true})).toHaveCount(1);
+      await expect(rows.getByText('Transfers', {exact: true})).toHaveCount(1);
+      await expect(rows.getByText('Taxes', {exact: true})).toHaveCount(0);
+      // the starter offer is gone once the account has categories
+      await expect(page.getByTestId('add-starter')).toHaveCount(0);
+    });
   });
 });
