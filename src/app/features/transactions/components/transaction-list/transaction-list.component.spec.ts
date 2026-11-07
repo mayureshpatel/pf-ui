@@ -457,6 +457,83 @@ describe('TransactionListComponent', () => {
     expect(sorted).toHaveBeenLastCalledWith('category.name,desc');
   });
 
+  it('should sort Merchant A to Z first, then toggle, and mark it in the header', () => {
+    // arrange
+    render([txn({ id: 1 })], { sort: 'amount,desc' });
+    const sorted = vi.fn();
+    component.sortChange.subscribe(sorted);
+    const header = (): HTMLButtonElement =>
+      all<HTMLButtonElement>('th button').find((b) => b.textContent?.trim() === 'Merchant')!;
+
+    // act
+    header().click();
+    // assert & verify
+    expect(sorted).toHaveBeenLastCalledWith('merchant.name,asc');
+
+    // act
+    fixture.componentRef.setInput('sort', 'merchant.name,asc');
+    fixture.detectChanges();
+    header().click();
+    // assert & verify
+    expect(sorted).toHaveBeenLastCalledWith('merchant.name,desc');
+    expect(header().closest('th')?.getAttribute('aria-sort')).toBe('ascending');
+  });
+
+  it('should put the Description column before the Merchant column', () => {
+    // act
+    render([txn({ id: 1 })]);
+
+    // assert & verify
+    const headers = all('th').map((th) => th.textContent?.trim());
+    expect(headers.indexOf('Description')).toBeGreaterThan(-1);
+    expect(headers.indexOf('Description')).toBeLessThan(headers.indexOf('Merchant'));
+  });
+
+  it('should leave the Merchant cell blank and show the description when a row has no merchant', () => {
+    // act
+    render([txn({ id: 1, merchant: null as never, description: 'ACME HARDWARE 0042' })]);
+
+    // assert & verify -- cells are: checkbox, description, merchant, ...
+    const cells = all('tbody tr:not(:has(th)) td');
+    expect(cells[1].textContent?.trim()).toBe('ACME HARDWARE 0042');
+    expect(cells[2].textContent?.trim()).toBe('');
+  });
+
+  it('should show the description in the Description column for a row that has a merchant too', () => {
+    // act
+    render([txn({ id: 1, description: 'WHOLEFDS #123' })]);
+
+    // assert & verify
+    const cells = all('tbody tr:not(:has(th)) td');
+    expect(cells[1].textContent?.trim()).toBe('WHOLEFDS #123');
+    expect(cells[2].textContent).toContain('Whole Foods');
+  });
+
+  it('should still open a merchant-less row from its description by button', () => {
+    // arrange
+    render([txn({ id: 1, merchant: null as never, description: 'ACME HARDWARE 0042' })]);
+    const opened = vi.fn();
+    component.openTransaction.subscribe(opened);
+
+    // act
+    all<HTMLButtonElement>('[data-testid="open-transaction"]')[0].click();
+
+    // assert & verify
+    expect(opened).toHaveBeenCalledTimes(1);
+  });
+
+  it('should fall back to the description in compact mode, where the Description column is hidden', () => {
+    // act
+    render([txn({ id: 1, merchant: null as never, description: 'ACME HARDWARE 0042' })], {
+      compact: true,
+    });
+
+    // assert & verify
+    expect(all('[data-testid="open-transaction"]')[0].textContent?.trim()).toBe(
+      'ACME HARDWARE 0042',
+    );
+  });
+
   it('should render skeleton rows while loading with no rows yet', () => {
     // act
     render([], { loading: true });
@@ -733,6 +810,7 @@ describe('TransactionListComponent', () => {
         expect(Array.from(field().options).map((o) => o.textContent?.trim())).toEqual([
           'Date',
           'Description',
+          'Merchant',
           'Category',
           'Account',
           'Amount',

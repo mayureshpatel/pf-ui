@@ -12,11 +12,13 @@
       {{
         sortField() === 'description'
           ? 'description'
-          : sortField() === 'category.name'
-            ? 'category'
-            : sortField() === 'account.name'
-              ? 'account'
-              : sortField()
+          : sortField() === 'merchant.name'
+            ? 'merchant'
+            : sortField() === 'category.name'
+              ? 'category'
+              : sortField() === 'account.name'
+                ? 'account'
+                : sortField()
       }}, so days are not grouped.
       <button type="button" class="cursor-pointer underline" (click)="onShowByDate()">
         Show newest first
@@ -101,7 +103,6 @@
             <button type="button" class="cursor-pointer" (click)="onShowByDate()">Date</button>
           </th>
         }
-        <th scope="col" class="px-2 py-2 sm:px-3 font-medium">Merchant</th>
         @for (column of visibleColumns(); track column.field) {
           <th
             scope="col"
@@ -176,16 +177,28 @@
                 {{ txn.date.substring(0, 10) }}
               </td>
             }
+            @if (!compact()) {
+              <td class="hidden max-w-64 truncate px-2 py-2 sm:px-3 text-muted-color sm:table-cell">
+                @if (txn.merchant) {
+                  {{ txn.description }}
+                } @else {
+                  <!-- a merchant-less row has no name button, so its description is the keyboard way in -->
+                  <button
+                    type="button"
+                    data-testid="open-transaction"
+                    class="max-w-full cursor-pointer truncate text-left"
+                    (click)="$event.stopPropagation(); openTransaction.emit(txn)"
+                  >
+                    {{ txn.description }}
+                  </button>
+                }
+              </td>
+            }
             <td class="px-2 py-2 sm:px-3">
               <ng-container
                 *ngTemplateOutlet="nameCell; context: { $implicit: txn, card: false }"
               />
             </td>
-            @if (!compact()) {
-              <td class="hidden max-w-64 truncate px-2 py-2 sm:px-3 text-muted-color sm:table-cell">
-                {{ txn.merchant ? txn.description : '' }}
-              </td>
-            }
             <td class="px-2 py-2 sm:px-3">
               <ng-container
                 *ngTemplateOutlet="categoryCell; context: { $implicit: txn, card: false }"
@@ -295,6 +308,9 @@
 </ng-template>
 
 <ng-template #nameCell let-txn let-card="card">
+  <!-- the table's Merchant cell stays blank without a merchant (its description sits in the
+       Description column); cards and the compact list have no such column, so they fall back -->
+  @let name = txn.merchant?.name ?? (card || compact() ? txn.description : '');
   <!-- the rule action goes under the name on a phone table and beside the panel, so it never
        adds a column width to a list that has none to spare; a card has the room to put it beside the first line -->
   <span
@@ -307,19 +323,21 @@
           : 'flex-col items-start gap-0.5 sm:flex-row sm:items-center sm:gap-1'
     "
   >
-    <button
-      type="button"
-      [attr.data-testid]="card ? 'card-open-transaction' : 'open-transaction'"
-      class="cursor-pointer text-left font-medium text-surface-900 dark:text-surface-0"
-      [class]="
-        card
-          ? 'min-w-0 wrap-anywhere'
-          : 'max-w-28 min-w-25 wrap-anywhere sm:max-w-none sm:min-w-0 sm:wrap-normal'
-      "
-      (click)="$event.stopPropagation(); openTransaction.emit(txn)"
-    >
-      {{ txn.merchant?.name ?? txn.description }}
-    </button>
+    @if (name) {
+      <button
+        type="button"
+        [attr.data-testid]="card ? 'card-open-transaction' : 'open-transaction'"
+        class="cursor-pointer text-left font-medium text-surface-900 dark:text-surface-0"
+        [class]="
+          card
+            ? 'min-w-0 wrap-anywhere'
+            : 'max-w-28 min-w-25 wrap-anywhere sm:max-w-none sm:min-w-0 sm:wrap-normal'
+        "
+        (click)="$event.stopPropagation(); openTransaction.emit(txn)"
+      >
+        {{ name }}
+      </button>
+    }
     <button
       type="button"
       [attr.data-testid]="card ? 'card-create-rule' : 'create-rule'"
