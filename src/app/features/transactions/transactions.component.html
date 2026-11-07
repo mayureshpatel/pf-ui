@@ -154,7 +154,7 @@
               : panelMode() === 'bulk'
                 ? 'Apply to ' + selectedIds().length
                 : panelMode() === 'rule'
-                  ? 'Add rule'
+                  ? ruleSaveLabel()
                   : 'Save changes'
           "
           [showDelete]="panelMode() === 'single'"
@@ -205,22 +205,80 @@
             </div>
           } @else if (panelMode() === 'rule') {
             <!-- one pass per start: a new key recreates the form, whose keyword prefill applies only then -->
+            <app-rule-kind-chooser
+              class="mb-4 block"
+              [kind]="ruleKind()"
+              [options]="ruleKindOptions"
+              (kindChange)="onRuleKindChange($event)"
+            />
             @for (start of ruleStart() ? [ruleStart()!] : []; track start.key) {
-              <app-rule-edit-form
-                #ruleForm
-                [rule]="null"
-                [groups]="ruleGroups()"
-                [saving]="savingRule()"
-                [initialKeyword]="start.keyword"
-                (save)="onSaveRule($event)"
-                (draftChange)="ruleDraft.set($event)"
-              />
-              <app-rule-match-list
-                class="mt-4 block"
-                [draft]="ruleDraft()"
-                [invalid]="ruleForm.keywordsInvalid()"
-                [context]="start.context"
-              />
+              @if (ruleKind() === 'merchant') {
+                <app-merchant-rule-edit-form
+                  #merchantRuleForm
+                  [rule]="null"
+                  [merchants]="ruleMerchants()"
+                  [allowCreate]="true"
+                  [saving]="savingRule()"
+                  [initialKeyword]="start.keyword"
+                  (save)="onSaveMerchantRule($event)"
+                  (draftChange)="ruleDraft.set($event)"
+                  (merchantChange)="ruleBecomes.set($event)"
+                />
+                <app-rule-match-list
+                  class="mt-4 block"
+                  [matchConfig]="merchantConfig"
+                  [draft]="ruleDraft()"
+                  [invalid]="merchantRuleForm.keywordsInvalid()"
+                  [context]="start.context"
+                  [selectable]="true"
+                  [becomes]="ruleBecomes()"
+                  (selectionChange)="onRuleSelection($event)"
+                />
+              } @else {
+                <app-rule-edit-form
+                  #ruleForm
+                  [rule]="null"
+                  [groups]="ruleGroups()"
+                  [saving]="savingRule()"
+                  [initialKeyword]="start.keyword"
+                  (save)="onSaveRule($event)"
+                  (draftChange)="ruleDraft.set($event)"
+                  (categoryChange)="ruleBecomes.set($event)"
+                />
+                @if (ruleKind() === 'both') {
+                  <app-merchant-picker
+                    class="mt-4 block"
+                    [merchants]="ruleMerchants()"
+                    [allowCreate]="true"
+                    [error]="bothMerchantError()"
+                    [value]="bothMerchant()"
+                    (valueChange)="bothMerchant.set($event); bothMerchantError.set(null)"
+                  />
+                  <h3 class="mb-0 mt-4 text-sm font-semibold">Categories</h3>
+                }
+                <app-rule-match-list
+                  class="mt-4 block"
+                  [draft]="ruleDraft()"
+                  [invalid]="ruleForm.keywordsInvalid()"
+                  [context]="start.context"
+                  [selectable]="true"
+                  [becomes]="ruleBecomes()"
+                  (selectionChange)="onRuleSelection($event)"
+                />
+                @if (ruleKind() === 'both') {
+                  <h3 class="mb-0 mt-4 text-sm font-semibold">Merchants</h3>
+                  <app-rule-match-list
+                    class="mt-2 block"
+                    [matchConfig]="merchantConfig"
+                    [draft]="bothMerchantDraft()"
+                    [invalid]="ruleForm.keywordsInvalid()"
+                    [context]="[]"
+                    [selectable]="true"
+                    [becomes]="bothMerchant()?.name ?? null"
+                    (selectionChange)="onMerchantSelection($event)"
+                  />
+                }
+              }
             }
           } @else {
             <app-transaction-edit-form
@@ -235,6 +293,8 @@
       }
     </div>
   }
+
+  <app-undo-toast [message]="undoMessage()" (undo)="undoLastApply()" (dismissed)="dismissUndo()" />
 
   <app-csv-import-dialog
     [(visible)]="showImportDialog"

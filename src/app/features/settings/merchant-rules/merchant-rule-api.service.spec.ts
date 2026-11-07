@@ -171,4 +171,48 @@ describe('MerchantRuleApiService', () => {
       req.flush(preview);
     });
   });
+
+  it('should create a merchant rule and apply it to the chosen transactions (PF-932)', () => {
+    // arrange
+    const reply = {
+      ruleId: 7,
+      merchantId: 5,
+      changes: [{ transactionId: 1, previousMerchantId: null }],
+    };
+    let result: unknown;
+
+    // act
+    service
+      .createAndApply({
+        rule: { merchantId: 5, keywords: ['kroger'] },
+        transactionIds: [1, 2],
+      })
+      .subscribe((r) => (result = r));
+
+    // assert & verify
+    const req = httpMock.expectOne(`${apiUrl}/create-and-apply`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({
+      rule: { merchantId: 5, keywords: ['kroger'] },
+      transactionIds: [1, 2],
+    });
+    expect(req.request.context.get(SKIP_GENERIC_ERROR_TOAST)).toBe(true);
+    req.flush(reply);
+    expect(result).toEqual(reply);
+  });
+
+  it('should send a new merchant name instead of an id when the merchant is to be created (PF-933)', () => {
+    // act
+    service
+      .createAndApply({
+        rule: { newMerchantName: 'Brand New', keywords: ['x'] },
+        transactionIds: [1],
+      })
+      .subscribe();
+
+    // assert & verify
+    const req = httpMock.expectOne(`${apiUrl}/create-and-apply`);
+    expect(req.request.body.rule).toEqual({ newMerchantName: 'Brand New', keywords: ['x'] });
+    req.flush({ ruleId: 1, merchantId: 9, changes: [] });
+  });
 });

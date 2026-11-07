@@ -1,10 +1,11 @@
 import { Mock, vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Observable, Subject } from 'rxjs';
+import { Observable, of, Subject } from 'rxjs';
 import { Category } from '@models/category.model';
 import { RuleDraft, RuleMatchPreview, RuleMatchRow, RuleRef } from '@models/category-rule.model';
 import { Transaction } from '@models/transaction.model';
 import { CategoryRuleApiService } from '../../services/category-rule-api.service';
+import { MatchPreviewData, RuleMatchConfig, categoryMatchConfig } from './rule-match-config';
 import { RuleMatchListComponent } from './rule-match-list.component';
 
 const groceries = { id: 3, name: 'Groceries', color: '' } as Category;
@@ -672,6 +673,228 @@ describe('RuleMatchListComponent', () => {
       // assert & verify -- settled: no held height is left behind
       expect(section().style.minHeight).toBe('');
       expect(section().getBoundingClientRect().height).toBeLessThan(alertHeight);
+    });
+  });
+
+  describe('selectable mode (PF-926)', () => {
+    let selections: number[][];
+    const boxes = (): HTMLInputElement[] =>
+      Array.from(
+        el().querySelectorAll<HTMLInputElement>('[data-match-row] input[type="checkbox"]'),
+      );
+    const groupBox = (title: string): HTMLInputElement =>
+      Array.from(el().querySelectorAll<HTMLInputElement>('[data-testid="group-checkbox"]')).find(
+        (b) => (b.getAttribute('aria-label') ?? '').includes(title),
+      )!;
+    const lastSelection = (): number[] => selections[selections.length - 1];
+    const mixed = (): RuleMatchPreview =>
+      preview([
+        row(1),
+        row(2),
+        row(3, { verdict: 'ALREADY_CATEGORIZED', currentCategory: groceries }),
+        row(4, { verdict: 'LOSES_TO_OTHER_RULE', otherRules: [ref(9, ['costco'], 'Shopping', 5)] }),
+      ]);
+
+    beforeEach(() => {
+      selections = [];
+      fixture.componentInstance.selectionChange.subscribe((ids: number[]) => selections.push(ids));
+      fixture.componentRef.setInput('selectable', true);
+      fixture.componentRef.setInput('becomes', 'Fast Food');
+      fixture.detectChanges();
+    });
+
+    it('should show no checkboxes unless the list is selectable', () => {
+      // arrange
+      fixture.componentRef.setInput('selectable', false);
+      fixture.detectChanges();
+
+      // act
+      search(draft(['costco']), mixed());
+
+      // assert & verify
+      expect(boxes().length).toBe(0);
+    });
+
+    it('should list the matches in three groups, each with its count', () => {
+      // act
+      search(draft(['costco']), mixed());
+
+      // assert & verify
+      const groups = Array.from(el().querySelectorAll('[data-testid="match-group"]')).map((g) =>
+        (g.querySelector('[data-testid="group-title"]')?.textContent ?? '')
+          .replace(/\s+/g, ' ')
+          .trim(),
+      );
+      expect(groups).toEqual([
+        'Will be set (no category today) 2',
+        'Will change 1',
+        "Won't change 1",
+      ]);
+    });
+
+    it('should start with only the rows that have no category ticked, and emit them', () => {
+      // act
+      search(draft(['costco']), mixed());
+
+      // assert & verify -- in group order: two blank rows, the categorized row, the losing row
+      expect(boxes().map((b) => b.checked)).toEqual([true, true, false, false]);
+      expect(lastSelection()).toEqual([1, 2]);
+    });
+
+    it('should emit the new selection when a row is ticked or unticked', () => {
+      // arrange
+      search(draft(['costco']), mixed());
+
+      // act
+      boxes()[2].click();
+      fixture.detectChanges();
+      boxes()[0].click();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(lastSelection()).toEqual([2, 3]);
+    });
+
+    it('should tick or untick a whole group from its header, and show a partial state', () => {
+      // arrange
+      search(draft(['costco']), mixed());
+
+      // act -- untick the group, then tick one of its rows
+      groupBox('Will be set').click();
+      fixture.detectChanges();
+      const afterUntick = lastSelection();
+      boxes()[0].click();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(afterUntick).toEqual([]);
+      expect(groupBox('Will be set').indeterminate).toBe(true);
+
+      // act -- the header ticks the rest
+      groupBox('Will be set').click();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(lastSelection()).toEqual([1, 2]);
+      expect(groupBox('Will be set').indeterminate).toBe(false);
+    });
+
+    it('should show what a row that already has a value would change from and to', () => {
+      // act
+      search(draft(['costco']), mixed());
+
+      // assert & verify
+      const changeRow = rowText(2);
+      expect(changeRow).toContain('Was Groceries');
+      expect(changeRow).toContain('becomes Fast Food');
+    });
+
+    it('should name each checkbox after the transaction it would update', () => {
+      // act
+      search(draft(['costco']), mixed());
+
+      // assert & verify
+      expect(boxes()[0].getAttribute('aria-label')).toBe('Update COSTCO WHSE #1');
+    });
+
+    it('should select every blank match, listed or not, when more match than the rows list', () => {
+      // arrange -- 70 blank matches, only 50 listed
+      const listed = Array.from({ length: 50 }, (_, n) => row(n + 1));
+      const everyBlank = Array.from({ length: 70 }, (_, n) => n + 1);
+
+      // act
+      search(
+        draft(['costco']),
+        preview(listed, {
+          totalMatches: 70,
+          willCategorizeCount: 70,
+          truncated: true,
+          willCategorizeIds: everyBlank,
+        }),
+      );
+
+      // assert & verify -- all 70 count, and the header unticks all 70
+      expect(lastSelection().length).toBe(70);
+      expect(text()).toContain('and 20 more');
+      groupBox('Will be set').click();
+      fixture.detectChanges();
+      expect(lastSelection()).toEqual([]);
+    });
+
+    it('should keep the ticks of rows that stay when the draft changes, and give new rows the default', () => {
+      // arrange
+      search(draft(['costco']), preview([row(1), row(2)]));
+      boxes()[0].click();
+      fixture.detectChanges();
+
+      // act -- a longer keyword brings a third blank row
+      search(draft(['costco', 'whse']), preview([row(1), row(2), row(5)]));
+
+      // assert & verify -- row 1 stays unticked, the new row 5 starts ticked
+      expect(boxes().map((b) => b.checked)).toEqual([false, true, true]);
+      expect(lastSelection()).toEqual([2, 5]);
+    });
+
+    it('should select nothing while there is no keyword', () => {
+      // arrange
+      search(draft(['costco']), mixed());
+
+      // act
+      setDraft(draft([]));
+
+      // assert & verify
+      expect(lastSelection()).toEqual([]);
+    });
+  });
+
+  describe('another kind of rule through matchConfig (PF-932)', () => {
+    it('should preview with the given config and use its wording, not the injected category config', () => {
+      // arrange
+      const previewWith = vi.fn((): Observable<MatchPreviewData> =>
+        of({
+          totalMatches: 1,
+          willApplyCount: 1,
+          losesToOtherRuleCount: 0,
+          alreadySetCount: 0,
+          linkedCount: 0,
+          truncated: false,
+          targetName: 'Kroger',
+          willApplyIds: [1],
+          rows: [
+            {
+              transactionId: 1,
+              date: '2026-10-05T00:00:00Z',
+              description: 'KROGER #123',
+              amount: -10,
+              accountName: 'Checking',
+              currentName: null,
+              verdict: 'WILL_APPLY',
+              winner: null,
+              alsoMatches: [],
+            },
+          ],
+        }),
+      );
+      const config: RuleMatchConfig = {
+        preview: previewWith,
+        labels: {
+          ...categoryMatchConfig({ previewMatches } as never).labels,
+          currentNone: 'No merchant',
+          willRow: (name: string | null): string => `Will be assigned to ${name}`,
+        },
+      };
+      fixture.componentRef.setInput('matchConfig', config);
+
+      // act
+      setDraft(draft(['kroger']));
+      vi.advanceTimersByTime(300);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(previewWith).toHaveBeenCalledTimes(1);
+      expect(previewMatches).not.toHaveBeenCalled();
+      expect(rowText(0)).toContain('No merchant');
+      expect(rowText(0)).toContain('Will be assigned to Kroger');
     });
   });
 });

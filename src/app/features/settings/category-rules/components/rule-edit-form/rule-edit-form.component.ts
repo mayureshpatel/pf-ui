@@ -1,3 +1,4 @@
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -40,6 +41,9 @@ export class RuleEditFormComponent extends RuleFormBase<CategoryRule, CategoryRu
   /** Categories grouped under their parents, for the category choice. */
   readonly groups: InputSignal<CategoryGroup[]> = input.required<CategoryGroup[]>();
 
+  /** Emits the name of the chosen category (null when none), for hosts that preview what rows would become. */
+  readonly categoryChange: OutputEmitterRef<string | null> = output<string | null>();
+
   readonly save: OutputEmitterRef<RuleCreateValue | CategoryRuleUpdateRequest> = output<
     RuleCreateValue | CategoryRuleUpdateRequest
   >();
@@ -63,6 +67,15 @@ export class RuleEditFormComponent extends RuleFormBase<CategoryRule, CategoryRu
     const control = this.form.controls.category;
     return control.invalid && control.touched ? 'Choose a category.' : null;
   });
+
+  constructor() {
+    super();
+    this.form.controls.category.valueChanges
+      .pipe(takeUntilDestroyed())
+      .subscribe((category: Category | null): void =>
+        this.categoryChange.emit(category?.name ?? null),
+      );
+  }
 
   protected buildForm(): CategoryRuleForm {
     return createRuleForm({

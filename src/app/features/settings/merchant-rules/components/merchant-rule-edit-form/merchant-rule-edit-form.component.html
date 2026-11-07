@@ -12,8 +12,9 @@
         inputId="rule-merchant"
         ariaLabelledBy="rule-merchant-label"
         formControlName="merchant"
-        [options]="choices()"
+        [options]="options()"
         [filter]="true"
+        (onFilter)="onMerchantFilter($event)"
         filterBy="name,city"
         dataKey="id"
         optionLabel="name"
@@ -21,7 +22,18 @@
         emptyMessage="No merchants"
         emptyFilterMessage="No merchants found"
         appendTo="body"
-      />
+      >
+        <ng-template #item let-merchant>
+          @if (isCreateOption(merchant)) {
+            <span class="flex items-center gap-2">
+              <i class="pi pi-plus text-xs" aria-hidden="true"></i>
+              Create "{{ merchant.name }}"
+            </span>
+          } @else {
+            {{ merchant.name }}
+          }
+        </ng-template>
+      </p-select>
       @if (merchantError(); as error) {
         <small class="text-rose-700 dark:text-rose-400">{{ error }}</small>
       }

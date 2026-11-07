@@ -28,6 +28,7 @@ import {
   MerchantRuleCreateRequest,
   MerchantRuleDraft,
   MerchantRuleUpdateRequest,
+  MerchantRuleNewMerchantRequest,
 } from '@models/merchant-rule.model';
 import { PageErrorStateComponent } from '@shared/components/page-error-state/page-error-state.component';
 import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen-toolbar';
@@ -264,8 +265,11 @@ export class MerchantRulesComponent implements OnInit {
   // ---- saving and deleting ----
 
   /** Saves the form: an update when a rule is open, otherwise a create. */
-  saveRule(request: MerchantRuleCreateRequest | MerchantRuleUpdateRequest): void {
-    if (this.saving()) return;
+  saveRule(
+    request: MerchantRuleCreateRequest | MerchantRuleUpdateRequest | MerchantRuleNewMerchantRequest,
+  ): void {
+    // Settings never lets the form create a merchant (allowCreate is off), so this cannot happen
+    if (this.saving() || 'newMerchantName' in request) return;
     this.saving.set(true);
     const editing: boolean = 'id' in request;
     const call =

@@ -42,6 +42,9 @@ import {
   CategoryRuleCreateRequest,
   CategoryRuleUpdateRequest,
   RuleDraft,
+  CategoryRuleApplyResult,
+  RuleApplicationUndoResult,
+  CreateBothAndApplyResult,
 } from '@models/category-rule.model';
 import { Merchant } from '@models/merchant.model';
 import { Tag } from '@models/tag.model';
@@ -67,6 +70,28 @@ import {
 import { TransactionListComponent } from './components/transaction-list/transaction-list.component';
 import { TransactionBulkBarComponent } from './components/transaction-bulk-bar/transaction-bulk-bar.component';
 import { GridHighlights, NO_HIGHLIGHTS } from './utils/grid-highlights';
+import { sharedKeyword, trimmedKeyword } from './utils/rule-keyword';
+import { MerchantRuleEditFormComponent } from '@features/settings/merchant-rules/components/merchant-rule-edit-form/merchant-rule-edit-form.component';
+import { MerchantRuleApiService } from '@features/settings/merchant-rules/merchant-rule-api.service';
+import {
+  merchantMatchConfig,
+  RuleMatchConfig,
+} from '@features/settings/category-rules/components/rule-match-list/rule-match-config';
+import { MerchantApiService } from '@features/merchants/services/merchant-api.service';
+import {
+  MerchantRuleApplyResult,
+  MerchantRuleApplyRule,
+  MerchantRuleCreateRequest,
+  MerchantRuleDraft,
+  MerchantRuleNewMerchantRequest,
+  MerchantRuleUpdateRequest,
+} from '@models/merchant-rule.model';
+import { RuleKind } from './utils/rule-kind';
+import { NEW_MERCHANT_ID } from '@features/settings/merchant-rules/utils/merchant-options';
+import { MerchantPickerComponent } from './components/merchant-picker/merchant-picker.component';
+import { RuleKindChooserComponent } from './components/rule-kind-chooser/rule-kind-chooser.component';
+import { RuleApplicationApiService } from './services/rule-application-api.service';
+import { UndoToastComponent } from './components/undo-toast/undo-toast.component';
 import { TransactionGridToolbarComponent } from './components/transaction-grid-toolbar/transaction-grid-toolbar.component';
 import { SidePanelComponent } from '@shared/components/side-panel/side-panel.component';
 import { TransactionEditFormComponent } from './components/transaction-edit-form/transaction-edit-form.component';
@@ -101,26 +126,25 @@ interface RuleStart {
 }
 
 /**
- * One keyword from a description: the description itself, or when it has commas (which the rule
- * form reads as separate OR keywords) its longest comma-separated part, trimmed. That part is still
- * in the description, so the transaction it came from still matches.
- */
-function singleKeyword(description: string): string {
-  if (!description.includes(',')) return description;
-  return description
-    .split(',')
-    .map((part: string): string => part.trim())
-    .reduce((longest: string, part: string): string =>
-      part.length > longest.length ? part : longest,
-    );
-}
-
-/**
  * Component for managing and auditing the master transaction ledger.
  *
  * Provides high-fidelity filtering, bulk operations, CSV imports, and
  * intelligent transfer matching.
  */
+/** The Undo toast's offer after a rule was applied (PF-928). */
+interface UndoOffer {
+  message: string;
+  /** the category create-and-apply result to send back, when a category rule was applied */
+  category?: CategoryRuleApplyResult;
+  /** the merchant create-and-apply result to send back, when a merchant rule was applied */
+  merchant?: MerchantRuleApplyResult;
+}
+
+const NO_ROWS_CHANGED = 'Rule added, no transactions changed';
+
+/** How many merchants the merchant rule form loads (the same cap as Settings). */
+const RULE_MERCHANT_PAGE_SIZE = 2000;
+
 @Component({
   selector: 'app-transactions',
   standalone: true,
@@ -135,6 +159,10 @@ function singleKeyword(description: string): string {
     TransactionListComponent,
     TransactionBulkBarComponent,
     TransactionGridToolbarComponent,
+    UndoToastComponent,
+    RuleKindChooserComponent,
+    MerchantPickerComponent,
+    MerchantRuleEditFormComponent,
     SidePanelComponent,
     TransactionEditFormComponent,
     TransactionBulkFormComponent,
@@ -156,6 +184,10 @@ export class TransactionsComponent implements OnInit {
   private readonly tagApi: TagApiService = inject(TagApiService);
   private readonly toast: ToastService = inject(ToastService);
   private readonly confirmationService: ConfirmationService = inject(ConfirmationService);
+  private readonly ruleApplicationApi: RuleApplicationApiService =
+    inject(RuleApplicationApiService);
+  private readonly merchantRuleApi: MerchantRuleApiService = inject(MerchantRuleApiService);
+  private readonly merchantApi: MerchantApiService = inject(MerchantApiService);
   private readonly route: ActivatedRoute = inject(ActivatedRoute);
   private readonly router: Router = inject(Router);
   private readonly destroyRef: DestroyRef = inject(DestroyRef);
@@ -215,6 +247,68 @@ export class TransactionsComponent implements OnInit {
 
   /** The rule form's draft, for the match list under it. */
   readonly ruleDraft: WritableSignal<RuleDraft | null> = signal<RuleDraft | null>(null);
+
+  /** The Undo toast's offer after a rule was applied: its message and the result to send back (PF-928). */
+  readonly undoOffer: WritableSignal<UndoOffer | null> = signal<UndoOffer | null>(null);
+  readonly undoMessage: Signal<string | null> = computed(
+    (): string | null => this.undoOffer()?.message ?? null,
+  );
+  private readonly undoing: WritableSignal<boolean> = signal(false);
+
+  /** Which kind of rule the panel is making (PF-931); every new rule starts as a category rule. */
+  readonly ruleKind: WritableSignal<RuleKind> = signal<RuleKind>('category');
+
+  /** The kinds the chooser offers. */
+  readonly ruleKindOptions: RuleKind[] = ['category', 'merchant', 'both'];
+
+  /** Every merchant, for the merchant rule form; loaded once, the first time it is needed. */
+  readonly ruleMerchants: WritableSignal<Merchant[]> = signal<Merchant[]>([]);
+  private ruleMerchantsRequested = false;
+
+  /** The merchant chosen in "Both" mode (PF-934); the "Create" option stands for a new merchant. */
+  readonly bothMerchant: WritableSignal<Merchant | null> = signal<Merchant | null>(null);
+
+  /** The ticked matches for the merchant half of a "Both" rule; the category half uses `ruleApplyIds`. */
+  readonly merchantApplyIds: WritableSignal<number[]> = signal<number[]>([]);
+
+  /** Shown under the merchant field in "Both" mode when saving without a merchant. */
+  readonly bothMerchantError: WritableSignal<string | null> = signal<string | null>(null);
+
+  /**
+   * The merchant half's draft in "Both" mode: the shared keyword form's draft plus the chosen
+   * merchant, which the merchant preview needs (a new merchant has no id yet).
+   */
+  readonly bothMerchantDraft: Signal<MerchantRuleDraft | null> = computed(
+    (): MerchantRuleDraft | null => {
+      const draft: RuleDraft | null = this.ruleDraft();
+      const merchant: Merchant | null = this.bothMerchant();
+      if (!draft) return null;
+      return {
+        ...draft,
+        merchantId: merchant && merchant.id !== NEW_MERCHANT_ID ? merchant.id : null,
+      };
+    },
+  );
+
+  /** How the match list previews and words a merchant rule (the category config is the default). */
+  readonly merchantConfig: RuleMatchConfig = merchantMatchConfig(this.merchantRuleApi);
+
+  /** The matches the owner has ticked in the rule panel's preview, to apply the rule to (PF-926). */
+  readonly ruleApplyIds: WritableSignal<number[]> = signal<number[]>([]);
+
+  /** The name of the category the rule form has chosen, for the preview's "becomes" line. */
+  readonly ruleBecomes: WritableSignal<string | null> = signal<string | null>(null);
+
+  /** The rule panel's save button, saying how many rows saving will change. */
+  readonly ruleSaveLabel: Signal<string> = computed((): string => {
+    // in "Both" mode a transaction ticked for both kinds is still one transaction
+    const count: number =
+      this.ruleKind() === 'both'
+        ? new Set([...this.ruleApplyIds(), ...this.merchantApplyIds()]).size
+        : this.ruleApplyIds().length;
+    if (count === 0) return 'Add rule, no transactions changed';
+    return `Add rule and update ${count} ${count === 1 ? 'transaction' : 'transactions'}`;
+  });
 
   /** Categories grouped under their parents, for the rule form; loaded on the first Create rule. */
   readonly ruleGroups: WritableSignal<CategoryGroup[]> = signal<CategoryGroup[]>([]);
@@ -407,6 +501,8 @@ export class TransactionsComponent implements OnInit {
     viewChild<TransactionBulkFormComponent>('bulkForm');
   private readonly ruleForm: Signal<RuleEditFormComponent | undefined> =
     viewChild<RuleEditFormComponent>('ruleForm');
+  private readonly merchantRuleForm: Signal<MerchantRuleEditFormComponent | undefined> =
+    viewChild<MerchantRuleEditFormComponent>('merchantRuleForm');
 
   /** The list request in flight, cancelled when a newer load starts. */
   private listRequest: Subscription | null = null;
@@ -700,6 +796,16 @@ export class TransactionsComponent implements OnInit {
     }));
   }
 
+  /** Keeps the ids ticked in the merchant preview of "Both" mode (PF-934). */
+  onMerchantSelection(ids: number[]): void {
+    this.merchantApplyIds.set(ids);
+  }
+
+  /** Keeps the ids of the matches ticked in the rule panel's preview. */
+  onRuleSelection(ids: number[]): void {
+    this.ruleApplyIds.set(ids);
+  }
+
   /** Applies the toolbar's new highlights. */
   onHighlightsChange(highlights: GridHighlights): void {
     this.highlights.set(highlights);
@@ -741,7 +847,7 @@ export class TransactionsComponent implements OnInit {
     const editing: boolean = mode === 'single' || mode === 'create';
     const dirty: boolean =
       (editing && !!this.editForm()?.form.dirty) ||
-      (mode === 'rule' && !!this.ruleForm()?.form.dirty);
+      (mode === 'rule' && !!this.activeRuleForm()?.form.dirty);
     if (!dirty) {
       proceed();
       return;
@@ -818,46 +924,165 @@ export class TransactionsComponent implements OnInit {
         this.bulkForm()?.submit();
         break;
       case 'rule':
-        this.ruleForm()?.submit();
+        this.activeRuleForm()?.submit();
         break;
       default:
         this.editForm()?.submit();
     }
   }
 
-  /** Starts a rule from the transaction open in the edit panel. */
+  /** Starts a rule from the transaction open in the edit panel, its trimmed description as the keyword. */
   onCreateRuleFromEditForm(): void {
     const txn: Transaction | null = this.selectedTransaction();
-    if (txn) this.openRuleForm(txn.description, []);
+    if (txn) this.openRuleForm(trimmedKeyword(txn.description), []);
   }
 
   /**
-   * Starts one rule for the selection. One selected row counts as starting from that transaction
-   * (its description is the keyword); several start with an empty keyword and show as context.
+   * Starts one rule for the selection. One selected row starts from that transaction (its
+   * description trimmed of store numbers and locations, PF-929); several start from the words all
+   * their descriptions share (PF-930), or with an empty keyword, showing the rows as context, when
+   * they share nothing useful.
    */
   onCreateRuleFromSelection(): void {
     const rows: Transaction[] = this.selectedTransactions();
     if (rows.length === 1) {
-      this.openRuleForm(rows[0].description, []);
+      this.openRuleForm(trimmedKeyword(rows[0].description), []);
     } else {
-      this.openRuleForm('', rows);
+      this.openRuleForm(sharedKeyword(rows.map((t: Transaction): string => t.description)), rows);
     }
+  }
+
+  /** The rule form the panel is showing: the merchant form for a merchant rule, otherwise the category form. */
+  private activeRuleForm(): RuleEditFormComponent | MerchantRuleEditFormComponent | undefined {
+    return this.ruleKind() === 'merchant' ? this.merchantRuleForm() : this.ruleForm();
+  }
+
+  /**
+   * Switches the rule panel between a category rule and a merchant rule (PF-931), keeping the
+   * keywords typed so far. Unsaved changes ask first, like closing the panel does. The new form
+   * starts fresh, so the preview, the ticks and the "becomes" name start over.
+   */
+  onRuleKindChange(kind: RuleKind): void {
+    if (kind === this.ruleKind()) return;
+    this.confirmDiscardIfDirty((): void => {
+      const keyword: string =
+        this.activeRuleForm()?.form.controls.keywordsInput.value ?? this.ruleStart()?.keyword ?? '';
+      this.ruleKind.set(kind);
+      if (kind !== 'category') this.loadRuleMerchants();
+      this.ruleDraft.set(null);
+      this.ruleApplyIds.set([]);
+      this.merchantApplyIds.set([]);
+      this.bothMerchant.set(null);
+      this.bothMerchantError.set(null);
+      this.ruleBecomes.set(null);
+      this.ruleStart.set({
+        key: ++this.ruleSessions,
+        keyword,
+        context: this.ruleStart()?.context ?? [],
+      });
+      afterNextRender(
+        { read: (): void => this.activeRuleForm()?.focusKeywords() },
+        { injector: this.injector },
+      );
+    });
+  }
+
+  /** Loads every merchant for the merchant rule form, once. */
+  private loadRuleMerchants(): void {
+    if (this.ruleMerchantsRequested) return;
+    this.ruleMerchantsRequested = true;
+    this.merchantApi
+      .getMerchants(null, { page: 0, size: RULE_MERCHANT_PAGE_SIZE, sort: 'name' })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (page: PageResponse<Merchant>): void => this.ruleMerchants.set(page.content),
+        error: (err: unknown): void => {
+          console.error('Failed to load merchants:', err);
+          this.ruleMerchantsRequested = false;
+          this.toast.error('Failed to load merchants.');
+        },
+      });
+  }
+
+  /**
+   * Saves a merchant rule: with matches ticked in the preview (PF-932) it creates the rule and
+   * applies it to exactly those rows, like a category rule; with nothing ticked it stores the rule
+   * only (PF-931). A failure leaves the panel open with the form as typed.
+   */
+  onSaveMerchantRule(
+    value: MerchantRuleCreateRequest | MerchantRuleUpdateRequest | MerchantRuleNewMerchantRequest,
+  ): void {
+    if (this.savingRule() || 'id' in value) return;
+    const ids: number[] = this.ruleApplyIds();
+    this.savingRule.set(true);
+
+    // a merchant that does not exist yet is created by the server together with the rule (PF-933),
+    // in one all-or-nothing step, so even with nothing ticked this goes through create-and-apply
+    if ('newMerchantName' in value) {
+      const { newMerchantName, ...rest } = value;
+      this.applyMerchantRule({ ...rest, newMerchantName }, ids);
+      return;
+    }
+    if (ids.length === 0) {
+      this.merchantRuleApi
+        .createRule(value)
+        .pipe(
+          takeUntilDestroyed(this.destroyRef),
+          finalize((): void => this.savingRule.set(false)),
+        )
+        .subscribe({
+          next: (): void => {
+            this.merchantRuleForm()?.form.markAsPristine();
+            this.toast.success(NO_ROWS_CHANGED);
+            this.refreshRuleCoverage();
+            this.closePanel();
+          },
+          error: (err: HttpErrorResponse): void => this.onRuleSaveFailed(err),
+        });
+      return;
+    }
+    this.applyMerchantRule(value, ids);
+  }
+
+  /** Creates a merchant rule (and a new merchant if it is named) and applies it to the ticked rows. */
+  private applyMerchantRule(rule: MerchantRuleApplyRule, transactionIds: number[]): void {
+    const createsMerchant = !!rule.newMerchantName;
+    this.merchantRuleApi
+      .createAndApply({ rule, transactionIds })
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize((): void => this.savingRule.set(false)),
+      )
+      .subscribe({
+        next: (result: MerchantRuleApplyResult): void => {
+          // the new merchant is not in the loaded list yet: load the list again next time it is needed
+          if (createsMerchant) this.ruleMerchantsRequested = false;
+          this.onMerchantRuleApplied(result);
+        },
+        error: (err: HttpErrorResponse): void => this.onRuleSaveFailed(err),
+      });
   }
 
   /** Forgets the rule form's start, draft and opener, whenever the panel leaves rule mode. */
   private clearRuleState(): void {
     this.ruleStart.set(null);
     this.ruleDraft.set(null);
+    this.ruleApplyIds.set([]);
+    this.merchantApplyIds.set([]);
+    this.bothMerchant.set(null);
+    this.bothMerchantError.set(null);
+    this.ruleBecomes.set(null);
+    this.ruleKind.set('category');
     this.ruleOpener = null;
   }
 
   /**
    * Opens the panel on a fresh Create rule form, leaving the page's selection, filters and list
-   * alone. Focus moves to the keyword field. The keyword is reduced to one comma-free part (see
-   * {@link singleKeyword}), since the form reads commas as separate keywords.
+   * alone. Focus moves to the keyword field. The keyword comes from {@link trimmedKeyword} or
+   * {@link sharedKeyword}, so it is already one comma-free part (the form reads commas as separate
+   * keywords).
    */
-  private openRuleForm(description: string, context: Transaction[]): void {
-    const keyword: string = singleKeyword(description);
+  private openRuleForm(keyword: string, context: Transaction[]): void {
     // captured before any discard prompt takes focus
     const opener: HTMLElement | null = document.activeElement as HTMLElement | null;
     this.confirmDiscardIfDirty((): void => {
@@ -865,6 +1090,12 @@ export class TransactionsComponent implements OnInit {
       this.ruleOpener = opener && opener !== document.body ? opener : null;
       this.selectedTransaction.set(null);
       this.ruleDraft.set(null);
+      this.ruleApplyIds.set([]);
+      this.merchantApplyIds.set([]);
+      this.bothMerchant.set(null);
+      this.bothMerchantError.set(null);
+      this.ruleBecomes.set(null);
+      this.ruleKind.set('category');
       this.ruleStart.set({ key: ++this.ruleSessions, keyword, context });
       this.panelMode.set('rule');
       // the read phase runs after the panel's own move of focus to itself on opening
@@ -893,30 +1124,187 @@ export class TransactionsComponent implements OnInit {
   }
 
   /**
-   * Stores the new rule. Nothing else changes: the rule is not applied, and the list, filters,
-   * page and selection stay as they are (applying stays on Settings, "Apply rules").
+   * Saves the rule. With matches ticked in the preview (PF-927) it creates the rule and applies it
+   * to exactly those rows in one all-or-nothing call, then closes the panel, refreshes the list (the
+   * page, filters and sort stay as they are) and offers Undo. With nothing ticked it only stores the
+   * rule. Either way a failure leaves the panel open with the form as typed and nothing changed.
    */
   onSaveRule(value: RuleCreateValue | CategoryRuleUpdateRequest): void {
     if (this.savingRule() || 'id' in value) return;
+    const rule: CategoryRuleCreateRequest = value as CategoryRuleCreateRequest;
+    if (this.ruleKind() === 'both') {
+      this.saveBoth(rule);
+      return;
+    }
+    const ids: number[] = this.ruleApplyIds();
     this.savingRule.set(true);
+
+    if (ids.length === 0) {
+      this.ruleApi
+        .createRule(rule)
+        .pipe(
+          takeUntilDestroyed(this.destroyRef),
+          finalize((): void => this.savingRule.set(false)),
+        )
+        .subscribe({
+          next: (): void => {
+            this.ruleForm()?.form.markAsPristine();
+            this.toast.success(NO_ROWS_CHANGED);
+            this.refreshRuleCoverage();
+            this.closePanel();
+          },
+          error: (err: HttpErrorResponse): void => this.onRuleSaveFailed(err),
+        });
+      return;
+    }
+
     this.ruleApi
-      .createRule(value as CategoryRuleCreateRequest)
+      .createAndApply({ rule, transactionIds: ids })
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize((): void => this.savingRule.set(false)),
       )
       .subscribe({
-        next: (): void => {
-          this.ruleForm()?.form.markAsPristine();
-          this.toast.success('Rule added');
-          this.refreshRuleCoverage();
-          this.closePanel();
+        next: (result: CategoryRuleApplyResult): void => this.onRuleApplied(result),
+        error: (err: HttpErrorResponse): void => this.onRuleSaveFailed(err),
+      });
+  }
+
+  /**
+   * Saves a category rule and a merchant rule together (PF-934), from the shared keyword form and
+   * the merchant field: one all-or-nothing call, each kind applied to its own ticked rows. Without
+   * a merchant it asks for one and saves nothing. A failure leaves the panel open as typed.
+   */
+  private saveBoth(category: CategoryRuleCreateRequest): void {
+    const merchant: Merchant | null = this.bothMerchant();
+    if (!merchant) {
+      this.bothMerchantError.set('Choose a merchant.');
+      return;
+    }
+    this.bothMerchantError.set(null);
+    const shared = {
+      keywords: category.keywords,
+      matchType: category.matchType,
+      priority: category.priority,
+      minAmount: category.minAmount,
+      maxAmount: category.maxAmount,
+    };
+    const merchantRule: MerchantRuleApplyRule =
+      merchant.id === NEW_MERCHANT_ID
+        ? { ...shared, newMerchantName: merchant.name }
+        : { ...shared, merchantId: merchant.id };
+    this.savingRule.set(true);
+    this.ruleApplicationApi
+      .createBothAndApply({
+        category: { rule: category, transactionIds: this.ruleApplyIds() },
+        merchant: { rule: merchantRule, transactionIds: this.merchantApplyIds() },
+      })
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize((): void => this.savingRule.set(false)),
+      )
+      .subscribe({
+        next: (result: CreateBothAndApplyResult): void => {
+          if (merchant.id === NEW_MERCHANT_ID) this.ruleMerchantsRequested = false;
+          this.onBothApplied(result);
         },
-        error: (err: HttpErrorResponse): void => {
-          console.error('Saving the rule failed:', err);
-          this.ruleForm()?.errorMessage.set(err.error?.detail || 'Failed to save the rule.');
+        error: (err: HttpErrorResponse): void => this.onRuleSaveFailed(err),
+      });
+  }
+
+  /** After both rules were created and applied: one Undo for both, naming both kinds and their counts. */
+  private onBothApplied(result: CreateBothAndApplyResult): void {
+    const categorized: number = result.category.changes.length;
+    const merchants: number = result.merchant.changes.length;
+    this.afterRuleApplied(
+      categorized + merchants,
+      { category: result.category, merchant: result.merchant },
+      `Rules added. ${categorized} ${categorized === 1 ? 'transaction' : 'transactions'} categorized, ${merchants} given a merchant.`,
+      'Rules added, no transactions changed',
+    );
+  }
+
+  /** Shows why saving the rule failed, in the form, which stays open as the owner typed it. */
+  private onRuleSaveFailed(err: HttpErrorResponse): void {
+    console.error('Saving the rule failed:', err);
+    this.activeRuleForm()?.errorMessage.set(err.error?.detail || 'Failed to save the rule.');
+  }
+
+  /** After a category rule was created and applied: close the panel, refresh the list and offer Undo. */
+  private onRuleApplied(result: CategoryRuleApplyResult): void {
+    this.afterRuleApplied(result.changes.length, { category: result });
+  }
+
+  /** After a merchant rule was created and applied: close the panel, refresh the list and offer Undo. */
+  private onMerchantRuleApplied(result: MerchantRuleApplyResult): void {
+    this.afterRuleApplied(result.changes.length, { merchant: result });
+  }
+
+  /**
+   * The same ending for every kind of rule (PF-927, PF-932): with rows changed, offer Undo with the
+   * count; with none, just say so. Then close the panel and refresh the list.
+   */
+  private afterRuleApplied(
+    changed: number,
+    offer: Omit<UndoOffer, 'message'>,
+    message?: string,
+    nothingChanged: string = NO_ROWS_CHANGED,
+  ): void {
+    this.activeRuleForm()?.form.markAsPristine();
+    if (changed === 0) {
+      this.undoOffer.set(null);
+      this.toast.success(nothingChanged);
+    } else {
+      this.undoOffer.set({
+        message:
+          message ??
+          `Rule added. ${changed} ${changed === 1 ? 'transaction' : 'transactions'} updated.`,
+        ...offer,
+      });
+    }
+    this.closePanel();
+    this.loadTransactions();
+  }
+
+  /**
+   * Undoes the rule that was just applied: sends the apply result back, which restores the changed
+   * rows (leaving any that changed since alone) and deletes the rule, then refreshes the list.
+   */
+  undoLastApply(): void {
+    const offer: UndoOffer | null = this.undoOffer();
+    if (!offer || this.undoing()) return;
+    this.undoing.set(true);
+    this.ruleApplicationApi
+      .undo({
+        ...(offer.category ? { category: offer.category } : {}),
+        ...(offer.merchant ? { merchant: offer.merchant } : {}),
+      })
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize((): void => this.undoing.set(false)),
+      )
+      .subscribe({
+        next: (undone: RuleApplicationUndoResult): void => {
+          this.undoOffer.set(null);
+          this.loadTransactions();
+          const left: number = undone.skippedTransactionIds.length;
+          const restored = `${undone.restoredCount} ${undone.restoredCount === 1 ? 'transaction' : 'transactions'} restored`;
+          this.toast.success(
+            left > 0
+              ? `Rule undone. ${restored}; ${left} changed since and ${left === 1 ? 'was' : 'were'} left alone.`
+              : `Rule undone. ${restored}.`,
+          );
+        },
+        error: (): void => {
+          this.undoOffer.set(null);
+          this.toast.error('Could not undo the rule. Nothing was changed.');
         },
       });
+  }
+
+  /** Drops the Undo offer without undoing anything. */
+  dismissUndo(): void {
+    this.undoOffer.set(null);
   }
 
   /** Loads the counts shown on the review tabs. */

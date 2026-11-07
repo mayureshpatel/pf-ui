@@ -46,6 +46,17 @@ export interface MerchantRuleCreateRequest {
 }
 
 /** Represents a request to update a merchant rule: the create fields plus the rule's `id`. */
+/**
+ * A new merchant rule whose merchant does not exist yet (PF-933): the merchant is named here and
+ * created together with the rule.
+ */
+export interface MerchantRuleNewMerchantRequest extends Omit<
+  MerchantRuleCreateRequest,
+  'merchantId'
+> {
+  newMerchantName: string;
+}
+
 export interface MerchantRuleUpdateRequest extends MerchantRuleCreateRequest {
   id: number;
 }
@@ -108,6 +119,8 @@ export interface MerchantRuleMatchPreview {
   linkedCount: number;
   truncated: boolean;
   rows: MerchantRuleMatchRow[];
+  /** the ids of every transaction the draft would give a merchant, not only those in `rows` (PF-932) */
+  willAssignIds?: number[];
 }
 
 /**
@@ -132,4 +145,44 @@ export interface MerchantRuleChangePreview {
  */
 export interface MerchantRuleDraft extends RuleDraft {
   merchantId: number | null;
+}
+
+/**
+ * The rule a create-and-apply call creates (PF-932, PF-933): a merchant rule's usual fields, with
+ * the merchant either an existing one (`merchantId`) or a new name to create (`newMerchantName`),
+ * never both.
+ */
+export interface MerchantRuleApplyRule {
+  merchantId?: number | null;
+  newMerchantName?: string | null;
+  keywords: string[];
+  matchType?: MatchType;
+  priority?: number;
+  minAmount?: number | null;
+  maxAmount?: number | null;
+}
+
+/** A request to create a merchant rule and apply it to the transactions the user chose (PF-932). */
+export interface MerchantRuleApplyRequest {
+  rule: MerchantRuleApplyRule;
+  transactionIds: number[];
+}
+
+/** One transaction a merchant create-and-apply changed, with the merchant it had before. */
+export interface AppliedMerchantChange {
+  transactionId: number;
+  previousMerchantId: number | null;
+}
+
+/**
+ * The result of a merchant create-and-apply, kept so the change can be undone (PF-928).
+ *
+ * @property ruleId - The id of the rule that was created.
+ * @property merchantId - The merchant the rule set (an existing one, or the one just created).
+ * @property changes - Every transaction that was changed, with its previous merchant.
+ */
+export interface MerchantRuleApplyResult {
+  ruleId: number;
+  merchantId: number;
+  changes: AppliedMerchantChange[];
 }

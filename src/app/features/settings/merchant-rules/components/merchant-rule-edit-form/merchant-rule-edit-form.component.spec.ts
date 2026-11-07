@@ -2,7 +2,10 @@ import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Merchant } from '@models/merchant.model';
 import { MerchantRule, MerchantRuleDraft } from '@models/merchant-rule.model';
-import { MerchantRuleEditFormComponent } from './merchant-rule-edit-form.component';
+import {
+  MerchantRuleEditFormComponent,
+  NEW_MERCHANT_ID,
+} from './merchant-rule-edit-form.component';
 
 const kroger = { id: 5, userId: 1, name: 'Kroger' } as Merchant;
 const shell = { id: 8, userId: 1, name: 'Shell' } as Merchant;
@@ -366,6 +369,116 @@ describe('MerchantRuleEditFormComponent', () => {
       // assert & verify
       expect(component.form.getRawValue().keywordsInput).toBe('KROGER #431');
       expect(component.form.pristine).toBe(true);
+    });
+  });
+
+  it('should tell the host which merchant is chosen, so the preview can say what rows would become (PF-932)', () => {
+    // arrange
+    render();
+    const names: (string | null)[] = [];
+    component.merchantChange.subscribe((name) => names.push(name));
+
+    // act
+    component.form.patchValue({ merchant: kroger });
+    component.form.patchValue({ merchant: null });
+
+    // assert & verify
+    expect(names).toEqual(['Kroger', null]);
+  });
+
+  describe('creating a merchant on the spot (PF-933)', () => {
+    const typed = (text: string): void => component.onMerchantFilter({ filter: text });
+    const createOption = (): Merchant | undefined =>
+      component.options().find((m: Merchant): boolean => m.id === NEW_MERCHANT_ID);
+
+    it('should not offer to create a merchant unless the host asks for it', () => {
+      // arrange
+      render();
+
+      // act
+      typed('Brand New');
+
+      // assert & verify
+      expect(createOption()).toBeUndefined();
+      expect(component.options()).toEqual(merchants);
+    });
+
+    it('should offer a Create option for a name that matches no merchant', () => {
+      // arrange
+      render();
+      fixture.componentRef.setInput('allowCreate', true);
+      fixture.detectChanges();
+
+      // act
+      typed('  Brand New ');
+
+      // assert & verify
+      expect(createOption()?.name).toBe('Brand New');
+      expect(component.options().slice(0, merchants.length)).toEqual(merchants);
+    });
+
+    it('should not offer Create for a name that matches an existing merchant, ignoring case', () => {
+      // arrange
+      render();
+      fixture.componentRef.setInput('allowCreate', true);
+      fixture.detectChanges();
+
+      // act
+      typed('KROGER');
+
+      // assert & verify
+      expect(createOption()).toBeUndefined();
+    });
+
+    it('should offer nothing to create for an empty search', () => {
+      // arrange
+      render();
+      fixture.componentRef.setInput('allowCreate', true);
+      fixture.detectChanges();
+
+      // act
+      typed('   ');
+
+      // assert & verify
+      expect(createOption()).toBeUndefined();
+    });
+
+    it('should save the new name, with no merchant id, when the Create option is chosen', () => {
+      // arrange
+      render();
+      fixture.componentRef.setInput('allowCreate', true);
+      fixture.detectChanges();
+      typed('Brand New');
+      fill({ merchant: createOption() });
+
+      // act
+      component.submit();
+
+      // assert & verify
+      expect(saved).toEqual([
+        {
+          keywords: ['kroger'],
+          matchType: 'OR',
+          priority: 0,
+          minAmount: null,
+          maxAmount: null,
+          newMerchantName: 'Brand New',
+        },
+      ]);
+    });
+
+    it('should preview a new merchant without a target merchant id', () => {
+      // arrange
+      render();
+      fixture.componentRef.setInput('allowCreate', true);
+      fixture.detectChanges();
+      typed('Brand New');
+
+      // act
+      fill({ merchant: createOption() });
+
+      // assert & verify
+      expect(drafts[drafts.length - 1]?.merchantId).toBeNull();
     });
   });
 });

@@ -43,6 +43,11 @@ export interface MatchPreviewData {
   /** what the draft would assign (a merchant's name), when the preview says; null otherwise */
   targetName: string | null;
   rows: MatchRowData[];
+  /**
+   * the ids of every match the draft would handle (`WILL_APPLY`), including those beyond the capped
+   * `rows`, so the ledger can apply a rule to all of them (PF-926)
+   */
+  willApplyIds: number[];
 }
 
 /** The wording the list uses for one kind of rule. */
@@ -63,6 +68,10 @@ export interface MatchListLabels {
   /** the summary line and verdict for rows linked by an exact description link */
   linkedSummary: string;
   linkedRow: string;
+  /** the group headings of the ledger's selectable list (PF-926) */
+  groupSet: string;
+  groupChange: string;
+  groupKeep: string;
 }
 
 /** What the match list needs to know about a kind of rule: how to preview a draft, and what to call things. */
@@ -86,6 +95,9 @@ export function categoryMatchConfig(api: CategoryRuleApiService): RuleMatchConfi
       alreadyRow: 'Already categorized - Apply rules leaves it alone',
       linkedSummary: '',
       linkedRow: '',
+      groupSet: 'Will be set (no category today)',
+      groupChange: 'Will change',
+      groupKeep: "Won't change",
     },
   };
 }
@@ -106,6 +118,9 @@ export function merchantMatchConfig(api: MerchantRuleApiService): RuleMatchConfi
       linkedSummary:
         'linked to a merchant by an exact description link, the rule leaves them alone',
       linkedRow: 'Linked to a merchant by an exact description link, the rule leaves it alone',
+      groupSet: 'Will be set (no merchant today)',
+      groupChange: 'Will change',
+      groupKeep: "Won't change",
     },
   };
 }
@@ -130,6 +145,9 @@ function fromCategoryPreview(p: RuleMatchPreview): MatchPreviewData {
     linkedCount: 0,
     truncated: p.truncated,
     targetName: null,
+    willApplyIds:
+      p.willCategorizeIds ??
+      p.rows.filter((row) => row.verdict === 'WILL_CATEGORIZE').map((row) => row.transactionId),
     rows: p.rows.map((row) => {
       const refs: MatchRuleRef[] = row.otherRules.map((r) => ({
         id: r.id,
@@ -167,6 +185,9 @@ function fromMerchantPreview(p: MerchantRuleMatchPreview): MatchPreviewData {
     linkedCount: p.linkedCount,
     truncated: p.truncated,
     targetName: p.targetMerchantName ?? null,
+    willApplyIds:
+      p.willAssignIds ??
+      p.rows.filter((row) => row.verdict === 'WILL_ASSIGN').map((row) => row.transactionId),
     rows: p.rows.map((row) => {
       const toRef = (r: {
         id: number;
