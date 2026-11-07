@@ -388,6 +388,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/rule-applications/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Undo a created-and-applied rule
+         * @description Restores the previous values the apply reported, leaving rows that changed since alone, and deletes the rule(s) it created
+         */
+        post: operations["undoRuleApplication"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/recurring/dismissals": {
         parameters: {
             query?: never;
@@ -456,6 +476,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/merchant-rules/create-and-apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a merchant rule and apply it to chosen transactions
+         * @description Creates the rule and sets its merchant on the chosen transactions, overwriting existing merchants; all or nothing, and only the chosen transactions change
+         */
+        post: operations["createMerchantRuleAndApply"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/merchant-rules/apply": {
         parameters: {
             query?: never;
@@ -490,6 +530,26 @@ export interface paths {
          * @description Shows which transactions a draft rule would match and whether it would categorize each, lose to another rule, or leave it alone; read-only
          */
         post: operations["matchPreview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/category-rules/create-and-apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a category rule and apply it to chosen transactions
+         * @description Creates the rule and sets its category on the chosen transactions, overwriting existing categories; all or nothing, and only the chosen transactions change
+         */
+        post: operations["createCategoryRuleAndApply"];
         delete?: never;
         options?: never;
         head?: never;
@@ -712,6 +772,26 @@ export interface paths {
          * @description Finds transaction pairs that look like transfers between the user's own accounts
          */
         get: operations["getTransferSuggestions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/transactions/rule-coverage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get rule coverage for a page of transactions
+         * @description Says, for each given transaction the user owns, whether a category rule and whether a merchant rule covers its description
+         */
+        get: operations["getTransactionRuleCoverage"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1633,6 +1713,44 @@ export interface components {
             name: string;
             color?: string;
         };
+        AppliedCategoryChangeDto: {
+            /** Format: int64 */
+            transactionId?: number;
+            /** Format: int64 */
+            previousCategoryId?: number;
+        };
+        AppliedMerchantChangeDto: {
+            /** Format: int64 */
+            transactionId?: number;
+            /** Format: int64 */
+            previousMerchantId?: number;
+        };
+        CategoryRuleApplyResultDto: {
+            /** Format: int64 */
+            ruleId?: number;
+            /** Format: int64 */
+            categoryId?: number;
+            changes?: components["schemas"]["AppliedCategoryChangeDto"][];
+            skippedTransactionIds?: number[];
+        };
+        MerchantRuleApplyResultDto: {
+            /** Format: int64 */
+            ruleId?: number;
+            /** Format: int64 */
+            merchantId?: number;
+            changes?: components["schemas"]["AppliedMerchantChangeDto"][];
+        };
+        RuleApplicationUndoRequest: {
+            category?: components["schemas"]["CategoryRuleApplyResultDto"];
+            merchant?: components["schemas"]["MerchantRuleApplyResultDto"];
+        };
+        RuleApplicationUndoResultDto: {
+            /** Format: int32 */
+            restoredCount?: number;
+            skippedTransactionIds?: number[];
+            categoryRuleDeleted?: boolean;
+            merchantRuleDeleted?: boolean;
+        };
         RecurringTransactionCreateRequest: {
             /** Format: int64 */
             userId: number;
@@ -1725,6 +1843,10 @@ export interface components {
             /** Format: int32 */
             priority?: number;
         };
+        MerchantRuleApplyRequest: {
+            rule: components["schemas"]["MerchantRuleCreateRequest"];
+            transactionIds: number[];
+        };
         CategoryRuleCreateRequest: {
             /** Format: int64 */
             userId: number;
@@ -1781,6 +1903,10 @@ export interface components {
             categoryName?: string;
             /** Format: int32 */
             priority?: number;
+        };
+        CategoryRuleApplyRequest: {
+            rule: components["schemas"]["CategoryRuleCreateRequest"];
+            transactionIds: number[];
         };
         CategoryCreateRequest: {
             /** Format: int64 */
@@ -1921,6 +2047,12 @@ export interface components {
             targetTransaction?: components["schemas"]["TransactionDto"];
             /** Format: double */
             confidenceScore?: number;
+        };
+        TransactionRuleCoverageDto: {
+            /** Format: int64 */
+            transactionId?: number;
+            categoryRuleCovers?: boolean;
+            merchantRuleCovers?: boolean;
         };
         CategoryTransactionsDto: {
             category?: components["schemas"]["CategoryDto"];
@@ -3289,6 +3421,39 @@ export interface operations {
             };
         };
     };
+    undoRuleApplication: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleApplicationUndoRequest"];
+            };
+        };
+        responses: {
+            /** @description Undone; the response says what was restored and skipped */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RuleApplicationUndoResultDto"];
+                };
+            };
+            /** @description Neither a category nor a merchant result was provided */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RuleApplicationUndoResultDto"];
+                };
+            };
+        };
+    };
     getDismissedPatterns: {
         parameters: {
             query?: never;
@@ -3437,6 +3602,57 @@ export interface operations {
             };
         };
     };
+    createMerchantRuleAndApply: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MerchantRuleApplyRequest"];
+            };
+        };
+        responses: {
+            /** @description Rule created and applied; previous merchants returned for undo */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MerchantRuleApplyResultDto"];
+                };
+            };
+            /** @description Validation failed, for example no transactions or a blank keyword */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MerchantRuleApplyResultDto"];
+                };
+            };
+            /** @description A chosen transaction is not the user's; nothing changed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MerchantRuleApplyResultDto"];
+                };
+            };
+            /** @description The merchant does not exist or is not the authenticated user's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MerchantRuleApplyResultDto"];
+                };
+            };
+        };
+    };
     applyMerchantRules: {
         parameters: {
             query?: never;
@@ -3495,6 +3711,39 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["RuleMatchPreviewDto"];
+                };
+            };
+        };
+    };
+    createCategoryRuleAndApply: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CategoryRuleApplyRequest"];
+            };
+        };
+        responses: {
+            /** @description Rule created and applied; previous categories returned for undo */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CategoryRuleApplyResultDto"];
+                };
+            };
+            /** @description A chosen transaction or the category is not the user's; nothing changed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CategoryRuleApplyResultDto"];
                 };
             };
         };
@@ -3862,6 +4111,37 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["TransferSuggestionDto"][];
+                };
+            };
+        };
+    };
+    getTransactionRuleCoverage: {
+        parameters: {
+            query: {
+                ids: number[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Coverage returned (ids the user does not own are left out) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TransactionRuleCoverageDto"][];
+                };
+            };
+            /** @description No ids, or more than the allowed number */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TransactionRuleCoverageDto"][];
                 };
             };
         };
