@@ -1690,7 +1690,7 @@ describe('TransactionsComponent', () => {
         // assert & verify
         expect(component.panelMode()).toBe('rule');
         expect(q('aside h2')?.textContent?.trim()).toBe('Create rule');
-        expect(keyword().value).toBe('NETFLIX.COM 866-579');
+        expect(keyword().value).toBe('NETFLIX.COM');
         expect(buttonNamed('aside', ADD_RULE_ONLY)).toBeTruthy();
         // no edit drawer for that row, the selection stays, and the list stays beside the panel
         expect(fixture.debugElement.query(By.directive(TransactionEditFormComponent))).toBeNull();
@@ -1712,7 +1712,7 @@ describe('TransactionsComponent', () => {
 
         // assert & verify
         expect(component.panelMode()).toBe('rule');
-        expect(keyword().value).toBe('NETFLIX.COM 866-579');
+        expect(keyword().value).toBe('NETFLIX.COM');
         expect(fixture.debugElement.query(By.directive(TransactionEditFormComponent))).toBeNull();
       });
 
@@ -1747,8 +1747,77 @@ describe('TransactionsComponent', () => {
 
         // assert & verify
         expect(component.panelMode()).toBe('rule');
-        expect(keyword().value).toBe('SHELL OIL 57444');
+        expect(keyword().value).toBe('SHELL OIL');
         expect(component.selectedIds()).toEqual([2]);
+      });
+
+      describe('suggested keywords (PF-929, PF-930)', () => {
+        it('should trim a store number and location off the keyword for one ticked row', async () => {
+          // arrange
+          open();
+          component.transactions.set([
+            row(11, { description: 'TACO BELL 041246 ROSWELL GA', category: null as never }),
+          ]);
+          fixture.detectChanges();
+          component.onSelectionChange([11]);
+
+          // act
+          component.onCreateRuleFromSelection();
+          await settle();
+
+          // assert & verify
+          expect(keyword().value).toBe('TACO BELL');
+        });
+
+        it('should start from the text several ticked rows share', async () => {
+          // arrange
+          open();
+          component.transactions.set([
+            row(11, { description: 'TACO BELL 041246', category: null as never }),
+            row(12, { description: 'TACO BELL 041246 ROSWELL', category: null as never }),
+            row(13, { description: 'TACO BELL 0412', category: null as never }),
+          ]);
+          fixture.detectChanges();
+          component.onSelectionChange([11, 12, 13]);
+
+          // act
+          component.onCreateRuleFromSelection();
+          await settle();
+
+          // assert & verify
+          expect(keyword().value).toBe('TACO BELL');
+          expect(component.selectedIds()).toEqual([11, 12, 13]);
+        });
+
+        it('should leave the keyword empty, listing the rows as context, when they share nothing', async () => {
+          // arrange
+          open();
+          component.onSelectionChange([1, 2]);
+
+          // act
+          component.onCreateRuleFromSelection();
+          await settle();
+
+          // assert & verify
+          expect(keyword().value).toBe('');
+          expect(q('app-rule-match-list [aria-label="Selected transactions"]')).not.toBeNull();
+        });
+
+        it('should trim the keyword when a rule is started from the edit panel too', async () => {
+          // arrange
+          open();
+          component.openEditDialog(
+            row(14, { description: 'ALDI 76012 WARNER ROBIN GA', category: null as never }),
+          );
+          await settle();
+
+          // act
+          buttonNamed('aside', 'Create rule from this transaction')!.click();
+          await settle();
+
+          // assert & verify
+          expect(keyword().value).toBe('ALDI');
+        });
       });
 
       describe('choosing which matches the rule changes (PF-926)', () => {
@@ -2166,14 +2235,14 @@ describe('TransactionsComponent', () => {
         await settle();
 
         // assert & verify
-        expect(keyword().value).toBe('SHELL OIL 57444');
+        expect(keyword().value).toBe('SHELL OIL');
 
         // act -- straight from one row to another while the panel is open
         rowAction('NETFLIX.COM 866-579').click();
         await settle();
 
         // assert & verify
-        expect(keyword().value).toBe('NETFLIX.COM 866-579');
+        expect(keyword().value).toBe('NETFLIX.COM');
       });
 
       it('should create the rule, close the panel and leave the page exactly as it was', async () => {
