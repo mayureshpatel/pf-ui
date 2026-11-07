@@ -125,89 +125,44 @@
           aria-label="Matching transactions"
           class="relative -mx-1 max-h-96 min-w-0 overflow-y-auto overscroll-contain rounded-xl px-1 py-0.5 focus-visible:outline-2 focus-visible:outline-primary-700 dark:focus-visible:outline-primary-400"
         >
-          <ul class="m-0 flex list-none flex-col gap-2 p-0">
-            @for (item of rows(); track item.row.transactionId) {
-              <li
-                data-match-row
-                class="flex min-w-0 flex-col gap-1.5 rounded-xl border border-surface-200 bg-surface-0 p-3 dark:border-surface-800 dark:bg-surface-900"
-              >
-                <span class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-                  <span class="flex min-w-0 flex-col">
-                    <span data-testid="row-date" class="text-xs text-muted-color">
-                      @if (item.date) {
-                        {{ item.date | date: 'MMM d, y' }}
-                      } @else {
-                        -
-                      }
-                    </span>
-                    <span class="break-words text-sm font-medium">{{ item.row.description }}</span>
-                  </span>
-                  <span class="shrink-0 text-sm tabular-nums">{{
-                    item.row.amount | formatCurrency
-                  }}</span>
-                </span>
-                <span class="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-color">
-                  <span class="min-w-0 break-words"
-                    ><span class="sr-only">Account: </span
-                    >{{ item.row.accountName ?? '(no account)' }}</span
-                  >
-                  <span class="min-w-0 break-words"
-                    ><span class="sr-only">{{ labels.currentLabel }}</span
-                    >{{ item.row.currentName || labels.currentNone }}</span
-                  >
-                </span>
-                <span data-testid="verdict" class="flex items-start gap-1.5 text-xs font-medium">
-                  @switch (item.row.verdict) {
-                    @case ('WILL_APPLY') {
-                      <i
-                        class="pi pi-check-circle mt-0.5 text-xs text-primary-700 dark:text-primary-400"
-                        aria-hidden="true"
-                      ></i>
-                      <span class="text-primary-700 dark:text-primary-400">{{
-                        labels.willRow(preview()?.targetName ?? null)
-                      }}</span>
+          @if (selectable()) {
+            <div class="flex flex-col gap-4">
+              @for (group of groups(); track group.key) {
+                <section data-testid="match-group" class="flex flex-col gap-2">
+                  <h4 class="m-0 flex items-center gap-2 text-sm font-semibold">
+                    <input
+                      type="checkbox"
+                      data-testid="group-checkbox"
+                      class="size-4 shrink-0 cursor-pointer"
+                      [checked]="allTicked(group)"
+                      [indeterminate]="someTicked(group)"
+                      [attr.aria-label]="'Select all: ' + group.title"
+                      (change)="toggleGroup(group)"
+                    />
+                    <span data-testid="group-title"
+                      >{{ group.title }}
+                      <span class="tabular-nums text-muted-color">{{ group.total }}</span></span
+                    >
+                  </h4>
+                  <ul class="m-0 flex list-none flex-col gap-2 p-0">
+                    @for (item of group.rows; track item.row.transactionId) {
+                      <ng-container
+                        *ngTemplateOutlet="rowTpl; context: { $implicit: item, selectable: true }"
+                      />
                     }
-                    @case ('LOSES_TO_OTHER_RULE') {
-                      <i
-                        class="pi pi-exclamation-triangle mt-0.5 text-xs text-amber-600 dark:text-amber-400"
-                        aria-hidden="true"
-                      ></i>
-                      <span class="text-amber-700 dark:text-amber-300">
-                        @if (item.winner; as winner) {
-                          Loses to {{ keywordsText(winner) }} (priority {{ winner.priority }})
-                        } @else {
-                          Loses to another rule
-                        }
-                      </span>
-                    }
-                    @case ('ALREADY_SET') {
-                      <i
-                        class="pi pi-minus-circle mt-0.5 text-xs text-muted-color"
-                        aria-hidden="true"
-                      ></i>
-                      <span class="text-muted-color">{{ labels.alreadyRow }}</span>
-                    }
-                    @case ('LINKED') {
-                      <i class="pi pi-link mt-0.5 text-xs text-muted-color" aria-hidden="true"></i>
-                      <span class="text-muted-color">{{ labels.linkedRow }}</span>
-                    }
-                  }
-                </span>
-                @if (item.alsoMatches.length > 0) {
-                  <span class="break-words text-xs text-muted-color">
-                    Also matches:
-                    @for (other of item.alsoMatches; track other.id; let last = $last) {
-                      {{ keywordsText(other) }} <span aria-hidden="true">→</span
-                      ><span class="sr-only">sets</span>
-                      {{ other.targetName ?? labels.targetNone }} (priority {{ other.priority }}){{
-                        last ? '' : ';'
-                      }}
-                    }
-                  </span>
-                }
-              </li>
-            }
-          </ul>
+                  </ul>
+                </section>
+              }
+            </div>
+          } @else {
+            <ul class="m-0 flex list-none flex-col gap-2 p-0">
+              @for (item of rows(); track item.row.transactionId) {
+                <ng-container
+                  *ngTemplateOutlet="rowTpl; context: { $implicit: item, selectable: false }"
+                />
+              }
+            </ul>
+          }
         </div>
       }
       @if (moreCount() > 0) {
@@ -216,3 +171,93 @@
     </div>
   }
 </section>
+
+<ng-template #rowTpl let-item let-pick="selectable">
+  <li
+    data-match-row
+    class="flex min-w-0 gap-2 rounded-xl border border-surface-200 bg-surface-0 p-3 dark:border-surface-800 dark:bg-surface-900"
+  >
+    @if (pick) {
+      <input
+        type="checkbox"
+        class="mt-1 size-4 shrink-0 cursor-pointer"
+        [checked]="isTicked(item.row.transactionId)"
+        [attr.aria-label]="'Update ' + item.row.description"
+        (change)="toggleRow(item.row.transactionId)"
+      />
+    }
+    <div class="flex min-w-0 flex-1 flex-col gap-1.5">
+      <span class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+        <span class="flex min-w-0 flex-col">
+          <span data-testid="row-date" class="text-xs text-muted-color">
+            @if (item.date) {
+              {{ item.date | date: 'MMM d, y' }}
+            } @else {
+              -
+            }
+          </span>
+          <span class="break-words text-sm font-medium">{{ item.row.description }}</span>
+        </span>
+        <span class="shrink-0 text-sm tabular-nums">{{ item.row.amount | formatCurrency }}</span>
+      </span>
+      <span class="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-color">
+        <span class="min-w-0 break-words"
+          ><span class="sr-only">Account: </span>{{ item.row.accountName ?? '(no account)' }}</span
+        >
+        <span class="min-w-0 break-words"
+          ><span class="sr-only">{{ labels.currentLabel }}</span
+          >{{ item.row.currentName || labels.currentNone }}</span
+        >
+      </span>
+      <span data-testid="verdict" class="flex items-start gap-1.5 text-xs font-medium">
+        @switch (item.row.verdict) {
+          @case ('WILL_APPLY') {
+            <i
+              class="pi pi-check-circle mt-0.5 text-xs text-primary-700 dark:text-primary-400"
+              aria-hidden="true"
+            ></i>
+            <span class="text-primary-700 dark:text-primary-400">{{
+              labels.willRow(preview()?.targetName ?? null)
+            }}</span>
+          }
+          @case ('LOSES_TO_OTHER_RULE') {
+            <i
+              class="pi pi-exclamation-triangle mt-0.5 text-xs text-amber-600 dark:text-amber-400"
+              aria-hidden="true"
+            ></i>
+            <span class="text-amber-700 dark:text-amber-300">
+              @if (item.winner; as winner) {
+                Loses to {{ keywordsText(winner) }} (priority {{ winner.priority }})
+              } @else {
+                Loses to another rule
+              }
+            </span>
+          }
+          @case ('ALREADY_SET') {
+            <i class="pi pi-minus-circle mt-0.5 text-xs text-muted-color" aria-hidden="true"></i>
+            <span class="text-muted-color">{{ labels.alreadyRow }}</span>
+          }
+          @case ('LINKED') {
+            <i class="pi pi-link mt-0.5 text-xs text-muted-color" aria-hidden="true"></i>
+            <span class="text-muted-color">{{ labels.linkedRow }}</span>
+          }
+        }
+      </span>
+      @if (item.alsoMatches.length > 0) {
+        <span class="break-words text-xs text-muted-color">
+          Also matches:
+          @for (other of item.alsoMatches; track other.id; let last = $last) {
+            {{ keywordsText(other) }} <span aria-hidden="true">→</span
+            ><span class="sr-only">sets</span> {{ other.targetName ?? labels.targetNone }} (priority
+            {{ other.priority }}){{ last ? '' : ';' }}
+          }
+        </span>
+      }
+      @if (pick && item.row.verdict === 'ALREADY_SET' && becomes()) {
+        <span data-testid="row-change" class="text-xs font-medium">
+          Was {{ item.row.currentName || labels.currentNone }}, becomes {{ becomes() }}
+        </span>
+      }
+    </div>
+  </li>
+</ng-template>

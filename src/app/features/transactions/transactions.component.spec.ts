@@ -3,6 +3,7 @@ import { By } from '@angular/platform-browser';
 import { TransactionEditFormComponent } from './components/transaction-edit-form/transaction-edit-form.component';
 import { CsvImportDialogComponent } from './components/csv-import-dialog/csv-import-dialog.component';
 import { TransactionsComponent } from './transactions.component';
+import { RuleApplicationApiService } from './services/rule-application-api.service';
 import { TransactionApiService } from './services/transaction-api.service';
 import { AccountApiService } from '@features/accounts/services/account-api.service';
 import { CategoryApiService } from '@features/categories/services/category-api.service';
@@ -29,7 +30,7 @@ import {
 import { BulkEditData } from './components/transaction-bulk-form/transaction-bulk-form.component';
 import { Category, CategoryGroup } from '@models/category.model';
 import { Merchant } from '@models/merchant.model';
-import { RuleMatchPreview } from '@models/category-rule.model';
+import { CategoryRuleApplyResult, RuleMatchPreview } from '@models/category-rule.model';
 import { CategoryRuleApiService } from '@features/settings/category-rules/services/category-rule-api.service';
 import { RuleEditFormComponent } from '@features/settings/category-rules/components/rule-edit-form/rule-edit-form.component';
 
@@ -38,6 +39,8 @@ interface MockActivatedRoute {
   snapshot: { queryParams: Params };
   queryParams: Observable<Params>;
 }
+
+const ADD_RULE_ONLY = 'Add rule, no transactions changed';
 
 describe('TransactionsComponent', () => {
   let component: TransactionsComponent;
@@ -75,7 +78,10 @@ describe('TransactionsComponent', () => {
   let mockConfirmationService: { confirm: Mock<(confirmation: Confirmation) => void> };
   let mockRouter: Mocked<Pick<Router, 'navigate'>>;
   let mockActivatedRoute: MockActivatedRoute;
-  let mockRuleApi: Mocked<Pick<CategoryRuleApiService, 'createRule' | 'previewMatches'>>;
+  let mockRuleApi: Mocked<
+    Pick<CategoryRuleApiService, 'createRule' | 'previewMatches' | 'createAndApply'>
+  >;
+  let mockRuleApplicationApi: Mocked<Pick<RuleApplicationApiService, 'undo'>>;
 
   /**
    * The list loads (page size above 1). A period-only page that comes back empty also sends a
@@ -144,11 +150,15 @@ describe('TransactionsComponent', () => {
     mockRuleApi = {
       createRule: vi.fn().mockReturnValue(of(77)),
       previewMatches: vi.fn().mockReturnValue(of(emptyPreview)),
+      createAndApply: vi.fn(),
     };
+
+    mockRuleApplicationApi = { undo: vi.fn() };
 
     await TestBed.configureTestingModule({
       imports: [TransactionsComponent, NoopAnimationsModule],
       providers: [
+        { provide: RuleApplicationApiService, useValue: mockRuleApplicationApi },
         { provide: TransactionApiService, useValue: mockTransactionApi },
         { provide: AccountApiService, useValue: mockAccountApi },
         { provide: CategoryApiService, useValue: mockCategoryApi },
@@ -1681,7 +1691,7 @@ describe('TransactionsComponent', () => {
         expect(component.panelMode()).toBe('rule');
         expect(q('aside h2')?.textContent?.trim()).toBe('Create rule');
         expect(keyword().value).toBe('NETFLIX.COM 866-579');
-        expect(buttonNamed('aside', 'Add rule')).toBeTruthy();
+        expect(buttonNamed('aside', ADD_RULE_ONLY)).toBeTruthy();
         // no edit drawer for that row, the selection stays, and the list stays beside the panel
         expect(fixture.debugElement.query(By.directive(TransactionEditFormComponent))).toBeNull();
         expect(component.selectedIds()).toEqual([1]);
@@ -1739,6 +1749,312 @@ describe('TransactionsComponent', () => {
         expect(component.panelMode()).toBe('rule');
         expect(keyword().value).toBe('SHELL OIL 57444');
         expect(component.selectedIds()).toEqual([2]);
+      });
+
+      describe('choosing which matches the rule changes (PF-926)', () => {
+        it('should say the rule only will be added while no matches are ticked', async () => {
+          // arrange
+          open();
+          component.onSelectionChange([1]);
+          rowAction('NETFLIX.COM 866-579').click();
+
+          // act
+          await settle();
+
+          // assert & verify
+          expect(buttonNamed('aside', ADD_RULE_ONLY)).toBeTruthy();
+        });
+
+        it('should count the ticked matches in the save button, singular and plural', async () => {
+          // arrange
+          open();
+          rowAction('NETFLIX.COM 866-579').click();
+          await settle();
+
+          // act
+          component.onRuleSelection([4, 5, 6]);
+          await settle();
+
+          // assert & verify
+          expect(buttonNamed('aside', 'Add rule and update 3 transactions')).toBeTruthy();
+
+          // act
+          component.onRuleSelection([4]);
+          await settle();
+
+          // assert & verify
+          expect(buttonNamed('aside', 'Add rule and update 1 transaction')).toBeTruthy();
+        });
+
+        it('should pass the chosen category on, so rows that change can say what they become', async () => {
+          // arrange
+          open();
+          rowAction('NETFLIX.COM 866-579').click();
+          await settle();
+
+          // act
+          ruleForm().form.controls.category.setValue(streaming);
+          await settle();
+
+          // assert & verify
+          expect(component.ruleBecomes()).toBe(streaming.name);
+        });
+
+        it('should forget the ticks when the rule panel closes', async () => {
+          // arrange
+          open();
+          rowAction('NETFLIX.COM 866-579').click();
+          await settle();
+          component.onRuleSelection([4, 5]);
+
+          // act
+          component.closePanel();
+          await settle();
+
+          // assert & verify
+          expect(component.ruleApplyIds()).toEqual([]);
+          expect(component.ruleBecomes()).toBeNull();
+        });
+      });
+
+      describe('saving applies the rule to the ticked matches (PF-927)', () => {
+        const applied = (
+          changes: { transactionId: number; previousCategoryId: number | null }[],
+          skipped: number[] = [],
+        ): CategoryRuleApplyResult => ({
+          ruleId: 77,
+          categoryId: 9,
+          changes,
+          skippedTransactionIds: skipped,
+        });
+        const fillRule = async (): Promise<void> => {
+          open();
+          rowAction('NETFLIX.COM 866-579').click();
+          await settle();
+          typeKeyword('NETFLIX');
+          ruleForm().form.controls.category.setValue(streaming);
+        };
+
+        it('should create the rule and apply it to the ticked matches, then close and refresh the list', async () => {
+          // arrange
+          await fillRule();
+          component.onRuleSelection([4, 5]);
+          await settle();
+          mockRuleApi.createAndApply.mockReturnValue(
+            of(
+              applied([
+                { transactionId: 4, previousCategoryId: null },
+                { transactionId: 5, previousCategoryId: 3 },
+              ]),
+            ),
+          );
+          const stateBefore = component.state();
+          const loadsBefore = listLoads().length;
+
+          // act
+          buttonNamed('aside', 'Add rule and update 2 transactions')!.click();
+          await settle();
+
+          // assert & verify
+          expect(mockRuleApi.createAndApply).toHaveBeenCalledWith({
+            rule: {
+              keywords: ['NETFLIX'],
+              matchType: 'OR',
+              categoryId: 9,
+              priority: 0,
+              minAmount: null,
+              maxAmount: null,
+            },
+            transactionIds: [4, 5],
+          });
+          expect(mockRuleApi.createRule).not.toHaveBeenCalled();
+          expect(component.panelMode()).toBe('closed');
+          expect(listLoads().length).toBe(loadsBefore + 1);
+          expect(component.state()).toBe(stateBefore);
+          expect(component.undoMessage()).toBe('Rule added. 2 transactions updated.');
+        });
+
+        it('should say how many rows were updated, singular for one', async () => {
+          // arrange
+          await fillRule();
+          component.onRuleSelection([4]);
+          await settle();
+          mockRuleApi.createAndApply.mockReturnValue(
+            of(applied([{ transactionId: 4, previousCategoryId: null }])),
+          );
+
+          // act
+          buttonNamed('aside', 'Add rule and update 1 transaction')!.click();
+          await settle();
+
+          // assert & verify
+          expect(component.undoMessage()).toBe('Rule added. 1 transaction updated.');
+        });
+
+        it('should create only the rule, and say nothing changed, when nothing is ticked', async () => {
+          // arrange
+          await fillRule();
+          component.onRuleSelection([]);
+          await settle();
+
+          // act
+          buttonNamed('aside', ADD_RULE_ONLY)!.click();
+          await settle();
+
+          // assert & verify
+          expect(mockRuleApi.createRule).toHaveBeenCalledTimes(1);
+          expect(mockRuleApi.createAndApply).not.toHaveBeenCalled();
+          expect(mockToast.success).toHaveBeenCalledWith('Rule added, no transactions changed');
+          expect(component.undoMessage()).toBeNull();
+        });
+
+        it('should say nothing changed, with no Undo, when the apply changed no rows', async () => {
+          // arrange
+          await fillRule();
+          component.onRuleSelection([4]);
+          await settle();
+          mockRuleApi.createAndApply.mockReturnValue(of(applied([], [4])));
+
+          // act
+          buttonNamed('aside', 'Add rule and update 1 transaction')!.click();
+          await settle();
+
+          // assert & verify
+          expect(mockToast.success).toHaveBeenCalledWith('Rule added, no transactions changed');
+          expect(component.undoMessage()).toBeNull();
+        });
+
+        it('should keep the panel open with the error and the form as typed when applying fails', async () => {
+          // arrange
+          await fillRule();
+          component.onRuleSelection([4]);
+          await settle();
+          mockRuleApi.createAndApply.mockReturnValue(
+            throwError(() => ({ status: 403, error: { detail: 'Access denied to transaction' } })),
+          );
+          const loadsBefore = listLoads().length;
+
+          // act
+          buttonNamed('aside', 'Add rule and update 1 transaction')!.click();
+          await settle();
+
+          // assert & verify
+          expect(component.panelMode()).toBe('rule');
+          expect(keyword().value).toBe('NETFLIX');
+          expect(q('aside [role="alert"]')?.textContent).toContain('Access denied to transaction');
+          expect(listLoads().length).toBe(loadsBefore);
+          expect(component.undoMessage()).toBeNull();
+        });
+      });
+
+      describe('undoing an applied rule (PF-928)', () => {
+        const result: CategoryRuleApplyResult = {
+          ruleId: 77,
+          categoryId: 9,
+          changes: [
+            { transactionId: 4, previousCategoryId: null },
+            { transactionId: 5, previousCategoryId: 3 },
+          ],
+          skippedTransactionIds: [],
+        };
+        const apply = async (): Promise<void> => {
+          open();
+          rowAction('NETFLIX.COM 866-579').click();
+          await settle();
+          typeKeyword('NETFLIX');
+          ruleForm().form.controls.category.setValue(streaming);
+          component.onRuleSelection([4, 5]);
+          await settle();
+          mockRuleApi.createAndApply.mockReturnValue(of(result));
+          buttonNamed('aside', 'Add rule and update 2 transactions')!.click();
+          await settle();
+        };
+        const undoToast = (): HTMLElement | null => q('app-undo-toast [data-testid="undo-toast"]');
+
+        it('should show an Undo toast with the message after the rule is applied', async () => {
+          // act
+          await apply();
+
+          // assert & verify
+          expect(undoToast()?.textContent).toContain('Rule added. 2 transactions updated.');
+        });
+
+        it('should undo from the toast: send the apply result back, refresh the list and say what was restored', async () => {
+          // arrange
+          await apply();
+          mockRuleApplicationApi.undo.mockReturnValue(
+            of({
+              restoredCount: 2,
+              skippedTransactionIds: [],
+              categoryRuleDeleted: true,
+              merchantRuleDeleted: false,
+            }),
+          );
+          const loadsBefore = listLoads().length;
+
+          // act
+          q<HTMLButtonElement>('[data-testid="undo-button"]')!.click();
+          await settle();
+
+          // assert & verify
+          expect(mockRuleApplicationApi.undo).toHaveBeenCalledWith({ category: result });
+          expect(listLoads().length).toBe(loadsBefore + 1);
+          expect(component.undoMessage()).toBeNull();
+          expect(undoToast()).toBeNull();
+          expect(mockToast.success).toHaveBeenCalledWith('Rule undone. 2 transactions restored.');
+        });
+
+        it('should say how many rows changed since and were left alone', async () => {
+          // arrange
+          await apply();
+          mockRuleApplicationApi.undo.mockReturnValue(
+            of({
+              restoredCount: 1,
+              skippedTransactionIds: [5],
+              categoryRuleDeleted: true,
+              merchantRuleDeleted: false,
+            }),
+          );
+
+          // act
+          component.undoLastApply();
+          await settle();
+
+          // assert & verify
+          expect(mockToast.success).toHaveBeenCalledWith(
+            'Rule undone. 1 transaction restored; 1 changed since and was left alone.',
+          );
+        });
+
+        it('should say nothing was changed, and leave the list alone, when the undo fails', async () => {
+          // arrange
+          await apply();
+          mockRuleApplicationApi.undo.mockReturnValue(throwError(() => new Error('boom')));
+          const loadsBefore = listLoads().length;
+
+          // act
+          component.undoLastApply();
+          await settle();
+
+          // assert & verify
+          expect(mockToast.error).toHaveBeenCalledWith(
+            'Could not undo the rule. Nothing was changed.',
+          );
+          expect(listLoads().length).toBe(loadsBefore);
+        });
+
+        it('should drop the Undo offer when the toast is dismissed', async () => {
+          // arrange
+          await apply();
+
+          // act
+          q<HTMLButtonElement>('[data-testid="undo-dismiss"]')!.click();
+          await settle();
+
+          // assert & verify
+          expect(component.undoMessage()).toBeNull();
+          expect(undoToast()).toBeNull();
+        });
       });
 
       describe('a description with commas', () => {
@@ -1874,7 +2190,7 @@ describe('TransactionsComponent', () => {
         const loadsBefore = listLoads().length;
 
         // act
-        buttonNamed('aside', 'Add rule')!.click();
+        buttonNamed('aside', ADD_RULE_ONLY)!.click();
         await settle();
 
         // assert & verify
@@ -1886,7 +2202,7 @@ describe('TransactionsComponent', () => {
           minAmount: null,
           maxAmount: null,
         });
-        expect(mockToast.success).toHaveBeenCalledWith('Rule added');
+        expect(mockToast.success).toHaveBeenCalledWith('Rule added, no transactions changed');
         expect(component.panelMode()).toBe('closed');
         expect(q('aside')).toBeNull();
         expect(listLoads().length).toBe(loadsBefore);
@@ -1907,7 +2223,7 @@ describe('TransactionsComponent', () => {
         ruleForm().form.controls.category.setValue(streaming);
 
         // act
-        buttonNamed('aside', 'Add rule')!.click();
+        buttonNamed('aside', ADD_RULE_ONLY)!.click();
         await settle();
 
         // assert & verify

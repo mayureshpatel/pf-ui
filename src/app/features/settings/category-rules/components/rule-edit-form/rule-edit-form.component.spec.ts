@@ -551,4 +551,18 @@ describe('RuleEditFormComponent', () => {
       expect(drafts).toHaveLength(count);
     });
   });
+
+  it('should tell the host which category is chosen, so the preview can say what rows would become (PF-926)', () => {
+    // arrange
+    render();
+    const names: (string | null)[] = [];
+    component.categoryChange.subscribe((name) => names.push(name));
+
+    // act
+    component.form.patchValue({ category: groceries });
+    component.form.patchValue({ category: null });
+
+    // assert & verify
+    expect(names).toEqual(['Groceries', null]);
+  });
 });

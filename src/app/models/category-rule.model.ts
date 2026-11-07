@@ -160,6 +160,8 @@ export interface RuleMatchPreview {
   alreadyCategorizedCount: number;
   truncated: boolean;
   rows: RuleMatchRow[];
+  /** the ids of every transaction the draft would categorize, not only those in `rows` (PF-926) */
+  willCategorizeIds?: number[];
 }
 
 /**
@@ -180,4 +182,60 @@ export interface RuleDraft {
   priority: number;
   minAmount: number | null;
   maxAmount: number | null;
+}
+
+/**
+ * A request to create a category rule and apply it, in one step, to the transactions the user
+ * chose (PF-927). Every chosen transaction gets the rule's category, even if it already had one.
+ *
+ * @property rule - The rule to create.
+ * @property transactionIds - The transactions to apply it to.
+ */
+export interface CategoryRuleApplyRequest {
+  rule: CategoryRuleCreateRequest;
+  transactionIds: number[];
+}
+
+/** One transaction a create-and-apply changed, with the category it had before (PF-927). */
+export interface AppliedCategoryChange {
+  transactionId: number;
+  previousCategoryId: number | null;
+}
+
+/**
+ * The result of a category create-and-apply, kept so the change can be undone (PF-928).
+ *
+ * @property ruleId - The id of the rule that was created.
+ * @property categoryId - The category the rule set.
+ * @property changes - Every transaction that was changed, with its previous category.
+ * @property skippedTransactionIds - Chosen transactions left alone (transfers).
+ */
+export interface CategoryRuleApplyResult {
+  ruleId: number;
+  categoryId: number;
+  changes: AppliedCategoryChange[];
+  skippedTransactionIds: number[];
+}
+
+/**
+ * A request to undo a created-and-applied rule (PF-928): the apply result, sent back as returned.
+ *
+ * @property category - The category create-and-apply result to undo.
+ */
+export interface RuleApplicationUndoRequest {
+  category: CategoryRuleApplyResult;
+}
+
+/**
+ * The result of an undo (PF-928).
+ *
+ * @property restoredCount - How many transactions were put back.
+ * @property skippedTransactionIds - Transactions left alone because they changed since the apply.
+ * @property categoryRuleDeleted - True if the rule was found and deleted.
+ */
+export interface RuleApplicationUndoResult {
+  restoredCount: number;
+  skippedTransactionIds: number[];
+  categoryRuleDeleted: boolean;
+  merchantRuleDeleted: boolean;
 }

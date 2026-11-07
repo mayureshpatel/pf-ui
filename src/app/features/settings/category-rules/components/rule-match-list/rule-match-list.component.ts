@@ -3,18 +3,21 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   ElementRef,
   inject,
   Injector,
   input,
   InputSignal,
+  output,
+  OutputEmitterRef,
   signal,
   Signal,
   viewChild,
   WritableSignal,
 } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
-import { DatePipe } from '@angular/common';
+import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import {
   catchError,
   defer,
@@ -63,6 +66,17 @@ interface MatchRowView {
   winner: MatchRuleRef | null;
   /** the remaining matching rules, listed compactly */
   alsoMatches: MatchRuleRef[];
+}
+
+/** One group of the ledger's selectable list: what will happen to its rows. */
+interface MatchGroupView {
+  key: 'set' | 'change' | 'keep';
+  title: string;
+  /** how many matches the group holds in all, listed or not */
+  total: number;
+  rows: MatchRowView[];
+  /** every id the group's checkbox covers: its listed rows, plus unlisted blank matches for `set` */
+  ids: number[];
 }
 
 /** A selected transaction shown as context while the keyword is empty. */
@@ -114,7 +128,7 @@ function sameDraft(a: RuleDraft | null, b: RuleDraft | null): boolean {
  */
 @Component({
   selector: 'app-rule-match-list',
-  imports: [DatePipe, FormatCurrencyPipe],
+  imports: [DatePipe, FormatCurrencyPipe, NgTemplateOutlet],
   templateUrl: './rule-match-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -127,6 +141,15 @@ export class RuleMatchListComponent {
   readonly draft: InputSignal<RuleDraft | null> = input<RuleDraft | null>(null);
   /** The selected transactions, shown as context while the keyword is empty. */
   readonly context: InputSignal<Transaction[]> = input<Transaction[]>([]);
+  /**
+   * Shows each match with a checkbox, grouped by what will happen to it (PF-926): the ledger's rule
+   * panel, where the owner chooses which rows the rule changes. Off in Settings.
+   */
+  readonly selectable: InputSignal<boolean> = input<boolean>(false);
+  /** What the rule would set, for the "was X, becomes Y" line of a row that already has a value. */
+  readonly becomes: InputSignal<string | null> = input<string | null>(null);
+  /** Emits the ids of the ticked matches whenever they change (only while `selectable`). */
+  readonly selectionChange: OutputEmitterRef<number[]> = output<number[]>();
   /**
    * True when the form holds keywords the server would refuse (the draft is null then): the list
    * asks for a fix instead of prompting for a keyword.
@@ -173,6 +196,52 @@ export class RuleMatchListComponent {
     })),
   );
 
+  /** Which matches are ticked, by transaction id; rows the preview no longer holds are dropped. */
+  private readonly tickState: WritableSignal<ReadonlyMap<number, boolean>> = signal(new Map());
+
+  /** The groups of the selectable list; empty groups are left out. */
+  protected readonly groups: Signal<MatchGroupView[]> = computed((): MatchGroupView[] => {
+    const p: MatchPreviewData | null = this.preview();
+    if (!p) return [];
+    const all: MatchRowView[] = this.rows();
+    const listed = (verdicts: string[]): MatchRowView[] =>
+      all.filter((item: MatchRowView): boolean => verdicts.includes(item.row.verdict));
+    const set: MatchRowView[] = listed(['WILL_APPLY']);
+    const unique = (ids: number[]): number[] => Array.from(new Set(ids));
+    const groups: MatchGroupView[] = [
+      {
+        key: 'set',
+        title: this.labels.groupSet,
+        total: p.willApplyCount,
+        rows: set,
+        ids: unique([...set.map((i) => i.row.transactionId), ...p.willApplyIds]),
+      },
+      {
+        key: 'change',
+        title: this.labels.groupChange,
+        total: p.alreadySetCount,
+        rows: listed(['ALREADY_SET']),
+        ids: listed(['ALREADY_SET']).map((i) => i.row.transactionId),
+      },
+      {
+        key: 'keep',
+        title: this.labels.groupKeep,
+        total: p.losesToOtherRuleCount + p.linkedCount,
+        rows: listed(['LOSES_TO_OTHER_RULE', 'LINKED']),
+        ids: listed(['LOSES_TO_OTHER_RULE', 'LINKED']).map((i) => i.row.transactionId),
+      },
+    ];
+    return groups.filter((g: MatchGroupView): boolean => g.total > 0);
+  });
+
+  /** The ids of the ticked matches, in the order the groups list them. */
+  protected readonly ticked: Signal<number[]> = computed((): number[] => {
+    const state: ReadonlyMap<number, boolean> = this.tickState();
+    return this.groups()
+      .flatMap((g: MatchGroupView): number[] => g.ids)
+      .filter((id: number): boolean => state.get(id) === true);
+  });
+
   /** Matches beyond the capped rows. */
   protected readonly moreCount: Signal<number> = computed(() => {
     const p: MatchPreviewData | null = this.preview();
@@ -190,6 +259,13 @@ export class RuleMatchListComponent {
   });
 
   constructor() {
+    effect((): void => {
+      const ids: number[] = this.ticked();
+      if (this.selectable()) {
+        this.selectionChange.emit(ids);
+      }
+    });
+
     const drafts$: Observable<Trigger> = toObservable(this.active).pipe(
       distinctUntilChanged(sameDraft),
       // a new draft replaces the failed one at once, not only when its own request settles
@@ -228,6 +304,61 @@ export class RuleMatchListComponent {
     return ruleKeywordsText(ruleRef.keywords);
   }
 
+  /** True when the match is currently ticked. */
+  protected isTicked(id: number): boolean {
+    return this.tickState().get(id) === true;
+  }
+
+  /** Ticks or unticks one match. */
+  protected toggleRow(id: number): void {
+    this.tickState.update((state: ReadonlyMap<number, boolean>) =>
+      new Map(state).set(id, state.get(id) !== true),
+    );
+  }
+
+  /** True when every match of the group is ticked. */
+  protected allTicked(group: MatchGroupView): boolean {
+    return group.ids.length > 0 && group.ids.every((id: number): boolean => this.isTicked(id));
+  }
+
+  /** True when some, but not all, matches of the group are ticked. */
+  protected someTicked(group: MatchGroupView): boolean {
+    return !this.allTicked(group) && group.ids.some((id: number): boolean => this.isTicked(id));
+  }
+
+  /** Unticks the whole group when it is fully ticked, otherwise ticks all of it. */
+  protected toggleGroup(group: MatchGroupView): void {
+    const tick = !this.allTicked(group);
+    this.tickState.update((state: ReadonlyMap<number, boolean>) => {
+      const next = new Map<number, boolean>(state);
+      group.ids.forEach((id: number): void => void next.set(id, tick));
+      return next;
+    });
+  }
+
+  /**
+   * Carries the ticks over to a new preview: a match that is still there keeps its tick, a new
+   * one starts ticked only if the rule would set it (it has no value today), and a match that is
+   * gone is forgotten.
+   */
+  private reconcileTicks(): void {
+    const p: MatchPreviewData | null = this.preview();
+    const next = new Map<number, boolean>();
+    if (p) {
+      const previous: ReadonlyMap<number, boolean> = this.tickState();
+      const keep = (id: number, byDefault: boolean): void => {
+        next.set(id, previous.has(id) ? previous.get(id) === true : byDefault);
+      };
+      p.rows.forEach((row: MatchRowData): void =>
+        keep(row.transactionId, row.verdict === 'WILL_APPLY'),
+      );
+      p.willApplyIds
+        .filter((id: number): boolean => !next.has(id))
+        .forEach((id: number): void => keep(id, true));
+    }
+    this.tickState.set(next);
+  }
+
   /** Keeps the list at least as tall as it is now, until the next outcome settles. */
   private holdHeight(): void {
     const height: number | undefined = this.region()?.nativeElement.offsetHeight;
@@ -251,6 +382,7 @@ export class RuleMatchListComponent {
     this.loading.set(false);
     this.failed.set(outcome.kind === 'error');
     this.preview.set(outcome.kind === 'ok' ? outcome.preview : null);
+    this.reconcileTicks();
     // a retry that succeeds removes the focused button: focus moves to the list region instead
     if (outcome.kind !== 'error' && this.retryHadFocus) {
       this.retryHadFocus = false;
