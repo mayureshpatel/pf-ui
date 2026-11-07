@@ -39,6 +39,7 @@ import { Transaction } from '@models/transaction.model';
 import {
   MatchPreviewData,
   MatchRowData,
+  MatchListLabels,
   MatchRuleRef,
   RULE_MATCH_CONFIG,
   RuleMatchConfig,
@@ -133,8 +134,18 @@ function sameDraft(a: RuleDraft | null, b: RuleDraft | null): boolean {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RuleMatchListComponent {
-  private readonly config: RuleMatchConfig = inject(RULE_MATCH_CONFIG);
-  protected readonly labels = this.config.labels;
+  private readonly injectedConfig: RuleMatchConfig = inject(RULE_MATCH_CONFIG);
+  /**
+   * The kind of rule to preview, when the host needs more than one (the ledger offers category and
+   * merchant rules); otherwise the injected {@link RULE_MATCH_CONFIG} applies (PF-932).
+   */
+  readonly matchConfig: InputSignal<RuleMatchConfig | null> = input<RuleMatchConfig | null>(null);
+  private readonly config: Signal<RuleMatchConfig> = computed(
+    (): RuleMatchConfig => this.matchConfig() ?? this.injectedConfig,
+  );
+  protected readonly labels: Signal<MatchListLabels> = computed(
+    (): MatchListLabels => this.config().labels,
+  );
   private readonly injector: Injector = inject(Injector);
 
   /** The rule being drafted; null or keyword-less shows the prompt. */
@@ -211,21 +222,21 @@ export class RuleMatchListComponent {
     const groups: MatchGroupView[] = [
       {
         key: 'set',
-        title: this.labels.groupSet,
+        title: this.labels().groupSet,
         total: p.willApplyCount,
         rows: set,
         ids: unique([...set.map((i) => i.row.transactionId), ...p.willApplyIds]),
       },
       {
         key: 'change',
-        title: this.labels.groupChange,
+        title: this.labels().groupChange,
         total: p.alreadySetCount,
         rows: listed(['ALREADY_SET']),
         ids: listed(['ALREADY_SET']).map((i) => i.row.transactionId),
       },
       {
         key: 'keep',
-        title: this.labels.groupKeep,
+        title: this.labels().groupKeep,
         total: p.losesToOtherRuleCount + p.linkedCount,
         rows: listed(['LOSES_TO_OTHER_RULE', 'LINKED']),
         ids: listed(['LOSES_TO_OTHER_RULE', 'LINKED']).map((i) => i.row.transactionId),
@@ -369,7 +380,7 @@ export class RuleMatchListComponent {
     if (!draft) return of<Outcome>({ kind: 'idle' });
     const request$: Observable<Outcome> = defer(() => {
       this.loading.set(true);
-      return this.config.preview(draft);
+      return this.config().preview(draft);
     }).pipe(
       map((preview: MatchPreviewData): Outcome => ({ kind: 'ok', preview })),
       catchError(() => of<Outcome>({ kind: 'error' })),

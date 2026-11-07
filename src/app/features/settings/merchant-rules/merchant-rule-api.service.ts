@@ -9,6 +9,8 @@ import {
   MerchantRuleDraft,
   MerchantRuleMatchPreview,
   MerchantRuleUpdateRequest,
+  MerchantRuleApplyRequest,
+  MerchantRuleApplyResult,
 } from '@models/merchant-rule.model';
 import { SKIP_GENERIC_ERROR_TOAST } from '@core/auth/error.interceptor';
 
@@ -36,6 +38,20 @@ export class MerchantRuleApiService {
    */
   createRule(data: MerchantRuleCreateRequest): Observable<number> {
     return this.http.post<number>(this.apiUrl, data, SKIP_TOAST_OPTIONS);
+  }
+
+  /**
+   * Creates a merchant rule and applies it, in one all-or-nothing step, to the transactions the user
+   * chose (PF-932), giving each the rule's merchant even if it already had one. The merchant may be
+   * a new name, created in the same step (PF-933).
+   * @returns the new rule's id, the merchant it set, and every changed transaction with its previous merchant.
+   */
+  createAndApply(data: MerchantRuleApplyRequest): Observable<MerchantRuleApplyResult> {
+    return this.http.post<MerchantRuleApplyResult>(
+      `${this.apiUrl}/create-and-apply`,
+      data,
+      SKIP_TOAST_OPTIONS,
+    );
   }
 
   /**

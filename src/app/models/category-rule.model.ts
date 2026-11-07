@@ -1,3 +1,4 @@
+import { MerchantRuleApplyRequest, MerchantRuleApplyResult } from './merchant-rule.model';
 import { Category } from '@models/category.model';
 
 /**
@@ -220,10 +221,12 @@ export interface CategoryRuleApplyResult {
 /**
  * A request to undo a created-and-applied rule (PF-928): the apply result, sent back as returned.
  *
- * @property category - The category create-and-apply result to undo.
+ * @property category - The category create-and-apply result to undo, when a category rule was made.
+ * @property merchant - The merchant create-and-apply result to undo, when a merchant rule was made.
  */
 export interface RuleApplicationUndoRequest {
-  category: CategoryRuleApplyResult;
+  category?: CategoryRuleApplyResult;
+  merchant?: MerchantRuleApplyResult;
 }
 
 /**
@@ -238,4 +241,19 @@ export interface RuleApplicationUndoResult {
   skippedTransactionIds: number[];
   categoryRuleDeleted: boolean;
   merchantRuleDeleted: boolean;
+}
+
+/**
+ * A request to create a category rule and a merchant rule from the same keyword and apply both,
+ * all or nothing, to the transactions chosen for each kind (PF-934).
+ */
+export interface CreateBothAndApplyRequest {
+  category: CategoryRuleApplyRequest;
+  merchant: MerchantRuleApplyRequest;
+}
+
+/** The result of creating and applying both kinds together: each kind's own result, for undo (PF-934). */
+export interface CreateBothAndApplyResult {
+  category: CategoryRuleApplyResult;
+  merchant: MerchantRuleApplyResult;
 }

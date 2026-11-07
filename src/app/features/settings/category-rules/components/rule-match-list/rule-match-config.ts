@@ -185,9 +185,9 @@ function fromMerchantPreview(p: MerchantRuleMatchPreview): MatchPreviewData {
     linkedCount: p.linkedCount,
     truncated: p.truncated,
     targetName: p.targetMerchantName ?? null,
-    willApplyIds: p.rows
-      .filter((row) => row.verdict === 'WILL_ASSIGN')
-      .map((row) => row.transactionId),
+    willApplyIds:
+      p.willAssignIds ??
+      p.rows.filter((row) => row.verdict === 'WILL_ASSIGN').map((row) => row.transactionId),
     rows: p.rows.map((row) => {
       const toRef = (r: {
         id: number;

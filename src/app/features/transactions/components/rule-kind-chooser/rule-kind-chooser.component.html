@@ -1,0 +1,22 @@
+<div role="radiogroup" aria-label="Kind of rule" class="flex flex-wrap gap-2">
+  @for (option of options(); track option) {
+    <label
+      class="inline-flex min-h-8 cursor-pointer items-center gap-2 rounded-full border px-3 text-sm has-focus-visible:outline-2 has-focus-visible:outline-offset-1 has-focus-visible:outline-primary-700 dark:has-focus-visible:outline-primary-400"
+      [class]="
+        kind() === option
+          ? 'border-primary-600 bg-primary-50 font-medium text-primary-900 dark:bg-primary-950/40 dark:text-primary-100'
+          : 'border-surface-300 text-surface-900 hover:bg-surface-100 dark:border-surface-700 dark:text-surface-0 dark:hover:bg-surface-800'
+      "
+    >
+      <input
+        type="radio"
+        class="size-4 cursor-pointer"
+        [name]="groupName"
+        [value]="option"
+        [checked]="kind() === option"
+        (change)="kindChange.emit(option)"
+      />
+      {{ labels[option] }}
+    </label>
+  }
+</div>

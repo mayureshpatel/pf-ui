@@ -292,3 +292,52 @@ describe('RULE_MATCH_CONFIG', () => {
     expect(config.labels.currentNone).toBe('Uncategorized');
   });
 });
+
+describe('merchantMatchConfig willApplyIds (PF-932)', () => {
+  const row = (id: number, verdict: string): unknown => ({
+    transactionId: id,
+    date: '2026-10-05T00:00:00Z',
+    description: `KROGER ${id}`,
+    amount: -10,
+    accountName: 'Checking',
+    currentMerchant: null,
+    verdict,
+    otherRules: [],
+  });
+  const preview = (over: Record<string, unknown>): MerchantRuleMatchPreview =>
+    ({
+      targetMerchantName: 'Kroger',
+      totalMatches: 2,
+      willAssignCount: 2,
+      losesToOtherRuleCount: 0,
+      alreadyHasMerchantCount: 0,
+      linkedCount: 0,
+      truncated: false,
+      rows: [row(1, 'WILL_ASSIGN'), row(2, 'ALREADY_HAS_MERCHANT')],
+      ...over,
+    }) as MerchantRuleMatchPreview;
+  const ids = (reply: MerchantRuleMatchPreview): number[] => {
+    let result: number[] = [];
+    merchantMatchConfig({ previewMatches: () => of(reply) } as never)
+      .preview({
+        ruleId: null,
+        keywords: ['k'],
+        matchType: 'OR',
+        priority: 0,
+        minAmount: null,
+        maxAmount: null,
+      })
+      .subscribe((p) => (result = p.willApplyIds));
+    return result;
+  };
+
+  it('should use every id the server lists, including those beyond the capped rows', () => {
+    // act & assert & verify
+    expect(ids(preview({ willAssignIds: [1, 5, 6, 7] }))).toEqual([1, 5, 6, 7]);
+  });
+
+  it('should fall back to the listed rows the rule would handle when the server sends no ids', () => {
+    // act & assert & verify
+    expect(ids(preview({}))).toEqual([1]);
+  });
+});

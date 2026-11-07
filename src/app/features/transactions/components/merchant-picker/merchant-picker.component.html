@@ -1,0 +1,33 @@
+<div class="flex flex-col gap-1">
+  <label id="both-merchant-label" for="both-merchant" class="text-sm font-medium">Merchant</label>
+  <p-select
+    inputId="both-merchant"
+    ariaLabelledBy="both-merchant-label"
+    [ngModel]="value()"
+    (ngModelChange)="value.set($event)"
+    [options]="options()"
+    [filter]="true"
+    filterBy="name,city"
+    (onFilter)="onFilter($event)"
+    dataKey="id"
+    optionLabel="name"
+    placeholder="Choose a merchant"
+    emptyMessage="No merchants"
+    emptyFilterMessage="No merchants found"
+    appendTo="body"
+  >
+    <ng-template #item let-merchant>
+      @if (isCreateOption(merchant)) {
+        <span class="flex items-center gap-2">
+          <i class="pi pi-plus text-xs" aria-hidden="true"></i>
+          Create "{{ merchant.name }}"
+        </span>
+      } @else {
+        {{ merchant.name }}
+      }
+    </ng-template>
+  </p-select>
+  @if (error(); as message) {
+    <small class="text-rose-700 dark:text-rose-400">{{ message }}</small>
+  }
+</div>

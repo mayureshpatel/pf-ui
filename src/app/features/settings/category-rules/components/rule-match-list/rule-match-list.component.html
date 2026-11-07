@@ -82,7 +82,7 @@
             <ul class="m-0 mt-1 flex list-none flex-col gap-0.5 p-0 text-muted-color">
               <li>
                 <span class="tabular-nums">{{ p.willApplyCount }}</span>
-                {{ labels.willSummary(p.targetName) }}
+                {{ labels().willSummary(p.targetName) }}
                 @if (unopposedCount(); as unopposed) {
                   <span class="block pl-3"
                     ><span class="tabular-nums">{{ unopposed }}</span> of them: no other rule
@@ -99,13 +99,13 @@
               @if (p.alreadySetCount > 0) {
                 <li>
                   <span class="tabular-nums">{{ p.alreadySetCount }}</span>
-                  {{ labels.alreadySummary }}
+                  {{ labels().alreadySummary }}
                 </li>
               }
               @if (p.linkedCount > 0) {
                 <li>
                   <span class="tabular-nums">{{ p.linkedCount }}</span>
-                  {{ labels.linkedSummary }}
+                  {{ labels().linkedSummary }}
                 </li>
               }
             </ul>
@@ -205,8 +205,8 @@
           ><span class="sr-only">Account: </span>{{ item.row.accountName ?? '(no account)' }}</span
         >
         <span class="min-w-0 break-words"
-          ><span class="sr-only">{{ labels.currentLabel }}</span
-          >{{ item.row.currentName || labels.currentNone }}</span
+          ><span class="sr-only">{{ labels().currentLabel }}</span
+          >{{ item.row.currentName || labels().currentNone }}</span
         >
       </span>
       <span data-testid="verdict" class="flex items-start gap-1.5 text-xs font-medium">
@@ -217,7 +217,7 @@
               aria-hidden="true"
             ></i>
             <span class="text-primary-700 dark:text-primary-400">{{
-              labels.willRow(preview()?.targetName ?? null)
+              labels().willRow(preview()?.targetName ?? null)
             }}</span>
           }
           @case ('LOSES_TO_OTHER_RULE') {
@@ -235,11 +235,11 @@
           }
           @case ('ALREADY_SET') {
             <i class="pi pi-minus-circle mt-0.5 text-xs text-muted-color" aria-hidden="true"></i>
-            <span class="text-muted-color">{{ labels.alreadyRow }}</span>
+            <span class="text-muted-color">{{ labels().alreadyRow }}</span>
           }
           @case ('LINKED') {
             <i class="pi pi-link mt-0.5 text-xs text-muted-color" aria-hidden="true"></i>
-            <span class="text-muted-color">{{ labels.linkedRow }}</span>
+            <span class="text-muted-color">{{ labels().linkedRow }}</span>
           }
         }
       </span>
@@ -248,14 +248,16 @@
           Also matches:
           @for (other of item.alsoMatches; track other.id; let last = $last) {
             {{ keywordsText(other) }} <span aria-hidden="true">→</span
-            ><span class="sr-only">sets</span> {{ other.targetName ?? labels.targetNone }} (priority
-            {{ other.priority }}){{ last ? '' : ';' }}
+            ><span class="sr-only">sets</span>
+            {{ other.targetName ?? labels().targetNone }} (priority {{ other.priority }}){{
+              last ? '' : ';'
+            }}
           }
         </span>
       }
       @if (pick && item.row.verdict === 'ALREADY_SET' && becomes()) {
         <span data-testid="row-change" class="text-xs font-medium">
-          Was {{ item.row.currentName || labels.currentNone }}, becomes {{ becomes() }}
+          Was {{ item.row.currentName || labels().currentNone }}, becomes {{ becomes() }}
         </span>
       }
     </div>

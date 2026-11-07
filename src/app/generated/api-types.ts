@@ -408,6 +408,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/rule-applications/create-both-and-apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a category rule and a merchant rule and apply both
+         * @description Creates both rules and applies each to its chosen transactions, overwriting existing values; all or nothing across the two kinds
+         */
+        post: operations["createBothRulesAndApply"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/recurring/dismissals": {
         parameters: {
             query?: never;
@@ -1751,6 +1771,47 @@ export interface components {
             categoryRuleDeleted?: boolean;
             merchantRuleDeleted?: boolean;
         };
+        CategoryRuleApplyRequest: {
+            rule: components["schemas"]["CategoryRuleCreateRequest"];
+            transactionIds: number[];
+        };
+        CategoryRuleCreateRequest: {
+            /** Format: int64 */
+            userId: number;
+            /** Format: int64 */
+            categoryId: number;
+            keywords: string[];
+            /** @enum {string} */
+            matchType?: "AND" | "OR";
+            /** Format: int32 */
+            priority?: number;
+            minAmount?: number;
+            maxAmount?: number;
+        };
+        CreateBothAndApplyRequest: {
+            category: components["schemas"]["CategoryRuleApplyRequest"];
+            merchant: components["schemas"]["MerchantRuleApplyRequest"];
+        };
+        MerchantRuleApplyRequest: {
+            rule: components["schemas"]["MerchantRuleApplyRule"];
+            transactionIds: number[];
+        };
+        MerchantRuleApplyRule: {
+            /** Format: int64 */
+            merchantId?: number;
+            newMerchantName?: string;
+            keywords: string[];
+            /** @enum {string} */
+            matchType?: "AND" | "OR";
+            /** Format: int32 */
+            priority?: number;
+            minAmount?: number;
+            maxAmount?: number;
+        };
+        CreateBothAndApplyResultDto: {
+            category?: components["schemas"]["CategoryRuleApplyResultDto"];
+            merchant?: components["schemas"]["MerchantRuleApplyResultDto"];
+        };
         RecurringTransactionCreateRequest: {
             /** Format: int64 */
             userId: number;
@@ -1820,6 +1881,7 @@ export interface components {
             linkedCount?: number;
             truncated?: boolean;
             rows?: components["schemas"]["MerchantRuleMatchRowDto"][];
+            willAssignIds?: number[];
         };
         MerchantRuleMatchRowDto: {
             /** Format: int64 */
@@ -1842,23 +1904,6 @@ export interface components {
             merchantName?: string;
             /** Format: int32 */
             priority?: number;
-        };
-        MerchantRuleApplyRequest: {
-            rule: components["schemas"]["MerchantRuleCreateRequest"];
-            transactionIds: number[];
-        };
-        CategoryRuleCreateRequest: {
-            /** Format: int64 */
-            userId: number;
-            /** Format: int64 */
-            categoryId: number;
-            keywords: string[];
-            /** @enum {string} */
-            matchType?: "AND" | "OR";
-            /** Format: int32 */
-            priority?: number;
-            minAmount?: number;
-            maxAmount?: number;
         };
         RuleMatchPreviewRequest: {
             /** Format: int64 */
@@ -1904,10 +1949,6 @@ export interface components {
             categoryName?: string;
             /** Format: int32 */
             priority?: number;
-        };
-        CategoryRuleApplyRequest: {
-            rule: components["schemas"]["CategoryRuleCreateRequest"];
-            transactionIds: number[];
         };
         CategoryCreateRequest: {
             /** Format: int64 */
@@ -3451,6 +3492,57 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["RuleApplicationUndoResultDto"];
+                };
+            };
+        };
+    };
+    createBothRulesAndApply: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateBothAndApplyRequest"];
+            };
+        };
+        responses: {
+            /** @description Both rules created and applied; previous values returned for undo */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CreateBothAndApplyResultDto"];
+                };
+            };
+            /** @description Validation failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CreateBothAndApplyResultDto"];
+                };
+            };
+            /** @description A chosen transaction or the category is not the user's; nothing changed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CreateBothAndApplyResultDto"];
+                };
+            };
+            /** @description The merchant does not exist or is not the authenticated user's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CreateBothAndApplyResultDto"];
                 };
             };
         };

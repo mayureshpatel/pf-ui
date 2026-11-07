@@ -1,10 +1,11 @@
 import { Mock, vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Observable, Subject } from 'rxjs';
+import { Observable, of, Subject } from 'rxjs';
 import { Category } from '@models/category.model';
 import { RuleDraft, RuleMatchPreview, RuleMatchRow, RuleRef } from '@models/category-rule.model';
 import { Transaction } from '@models/transaction.model';
 import { CategoryRuleApiService } from '../../services/category-rule-api.service';
+import { MatchPreviewData, RuleMatchConfig, categoryMatchConfig } from './rule-match-config';
 import { RuleMatchListComponent } from './rule-match-list.component';
 
 const groceries = { id: 3, name: 'Groceries', color: '' } as Category;
@@ -843,6 +844,57 @@ describe('RuleMatchListComponent', () => {
 
       // assert & verify
       expect(lastSelection()).toEqual([]);
+    });
+  });
+
+  describe('another kind of rule through matchConfig (PF-932)', () => {
+    it('should preview with the given config and use its wording, not the injected category config', () => {
+      // arrange
+      const previewWith = vi.fn((): Observable<MatchPreviewData> =>
+        of({
+          totalMatches: 1,
+          willApplyCount: 1,
+          losesToOtherRuleCount: 0,
+          alreadySetCount: 0,
+          linkedCount: 0,
+          truncated: false,
+          targetName: 'Kroger',
+          willApplyIds: [1],
+          rows: [
+            {
+              transactionId: 1,
+              date: '2026-10-05T00:00:00Z',
+              description: 'KROGER #123',
+              amount: -10,
+              accountName: 'Checking',
+              currentName: null,
+              verdict: 'WILL_APPLY',
+              winner: null,
+              alsoMatches: [],
+            },
+          ],
+        }),
+      );
+      const config: RuleMatchConfig = {
+        preview: previewWith,
+        labels: {
+          ...categoryMatchConfig({ previewMatches } as never).labels,
+          currentNone: 'No merchant',
+          willRow: (name: string | null): string => `Will be assigned to ${name}`,
+        },
+      };
+      fixture.componentRef.setInput('matchConfig', config);
+
+      // act
+      setDraft(draft(['kroger']));
+      vi.advanceTimersByTime(300);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(previewWith).toHaveBeenCalledTimes(1);
+      expect(previewMatches).not.toHaveBeenCalled();
+      expect(rowText(0)).toContain('No merchant');
+      expect(rowText(0)).toContain('Will be assigned to Kroger');
     });
   });
 });

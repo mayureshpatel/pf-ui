@@ -33,6 +33,10 @@ import { Merchant } from '@models/merchant.model';
 import { CategoryRuleApplyResult, RuleMatchPreview } from '@models/category-rule.model';
 import { CategoryRuleApiService } from '@features/settings/category-rules/services/category-rule-api.service';
 import { RuleEditFormComponent } from '@features/settings/category-rules/components/rule-edit-form/rule-edit-form.component';
+import { MerchantRuleEditFormComponent } from '@features/settings/merchant-rules/components/merchant-rule-edit-form/merchant-rule-edit-form.component';
+import { MerchantRuleApiService } from '@features/settings/merchant-rules/merchant-rule-api.service';
+import { MerchantRuleApplyResult, MerchantRuleMatchPreview } from '@models/merchant-rule.model';
+import { MerchantPickerComponent } from './components/merchant-picker/merchant-picker.component';
 
 /** Reproduces just the 2 ActivatedRoute members this component actually reads. */
 interface MockActivatedRoute {
@@ -81,7 +85,12 @@ describe('TransactionsComponent', () => {
   let mockRuleApi: Mocked<
     Pick<CategoryRuleApiService, 'createRule' | 'previewMatches' | 'createAndApply'>
   >;
-  let mockRuleApplicationApi: Mocked<Pick<RuleApplicationApiService, 'undo'>>;
+  let mockRuleApplicationApi: Mocked<
+    Pick<RuleApplicationApiService, 'undo' | 'createBothAndApply'>
+  >;
+  let mockMerchantRuleApi: Mocked<
+    Pick<MerchantRuleApiService, 'createRule' | 'previewMatches' | 'createAndApply'>
+  >;
 
   /**
    * The list loads (page size above 1). A period-only page that comes back empty also sends a
@@ -153,12 +162,28 @@ describe('TransactionsComponent', () => {
       createAndApply: vi.fn(),
     };
 
-    mockRuleApplicationApi = { undo: vi.fn() };
+    mockRuleApplicationApi = { undo: vi.fn(), createBothAndApply: vi.fn() };
+    const emptyMerchantPreview: MerchantRuleMatchPreview = {
+      targetMerchantName: null,
+      totalMatches: 0,
+      willAssignCount: 0,
+      losesToOtherRuleCount: 0,
+      alreadyHasMerchantCount: 0,
+      linkedCount: 0,
+      truncated: false,
+      rows: [],
+    };
+    mockMerchantRuleApi = {
+      createRule: vi.fn().mockReturnValue(of(88)),
+      previewMatches: vi.fn().mockReturnValue(of(emptyMerchantPreview)),
+      createAndApply: vi.fn(),
+    };
 
     await TestBed.configureTestingModule({
       imports: [TransactionsComponent, NoopAnimationsModule],
       providers: [
         { provide: RuleApplicationApiService, useValue: mockRuleApplicationApi },
+        { provide: MerchantRuleApiService, useValue: mockMerchantRuleApi },
         { provide: TransactionApiService, useValue: mockTransactionApi },
         { provide: AccountApiService, useValue: mockAccountApi },
         { provide: CategoryApiService, useValue: mockCategoryApi },
@@ -1749,6 +1774,679 @@ describe('TransactionsComponent', () => {
         expect(component.panelMode()).toBe('rule');
         expect(keyword().value).toBe('SHELL OIL');
         expect(component.selectedIds()).toEqual([2]);
+      });
+
+      describe('choosing the kind of rule (PF-931)', () => {
+        const kroger = { id: 12, name: 'Kroger' } as Merchant;
+        const merchantForm = (): MerchantRuleEditFormComponent =>
+          fixture.debugElement.query(By.directive(MerchantRuleEditFormComponent))
+            .componentInstance as MerchantRuleEditFormComponent;
+        const chosenKind = (): string | undefined =>
+          Array.from<HTMLInputElement>(
+            fixture.nativeElement.querySelectorAll('app-rule-kind-chooser input[type="radio"]'),
+          )
+            .find((r) => r.checked)
+            ?.parentElement?.textContent?.trim();
+        const choose = async (label: string): Promise<void> => {
+          Array.from<HTMLInputElement>(
+            fixture.nativeElement.querySelectorAll('app-rule-kind-chooser input[type="radio"]'),
+          )
+            .find((r) => r.parentElement?.textContent?.trim() === label)!
+            .click();
+          await settle();
+        };
+        const startRule = async (): Promise<void> => {
+          open();
+          rowAction('NETFLIX.COM 866-579').click();
+          await settle();
+        };
+
+        beforeEach(() => {
+          mockMerchantApi.getMerchants.mockReturnValue(
+            of({
+              content: [kroger],
+              page: { totalElements: 1, totalPages: 1, number: 0, size: 2000 },
+            }),
+          );
+        });
+
+        it('should start as a category rule, with the category form and Category rule chosen', async () => {
+          // act
+          await startRule();
+
+          // assert & verify
+          expect(chosenKind()).toBe('Category rule');
+          expect(component.ruleKind()).toBe('category');
+          expect(q('app-rule-edit-form')).not.toBeNull();
+          expect(q('app-merchant-rule-edit-form')).toBeNull();
+        });
+
+        it('should show the merchant rule form when Merchant rule is chosen, loading the merchants once', async () => {
+          // arrange
+          await startRule();
+
+          // act
+          await choose('Merchant rule');
+
+          // assert & verify
+          expect(chosenKind()).toBe('Merchant rule');
+          expect(q('app-merchant-rule-edit-form')).not.toBeNull();
+          expect(q('app-rule-edit-form')).toBeNull();
+          expect(mockMerchantApi.getMerchants).toHaveBeenCalledTimes(1);
+
+          // act -- back and forth does not load them again
+          await choose('Category rule');
+          await choose('Merchant rule');
+
+          // assert & verify
+          expect(mockMerchantApi.getMerchants).toHaveBeenCalledTimes(1);
+        });
+
+        it('should keep the keyword when switching, asking first because it was typed', async () => {
+          // arrange
+          mockConfirmationService.confirm.mockImplementation((c: Confirmation) => c.accept?.());
+          await startRule();
+          typeKeyword('NETFLIX');
+
+          // act
+          await choose('Merchant rule');
+
+          // assert & verify
+          expect(mockConfirmationService.confirm).toHaveBeenCalledTimes(1);
+          expect(keyword().value).toBe('NETFLIX');
+        });
+
+        it('should stay on the current kind when the owner keeps editing', async () => {
+          // arrange
+          mockConfirmationService.confirm.mockImplementation((c: Confirmation) => c.reject?.());
+          await startRule();
+          typeKeyword('NETFLIX');
+
+          // act
+          await choose('Merchant rule');
+
+          // assert & verify
+          expect(component.ruleKind()).toBe('category');
+          expect(keyword().value).toBe('NETFLIX');
+        });
+
+        it('should switch without asking when nothing was typed', async () => {
+          // arrange
+          await startRule();
+
+          // act
+          await choose('Merchant rule');
+
+          // assert & verify
+          expect(mockConfirmationService.confirm).not.toHaveBeenCalled();
+          expect(keyword().value).toBe('NETFLIX.COM');
+        });
+
+        it('should store a merchant rule only, and say nothing changed, when saved with nothing ticked', async () => {
+          // arrange
+          await startRule();
+          await choose('Merchant rule');
+          typeKeyword('KROGER');
+          merchantForm().form.controls.merchant.setValue(kroger);
+
+          // act
+          buttonNamed('aside', ADD_RULE_ONLY)!.click();
+          await settle();
+
+          // assert & verify
+          expect(mockMerchantRuleApi.createRule).toHaveBeenCalledWith({
+            keywords: ['KROGER'],
+            matchType: 'OR',
+            merchantId: 12,
+            priority: 0,
+            minAmount: null,
+            maxAmount: null,
+          });
+          expect(mockRuleApi.createRule).not.toHaveBeenCalled();
+          expect(mockToast.success).toHaveBeenCalledWith('Rule added, no transactions changed');
+          expect(component.panelMode()).toBe('closed');
+        });
+
+        it('should keep the panel open with the error when a merchant rule fails to save', async () => {
+          // arrange
+          mockMerchantRuleApi.createRule.mockReturnValue(
+            throwError(() => ({ status: 400, error: { detail: 'That rule already exists.' } })),
+          );
+          await startRule();
+          await choose('Merchant rule');
+          typeKeyword('KROGER');
+          merchantForm().form.controls.merchant.setValue(kroger);
+
+          // act
+          buttonNamed('aside', ADD_RULE_ONLY)!.click();
+          await settle();
+
+          // assert & verify
+          expect(component.panelMode()).toBe('rule');
+          expect(q('aside [role="alert"]')?.textContent).toContain('That rule already exists.');
+        });
+
+        it('should start every new rule as a category rule again', async () => {
+          // arrange
+          await startRule();
+          await choose('Merchant rule');
+          component.closePanel();
+          await settle();
+
+          // act
+          rowAction('NETFLIX.COM 866-579').click();
+          await settle();
+
+          // assert & verify
+          expect(component.ruleKind()).toBe('category');
+        });
+      });
+
+      describe('applying a merchant rule (PF-932)', () => {
+        const kroger = { id: 12, name: 'Kroger' } as Merchant;
+        const result: MerchantRuleApplyResult = {
+          ruleId: 88,
+          merchantId: 12,
+          changes: [
+            { transactionId: 4, previousMerchantId: null },
+            { transactionId: 5, previousMerchantId: 3 },
+          ],
+        };
+        const merchantForm = (): MerchantRuleEditFormComponent =>
+          fixture.debugElement.query(By.directive(MerchantRuleEditFormComponent))
+            .componentInstance as MerchantRuleEditFormComponent;
+        const startMerchantRule = async (): Promise<void> => {
+          mockMerchantApi.getMerchants.mockReturnValue(
+            of({
+              content: [kroger],
+              page: { totalElements: 1, totalPages: 1, number: 0, size: 2000 },
+            }),
+          );
+          open();
+          rowAction('NETFLIX.COM 866-579').click();
+          await settle();
+          Array.from<HTMLInputElement>(
+            fixture.nativeElement.querySelectorAll('app-rule-kind-chooser input[type="radio"]'),
+          )
+            .find((r) => r.parentElement?.textContent?.trim() === 'Merchant rule')!
+            .click();
+          await settle();
+          typeKeyword('KROGER');
+          merchantForm().form.controls.merchant.setValue(kroger);
+        };
+
+        it('should pass the chosen merchant on, so rows that change can say what they become', async () => {
+          // act
+          await startMerchantRule();
+
+          // assert & verify
+          expect(component.ruleBecomes()).toBe('Kroger');
+        });
+
+        it('should count the ticked matches in the save button for a merchant rule too', async () => {
+          // arrange
+          await startMerchantRule();
+
+          // act
+          component.onRuleSelection([4, 5]);
+          await settle();
+
+          // assert & verify
+          expect(buttonNamed('aside', 'Add rule and update 2 transactions')).toBeTruthy();
+        });
+
+        it('should create the merchant rule and apply it to the ticked matches, then close, refresh and offer Undo', async () => {
+          // arrange
+          await startMerchantRule();
+          component.onRuleSelection([4, 5]);
+          await settle();
+          mockMerchantRuleApi.createAndApply.mockReturnValue(of(result));
+          const loadsBefore = listLoads().length;
+
+          // act
+          buttonNamed('aside', 'Add rule and update 2 transactions')!.click();
+          await settle();
+
+          // assert & verify
+          expect(mockMerchantRuleApi.createAndApply).toHaveBeenCalledWith({
+            rule: {
+              keywords: ['KROGER'],
+              matchType: 'OR',
+              merchantId: 12,
+              priority: 0,
+              minAmount: null,
+              maxAmount: null,
+            },
+            transactionIds: [4, 5],
+          });
+          expect(mockMerchantRuleApi.createRule).not.toHaveBeenCalled();
+          expect(component.panelMode()).toBe('closed');
+          expect(listLoads().length).toBe(loadsBefore + 1);
+          expect(component.undoMessage()).toBe('Rule added. 2 transactions updated.');
+        });
+
+        it('should keep the panel open with the error when applying a merchant rule fails', async () => {
+          // arrange
+          await startMerchantRule();
+          component.onRuleSelection([4]);
+          await settle();
+          mockMerchantRuleApi.createAndApply.mockReturnValue(
+            throwError(() => ({ status: 403, error: { detail: 'Access denied to transaction' } })),
+          );
+
+          // act
+          buttonNamed('aside', 'Add rule and update 1 transaction')!.click();
+          await settle();
+
+          // assert & verify
+          expect(component.panelMode()).toBe('rule');
+          expect(q('aside [role="alert"]')?.textContent).toContain('Access denied to transaction');
+          expect(component.undoMessage()).toBeNull();
+        });
+
+        it('should undo a merchant apply from the toast by sending the merchant result back', async () => {
+          // arrange
+          await startMerchantRule();
+          component.onRuleSelection([4, 5]);
+          await settle();
+          mockMerchantRuleApi.createAndApply.mockReturnValue(of(result));
+          buttonNamed('aside', 'Add rule and update 2 transactions')!.click();
+          await settle();
+          mockRuleApplicationApi.undo.mockReturnValue(
+            of({
+              restoredCount: 2,
+              skippedTransactionIds: [],
+              categoryRuleDeleted: false,
+              merchantRuleDeleted: true,
+            }),
+          );
+
+          // act
+          component.undoLastApply();
+          await settle();
+
+          // assert & verify
+          expect(mockRuleApplicationApi.undo).toHaveBeenCalledWith({ merchant: result });
+          expect(mockToast.success).toHaveBeenCalledWith('Rule undone. 2 transactions restored.');
+        });
+      });
+
+      describe('creating a merchant on the spot (PF-933)', () => {
+        const kroger = { id: 12, name: 'Kroger' } as Merchant;
+        const brandNew = { id: -1, name: 'Brand New' } as Merchant;
+        const merchantForm = (): MerchantRuleEditFormComponent =>
+          fixture.debugElement.query(By.directive(MerchantRuleEditFormComponent))
+            .componentInstance as MerchantRuleEditFormComponent;
+        const startMerchantRule = async (): Promise<void> => {
+          mockMerchantApi.getMerchants.mockReturnValue(
+            of({
+              content: [kroger],
+              page: { totalElements: 1, totalPages: 1, number: 0, size: 2000 },
+            }),
+          );
+          open();
+          rowAction('NETFLIX.COM 866-579').click();
+          await settle();
+          Array.from<HTMLInputElement>(
+            fixture.nativeElement.querySelectorAll('app-rule-kind-chooser input[type="radio"]'),
+          )
+            .find((r) => r.parentElement?.textContent?.trim() === 'Merchant rule')!
+            .click();
+          await settle();
+          typeKeyword('KROGER');
+          merchantForm().form.controls.merchant.setValue(brandNew);
+        };
+
+        it('should create the rule and the new merchant in one step, even with nothing ticked', async () => {
+          // arrange
+          await startMerchantRule();
+          mockMerchantRuleApi.createAndApply.mockReturnValue(
+            of({ ruleId: 88, merchantId: 31, changes: [] }),
+          );
+
+          // act
+          buttonNamed('aside', ADD_RULE_ONLY)!.click();
+          await settle();
+
+          // assert & verify
+          expect(mockMerchantRuleApi.createAndApply).toHaveBeenCalledWith({
+            rule: {
+              keywords: ['KROGER'],
+              matchType: 'OR',
+              priority: 0,
+              minAmount: null,
+              maxAmount: null,
+              newMerchantName: 'Brand New',
+            },
+            transactionIds: [],
+          });
+          expect(mockMerchantRuleApi.createRule).not.toHaveBeenCalled();
+          expect(mockToast.success).toHaveBeenCalledWith('Rule added, no transactions changed');
+          expect(component.panelMode()).toBe('closed');
+        });
+
+        it('should send the ticked matches along with the new merchant name', async () => {
+          // arrange
+          await startMerchantRule();
+          component.onRuleSelection([4, 5]);
+          await settle();
+          mockMerchantRuleApi.createAndApply.mockReturnValue(
+            of({
+              ruleId: 88,
+              merchantId: 31,
+              changes: [
+                { transactionId: 4, previousMerchantId: null },
+                { transactionId: 5, previousMerchantId: null },
+              ],
+            }),
+          );
+
+          // act
+          buttonNamed('aside', 'Add rule and update 2 transactions')!.click();
+          await settle();
+
+          // assert & verify
+          expect(mockMerchantRuleApi.createAndApply).toHaveBeenCalledWith(
+            expect.objectContaining({ transactionIds: [4, 5] }),
+          );
+          expect(component.undoMessage()).toBe('Rule added. 2 transactions updated.');
+        });
+
+        it('should keep the panel open with the error when saving fails, creating nothing', async () => {
+          // arrange
+          await startMerchantRule();
+          mockMerchantRuleApi.createAndApply.mockReturnValue(
+            throwError(() => ({ status: 400, error: { detail: 'Merchant name is too long.' } })),
+          );
+
+          // act
+          buttonNamed('aside', ADD_RULE_ONLY)!.click();
+          await settle();
+
+          // assert & verify
+          expect(component.panelMode()).toBe('rule');
+          expect(q('aside [role="alert"]')?.textContent).toContain('Merchant name is too long.');
+          expect(component.undoMessage()).toBeNull();
+        });
+
+        it('should load the merchants again next time, since a new one now exists', async () => {
+          // arrange
+          await startMerchantRule();
+          mockMerchantRuleApi.createAndApply.mockReturnValue(
+            of({ ruleId: 88, merchantId: 31, changes: [] }),
+          );
+          buttonNamed('aside', ADD_RULE_ONLY)!.click();
+          await settle();
+          expect(mockMerchantApi.getMerchants).toHaveBeenCalledTimes(1);
+
+          // act
+          await startMerchantRule();
+
+          // assert & verify
+          expect(mockMerchantApi.getMerchants).toHaveBeenCalledTimes(2);
+        });
+      });
+
+      describe('both kinds of rule together (PF-934)', () => {
+        const kroger = { id: 12, name: 'Kroger' } as Merchant;
+        const categoryResult: CategoryRuleApplyResult = {
+          ruleId: 77,
+          categoryId: 9,
+          changes: [
+            { transactionId: 1, previousCategoryId: null },
+            { transactionId: 2, previousCategoryId: 3 },
+          ],
+          skippedTransactionIds: [],
+        };
+        const merchantResult: MerchantRuleApplyResult = {
+          ruleId: 88,
+          merchantId: 12,
+          changes: [
+            { transactionId: 2, previousMerchantId: null },
+            { transactionId: 3, previousMerchantId: null },
+          ],
+        };
+        const picker = (): MerchantPickerComponent =>
+          fixture.debugElement.query(By.directive(MerchantPickerComponent))
+            .componentInstance as MerchantPickerComponent;
+        const startBoth = async (): Promise<void> => {
+          mockMerchantApi.getMerchants.mockReturnValue(
+            of({
+              content: [kroger],
+              page: { totalElements: 1, totalPages: 1, number: 0, size: 2000 },
+            }),
+          );
+          open();
+          rowAction('NETFLIX.COM 866-579').click();
+          await settle();
+          Array.from<HTMLInputElement>(
+            fixture.nativeElement.querySelectorAll('app-rule-kind-chooser input[type="radio"]'),
+          )
+            .find((r) => r.parentElement?.textContent?.trim() === 'Both')!
+            .click();
+          await settle();
+          typeKeyword('TACO');
+          ruleForm().form.controls.category.setValue(streaming);
+          picker().value.set(kroger);
+          await settle();
+        };
+        const saveBoth = async (label: string): Promise<void> => {
+          buttonNamed('aside', label)!.click();
+          await settle();
+        };
+
+        it('should offer Both and show one keyword form, a merchant field and a preview for each kind', async () => {
+          // act
+          await startBoth();
+
+          // assert & verify
+          expect(component.ruleKind()).toBe('both');
+          expect(q('app-rule-edit-form')).not.toBeNull();
+          expect(q('app-merchant-picker')).not.toBeNull();
+          expect(q('app-merchant-rule-edit-form')).toBeNull();
+          expect(fixture.nativeElement.querySelectorAll('app-rule-match-list').length).toBe(2);
+        });
+
+        it('should preview the merchant side with the shared keyword and the chosen merchant', async () => {
+          // act
+          await startBoth();
+
+          // assert & verify
+          expect(component.bothMerchantDraft()).toEqual(
+            expect.objectContaining({ keywords: ['TACO'], merchantId: 12 }),
+          );
+        });
+
+        it('should count each affected transaction once across both kinds in the save button', async () => {
+          // arrange
+          await startBoth();
+
+          // act -- transactions 2 and 3 are ticked for both kinds
+          component.onRuleSelection([1, 2, 3]);
+          component.onMerchantSelection([2, 3, 4]);
+          await settle();
+
+          // assert & verify
+          expect(buttonNamed('aside', 'Add rule and update 4 transactions')).toBeTruthy();
+        });
+
+        it('should create both rules and apply each to its own ticked rows in one save, then offer one Undo', async () => {
+          // arrange
+          await startBoth();
+          component.onRuleSelection([1, 2]);
+          component.onMerchantSelection([2, 3]);
+          await settle();
+          mockRuleApplicationApi.createBothAndApply.mockReturnValue(
+            of({ category: categoryResult, merchant: merchantResult }),
+          );
+          const loadsBefore = listLoads().length;
+
+          // act
+          await saveBoth('Add rule and update 3 transactions');
+
+          // assert & verify
+          expect(mockRuleApplicationApi.createBothAndApply).toHaveBeenCalledWith({
+            category: {
+              rule: {
+                keywords: ['TACO'],
+                matchType: 'OR',
+                categoryId: 9,
+                priority: 0,
+                minAmount: null,
+                maxAmount: null,
+              },
+              transactionIds: [1, 2],
+            },
+            merchant: {
+              rule: {
+                keywords: ['TACO'],
+                matchType: 'OR',
+                merchantId: 12,
+                priority: 0,
+                minAmount: null,
+                maxAmount: null,
+              },
+              transactionIds: [2, 3],
+            },
+          });
+          expect(mockRuleApi.createRule).not.toHaveBeenCalled();
+          expect(component.panelMode()).toBe('closed');
+          expect(listLoads().length).toBe(loadsBefore + 1);
+          expect(component.undoMessage()).toBe(
+            'Rules added. 2 transactions categorized, 2 given a merchant.',
+          );
+        });
+
+        it('should send a new merchant name when the Create option is chosen', async () => {
+          // arrange
+          await startBoth();
+          picker().value.set({ id: -1, name: 'Brand New' } as Merchant);
+          await settle();
+          mockRuleApplicationApi.createBothAndApply.mockReturnValue(
+            of({
+              category: { ...categoryResult, changes: [] },
+              merchant: { ...merchantResult, changes: [] },
+            }),
+          );
+
+          // act
+          await saveBoth(ADD_RULE_ONLY);
+
+          // assert & verify
+          const sent = mockRuleApplicationApi.createBothAndApply.mock.calls[0][0];
+          expect(sent.merchant.rule.newMerchantName).toBe('Brand New');
+          expect(sent.merchant.rule.merchantId).toBeUndefined();
+        });
+
+        it('should ask for a merchant, creating nothing, when none is chosen', async () => {
+          // arrange
+          await startBoth();
+          picker().value.set(null);
+          await settle();
+
+          // act
+          await saveBoth(ADD_RULE_ONLY);
+
+          // assert & verify
+          expect(mockRuleApplicationApi.createBothAndApply).not.toHaveBeenCalled();
+          expect(q('aside')?.textContent).toContain('Choose a merchant.');
+          expect(component.panelMode()).toBe('rule');
+        });
+
+        it('should say nothing changed, with no Undo, when neither kind changed a row', async () => {
+          // arrange
+          await startBoth();
+          mockRuleApplicationApi.createBothAndApply.mockReturnValue(
+            of({
+              category: { ...categoryResult, changes: [] },
+              merchant: { ...merchantResult, changes: [] },
+            }),
+          );
+
+          // act
+          await saveBoth(ADD_RULE_ONLY);
+
+          // assert & verify
+          expect(mockToast.success).toHaveBeenCalledWith('Rules added, no transactions changed');
+          expect(component.undoMessage()).toBeNull();
+        });
+
+        it('should keep the panel open with the error when the combined save fails', async () => {
+          // arrange
+          await startBoth();
+          component.onRuleSelection([1]);
+          await settle();
+          mockRuleApplicationApi.createBothAndApply.mockReturnValue(
+            throwError(() => ({ status: 403, error: { detail: 'Access denied to transaction' } })),
+          );
+          const loadsBefore = listLoads().length;
+
+          // act
+          await saveBoth('Add rule and update 1 transaction');
+
+          // assert & verify
+          expect(component.panelMode()).toBe('rule');
+          expect(q('aside [role="alert"]')?.textContent).toContain('Access denied to transaction');
+          expect(listLoads().length).toBe(loadsBefore);
+          expect(component.undoMessage()).toBeNull();
+        });
+
+        it('should undo both kinds with one Undo, sending both results back', async () => {
+          // arrange
+          await startBoth();
+          component.onRuleSelection([1, 2]);
+          component.onMerchantSelection([2, 3]);
+          await settle();
+          mockRuleApplicationApi.createBothAndApply.mockReturnValue(
+            of({ category: categoryResult, merchant: merchantResult }),
+          );
+          await saveBoth('Add rule and update 3 transactions');
+          mockRuleApplicationApi.undo.mockReturnValue(
+            of({
+              restoredCount: 3,
+              skippedTransactionIds: [],
+              categoryRuleDeleted: true,
+              merchantRuleDeleted: true,
+            }),
+          );
+
+          // act
+          component.undoLastApply();
+          await settle();
+
+          // assert & verify
+          expect(mockRuleApplicationApi.undo).toHaveBeenCalledWith({
+            category: categoryResult,
+            merchant: merchantResult,
+          });
+          expect(mockToast.success).toHaveBeenCalledWith('Rule undone. 3 transactions restored.');
+        });
+
+        it('should keep the keyword when switching to Both from another kind', async () => {
+          // arrange
+          mockConfirmationService.confirm.mockImplementation((c: Confirmation) => c.accept?.());
+          mockMerchantApi.getMerchants.mockReturnValue(
+            of({
+              content: [kroger],
+              page: { totalElements: 1, totalPages: 1, number: 0, size: 2000 },
+            }),
+          );
+          open();
+          rowAction('NETFLIX.COM 866-579').click();
+          await settle();
+          typeKeyword('TACO');
+
+          // act
+          Array.from<HTMLInputElement>(
+            fixture.nativeElement.querySelectorAll('app-rule-kind-chooser input[type="radio"]'),
+          )
+            .find((r) => r.parentElement?.textContent?.trim() === 'Both')!
+            .click();
+          await settle();
+
+          // assert & verify
+          expect(keyword().value).toBe('TACO');
+        });
       });
 
       describe('suggested keywords (PF-929, PF-930)', () => {
