@@ -9,6 +9,7 @@ import {
   TransactionUpdateRequest,
   PageRequest,
   PageResponse,
+  RuleCoverage,
   TransferSuggestion,
 } from '@models/transaction.model';
 import { Category } from '@models/category.model';
@@ -25,6 +26,20 @@ const SKIP_TOAST_OPTIONS = { context: SKIP_TOAST_CONTEXT };
 export class TransactionApiService {
   private readonly http: HttpClient = inject(HttpClient);
   private readonly apiUrl: string = `${environment.apiUrl}/transactions`;
+
+  /**
+   * Says, for each of the given transactions (one page of the ledger), whether a category rule and
+   * whether a merchant rule already covers its description (PF-925). One call answers the whole
+   * page; ids that are not the user's are left out of the answer.
+   * @param ids the ids of the transactions on the current page.
+   * @returns one entry per transaction found.
+   */
+  getRuleCoverage(ids: number[]): Observable<RuleCoverage[]> {
+    return this.http.get<RuleCoverage[]>(`${this.apiUrl}/rule-coverage`, {
+      ...SKIP_TOAST_OPTIONS,
+      params: new HttpParams().set('ids', ids.join(',')),
+    });
+  }
 
   /**
    * Gets a paginated, filtered page of transactions.

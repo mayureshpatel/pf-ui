@@ -10,7 +10,8 @@ import {
   OutputEmitterRef,
   Signal,
 } from '@angular/core';
-import { Transaction, TransactionType } from '@models/transaction.model';
+import { GridHighlights, NO_HIGHLIGHTS } from '../../utils/grid-highlights';
+import { RuleCoverage, Transaction, TransactionType } from '@models/transaction.model';
 import { FormatTransactionTypeAmountPipe } from '@shared/pipes/format-transaction-type-amount.pipe';
 import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
 import { DayGroup, groupByDay } from '../../utils/transaction-day-groups';
@@ -44,6 +45,14 @@ export class TransactionListComponent {
   readonly selectedIds: InputSignal<number[]> = input.required<number[]>();
   readonly loading: InputSignal<boolean> = input.required<boolean>();
 
+  /** Which row highlights the toolbar has on (PF-924); none by default. */
+  readonly highlights: InputSignal<GridHighlights> = input<GridHighlights>(NO_HIGHLIGHTS);
+
+  /** Which rules already cover each row, by transaction id (PF-925); empty until loaded. */
+  readonly coverage: InputSignal<ReadonlyMap<number, RuleCoverage>> = input<
+    ReadonlyMap<number, RuleCoverage>
+  >(new Map());
+
   /** Hides the Description and Tags columns, for when the edit panel narrows the list. */
   readonly compact: InputSignal<boolean> = input<boolean>(false);
 
@@ -58,9 +67,6 @@ export class TransactionListComponent {
 
   /** Emits the transaction whose "Choose category" pill was clicked. */
   readonly pickCategory: OutputEmitterRef<Transaction> = output<Transaction>();
-
-  /** Emits the transaction whose "Create rule" action was used (it is not opened or selected). */
-  readonly createRule: OutputEmitterRef<Transaction> = output<Transaction>();
 
   readonly TransactionType = TransactionType;
 
@@ -194,6 +200,26 @@ export class TransactionListComponent {
     this.lastClickedIndex = index;
   }
 
+  /** The text for the rule-covers mark: which kind of saved rule already matches the row. */
+  coverText(coverage: RuleCoverage): string {
+    if (coverage.categoryRuleCovers && coverage.merchantRuleCovers) {
+      return 'Covered by a category rule and a merchant rule';
+    }
+    return coverage.categoryRuleCovers
+      ? 'Covered by a category rule'
+      : 'Covered by a merchant rule';
+  }
+
+  /** True when the No category highlight is on and this row has none (a transfer never needs one). */
+  missingCategory(txn: Transaction): boolean {
+    return this.highlights().noCategory && !txn.category && !this.isTransfer(txn);
+  }
+
+  /** True when the No merchant highlight is on and this row has no merchant. */
+  missingMerchant(txn: Transaction): boolean {
+    return this.highlights().noMerchant && !txn.merchant;
+  }
+
   /** Selects the whole loaded page, or clears the selection when it is already complete. */
   onHeaderCheckbox(): void {
     this.selectionChange.emit(this.allSelected() ? [] : this.transactions().map((t) => t.id));
@@ -202,12 +228,6 @@ export class TransactionListComponent {
   onPickCategory(txn: Transaction, event: Event): void {
     event.stopPropagation();
     this.pickCategory.emit(txn);
-  }
-
-  /** Starts a rule from the row without opening it in the edit panel. */
-  onCreateRule(txn: Transaction, event: Event): void {
-    event.stopPropagation();
-    this.createRule.emit(txn);
   }
 
   /** Index of a row in the flat loaded page (for shift-click ranges). */

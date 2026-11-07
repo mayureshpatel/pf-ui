@@ -250,3 +250,12 @@ export interface BankOption {
   value: BankName;
   description: string;
 }
+
+/** Whether the user's saved rules already cover one transaction's description (PF-919). */
+export interface RuleCoverage {
+  transactionId: number;
+  /** True if at least one category rule matches the description and amount. */
+  categoryRuleCovers: boolean;
+  /** True if at least one merchant rule matches the description and amount. */
+  merchantRuleCovers: boolean;
+}

@@ -19,6 +19,7 @@ import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { vi, Mock, Mocked } from 'vitest';
 import {
   PageResponse,
+  RuleCoverage,
   Transaction,
   TransactionCreateRequest,
   TransactionFilter,
@@ -52,6 +53,7 @@ describe('TransactionsComponent', () => {
       | 'markAsTransfer'
       | 'unmarkAsTransfer'
       | 'getTransferSuggestions'
+      | 'getRuleCoverage'
     >
   >;
   let mockAccountApi: Mocked<Pick<AccountApiService, 'getAccounts'>>;
@@ -97,6 +99,7 @@ describe('TransactionsComponent', () => {
       markAsTransfer: vi.fn(),
       unmarkAsTransfer: vi.fn(),
       getTransferSuggestions: vi.fn().mockReturnValue(of([])),
+      getRuleCoverage: vi.fn().mockReturnValue(of([])),
     };
     mockAccountApi = {
       getAccounts: vi.fn().mockReturnValue(of([])),
@@ -523,6 +526,207 @@ describe('TransactionsComponent', () => {
 
       // assert & verify
       expect(bar()?.textContent).toContain('2 selected');
+    });
+  });
+
+  describe('grid toolbar highlights (PF-924)', () => {
+    const row = (id: number, overrides: Record<string, unknown> = {}): Transaction =>
+      ({
+        id,
+        account: { id: 1, name: 'Checking' },
+        category: { id: 5, name: 'Groceries' },
+        amount: 10,
+        date: '2026-01-15T00:00:00Z',
+        description: 'test',
+        type: 'EXPENSE',
+        merchant: { id: 7, name: 'Test' },
+        tags: [],
+        ...overrides,
+      }) as unknown as Transaction;
+    const switchNamed = (name: string): HTMLButtonElement | undefined =>
+      Array.from<HTMLButtonElement>(
+        fixture.nativeElement.querySelectorAll('app-transaction-grid-toolbar [role="switch"]'),
+      ).find((b) => b.textContent?.trim() === name);
+    const marks = (kind: string): number =>
+      fixture.nativeElement.querySelectorAll(`table [data-highlight="${kind}"]`).length;
+
+    beforeEach(() => {
+      component.transactions.set([row(1, { category: null, merchant: null }), row(2)]);
+      fixture.detectChanges();
+    });
+
+    it('should start with every highlight off', () => {
+      // assert & verify
+      expect(component.highlights()).toEqual({
+        noCategory: false,
+        noMerchant: false,
+        ruleCovers: false,
+      });
+      expect(marks('no-category') + marks('no-merchant')).toBe(0);
+    });
+
+    it('should mark rows as the switches are turned on, and together', () => {
+      // act
+      switchNamed('No category')!.click();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(marks('no-category')).toBe(1);
+      expect(marks('no-merchant')).toBe(0);
+
+      // act
+      switchNamed('No merchant')!.click();
+      fixture.detectChanges();
+
+      // assert & verify -- both on at once
+      expect(marks('no-category')).toBe(1);
+      expect(marks('no-merchant')).toBe(1);
+    });
+
+    it('should clear the marks when a switch is turned off again', () => {
+      // arrange
+      switchNamed('No category')!.click();
+      fixture.detectChanges();
+
+      // act
+      switchNamed('No category')!.click();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(marks('no-category')).toBe(0);
+    });
+  });
+
+  describe('rule coverage loading (PF-925)', () => {
+    const row = (id: number): Transaction =>
+      ({
+        id,
+        account: { id: 1, name: 'Checking' },
+        category: { id: 5, name: 'Groceries' },
+        amount: 10,
+        date: '2026-01-15T00:00:00Z',
+        description: `row ${id}`,
+        type: 'EXPENSE',
+        merchant: { id: 7, name: 'Test' },
+        tags: [],
+      }) as unknown as Transaction;
+    const covered = (id: number): RuleCoverage => ({
+      transactionId: id,
+      categoryRuleCovers: true,
+      merchantRuleCovers: false,
+    });
+    const ruleCoversSwitch = (): HTMLButtonElement =>
+      Array.from<HTMLButtonElement>(
+        fixture.nativeElement.querySelectorAll('app-transaction-grid-toolbar [role="switch"]'),
+      ).find((b) => b.textContent?.trim() === 'Rule covers it')!;
+    const marked = (): number =>
+      fixture.nativeElement.querySelectorAll('table [data-testid="rule-covers-mark"]').length;
+    const turnOn = (): void => {
+      ruleCoversSwitch().click();
+      fixture.detectChanges();
+    };
+
+    beforeEach(() => {
+      component.transactions.set([row(1), row(2)]);
+      fixture.detectChanges();
+    });
+
+    it('should not ask for coverage while the switch is off', () => {
+      // assert & verify
+      expect(mockTransactionApi.getRuleCoverage).not.toHaveBeenCalled();
+    });
+
+    it('should ask once for the page ids when switched on, and mark the covered rows', () => {
+      // arrange
+      mockTransactionApi.getRuleCoverage.mockReturnValue(of([covered(1)]));
+
+      // act
+      turnOn();
+
+      // assert & verify
+      expect(mockTransactionApi.getRuleCoverage).toHaveBeenCalledTimes(1);
+      expect(mockTransactionApi.getRuleCoverage).toHaveBeenCalledWith([1, 2]);
+      expect(marked()).toBe(1);
+    });
+
+    it('should ask again for the new rows when the page, sort or filter changes the rows', () => {
+      // arrange
+      mockTransactionApi.getRuleCoverage.mockReturnValue(of([]));
+      turnOn();
+
+      // act
+      component.transactions.set([row(3), row(4), row(5)]);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(mockTransactionApi.getRuleCoverage).toHaveBeenCalledTimes(2);
+      expect(mockTransactionApi.getRuleCoverage).toHaveBeenLastCalledWith([3, 4, 5]);
+    });
+
+    it('should ignore a slow earlier response that arrives after a newer one', () => {
+      // arrange -- two overlapping requests; the older answer comes last
+      const older = new Subject<RuleCoverage[]>();
+      const newer = new Subject<RuleCoverage[]>();
+      mockTransactionApi.getRuleCoverage
+        .mockReturnValueOnce(older.asObservable())
+        .mockReturnValueOnce(newer.asObservable());
+      turnOn();
+      component.transactions.set([row(3)]);
+      fixture.detectChanges();
+
+      // act
+      newer.next([covered(3)]);
+      older.next([covered(1), covered(2)]);
+      fixture.detectChanges();
+
+      // assert & verify -- only the newer rows' answer is shown
+      expect(marked()).toBe(1);
+      expect(
+        fixture.nativeElement.querySelectorAll('table [data-testid="rule-covers-mark"]').length,
+      ).toBe(1);
+    });
+
+    it('should clear the marks and stop asking when the switch is turned off', () => {
+      // arrange
+      mockTransactionApi.getRuleCoverage.mockReturnValue(of([covered(1)]));
+      turnOn();
+      expect(marked()).toBe(1);
+
+      // act
+      ruleCoversSwitch().click();
+      fixture.detectChanges();
+      component.transactions.set([row(7)]);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(marked()).toBe(0);
+      expect(mockTransactionApi.getRuleCoverage).toHaveBeenCalledTimes(1);
+    });
+
+    it('should show no marks, and not fail the page, when the request fails', () => {
+      // arrange
+      mockTransactionApi.getRuleCoverage.mockReturnValue(throwError(() => new Error('boom')));
+
+      // act
+      turnOn();
+
+      // assert & verify
+      expect(marked()).toBe(0);
+      expect(component.loadError()).toBe(false);
+    });
+
+    it('should ask again after a rule is created, since the new rule may cover more rows', async () => {
+      // arrange
+      mockTransactionApi.getRuleCoverage.mockReturnValue(of([]));
+      turnOn();
+
+      // act
+      component.onSaveRule({ keywords: ['x'], categoryId: 9 } as never);
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(mockTransactionApi.getRuleCoverage).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -1447,8 +1651,13 @@ describe('TransactionsComponent', () => {
         Array.from<HTMLButtonElement>(
           fixture.nativeElement.querySelectorAll(`${scope} button`),
         ).find((b) => (b.getAttribute('aria-label') ?? b.textContent ?? '').trim() === name);
-      const rowAction = (description: string): HTMLButtonElement =>
-        buttonNamed('app-transaction-list', `Create rule from ${description}`)!;
+      // a rule is started from the toolbar for the ticked rows: tick the row, return the toolbar button
+      const rowAction = (description: string): HTMLButtonElement => {
+        const row = component.transactions().find((t) => t.description === description)!;
+        component.onSelectionChange([row.id]);
+        fixture.detectChanges();
+        return buttonNamed('app-transaction-grid-toolbar', 'Create rule')!;
+      };
       const keyword = (): HTMLInputElement => q<HTMLInputElement>('aside #rule-keywords')!;
       const ruleForm = (): RuleEditFormComponent =>
         fixture.debugElement.query(By.directive(RuleEditFormComponent))
@@ -1459,10 +1668,10 @@ describe('TransactionsComponent', () => {
         fixture.detectChanges();
       };
 
-      it("should open the panel in rule mode from a row's action, keyword prefilled from the description", async () => {
+      it('should open the panel in rule mode from the toolbar for one ticked row, keyword prefilled from the description', async () => {
         // arrange
         open();
-        component.onSelectionChange([2]);
+        component.onSelectionChange([1]);
 
         // act
         rowAction('NETFLIX.COM 866-579').click();
@@ -1475,7 +1684,7 @@ describe('TransactionsComponent', () => {
         expect(buttonNamed('aside', 'Add rule')).toBeTruthy();
         // no edit drawer for that row, the selection stays, and the list stays beside the panel
         expect(fixture.debugElement.query(By.directive(TransactionEditFormComponent))).toBeNull();
-        expect(component.selectedIds()).toEqual([2]);
+        expect(component.selectedIds()).toEqual([1]);
         expect(q('app-transaction-list')).not.toBeNull();
         expect(q('app-rule-match-list')).not.toBeNull();
         expect(mockCategoryApi.getGroupedCategories).toHaveBeenCalled();
@@ -1504,7 +1713,7 @@ describe('TransactionsComponent', () => {
         fixture.detectChanges();
 
         // act
-        buttonNamed('app-transaction-bulk-bar', 'Create rule')!.click();
+        buttonNamed('app-transaction-grid-toolbar', 'Create rule')!.click();
         await settle();
 
         // assert & verify
@@ -1523,7 +1732,7 @@ describe('TransactionsComponent', () => {
         fixture.detectChanges();
 
         // act
-        buttonNamed('app-transaction-bulk-bar', 'Create rule')!.click();
+        buttonNamed('app-transaction-grid-toolbar', 'Create rule')!.click();
         await settle();
 
         // assert & verify
@@ -1574,7 +1783,7 @@ describe('TransactionsComponent', () => {
           fixture.detectChanges();
 
           // act
-          buttonNamed('app-transaction-bulk-bar', 'Create rule')!.click();
+          buttonNamed('app-transaction-grid-toolbar', 'Create rule')!.click();
           await settle();
 
           // assert & verify
@@ -1656,7 +1865,7 @@ describe('TransactionsComponent', () => {
         open();
         component.onPageChange({ first: 0, rows: 50 });
         await settle();
-        component.onSelectionChange([2]);
+        component.onSelectionChange([1]);
         rowAction('NETFLIX.COM 866-579').click();
         await settle();
         typeKeyword('NETFLIX');
@@ -1682,7 +1891,7 @@ describe('TransactionsComponent', () => {
         expect(q('aside')).toBeNull();
         expect(listLoads().length).toBe(loadsBefore);
         expect(component.state()).toBe(stateBefore);
-        expect(component.selectedIds()).toEqual([2]);
+        expect(component.selectedIds()).toEqual([1]);
         expect(mockConfirmationService.confirm).not.toHaveBeenCalled();
       });
 
@@ -1746,25 +1955,20 @@ describe('TransactionsComponent', () => {
         expect(component.panelMode()).toBe('closed');
       });
 
-      it('should reach the row action by keyboard, focus the keyword, and return focus on close', async () => {
+      it('should start a rule from the toolbar by keyboard, focus the keyword, and return focus on close', async () => {
         // arrange
         open();
         await settle();
         document.body.appendChild(fixture.nativeElement);
         const { userEvent } = await import('vitest/browser');
-        Array.from<HTMLButtonElement>(
-          fixture.nativeElement.querySelectorAll('[data-testid="open-transaction"]'),
-        )[0].focus();
+        rowAction('NETFLIX.COM 866-579').focus();
 
         // act
-        await userEvent.tab();
-        const reached = document.activeElement;
         await userEvent.keyboard('{Enter}');
         await settle();
         await new Promise((resolve) => setTimeout(resolve));
 
         // assert & verify
-        expect(reached).toBe(rowAction('NETFLIX.COM 866-579'));
         expect(component.panelMode()).toBe('rule');
         expect(document.activeElement).toBe(keyword());
 
@@ -1821,7 +2025,7 @@ describe('TransactionsComponent', () => {
         await settle();
         document.body.appendChild(fixture.nativeElement);
         const { userEvent } = await import('vitest/browser');
-        const start = buttonNamed('app-transaction-bulk-bar', 'Create rule')!;
+        const start = buttonNamed('app-transaction-grid-toolbar', 'Create rule')!;
         start.focus();
         start.click();
         await settle();
@@ -1837,7 +2041,9 @@ describe('TransactionsComponent', () => {
         expect(component.panelMode()).toBe('closed');
         expect(component.selectedIds()).toEqual([1, 2]);
         expect(document.activeElement).not.toBe(document.body);
-        expect(document.activeElement).toBe(buttonNamed('app-transaction-bulk-bar', 'Create rule'));
+        expect(document.activeElement).toBe(
+          buttonNamed('app-transaction-grid-toolbar', 'Create rule'),
+        );
         fixture.nativeElement.remove();
       });
 

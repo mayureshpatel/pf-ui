@@ -71,18 +71,12 @@ describe('TransactionBulkBarComponent', () => {
     expect(events.clear).toHaveBeenCalledTimes(1);
   });
 
-  it('should offer Create rule for the selection and emit it', () => {
-    // arrange
-    render(3);
-    const created = vi.fn();
-    fixture.componentInstance.createRule.subscribe(created);
-
+  it('should not offer Create rule; the toolbar above the grid does', () => {
     // act
-    button(/Create rule/)?.click();
+    render(3);
 
     // assert & verify
-    expect(button(/Create rule/)).toBeTruthy();
-    expect(created).toHaveBeenCalledTimes(1);
+    expect(button(/Create rule/)).toBeUndefined();
   });
 
   it('should offer Unmark as transfer instead of Mark when every selected row is a transfer', () => {

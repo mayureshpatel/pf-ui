@@ -192,17 +192,50 @@
                     {{ txn.description }}
                   </button>
                 }
+                <ng-container *ngTemplateOutlet="ruleCoverMark; context: { $implicit: txn }" />
               </td>
             }
-            <td class="px-2 py-2 sm:px-3">
+            <td
+              class="px-2 py-2 sm:px-3"
+              [class]="
+                missingMerchant(txn)
+                  ? 'ring-1 ring-inset ring-amber-500 bg-amber-50 dark:bg-amber-950/30'
+                  : ''
+              "
+              [attr.data-highlight]="missingMerchant(txn) ? 'no-merchant' : null"
+            >
               <ng-container
                 *ngTemplateOutlet="nameCell; context: { $implicit: txn, card: false }"
               />
+              @if (missingMerchant(txn)) {
+                <span
+                  class="mt-1 inline-flex items-center gap-1 text-xs text-amber-900 dark:text-amber-100"
+                >
+                  <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+                  <span>No merchant</span>
+                </span>
+              }
             </td>
-            <td class="px-2 py-2 sm:px-3">
+            <td
+              class="px-2 py-2 sm:px-3"
+              [class]="
+                missingCategory(txn)
+                  ? 'ring-1 ring-inset ring-amber-500 bg-amber-50 dark:bg-amber-950/30'
+                  : ''
+              "
+              [attr.data-highlight]="missingCategory(txn) ? 'no-category' : null"
+            >
               <ng-container
                 *ngTemplateOutlet="categoryCell; context: { $implicit: txn, card: false }"
               />
+              @if (missingCategory(txn)) {
+                <span
+                  class="mt-1 inline-flex items-center gap-1 text-xs text-amber-900 dark:text-amber-100"
+                >
+                  <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+                  <span>No category</span>
+                </span>
+              }
             </td>
             <td class="hidden px-2 py-2 sm:px-3 text-muted-color sm:table-cell">
               {{ txn.account.name }}
@@ -278,6 +311,24 @@
                     <ng-container
                       *ngTemplateOutlet="categoryCell; context: { $implicit: txn, card: true }"
                     />
+                    @if (missingCategory(txn)) {
+                      <span
+                        data-testid="card-highlight-no-category"
+                        class="inline-flex items-center gap-1 rounded px-1.5 text-amber-900 ring-1 ring-amber-500 ring-inset bg-amber-50 dark:bg-amber-950/30 dark:text-amber-100"
+                      >
+                        <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+                        No category
+                      </span>
+                    }
+                    @if (missingMerchant(txn)) {
+                      <span
+                        data-testid="card-highlight-no-merchant"
+                        class="inline-flex items-center gap-1 rounded px-1.5 text-amber-900 ring-1 ring-amber-500 ring-inset bg-amber-50 dark:bg-amber-950/30 dark:text-amber-100"
+                      >
+                        <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+                        No merchant
+                      </span>
+                    }
                     <span data-testid="card-account">{{ txn.account.name }}</span>
                   </div>
                   @if (hasTags(txn)) {
@@ -311,45 +362,40 @@
   <!-- the table's Merchant cell stays blank without a merchant (its description sits in the
        Description column); cards and the compact list have no such column, so they fall back -->
   @let name = txn.merchant?.name ?? (card || compact() ? txn.description : '');
-  <!-- the rule action goes under the name on a phone table and beside the panel, so it never
-       adds a column width to a list that has none to spare; a card has the room to put it beside the first line -->
-  <span
-    class="flex"
-    [class]="
-      card
-        ? 'min-w-0 items-start gap-1'
-        : compact()
-          ? 'flex-col items-start gap-0.5'
-          : 'flex-col items-start gap-0.5 sm:flex-row sm:items-center sm:gap-1'
-    "
-  >
-    @if (name) {
-      <button
-        type="button"
-        [attr.data-testid]="card ? 'card-open-transaction' : 'open-transaction'"
-        class="cursor-pointer text-left font-medium text-surface-900 dark:text-surface-0"
-        [class]="
-          card
-            ? 'min-w-0 wrap-anywhere'
-            : 'max-w-28 min-w-25 wrap-anywhere sm:max-w-none sm:min-w-0 sm:wrap-normal'
-        "
-        (click)="$event.stopPropagation(); openTransaction.emit(txn)"
-      >
-        {{ name }}
-      </button>
-    }
+  @if (name) {
     <button
       type="button"
-      [attr.data-testid]="card ? 'card-create-rule' : 'create-rule'"
-      [class]="card ? '-mt-1.5 -mb-1.5' : compact() ? '-mb-1.5' : '-mb-1.5 sm:-mt-1.5'"
-      class="inline-flex min-h-8 min-w-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-color hover:bg-surface-100 hover:text-surface-900 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary-700 dark:hover:bg-surface-800 dark:hover:text-surface-0 dark:focus-visible:outline-primary-400"
-      title="Create rule"
-      [attr.aria-label]="'Create rule from ' + txn.description"
-      (click)="onCreateRule(txn, $event)"
+      [attr.data-testid]="card ? 'card-open-transaction' : 'open-transaction'"
+      class="cursor-pointer text-left font-medium text-surface-900 dark:text-surface-0"
+      [class]="
+        card
+          ? 'min-w-0 wrap-anywhere'
+          : 'max-w-28 min-w-25 wrap-anywhere sm:max-w-none sm:min-w-0 sm:wrap-normal'
+      "
+      (click)="$event.stopPropagation(); openTransaction.emit(txn)"
     >
-      <i class="pi pi-bolt text-sm" aria-hidden="true"></i>
+      {{ name }}
     </button>
-  </span>
+  }
+  @if (card || compact()) {
+    <ng-container *ngTemplateOutlet="ruleCoverMark; context: { $implicit: txn }" />
+  }
+</ng-template>
+
+<ng-template #ruleCoverMark let-txn>
+  @if (highlights().ruleCovers) {
+    @let covered = coverage().get(txn.id);
+    @if (covered && (covered.categoryRuleCovers || covered.merchantRuleCovers)) {
+      <span
+        data-testid="rule-covers-mark"
+        class="ml-1 inline-flex items-center align-middle text-muted-color"
+        [title]="coverText(covered)"
+      >
+        <i class="pi pi-bolt text-xs" aria-hidden="true"></i>
+        <span class="sr-only">{{ coverText(covered) }}</span>
+      </span>
+    }
+  }
 </ng-template>
 
 <ng-template #categoryCell let-txn let-card="card">

@@ -34,6 +34,7 @@ import {
   TransactionState,
   TransactionType,
   TransactionUpdateRequest,
+  RuleCoverage,
 } from '@models/transaction.model';
 import { Account } from '@models/account.model';
 import { Category, CategoryGroup } from '@models/category.model';
@@ -65,6 +66,8 @@ import {
 } from './components/transaction-review-tabs/transaction-review-tabs.component';
 import { TransactionListComponent } from './components/transaction-list/transaction-list.component';
 import { TransactionBulkBarComponent } from './components/transaction-bulk-bar/transaction-bulk-bar.component';
+import { GridHighlights, NO_HIGHLIGHTS } from './utils/grid-highlights';
+import { TransactionGridToolbarComponent } from './components/transaction-grid-toolbar/transaction-grid-toolbar.component';
 import { SidePanelComponent } from '@shared/components/side-panel/side-panel.component';
 import { TransactionEditFormComponent } from './components/transaction-edit-form/transaction-edit-form.component';
 import { TransactionBulkFormComponent } from './components/transaction-bulk-form/transaction-bulk-form.component';
@@ -131,6 +134,7 @@ function singleKeyword(description: string): string {
     TransactionReviewTabsComponent,
     TransactionListComponent,
     TransactionBulkBarComponent,
+    TransactionGridToolbarComponent,
     SidePanelComponent,
     TransactionEditFormComponent,
     TransactionBulkFormComponent,
@@ -298,6 +302,14 @@ export class TransactionsComponent implements OnInit {
   );
 
   /** The ids of the selected transactions (what the list's checkboxes show). */
+  /** The toolbar's row highlights (PF-924), kept only for the visit. */
+  readonly highlights: WritableSignal<GridHighlights> = signal<GridHighlights>(NO_HIGHLIGHTS);
+
+  /** Which saved rules already cover each row of the page, by transaction id (PF-925). */
+  readonly ruleCoverage: WritableSignal<ReadonlyMap<number, RuleCoverage>> = signal<
+    ReadonlyMap<number, RuleCoverage>
+  >(new Map());
+
   readonly selectedIds: Signal<number[]> = computed((): number[] =>
     this.selectedTransactions().map((t: Transaction): number => t.id),
   );
@@ -398,6 +410,7 @@ export class TransactionsComponent implements OnInit {
 
   /** The list request in flight, cancelled when a newer load starts. */
   private listRequest: Subscription | null = null;
+  private coverageRequest: Subscription | null = null;
 
   private ruleSessions = 0;
   private ruleGroupsRequested = false;
@@ -413,6 +426,17 @@ export class TransactionsComponent implements OnInit {
   });
 
   constructor() {
+    /**
+     * Keeps the "rule covers it" answer in step with the rows on the page (PF-925): asks once for
+     * the page's ids whenever the rows change while the highlight is on, and not at all while it is
+     * off.
+     */
+    effect((): void => {
+      const rows: Transaction[] = this.transactions();
+      const on: boolean = this.highlights().ruleCovers;
+      untracked((): void => this.loadRuleCoverage(on ? rows : []));
+    });
+
     /**
      * Core effect that reactively synchronizes the view state with the backend.
      * Automatically triggers a data load whenever filters, pagination, or sorting changes.
@@ -457,6 +481,38 @@ export class TransactionsComponent implements OnInit {
     const rest = { ...params };
     delete rest['action'];
     this.router.navigate([], { queryParams: rest, replaceUrl: true });
+  }
+
+  /**
+   * Loads which saved rules cover the given rows, one call for the whole page. The newest request
+   * wins: cancelling the one still in flight means a slow earlier answer can never replace a newer
+   * one (the PF-910 approach). No rows, or the highlight off, clears the marks without a request.
+   */
+  private loadRuleCoverage(rows: Transaction[]): void {
+    this.coverageRequest?.unsubscribe();
+    this.coverageRequest = null;
+    if (rows.length === 0) {
+      this.ruleCoverage.set(new Map());
+      return;
+    }
+    this.coverageRequest = this.transactionApi
+      .getRuleCoverage(rows.map((t: Transaction): number => t.id))
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (coverage: RuleCoverage[]): void =>
+          this.ruleCoverage.set(
+            new Map(
+              coverage.map((c: RuleCoverage): [number, RuleCoverage] => [c.transactionId, c]),
+            ),
+          ),
+        // marks are a hint, so a failed answer just shows none instead of failing the page
+        error: (): void => this.ruleCoverage.set(new Map()),
+      });
+  }
+
+  /** Asks again for the current rows, for after a rule changes what the rules cover. */
+  private refreshRuleCoverage(): void {
+    this.loadRuleCoverage(this.highlights().ruleCovers ? this.transactions() : []);
   }
 
   /**
@@ -644,6 +700,11 @@ export class TransactionsComponent implements OnInit {
     }));
   }
 
+  /** Applies the toolbar's new highlights. */
+  onHighlightsChange(highlights: GridHighlights): void {
+    this.highlights.set(highlights);
+  }
+
   /** Replaces the selection with the rows of the loaded page whose ids are given. */
   onSelectionChange(ids: number[]): void {
     this.selectedTransactions.set(
@@ -764,11 +825,6 @@ export class TransactionsComponent implements OnInit {
     }
   }
 
-  /** Starts a rule from a row's Create rule action: its description becomes the keyword. */
-  onCreateRuleFromRow(txn: Transaction): void {
-    this.openRuleForm(txn.description, []);
-  }
-
   /** Starts a rule from the transaction open in the edit panel. */
   onCreateRuleFromEditForm(): void {
     const txn: Transaction | null = this.selectedTransaction();
@@ -853,6 +909,7 @@ export class TransactionsComponent implements OnInit {
         next: (): void => {
           this.ruleForm()?.form.markAsPristine();
           this.toast.success('Rule added');
+          this.refreshRuleCoverage();
           this.closePanel();
         },
         error: (err: HttpErrorResponse): void => {

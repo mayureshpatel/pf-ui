@@ -25,6 +25,28 @@ describe('TransactionApiService', () => {
     httpMock.verify();
   });
 
+  describe('getRuleCoverage (PF-925)', () => {
+    it('should ask for the coverage of the given ids in one call and return it', () => {
+      // arrange
+      const coverage = [
+        { transactionId: 1, categoryRuleCovers: true, merchantRuleCovers: false },
+        { transactionId: 2, categoryRuleCovers: false, merchantRuleCovers: false },
+      ];
+      let result: unknown;
+
+      // act
+      service.getRuleCoverage([1, 2]).subscribe((r) => (result = r));
+      const req = httpMock.expectOne(
+        (r) => r.url === `${apiUrl}/rule-coverage` && r.params.get('ids') === '1,2',
+      );
+      req.flush(coverage);
+
+      // assert & verify
+      expect(req.request.method).toBe('GET');
+      expect(result).toEqual(coverage);
+    });
+  });
+
   describe('getTransactions', () => {
     it("should send the filter's local calendar date, not a UTC-shifted one, for a positive-UTC-offset user (PF-199)", () => {
       // Arrange -- a moment where the local calendar date (March 15) differs from the UTC one
