@@ -66,6 +66,7 @@ export class TransactionListComponent {
 
   readonly columns: SortColumn[] = [
     { field: 'description', label: 'Description', hideOnPhone: true },
+    { field: 'merchant.name', label: 'Merchant' },
     { field: 'category.name', label: 'Category' },
     { field: 'account.name', label: 'Account', hideOnPhone: true },
     { field: 'amount', label: 'Amount' },
@@ -144,10 +145,14 @@ export class TransactionListComponent {
     );
   }
 
-  /** Sorts by a column: toggles direction on the active one, starts descending on a new one. */
+  /**
+   * Sorts by a column: toggles direction on the active one, starts descending on a new one
+   * (except Merchant, a text column, which starts A to Z).
+   */
   onSort(field: string): void {
+    const initial: string = field === 'merchant.name' ? 'asc' : 'desc';
     const direction: string =
-      field === this.sortField() ? (this.sortDirection() === 'desc' ? 'asc' : 'desc') : 'desc';
+      field === this.sortField() ? (this.sortDirection() === 'desc' ? 'asc' : 'desc') : initial;
     this.sortChange.emit(`${field},${direction}`);
   }
 
