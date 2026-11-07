@@ -69,6 +69,7 @@ import {
 import { TransactionListComponent } from './components/transaction-list/transaction-list.component';
 import { TransactionBulkBarComponent } from './components/transaction-bulk-bar/transaction-bulk-bar.component';
 import { GridHighlights, NO_HIGHLIGHTS } from './utils/grid-highlights';
+import { sharedKeyword, trimmedKeyword } from './utils/rule-keyword';
 import { RuleApplicationApiService } from './services/rule-application-api.service';
 import { UndoToastComponent } from './components/undo-toast/undo-toast.component';
 import { TransactionGridToolbarComponent } from './components/transaction-grid-toolbar/transaction-grid-toolbar.component';
@@ -102,21 +103,6 @@ interface RuleStart {
   key: number;
   keyword: string;
   context: Transaction[];
-}
-
-/**
- * One keyword from a description: the description itself, or when it has commas (which the rule
- * form reads as separate OR keywords) its longest comma-separated part, trimmed. That part is still
- * in the description, so the transaction it came from still matches.
- */
-function singleKeyword(description: string): string {
-  if (!description.includes(',')) return description;
-  return description
-    .split(',')
-    .map((part: string): string => part.trim())
-    .reduce((longest: string, part: string): string =>
-      part.length > longest.length ? part : longest,
-    );
 }
 
 /**
@@ -865,22 +851,24 @@ export class TransactionsComponent implements OnInit {
     }
   }
 
-  /** Starts a rule from the transaction open in the edit panel. */
+  /** Starts a rule from the transaction open in the edit panel, its trimmed description as the keyword. */
   onCreateRuleFromEditForm(): void {
     const txn: Transaction | null = this.selectedTransaction();
-    if (txn) this.openRuleForm(txn.description, []);
+    if (txn) this.openRuleForm(trimmedKeyword(txn.description), []);
   }
 
   /**
-   * Starts one rule for the selection. One selected row counts as starting from that transaction
-   * (its description is the keyword); several start with an empty keyword and show as context.
+   * Starts one rule for the selection. One selected row starts from that transaction (its
+   * description trimmed of store numbers and locations, PF-929); several start from the words all
+   * their descriptions share (PF-930), or with an empty keyword, showing the rows as context, when
+   * they share nothing useful.
    */
   onCreateRuleFromSelection(): void {
     const rows: Transaction[] = this.selectedTransactions();
     if (rows.length === 1) {
-      this.openRuleForm(rows[0].description, []);
+      this.openRuleForm(trimmedKeyword(rows[0].description), []);
     } else {
-      this.openRuleForm('', rows);
+      this.openRuleForm(sharedKeyword(rows.map((t: Transaction): string => t.description)), rows);
     }
   }
 
@@ -895,11 +883,11 @@ export class TransactionsComponent implements OnInit {
 
   /**
    * Opens the panel on a fresh Create rule form, leaving the page's selection, filters and list
-   * alone. Focus moves to the keyword field. The keyword is reduced to one comma-free part (see
-   * {@link singleKeyword}), since the form reads commas as separate keywords.
+   * alone. Focus moves to the keyword field. The keyword comes from {@link trimmedKeyword} or
+   * {@link sharedKeyword}, so it is already one comma-free part (the form reads commas as separate
+   * keywords).
    */
-  private openRuleForm(description: string, context: Transaction[]): void {
-    const keyword: string = singleKeyword(description);
+  private openRuleForm(keyword: string, context: Transaction[]): void {
     // captured before any discard prompt takes focus
     const opener: HTMLElement | null = document.activeElement as HTMLElement | null;
     this.confirmDiscardIfDirty((): void => {
