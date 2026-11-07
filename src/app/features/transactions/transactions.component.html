@@ -154,7 +154,7 @@
               : panelMode() === 'bulk'
                 ? 'Apply to ' + selectedIds().length
                 : panelMode() === 'rule'
-                  ? 'Add rule'
+                  ? ruleSaveLabel()
                   : 'Save changes'
           "
           [showDelete]="panelMode() === 'single'"
@@ -214,12 +214,16 @@
                 [initialKeyword]="start.keyword"
                 (save)="onSaveRule($event)"
                 (draftChange)="ruleDraft.set($event)"
+                (categoryChange)="ruleBecomes.set($event)"
               />
               <app-rule-match-list
                 class="mt-4 block"
                 [draft]="ruleDraft()"
                 [invalid]="ruleForm.keywordsInvalid()"
                 [context]="start.context"
+                [selectable]="true"
+                [becomes]="ruleBecomes()"
+                (selectionChange)="onRuleSelection($event)"
               />
             }
           } @else {
@@ -235,6 +239,8 @@
       }
     </div>
   }
+
+  <app-undo-toast [message]="undoMessage()" (undo)="undoLastApply()" (dismissed)="dismissUndo()" />
 
   <app-csv-import-dialog
     [(visible)]="showImportDialog"

@@ -42,6 +42,8 @@ import {
   CategoryRuleCreateRequest,
   CategoryRuleUpdateRequest,
   RuleDraft,
+  CategoryRuleApplyResult,
+  RuleApplicationUndoResult,
 } from '@models/category-rule.model';
 import { Merchant } from '@models/merchant.model';
 import { Tag } from '@models/tag.model';
@@ -67,6 +69,8 @@ import {
 import { TransactionListComponent } from './components/transaction-list/transaction-list.component';
 import { TransactionBulkBarComponent } from './components/transaction-bulk-bar/transaction-bulk-bar.component';
 import { GridHighlights, NO_HIGHLIGHTS } from './utils/grid-highlights';
+import { RuleApplicationApiService } from './services/rule-application-api.service';
+import { UndoToastComponent } from './components/undo-toast/undo-toast.component';
 import { TransactionGridToolbarComponent } from './components/transaction-grid-toolbar/transaction-grid-toolbar.component';
 import { SidePanelComponent } from '@shared/components/side-panel/side-panel.component';
 import { TransactionEditFormComponent } from './components/transaction-edit-form/transaction-edit-form.component';
@@ -121,6 +125,14 @@ function singleKeyword(description: string): string {
  * Provides high-fidelity filtering, bulk operations, CSV imports, and
  * intelligent transfer matching.
  */
+/** The Undo toast's offer after a rule was applied (PF-928). */
+interface UndoOffer {
+  message: string;
+  result: CategoryRuleApplyResult;
+}
+
+const NO_ROWS_CHANGED = 'Rule added, no transactions changed';
+
 @Component({
   selector: 'app-transactions',
   standalone: true,
@@ -135,6 +147,7 @@ function singleKeyword(description: string): string {
     TransactionListComponent,
     TransactionBulkBarComponent,
     TransactionGridToolbarComponent,
+    UndoToastComponent,
     SidePanelComponent,
     TransactionEditFormComponent,
     TransactionBulkFormComponent,
@@ -156,6 +169,8 @@ export class TransactionsComponent implements OnInit {
   private readonly tagApi: TagApiService = inject(TagApiService);
   private readonly toast: ToastService = inject(ToastService);
   private readonly confirmationService: ConfirmationService = inject(ConfirmationService);
+  private readonly ruleApplicationApi: RuleApplicationApiService =
+    inject(RuleApplicationApiService);
   private readonly route: ActivatedRoute = inject(ActivatedRoute);
   private readonly router: Router = inject(Router);
   private readonly destroyRef: DestroyRef = inject(DestroyRef);
@@ -215,6 +230,26 @@ export class TransactionsComponent implements OnInit {
 
   /** The rule form's draft, for the match list under it. */
   readonly ruleDraft: WritableSignal<RuleDraft | null> = signal<RuleDraft | null>(null);
+
+  /** The Undo toast's offer after a rule was applied: its message and the result to send back (PF-928). */
+  readonly undoOffer: WritableSignal<UndoOffer | null> = signal<UndoOffer | null>(null);
+  readonly undoMessage: Signal<string | null> = computed(
+    (): string | null => this.undoOffer()?.message ?? null,
+  );
+  private readonly undoing: WritableSignal<boolean> = signal(false);
+
+  /** The matches the owner has ticked in the rule panel's preview, to apply the rule to (PF-926). */
+  readonly ruleApplyIds: WritableSignal<number[]> = signal<number[]>([]);
+
+  /** The name of the category the rule form has chosen, for the preview's "becomes" line. */
+  readonly ruleBecomes: WritableSignal<string | null> = signal<string | null>(null);
+
+  /** The rule panel's save button, saying how many rows saving will change. */
+  readonly ruleSaveLabel: Signal<string> = computed((): string => {
+    const count: number = this.ruleApplyIds().length;
+    if (count === 0) return 'Add rule, no transactions changed';
+    return `Add rule and update ${count} ${count === 1 ? 'transaction' : 'transactions'}`;
+  });
 
   /** Categories grouped under their parents, for the rule form; loaded on the first Create rule. */
   readonly ruleGroups: WritableSignal<CategoryGroup[]> = signal<CategoryGroup[]>([]);
@@ -700,6 +735,11 @@ export class TransactionsComponent implements OnInit {
     }));
   }
 
+  /** Keeps the ids of the matches ticked in the rule panel's preview. */
+  onRuleSelection(ids: number[]): void {
+    this.ruleApplyIds.set(ids);
+  }
+
   /** Applies the toolbar's new highlights. */
   onHighlightsChange(highlights: GridHighlights): void {
     this.highlights.set(highlights);
@@ -848,6 +888,8 @@ export class TransactionsComponent implements OnInit {
   private clearRuleState(): void {
     this.ruleStart.set(null);
     this.ruleDraft.set(null);
+    this.ruleApplyIds.set([]);
+    this.ruleBecomes.set(null);
     this.ruleOpener = null;
   }
 
@@ -865,6 +907,8 @@ export class TransactionsComponent implements OnInit {
       this.ruleOpener = opener && opener !== document.body ? opener : null;
       this.selectedTransaction.set(null);
       this.ruleDraft.set(null);
+      this.ruleApplyIds.set([]);
+      this.ruleBecomes.set(null);
       this.ruleStart.set({ key: ++this.ruleSessions, keyword, context });
       this.panelMode.set('rule');
       // the read phase runs after the panel's own move of focus to itself on opening
@@ -893,30 +937,107 @@ export class TransactionsComponent implements OnInit {
   }
 
   /**
-   * Stores the new rule. Nothing else changes: the rule is not applied, and the list, filters,
-   * page and selection stay as they are (applying stays on Settings, "Apply rules").
+   * Saves the rule. With matches ticked in the preview (PF-927) it creates the rule and applies it
+   * to exactly those rows in one all-or-nothing call, then closes the panel, refreshes the list (the
+   * page, filters and sort stay as they are) and offers Undo. With nothing ticked it only stores the
+   * rule. Either way a failure leaves the panel open with the form as typed and nothing changed.
    */
   onSaveRule(value: RuleCreateValue | CategoryRuleUpdateRequest): void {
     if (this.savingRule() || 'id' in value) return;
+    const rule: CategoryRuleCreateRequest = value as CategoryRuleCreateRequest;
+    const ids: number[] = this.ruleApplyIds();
     this.savingRule.set(true);
+
+    if (ids.length === 0) {
+      this.ruleApi
+        .createRule(rule)
+        .pipe(
+          takeUntilDestroyed(this.destroyRef),
+          finalize((): void => this.savingRule.set(false)),
+        )
+        .subscribe({
+          next: (): void => {
+            this.ruleForm()?.form.markAsPristine();
+            this.toast.success(NO_ROWS_CHANGED);
+            this.refreshRuleCoverage();
+            this.closePanel();
+          },
+          error: (err: HttpErrorResponse): void => this.onRuleSaveFailed(err),
+        });
+      return;
+    }
+
     this.ruleApi
-      .createRule(value as CategoryRuleCreateRequest)
+      .createAndApply({ rule, transactionIds: ids })
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize((): void => this.savingRule.set(false)),
       )
       .subscribe({
-        next: (): void => {
-          this.ruleForm()?.form.markAsPristine();
-          this.toast.success('Rule added');
-          this.refreshRuleCoverage();
-          this.closePanel();
+        next: (result: CategoryRuleApplyResult): void => this.onRuleApplied(result),
+        error: (err: HttpErrorResponse): void => this.onRuleSaveFailed(err),
+      });
+  }
+
+  /** Shows why saving the rule failed, in the form, which stays open as the owner typed it. */
+  private onRuleSaveFailed(err: HttpErrorResponse): void {
+    console.error('Saving the rule failed:', err);
+    this.ruleForm()?.errorMessage.set(err.error?.detail || 'Failed to save the rule.');
+  }
+
+  /** After a rule was created and applied: close the panel, refresh the list and offer Undo. */
+  private onRuleApplied(result: CategoryRuleApplyResult): void {
+    this.ruleForm()?.form.markAsPristine();
+    const changed: number = result.changes.length;
+    if (changed === 0) {
+      this.undoOffer.set(null);
+      this.toast.success(NO_ROWS_CHANGED);
+    } else {
+      this.undoOffer.set({
+        message: `Rule added. ${changed} ${changed === 1 ? 'transaction' : 'transactions'} updated.`,
+        result,
+      });
+    }
+    this.closePanel();
+    this.loadTransactions();
+  }
+
+  /**
+   * Undoes the rule that was just applied: sends the apply result back, which restores the changed
+   * rows (leaving any that changed since alone) and deletes the rule, then refreshes the list.
+   */
+  undoLastApply(): void {
+    const offer: UndoOffer | null = this.undoOffer();
+    if (!offer || this.undoing()) return;
+    this.undoing.set(true);
+    this.ruleApplicationApi
+      .undo({ category: offer.result })
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize((): void => this.undoing.set(false)),
+      )
+      .subscribe({
+        next: (undone: RuleApplicationUndoResult): void => {
+          this.undoOffer.set(null);
+          this.loadTransactions();
+          const left: number = undone.skippedTransactionIds.length;
+          const restored = `${undone.restoredCount} ${undone.restoredCount === 1 ? 'transaction' : 'transactions'} restored`;
+          this.toast.success(
+            left > 0
+              ? `Rule undone. ${restored}; ${left} changed since and ${left === 1 ? 'was' : 'were'} left alone.`
+              : `Rule undone. ${restored}.`,
+          );
         },
-        error: (err: HttpErrorResponse): void => {
-          console.error('Saving the rule failed:', err);
-          this.ruleForm()?.errorMessage.set(err.error?.detail || 'Failed to save the rule.');
+        error: (): void => {
+          this.undoOffer.set(null);
+          this.toast.error('Could not undo the rule. Nothing was changed.');
         },
       });
+  }
+
+  /** Drops the Undo offer without undoing anything. */
+  dismissUndo(): void {
+    this.undoOffer.set(null);
   }
 
   /** Loads the counts shown on the review tabs. */

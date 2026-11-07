@@ -169,4 +169,29 @@ describe('CategoryRuleApiService', () => {
       req.flush(preview);
     });
   });
+
+  it("should create a rule and apply it to the chosen transactions, with the user's id (PF-927)", () => {
+    // arrange
+    let result: unknown;
+    const reply = { ruleId: 7, categoryId: 5, changes: [], skippedTransactionIds: [] };
+
+    // act
+    service
+      .createAndApply({
+        rule: { keywords: ['netflix'], categoryId: 5, priority: 0 } as never,
+        transactionIds: [1, 2],
+      })
+      .subscribe((r) => (result = r));
+
+    // assert & verify
+    const req = httpMock.expectOne(`${apiUrl}/create-and-apply`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({
+      rule: { keywords: ['netflix'], categoryId: 5, priority: 0, userId: 42 },
+      transactionIds: [1, 2],
+    });
+    expect(req.request.context.get(SKIP_GENERIC_ERROR_TOAST)).toBe(true);
+    req.flush(reply);
+    expect(result).toEqual(reply);
+  });
 });

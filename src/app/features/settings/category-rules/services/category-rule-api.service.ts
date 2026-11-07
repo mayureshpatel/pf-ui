@@ -9,6 +9,8 @@ import {
   RuleChangePreview,
   RuleDraft,
   RuleMatchPreview,
+  CategoryRuleApplyRequest,
+  CategoryRuleApplyResult,
 } from '@models/category-rule.model';
 import { AuthService } from '@core/auth/auth.service';
 import { SKIP_GENERIC_ERROR_TOAST } from '@core/auth/error.interceptor';
@@ -44,6 +46,22 @@ export class CategoryRuleApiService {
     const userId: number | undefined = this.authService.user()?.id;
 
     return this.http.post<number>(this.apiUrl, { ...data, userId }, SKIP_TOAST_OPTIONS);
+  }
+
+  /**
+   * Creates a category rule and applies it, in one all-or-nothing step, to the transactions the
+   * user chose (PF-927), giving each the rule's category even if it already had one.
+   * @param data - The rule and the chosen transaction ids.
+   * @returns the new rule's id and every changed transaction with its previous category.
+   */
+  createAndApply(data: CategoryRuleApplyRequest): Observable<CategoryRuleApplyResult> {
+    const userId: number | undefined = this.authService.user()?.id;
+
+    return this.http.post<CategoryRuleApplyResult>(
+      `${this.apiUrl}/create-and-apply`,
+      { rule: { ...data.rule, userId }, transactionIds: data.transactionIds },
+      SKIP_TOAST_OPTIONS,
+    );
   }
 
   /**

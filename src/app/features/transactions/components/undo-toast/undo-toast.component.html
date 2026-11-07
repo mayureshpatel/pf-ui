@@ -1,0 +1,36 @@
+<div
+  role="status"
+  aria-live="polite"
+  class="pointer-events-none fixed inset-x-4 bottom-4 z-40 flex justify-center"
+>
+  @if (message(); as text) {
+    <div
+      #toast
+      data-testid="undo-toast"
+      class="pointer-events-auto flex max-w-xl flex-wrap items-center gap-3 rounded-2xl bg-surface-900 px-4 py-3 text-surface-0 shadow-lg dark:bg-surface-100 dark:text-surface-900"
+      (focusin)="held.set(true)"
+      (focusout)="onFocusOut($event, toast)"
+      (mouseenter)="held.set(true)"
+      (mouseleave)="held.set(false)"
+    >
+      <span>{{ text }}</span>
+      <button
+        type="button"
+        data-testid="undo-button"
+        class="min-h-8 cursor-pointer text-sm font-semibold underline"
+        (click)="undo.emit()"
+      >
+        Undo
+      </button>
+      <button
+        type="button"
+        data-testid="undo-dismiss"
+        class="inline-flex min-h-8 min-w-8 cursor-pointer items-center justify-center rounded-md"
+        aria-label="Dismiss"
+        (click)="dismissed.emit()"
+      >
+        <i class="pi pi-times text-sm" aria-hidden="true"></i>
+      </button>
+    </div>
+  }
+</div>

@@ -1882,6 +1882,7 @@ export interface components {
             alreadyCategorizedCount?: number;
             truncated?: boolean;
             rows?: components["schemas"]["RuleMatchRowDto"][];
+            willCategorizeIds?: number[];
         };
         RuleMatchRowDto: {
             /** Format: int64 */
