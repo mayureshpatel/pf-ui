@@ -1,6 +1,7 @@
 import { vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Transaction, TransactionType } from '@models/transaction.model';
+import { RuleCoverage, Transaction, TransactionType } from '@models/transaction.model';
+import { GridHighlights } from '../../utils/grid-highlights';
 import { TransactionListComponent } from './transaction-list.component';
 
 function txn(partial: Partial<Transaction> & { id: number }): Transaction {
@@ -30,6 +31,8 @@ describe('TransactionListComponent', () => {
       page: number;
       pageCount: number;
       compact: boolean;
+      highlights: GridHighlights;
+      coverage: Record<number, RuleCoverage>;
     }> = {},
   ): void {
     fixture.componentRef.setInput('transactions', transactions);
@@ -39,17 +42,20 @@ describe('TransactionListComponent', () => {
     fixture.componentRef.setInput('selectedIds', overrides.selectedIds ?? []);
     fixture.componentRef.setInput('loading', overrides.loading ?? false);
     fixture.componentRef.setInput('compact', overrides.compact ?? false);
+    if (overrides.highlights) {
+      fixture.componentRef.setInput('highlights', overrides.highlights);
+    }
+    if (overrides.coverage) {
+      fixture.componentRef.setInput(
+        'coverage',
+        new Map(Object.entries(overrides.coverage).map(([id, c]) => [Number(id), c])),
+      );
+    }
     fixture.detectChanges();
   }
 
   const all = <T extends HTMLElement>(selector: string): T[] =>
     Array.from(fixture.nativeElement.querySelectorAll(selector));
-
-  // the table and the cards are both in the DOM; each is checked on its own
-  const ruleButtons = (scope = 'table'): HTMLButtonElement[] =>
-    all<HTMLButtonElement>(`${scope} button`).filter((b) =>
-      (b.getAttribute('aria-label') ?? '').startsWith('Create rule from'),
-    );
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -107,6 +113,172 @@ describe('TransactionListComponent', () => {
     expect(all('[data-testid="transfer-pill"]').length).toBe(1);
   });
 
+  describe('highlights (PF-924)', () => {
+    const noCategoryRow = (id: number): Transaction =>
+      txn({ id, category: null as never, description: `NO CATEGORY ${id}` });
+    const noMerchantRow = (id: number): Transaction =>
+      txn({ id, merchant: null as never, description: `NO MERCHANT ${id}` });
+    const marks = (kind: string, scope = 'table'): HTMLElement[] =>
+      all(`${scope} [data-highlight="${kind}"]`);
+
+    it('should mark nothing while every highlight is off', () => {
+      // act
+      render([noCategoryRow(1), noMerchantRow(2)]);
+
+      // assert & verify
+      expect(all('[data-highlight]').length).toBe(0);
+      expect(all('[data-testid^="card-highlight"]').length).toBe(0);
+    });
+
+    it('should tint the empty Category cell of a row with no category, and say so in text and icon', () => {
+      // act
+      render([noCategoryRow(1), txn({ id: 2 })], {
+        highlights: { noCategory: true, noMerchant: false, ruleCovers: false },
+      });
+
+      // assert & verify -- one cell, with a visible icon and text for assistive technology
+      const cells = marks('no-category');
+      expect(cells.length).toBe(1);
+      expect(cells[0].tagName).toBe('TD');
+      expect(cells[0].querySelector('.pi')).not.toBeNull();
+      expect(cells[0].textContent).toContain('No category');
+    });
+
+    it('should not mark a transfer, which has no category by design', () => {
+      // act
+      render([txn({ id: 1, type: TransactionType.TRANSFER_OUT, category: null as never })], {
+        highlights: { noCategory: true, noMerchant: false, ruleCovers: false },
+      });
+
+      // assert & verify
+      expect(marks('no-category').length).toBe(0);
+    });
+
+    it('should tint the empty Merchant cell of a row with no merchant, and say so in text and icon', () => {
+      // act
+      render([noMerchantRow(1), txn({ id: 2 })], {
+        highlights: { noCategory: false, noMerchant: true, ruleCovers: false },
+      });
+
+      // assert & verify
+      const cells = marks('no-merchant');
+      expect(cells.length).toBe(1);
+      expect(cells[0].tagName).toBe('TD');
+      expect(cells[0].querySelector('.pi')).not.toBeNull();
+      expect(cells[0].textContent).toContain('No merchant');
+    });
+
+    it('should show both marks on a row missing both, when both highlights are on', () => {
+      // act
+      render([txn({ id: 1, category: null as never, merchant: null as never })], {
+        highlights: { noCategory: true, noMerchant: true, ruleCovers: false },
+      });
+
+      // assert & verify
+      expect(marks('no-category').length).toBe(1);
+      expect(marks('no-merchant').length).toBe(1);
+    });
+
+    it('should keep marking in the compact list beside the panel', () => {
+      // act
+      render([txn({ id: 1, category: null as never, merchant: null as never })], {
+        compact: true,
+        highlights: { noCategory: true, noMerchant: true, ruleCovers: false },
+      });
+
+      // assert & verify
+      expect(marks('no-category').length).toBe(1);
+      expect(marks('no-merchant').length).toBe(1);
+    });
+
+    it('should mark the phone cards the same way', () => {
+      // act
+      render([txn({ id: 1, category: null as never, merchant: null as never })], {
+        highlights: { noCategory: true, noMerchant: true, ruleCovers: false },
+      });
+
+      // assert & verify
+      expect(all('[data-testid="card-highlight-no-category"]').length).toBe(1);
+      expect(all('[data-testid="card-highlight-no-merchant"]').length).toBe(1);
+    });
+  });
+
+  describe('rule coverage marks (PF-925)', () => {
+    const ON = { noCategory: false, noMerchant: false, ruleCovers: true };
+    const covers = (id: number, category: boolean, merchant: boolean): RuleCoverage => ({
+      transactionId: id,
+      categoryRuleCovers: category,
+      merchantRuleCovers: merchant,
+    });
+    const marks = (scope = 'table'): HTMLElement[] =>
+      all(`${scope} [data-testid="rule-covers-mark"]`);
+
+    it('should mark nothing while the switch is off, even with coverage known', () => {
+      // act
+      render([txn({ id: 1 })], { coverage: { 1: covers(1, true, false) } });
+
+      // assert & verify
+      expect(marks().length).toBe(0);
+    });
+
+    it('should mark a covered row with an icon and text saying which kind of rule covers it', () => {
+      // act
+      render([txn({ id: 1 }), txn({ id: 2 }), txn({ id: 3 }), txn({ id: 4 })], {
+        highlights: ON,
+        coverage: {
+          1: covers(1, true, false),
+          2: covers(2, false, true),
+          3: covers(3, true, true),
+          4: covers(4, false, false),
+        },
+      });
+
+      // assert & verify -- one mark per covered row, none for the uncovered one
+      const texts = marks().map((m) => m.textContent?.replace(/\s+/g, ' ').trim());
+      expect(texts).toEqual([
+        'Covered by a category rule',
+        'Covered by a merchant rule',
+        'Covered by a category rule and a merchant rule',
+      ]);
+      expect(marks()[0].querySelector('.pi')).not.toBeNull();
+    });
+
+    it('should leave a row with no coverage entry unmarked', () => {
+      // act
+      render([txn({ id: 1 })], { highlights: ON, coverage: {} });
+
+      // assert & verify
+      expect(marks().length).toBe(0);
+    });
+
+    it('should mark in the compact list and on the phone cards too', () => {
+      // act
+      render([txn({ id: 1 })], {
+        compact: true,
+        highlights: ON,
+        coverage: { 1: covers(1, true, false) },
+      });
+
+      // assert & verify
+      expect(marks('table').length).toBe(1);
+      expect(marks('[data-testid="card-list"]').length).toBe(1);
+    });
+  });
+
+  it('should not put a Create rule button on rows or cards; the toolbar above the grid starts rules', () => {
+    // act
+    render([txn({ id: 1, description: 'NETFLIX.COM 866-579' })]);
+    const ruleButtons = (): HTMLButtonElement[] =>
+      all<HTMLButtonElement>('button').filter((b) =>
+        (b.getAttribute('aria-label') ?? b.textContent ?? '').includes('Create rule'),
+      );
+
+    // assert & verify -- the table, the cards and the compact list alike
+    expect(ruleButtons().length).toBe(0);
+    render([txn({ id: 1, description: 'NETFLIX.COM 866-579' })], { compact: true });
+    expect(ruleButtons().length).toBe(0);
+  });
+
   it('should emit the transaction when the merchant button is used, and when Choose category is clicked', () => {
     // arrange
     const rows = [txn({ id: 1, category: null as never })];
@@ -124,209 +296,6 @@ describe('TransactionListComponent', () => {
     expect(opened).toHaveBeenCalledTimes(1);
     expect(opened).toHaveBeenCalledWith(rows[0]);
     expect(picked).toHaveBeenCalledWith(rows[0]);
-  });
-
-  describe('Create rule action', () => {
-    it('should offer Create rule on each row, named after its raw description', () => {
-      // act
-      render([
-        txn({ id: 1, description: 'NETFLIX.COM 866-579' }),
-        txn({ id: 2, description: 'SHELL OIL 123' }),
-      ]);
-
-      // assert & verify
-      expect(ruleButtons().map((b) => b.getAttribute('aria-label'))).toEqual([
-        'Create rule from NETFLIX.COM 866-579',
-        'Create rule from SHELL OIL 123',
-      ]);
-    });
-
-    it('should keep the action in the compact list beside the panel', () => {
-      // act
-      render([txn({ id: 1, description: 'NETFLIX.COM' })], { compact: true });
-
-      // assert & verify
-      expect(ruleButtons().length).toBe(1);
-    });
-
-    it('should emit the row without opening it or changing the selection', () => {
-      // arrange
-      const rows = [txn({ id: 1, description: 'NETFLIX.COM' })];
-      render(rows);
-      const created = vi.fn();
-      const opened = vi.fn();
-      const selected = vi.fn();
-      component.createRule.subscribe(created);
-      component.openTransaction.subscribe(opened);
-      component.selectionChange.subscribe(selected);
-
-      // act
-      ruleButtons()[0].click();
-
-      // assert & verify
-      expect(created).toHaveBeenCalledWith(rows[0]);
-      expect(opened).not.toHaveBeenCalled();
-      expect(selected).not.toHaveBeenCalled();
-    });
-
-    it('should be a comfortable tap target that never overlaps the merchant button', async () => {
-      // arrange
-      render([]); // inputs are set before the first await lets the page render
-      const { page } = await import('vitest/browser');
-      const before = { width: window.innerWidth, height: window.innerHeight };
-      document.body.appendChild(fixture.nativeElement);
-      const check = (scope: string, merchantId: string): void => {
-        const action = ruleButtons(scope)[0].getBoundingClientRect();
-        const merchant = all<HTMLButtonElement>(
-          `[data-testid="${merchantId}"]`,
-        )[0].getBoundingClientRect();
-        expect(action.width).toBeGreaterThanOrEqual(32);
-        expect(action.height).toBeGreaterThanOrEqual(32);
-        const overlaps =
-          action.left < merchant.right &&
-          merchant.left < action.right &&
-          action.top < merchant.bottom &&
-          merchant.top < action.bottom;
-        expect(overlaps).toBe(false);
-      };
-
-      try {
-        // act -- desktop
-        await page.viewport(1024, 768);
-        render([txn({ id: 1, description: 'NETFLIX.COM 866-579' })]);
-
-        // assert & verify
-        check('table', 'open-transaction');
-
-        // act -- the narrowest table, compacted beside the panel
-        await page.viewport(640, 812);
-        render([txn({ id: 1, description: 'NETFLIX.COM 866-579' })], { compact: true });
-
-        // assert & verify
-        check('table', 'open-transaction');
-
-        // act -- a phone shows cards
-        await page.viewport(375, 812);
-        render([txn({ id: 1, description: 'NETFLIX.COM 866-579' })]);
-
-        // assert & verify
-        check('[data-testid="card-list"]', 'card-open-transaction');
-      } finally {
-        await page.viewport(before.width, before.height);
-        fixture.nativeElement.remove();
-      }
-    });
-
-    it('should not widen the phone cards past the screen, so Amount stays in view', async () => {
-      // arrange -- the list's width on a 375px phone (page gutters taken off)
-      render([]); // inputs are set before the first await lets the page render
-      const { page } = await import('vitest/browser');
-      const before = { width: window.innerWidth, height: window.innerHeight };
-      const frame = document.createElement('div');
-      frame.style.width = '343px';
-      frame.appendChild(fixture.nativeElement);
-      document.body.appendChild(frame);
-      const rows = [
-        txn({
-          id: 1,
-          description: 'Balance Reconciliation',
-          merchant: null as never,
-          category: null as never,
-          amount: 2000,
-        }),
-        txn({
-          id: 2,
-          description: 'TST*BROOKLYN BAGEL & COFFEE CO',
-          merchant: { id: 8, name: 'Averyveryverylongmerchantnamewithoutanyspaces' } as never,
-        }),
-        txn({
-          id: 3,
-          merchant: { id: 7, name: 'Wholefoodsmarketplace' } as never,
-          amount: 1234.56,
-          tags: [
-            { id: 1, name: 'weekly' },
-            { id: 2, name: 'groceries' },
-          ] as never,
-        }),
-      ];
-      const check = (): void => {
-        const wrapper = fixture.nativeElement.firstElementChild as HTMLElement;
-        expect(ruleButtons('[data-testid="card-list"]').length).toBe(3);
-        expect(wrapper.scrollWidth).toBeLessThanOrEqual(wrapper.clientWidth);
-        const right = wrapper.getBoundingClientRect().right;
-        all('[data-testid="card-amount"]').forEach((amount) =>
-          expect(amount.getBoundingClientRect().right).toBeLessThanOrEqual(right + 0.5),
-        );
-        ruleButtons('[data-testid="card-list"]').forEach((b) => {
-          expect(b.getBoundingClientRect().width).toBeGreaterThanOrEqual(32);
-          expect(b.getBoundingClientRect().height).toBeGreaterThanOrEqual(32);
-        });
-      };
-
-      try {
-        // act
-        render(rows);
-        await page.viewport(375, 812);
-        fixture.detectChanges();
-
-        // assert & verify
-        check();
-
-        // act -- a phone with the panel open renders the same cards
-        render(rows, { compact: true });
-
-        // assert & verify
-        check();
-      } finally {
-        await page.viewport(before.width, before.height);
-        frame.remove();
-      }
-    });
-
-    it('should not add a column width to the compact list beside the panel', () => {
-      // arrange
-      document.body.appendChild(fixture.nativeElement);
-      render([txn({ id: 1, description: 'NETFLIX.COM 866-579' })], { compact: true });
-      const merchantCell = all<HTMLButtonElement>('[data-testid="open-transaction"]')[0]
-        .parentElement!.parentElement as HTMLTableCellElement;
-
-      // act
-      const name = all<HTMLButtonElement>('[data-testid="open-transaction"]')[0];
-      const action = ruleButtons()[0];
-
-      // assert & verify -- the action sits under the name, not beside it
-      expect(action.getBoundingClientRect().top).toBeGreaterThanOrEqual(
-        name.getBoundingClientRect().bottom - 0.5,
-      );
-      expect(merchantCell.contains(action)).toBe(true);
-      fixture.nativeElement.remove();
-    });
-
-    it('should be a real button reachable by keyboard, opening on Enter', async () => {
-      // arrange
-      const rows = [txn({ id: 1, description: 'NETFLIX.COM' })];
-      render(rows);
-      document.body.appendChild(fixture.nativeElement);
-      const created = vi.fn();
-      const opened = vi.fn();
-      component.createRule.subscribe(created);
-      component.openTransaction.subscribe(opened);
-      const { page, userEvent } = await import('vitest/browser');
-      const before = { width: window.innerWidth, height: window.innerHeight };
-      await page.viewport(1024, 768); // the table is hidden on a phone, where the cards show
-      all<HTMLButtonElement>('[data-testid="open-transaction"]')[0].focus();
-
-      // act
-      await userEvent.tab();
-      await userEvent.keyboard('{Enter}');
-
-      // assert & verify
-      expect(document.activeElement).toBe(ruleButtons()[0]);
-      expect(created).toHaveBeenCalledWith(rows[0]);
-      expect(opened).not.toHaveBeenCalled();
-      await page.viewport(before.width, before.height);
-      fixture.nativeElement.remove();
-    });
   });
 
   it('should emit the full new selection from a row checkbox and from the header checkbox', () => {
@@ -721,24 +690,6 @@ describe('TransactionListComponent', () => {
       // assert & verify -- the name button opens once (its click does not also reach the card)
       expect(opened.mock.calls.map((c) => c[0])).toEqual([rows[1], rows[0]]);
     });
-
-    it('should start a rule from a card without opening or selecting it', () => {
-      // arrange
-      const rows = [txn({ id: 1, description: 'NETFLIX.COM' })];
-      render(rows);
-      const created = vi.fn();
-      const opened = vi.fn();
-      component.createRule.subscribe(created);
-      component.openTransaction.subscribe(opened);
-
-      // act
-      ruleButtons('[data-testid="card-list"]')[0].click();
-
-      // assert & verify
-      expect(created).toHaveBeenCalledWith(rows[0]);
-      expect(opened).not.toHaveBeenCalled();
-    });
-
     it('should select with the card checkbox, name it like the row checkbox, and select a shift-click range', () => {
       // arrange
       render([txn({ id: 1 }), txn({ id: 2 }), txn({ id: 3 }), txn({ id: 4 })], {
