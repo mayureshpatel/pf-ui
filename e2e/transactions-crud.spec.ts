@@ -66,4 +66,52 @@ test.describe('Transactions Core CRUD', () => {
     await expect(page.getByText('Transaction deleted')).toBeVisible();
     await expect(page.getByRole('row', {name: new RegExp(updatedDescription)})).not.toBeVisible();
   });
+
+  // PF-935: a date changed in the picker used to be sent as a long local date string, which the
+  // server rejected with a 400, so only the pre-filled "today" could ever be saved.
+  test('create a transaction dated in the past, and the ledger lists it under that day', async ({page}) => {
+    // the ledger is filtered to that one day first, so the row can only show up if the saved date is right
+    await page.goto('/transactions?startDate=2025-12-08&endDate=2025-12-08');
+    const account = await createTestAccount(page, 'E2E Past Date Account');
+    const parentCategory = await createTestCategory(page, 'E2E Past Date Parent');
+    const category = await createTestCategory(page, 'E2E Past Date Category', parentCategory.id);
+    const description = `E2E Past Date Txn ${Date.now()}`;
+
+    await page.reload();
+
+    await page.getByRole('button', {name: 'Add transaction'}).click();
+    const drawer = page.getByRole('complementary');
+    await expect(drawer.getByRole('heading', {name: 'New transaction'})).toBeVisible();
+
+    await drawer.getByRole('spinbutton').fill('17.25');
+    await drawer.getByText('Select the account...').click();
+    await page.getByRole('option', {name: account.name, exact: true}).click();
+    await drawer.getByText('Select a category...').click();
+    await page.getByRole('option', {name: category.name, exact: true}).click();
+    await drawer.locator('textarea#description').fill(description);
+
+    // change the date from the pre-filled today to a past day, by picking it in the calendar
+    // (a date typed into the field does not stick, which is a separate matter)
+    const dateInput = drawer.locator('#date input');
+    await dateInput.click();
+    const now = new Date();
+    const monthsBack = (now.getFullYear() - 2025) * 12 + (now.getMonth() - 11);
+    for (let i = 0; i < monthsBack; i++) {
+      await page.getByRole('button', {name: 'Previous Month'}).click();
+    }
+    await expect(page.locator('.p-datepicker-title')).toContainText(/December\s*2025/);
+    await page.getByRole('gridcell', {name: '8', exact: true}).click();
+    await drawer.locator('textarea#description').click();
+    await expect(dateInput).toHaveValue('2025-12-08');
+
+    await drawer.getByRole('button', {name: 'Post transaction'}).click();
+
+    await expect(page.getByText('Transaction created')).toBeVisible();
+    await expect(drawer).toBeHidden();
+
+    await expect(page.getByTestId('day-heading').getByText('Monday, Dec 8, 2025')).toBeVisible();
+    const row = page.getByRole('row', {name: new RegExp(description)});
+    await expect(row).toBeVisible();
+    await expect(row.getByText('-$17.25')).toBeVisible();
+  });
 });
