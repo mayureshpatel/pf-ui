@@ -91,7 +91,8 @@ test.describe('Transactions Core CRUD', () => {
     await drawer.locator('textarea#description').fill(description);
 
     // change the date from the pre-filled today to a past day, by picking it in the calendar
-    // (a date typed into the field does not stick, which is a separate matter)
+    // (typing it with real key events works too; Playwright's fill() sends no key events, which
+    // the date picker ignores, so it cannot be used here)
     const dateInput = drawer.locator('#date input');
     await dateInput.click();
     const now = new Date();
