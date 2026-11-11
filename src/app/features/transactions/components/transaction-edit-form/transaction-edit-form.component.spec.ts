@@ -223,6 +223,95 @@ describe('TransactionEditFormComponent', () => {
     );
   });
 
+  describe('PF-935: a date changed in the date picker', () => {
+    // The PrimeNG date picker writes a Date into the form control as soon as the user picks or
+    // types a date, even though the control is declared as a string. 23:30 local time is used so a
+    // conversion through UTC would also land on the wrong day in most time zones.
+    const pickedDate = (): string => new Date(2025, 11, 8, 23, 30) as unknown as string;
+
+    it('should emit a plain yyyy-MM-dd date, not the Date itself, when creating a transaction', () => {
+      // arrange
+      fixture.detectChanges();
+      component.onShow();
+      component.form.patchValue({
+        accountId: 1,
+        amount: 10,
+        transactionDate: pickedDate(),
+        category: { id: 5 } as unknown as Category,
+      });
+      const saveSpy = vi.fn();
+      component.save.subscribe(saveSpy);
+
+      // act
+      component.onSubmit();
+
+      // assert & verify
+      expect(saveSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          request: expect.objectContaining({ transactionDate: '2025-12-08' }),
+        }),
+      );
+    });
+
+    it('should emit a plain yyyy-MM-dd date, not the Date itself, when updating a transaction', () => {
+      // arrange
+      fixture.componentRef.setInput('transaction', {
+        id: 1,
+        account: { id: 1, name: 'Checking' },
+        category: null,
+        amount: 42.5,
+        date: '2026-03-15T00:00:00Z',
+        description: 'Test',
+        type: 'EXPENSE',
+        merchant: null,
+      });
+      fixture.detectChanges();
+      component.onShow();
+      component.form.patchValue({
+        accountId: 1,
+        amount: 10,
+        transactionDate: pickedDate(),
+        category: { id: 5 } as unknown as Category,
+      });
+      const saveSpy = vi.fn();
+      component.save.subscribe(saveSpy);
+
+      // act
+      component.onSubmit();
+
+      // assert & verify
+      expect(saveSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          request: expect.objectContaining({ transactionDate: '2025-12-08' }),
+        }),
+      );
+    });
+
+    it('should leave a date that was never changed (already a plain string) as it is', () => {
+      // arrange
+      fixture.detectChanges();
+      component.onShow();
+      component.form.patchValue({
+        accountId: 1,
+        amount: 10,
+        transactionDate: '2026-03-15',
+        category: { id: 5 } as unknown as Category,
+      });
+      const saveSpy = vi.fn();
+      component.save.subscribe(saveSpy);
+
+      // act
+      component.onSubmit();
+
+      // assert & verify
+      expect(saveSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          request: expect.objectContaining({ transactionDate: '2026-03-15' }),
+        }),
+      );
+    });
+  });
+
   describe('PF-847: inline "+ Create" merchant suggestion', () => {
     const costco: Merchant = {
       id: 1,

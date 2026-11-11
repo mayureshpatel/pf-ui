@@ -150,7 +150,9 @@ export class TransactionEditFormComponent {
       nonNullable: true,
       validators: [Validators.required, Validators.min(0.01)],
     }),
-    transactionDate: new FormControl<string>('', {
+    // PF-935: the date picker writes a Date here once the user picks or types a date, so the
+    // control holds either shape; onSubmit() turns it into a plain yyyy-MM-dd string.
+    transactionDate: new FormControl<string | Date>('', {
       nonNullable: true,
       validators: [Validators.required],
     }),
@@ -428,13 +430,19 @@ export class TransactionEditFormComponent {
     const rawValue = this.form.getRawValue();
     const selectedTransaction: Transaction | null = this.transaction();
     const tagIds: number[] = rawValue.tags.map((t: Tag): number => t.id);
+    // PF-935: a date the user changed arrives as a Date; the request wants the plain day. The
+    // local year/month/day are used (never toISOString), so no time zone can shift the day.
+    const transactionDate: string =
+      rawValue.transactionDate instanceof Date
+        ? toLocalDateString(rawValue.transactionDate)
+        : rawValue.transactionDate;
 
     if (selectedTransaction) {
       const updateRequest: TransactionUpdateRequest = {
         id: selectedTransaction.id,
         accountId: rawValue.accountId,
         amount: rawValue.amount,
-        transactionDate: rawValue.transactionDate,
+        transactionDate,
         description: rawValue.description ?? '',
         type: rawValue.type,
         categoryId: rawValue.category!.id,
@@ -451,7 +459,7 @@ export class TransactionEditFormComponent {
       const createRequest: TransactionCreateRequest = {
         accountId: rawValue.accountId,
         amount: rawValue.amount,
-        transactionDate: rawValue.transactionDate,
+        transactionDate,
         description: rawValue.description ?? '',
         type: rawValue.type,
         categoryId: rawValue.category!.id,
