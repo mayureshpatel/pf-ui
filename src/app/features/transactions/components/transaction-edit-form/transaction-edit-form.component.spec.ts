@@ -623,4 +623,20 @@ describe('TransactionEditFormComponent', () => {
       expect(row!.classList).not.toContain('text-primary');
     });
   });
+
+  describe('PF-936: the type selector', () => {
+    it('should offer only Expense and Income, because a stored transfer needs a direction', () => {
+      // arrange
+      fixture.detectChanges();
+
+      // act
+      const buttons = Array.from(
+        fixture.nativeElement.querySelectorAll('#type-options button'),
+      ) as HTMLElement[];
+
+      // assert & verify
+      expect(buttons.map((b) => b.id)).toEqual(['type-option-EXPENSE', 'type-option-INCOME']);
+      expect(fixture.nativeElement.querySelector('#type-option-TRANSFER')).toBeNull();
+    });
+  });
 });
