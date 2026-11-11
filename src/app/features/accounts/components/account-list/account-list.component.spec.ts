@@ -116,6 +116,23 @@ describe('AccountListComponent', () => {
     for (const spy of Object.values(events)) expect(spy).toHaveBeenCalledWith(accounts[0]);
   });
 
+  it('should offer Update balance instead of Reconcile for a hand-entered account', () => {
+    // arrange
+    render();
+    const manual = { ...accounts[0], balanceMode: 'MANUAL' } as Account;
+
+    // act
+    const items = component.menuItemsFor(manual);
+
+    // assert & verify
+    expect(items.map((i) => i.label)).toEqual([
+      'View transactions',
+      'Update balance',
+      'Edit',
+      'Delete',
+    ]);
+  });
+
   it('should highlight the selected account, with a dark-mode variant', () => {
     // act
     render({ selectedId: 3 });

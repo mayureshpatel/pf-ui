@@ -114,6 +114,8 @@ export class AccountEditFormComponent implements OnInit {
     ),
     currentBalance: new FormControl(0, { nonNullable: true, validators: [Validators.required] }),
     bankName: new FormControl<BankName | null>(null),
+    /** The balance is typed in by hand instead of coming from transactions. */
+    manualBalance: new FormControl(false, { nonNullable: true }),
   });
 
   /** Which account is shown (null when adding one). The form resets only when this changes. */
@@ -179,6 +181,12 @@ export class AccountEditFormComponent implements OnInit {
         bankName: rawValue.bankName ?? null,
         version: selectedAccount.version,
       };
+      // sent only when it matters: switching on, or switching a hand-entered account back off
+      if (rawValue.manualBalance) {
+        updateRequest.balanceMode = 'MANUAL';
+      } else if (selectedAccount.balanceMode === 'MANUAL') {
+        updateRequest.balanceMode = 'DERIVED';
+      }
 
       this.save.emit(updateRequest);
     } else {
@@ -189,6 +197,7 @@ export class AccountEditFormComponent implements OnInit {
         currencyCode: rawValue.currencyCode,
         bankName: rawValue.bankName ?? null,
       };
+      if (rawValue.manualBalance) createRequest.balanceMode = 'MANUAL';
 
       this.save.emit(createRequest);
     }
@@ -212,6 +221,7 @@ export class AccountEditFormComponent implements OnInit {
         currencyCode: account.currency.code,
         currentBalance: account.currentBalance,
         bankName: account.bank,
+        manualBalance: account.balanceMode === 'MANUAL',
       });
       this.form.controls.currentBalance.disable();
     } else {
@@ -222,6 +232,7 @@ export class AccountEditFormComponent implements OnInit {
         currencyCode: this.defaultCurrency,
         currentBalance: 0,
         bankName: null,
+        manualBalance: false,
       });
       this.form.controls.currentBalance.enable();
     }

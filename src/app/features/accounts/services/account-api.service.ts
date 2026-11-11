@@ -6,8 +6,10 @@ import {
   Account,
   AccountCreateRequest,
   AccountReconcileRequest,
+  AccountSnapshot,
   AccountType,
   AccountUpdateRequest,
+  BalanceEntryRequest,
 } from '@models/account.model';
 import { Currency } from '@models/currency.model';
 import { SKIP_GENERIC_ERROR_TOAST } from '@core/auth/error.interceptor';
@@ -57,6 +59,24 @@ export class AccountApiService {
    */
   reconcile(data: AccountReconcileRequest): Observable<number> {
     return this.http.post<number>(`${this.apiUrl}/reconcile`, data);
+  }
+
+  /**
+   * Records the balance of a hand-entered account on a day.
+   * @param data the balance entry, including the account's optimistic-locking version.
+   * @returns the id of the recorded balance entry.
+   */
+  recordBalance(data: BalanceEntryRequest): Observable<number> {
+    return this.http.post<number>(`${this.apiUrl}/balance`, data, SKIP_TOAST_OPTIONS);
+  }
+
+  /**
+   * Gets the recorded balances of a hand-entered account.
+   * @param accountId the account id.
+   * @returns the entries, newest first (empty when none were recorded).
+   */
+  getBalanceHistory(accountId: number): Observable<AccountSnapshot[]> {
+    return this.http.get<AccountSnapshot[]>(`${this.apiUrl}/${accountId}/balance-history`);
   }
 
   /**

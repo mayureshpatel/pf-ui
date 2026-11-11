@@ -23,14 +23,17 @@ import { ConfirmationService } from 'primeng/api';
 import {
   Account,
   AccountCreateRequest,
+  AccountSnapshot,
   AccountType,
   AccountUpdateRequest,
+  BalanceEntryRequest,
 } from '@models/account.model';
 import { AccountApiService } from './services/account-api.service';
 import { AccountOverviewComponent } from './components/account-overview/account-overview.component';
 import { AccountListComponent } from './components/account-list/account-list.component';
 import { AccountSummaryViewComponent } from './components/account-summary-view/account-summary-view.component';
 import { AccountEditFormComponent } from './components/account-edit-form/account-edit-form.component';
+import { AccountBalanceFormComponent } from './components/account-balance-form/account-balance-form.component';
 import { AccountReconcileFormComponent } from './components/account-reconcile-form/account-reconcile-form.component';
 import { SidePanelComponent } from '@shared/components/side-panel/side-panel.component';
 import { AccountGroup, AccountTotals, accountTotals, groupAccounts } from './utils/account-totals';
@@ -53,6 +56,7 @@ import { PageErrorStateComponent } from '@shared/components/page-error-state/pag
     AccountSummaryViewComponent,
     AccountEditFormComponent,
     AccountReconcileFormComponent,
+    AccountBalanceFormComponent,
   ],
   templateUrl: './accounts.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -74,6 +78,9 @@ export class AccountsComponent implements OnInit {
   /** A create or update request is in flight. */
   saving: WritableSignal<boolean> = signal(false);
 
+  /** The recorded balances of the shown hand-entered account, newest first. */
+  balanceHistory: WritableSignal<AccountSnapshot[]> = signal([]);
+
   /** What the docked panel is showing. */
   panelMode: WritableSignal<PanelMode> = signal('overview');
   /** The account the panel is about (null in overview and when no account is chosen). */
@@ -91,7 +98,9 @@ export class AccountsComponent implements OnInit {
 
   /** The row to highlight: only while the panel is about an account. */
   highlightedId: Signal<number | null> = computed((): number | null =>
-    ['account', 'edit', 'reconcile'].includes(this.panelMode()) ? this.selectedId() : null,
+    ['account', 'edit', 'reconcile', 'balance'].includes(this.panelMode())
+      ? this.selectedId()
+      : null,
   );
 
   /** With no accounts the add form is the only useful mode, so it has no Back or Close. */
@@ -118,6 +127,8 @@ export class AccountsComponent implements OnInit {
         return `Edit ${name}`;
       case 'reconcile':
         return `Reconcile ${name}`;
+      case 'balance':
+        return `Update balance, ${name}`;
       default:
         return this.selectedAccount()?.name ?? 'Account';
     }
@@ -132,6 +143,7 @@ export class AccountsComponent implements OnInit {
 
   private readonly editForm = viewChild<AccountEditFormComponent>('editForm');
   private readonly reconcileForm = viewChild<AccountReconcileFormComponent>('reconcileForm');
+  private readonly balanceForm = viewChild<AccountBalanceFormComponent>('balanceForm');
 
   constructor() {
     effect((): void => {
@@ -164,6 +176,7 @@ export class AccountsComponent implements OnInit {
           this.accountTypes.set(accountTypes);
           this.closePanelIfAccountGone(accounts);
           this.openLinkedAccount(accounts);
+          this.refreshHistory();
         },
         error: (error: unknown): void => {
           console.error('Error loading accounts:', error);
@@ -188,7 +201,9 @@ export class AccountsComponent implements OnInit {
     if (this.panelMode() === 'account' && this.selectedId() === account.id) return;
     this.confirmDiscardIfDirty((): void => {
       this.selectedId.set(account.id);
+      this.balanceHistory.set([]);
       this.go('account');
+      this.refreshHistory();
     });
   }
 
@@ -203,10 +218,25 @@ export class AccountsComponent implements OnInit {
 
   /** Opens the Reconcile step, for the given account or the one already shown. */
   startReconcile(account?: Account): void {
+    // a hand-entered balance has no statement to reconcile: the same shortcut records a balance
+    const target: Account | null = account ?? this.selectedAccount();
+    if (target?.balanceMode === 'MANUAL') {
+      this.startBalance(account);
+      return;
+    }
     if (this.panelMode() === 'reconcile' && (!account || account.id === this.selectedId())) return;
     this.confirmDiscardIfDirty((): void => {
       if (account) this.selectedId.set(account.id);
       this.go('reconcile');
+    });
+  }
+
+  /** Opens the Update balance step, for the given account or the one already shown. */
+  startBalance(account?: Account): void {
+    if (this.panelMode() === 'balance' && (!account || account.id === this.selectedId())) return;
+    this.confirmDiscardIfDirty((): void => {
+      if (account) this.selectedId.set(account.id);
+      this.go('balance');
     });
   }
 
@@ -281,6 +311,8 @@ export class AccountsComponent implements OnInit {
   onPanelSave(): void {
     if (this.panelMode() === 'reconcile') {
       this.reconcileForm()?.submit();
+    } else if (this.panelMode() === 'balance') {
+      this.balanceForm()?.submit();
     } else {
       this.editForm()?.submit();
     }
@@ -297,6 +329,59 @@ export class AccountsComponent implements OnInit {
   onReconciled(_event: { adjustment: number }): void {
     this.go('account');
     this.loadAccounts();
+  }
+
+  /** Posts a typed balance, then refreshes the accounts and the history. */
+  onBalanceRecorded(request: BalanceEntryRequest): void {
+    if (this.saving()) return;
+    this.saving.set(true);
+    this.accountApi
+      .recordBalance(request)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize((): void => this.saving.set(false)),
+      )
+      .subscribe({
+        next: (): void => {
+          this.toast.success('Balance updated');
+          this.balanceForm()?.form.markAsPristine();
+          this.go('account');
+          this.loadAccounts();
+        },
+        error: (error: HttpErrorResponse): void => {
+          console.error('Error recording balance:', error);
+          if (error.status === 409) {
+            this.toast.error(
+              'This account was changed elsewhere. Reload the accounts and try again.',
+            );
+            this.loadAccounts();
+          } else {
+            this.toast.error(error.error?.detail || 'Failed to update balance');
+          }
+        },
+      });
+  }
+
+  /** Loads the balance history of the shown account when it is hand-entered; otherwise clears it. */
+  private refreshHistory(): void {
+    const account: Account | null = this.selectedAccount();
+    if (account?.balanceMode !== 'MANUAL') {
+      this.balanceHistory.set([]);
+      return;
+    }
+    this.accountApi
+      .getBalanceHistory(account.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (history: AccountSnapshot[]): void => {
+          // a slow answer for an account that is no longer shown is dropped
+          if (this.selectedId() === account.id) this.balanceHistory.set(history);
+        },
+        error: (error: unknown): void => {
+          console.error('Error loading balance history:', error);
+          this.toast.error('Failed to load balance history');
+        },
+      });
   }
 
   onReloadRequested(): void {
@@ -401,7 +486,8 @@ export class AccountsComponent implements OnInit {
     const mode: PanelMode = this.panelMode();
     const dirty: boolean =
       ((mode === 'edit' || mode === 'create') && !!this.editForm()?.form.dirty) ||
-      (mode === 'reconcile' && !!this.reconcileForm()?.form.dirty);
+      (mode === 'reconcile' && !!this.reconcileForm()?.form.dirty) ||
+      (mode === 'balance' && !!this.balanceForm()?.form.dirty);
     if (!dirty) {
       proceed();
       return;
@@ -418,4 +504,4 @@ export class AccountsComponent implements OnInit {
 }
 
 /** The docked panel's states. */
-export type PanelMode = 'overview' | 'account' | 'edit' | 'reconcile' | 'create';
+export type PanelMode = 'overview' | 'account' | 'edit' | 'reconcile' | 'balance' | 'create';

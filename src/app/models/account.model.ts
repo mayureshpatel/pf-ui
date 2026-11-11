@@ -14,6 +14,9 @@ import { Currency } from '@models/currency.model';
  * @property currency - The {@link Currency} of the account.
  * @property bank - The {@link BankName} associated with the account.
  * @property version - The version of the account for optimistic locking.
+ * @property balanceMode - DERIVED when the balance comes from transactions, MANUAL when entered by hand.
+ * @property moneyIn - What the user has put in; null unless MANUAL.
+ * @property gain - Current balance minus money in; null unless MANUAL, or when no balance exists yet.
  */
 export interface Account {
   id: number;
@@ -23,6 +26,45 @@ export interface Account {
   currentBalance: number;
   currency: Currency;
   bank: BankName;
+  version: number;
+  balanceMode: BalanceMode;
+  moneyIn: number | null;
+  gain: number | null;
+}
+
+/** Where an account's balance comes from. */
+export type BalanceMode = 'DERIVED' | 'MANUAL';
+
+/** The account type code for loans, which show only a remaining balance. */
+export const LOAN_TYPE_CODE = 'LOAN';
+
+/**
+ * One recorded balance of a hand-entered account.
+ *
+ * @property id - The unique identifier of the entry.
+ * @property account - The account the entry belongs to.
+ * @property snapshotDate - The day the balance applies to (yyyy-MM-dd).
+ * @property balance - The recorded balance.
+ */
+export interface AccountSnapshot {
+  id: number;
+  account: Account;
+  snapshotDate: string;
+  balance: number;
+}
+
+/**
+ * Request payload for recording the balance of a hand-entered account.
+ *
+ * @property accountId - The account the balance is for.
+ * @property balance - The balance to record.
+ * @property asOfDate - The day the balance applies to (yyyy-MM-dd).
+ * @property version - The version of the account for optimistic locking.
+ */
+export interface BalanceEntryRequest {
+  accountId: number;
+  balance: number;
+  asOfDate: string;
   version: number;
 }
 
@@ -41,6 +83,7 @@ export interface AccountCreateRequest {
   startingBalance: number;
   currencyCode: string;
   bankName: string | null;
+  balanceMode?: BalanceMode;
 }
 
 /**
@@ -60,6 +103,7 @@ export interface AccountUpdateRequest {
   currencyCode: string;
   bankName: string | null;
   version: number;
+  balanceMode?: BalanceMode;
 }
 
 /**

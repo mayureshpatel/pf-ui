@@ -1,0 +1,24 @@
+<section aria-labelledby="balance-history-heading">
+  <h3 id="balance-history-heading" class="mb-2 text-sm font-semibold">Balance history</h3>
+  @if (sorted().length === 0) {
+    <p class="text-sm text-muted-color">No balance entries yet</p>
+  } @else {
+    <ul class="m-0 list-none p-0">
+      @for (entry of sorted(); track entry.id) {
+        <li
+          data-testid="history-row"
+          class="flex items-baseline justify-between border-t border-surface-100 py-2 first:border-t-0 dark:border-surface-800"
+        >
+          <span class="text-sm text-muted-color">{{ entry.snapshotDate }}</span>
+          <span class="font-medium tabular-nums">
+            {{ entry.balance < 0 ? '-' : ''
+            }}{{
+              (entry.balance < 0 ? -entry.balance : entry.balance)
+                | formatCurrency: true : currencyCode()
+            }}
+          </span>
+        </li>
+      }
+    </ul>
+  }
+</section>

@@ -35,6 +35,21 @@
   </div>
 
   <div class="flex flex-col gap-1">
+    <label class="flex cursor-pointer items-center gap-2 text-sm font-medium">
+      <input
+        type="checkbox"
+        data-testid="manual-toggle"
+        formControlName="manualBalance"
+        class="size-4 cursor-pointer"
+      />
+      Balance is entered by hand
+    </label>
+    <small class="text-muted-color">
+      For investments, savings and loans you update yourself instead of importing transactions.
+    </small>
+  </div>
+
+  <div class="flex flex-col gap-1">
     <label id="bank-label" for="bank" class="text-sm font-medium">Bank (for CSV imports)</label>
     <p-select
       inputId="bank"

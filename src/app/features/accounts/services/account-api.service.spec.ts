@@ -9,6 +9,8 @@ import {
   AccountReconcileRequest,
   AccountType,
   AccountUpdateRequest,
+  AccountSnapshot,
+  BalanceEntryRequest,
 } from '@models/account.model';
 
 describe('AccountApiService', () => {
@@ -134,6 +136,40 @@ describe('AccountApiService', () => {
       const req = httpMock.expectOne(accountTypeApiUrl);
       expect(req.request.method).toBe('GET');
       req.flush(mockTypes);
+    });
+  });
+
+  describe('recordBalance', () => {
+    it('should POST the balance entry to /accounts/balance and return the snapshot id', () => {
+      const request: BalanceEntryRequest = {
+        accountId: 7,
+        balance: 1234.5,
+        asOfDate: '2026-11-11',
+        version: 3,
+      };
+      let result: number | undefined;
+
+      service.recordBalance(request).subscribe((id) => (result = id));
+
+      const req = httpMock.expectOne(`${apiUrl}/balance`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual(request);
+      req.flush(55);
+      expect(result).toBe(55);
+    });
+  });
+
+  describe('getBalanceHistory', () => {
+    it('should GET the account balance history', () => {
+      const history = [{ id: 1, snapshotDate: '2026-11-11', balance: 10 }] as AccountSnapshot[];
+      let result: AccountSnapshot[] | undefined;
+
+      service.getBalanceHistory(7).subscribe((h) => (result = h));
+
+      const req = httpMock.expectOne(`${apiUrl}/7/balance-history`);
+      expect(req.request.method).toBe('GET');
+      req.flush(history);
+      expect(result).toEqual(history);
     });
   });
 });
