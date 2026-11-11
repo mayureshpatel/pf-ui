@@ -406,6 +406,50 @@ describe('AccountEditFormComponent', () => {
       );
     });
 
+    it('should send balanceMode MANUAL on update when switched on for a derived account', () => {
+      // arrange
+      vi.spyOn(component.save, 'emit');
+      fixture.componentRef.setInput('account', { ...mockAccount, balanceMode: 'DERIVED' });
+      fixture.detectChanges();
+      expect(component.form.controls.manualBalance.value).toBe(false);
+
+      // act
+      component.form.controls.manualBalance.setValue(true);
+      component.onSubmit();
+
+      // assert & verify
+      expect(component.save.emit).toHaveBeenCalledWith(
+        expect.objectContaining({ id: mockAccount.id, balanceMode: 'MANUAL' }),
+      );
+    });
+
+    it('should hint that transactions change the balance again only when a manual account is switched off', () => {
+      const hint = (): HTMLElement | null =>
+        fixture.nativeElement.querySelector('[data-testid="manual-off-hint"]');
+
+      // a derived account switched on: no hint
+      fixture.componentRef.setInput('account', { ...mockAccount, balanceMode: 'DERIVED' });
+      fixture.detectChanges();
+      component.form.controls.manualBalance.setValue(true);
+      fixture.detectChanges();
+      expect(hint()).toBeNull();
+
+      // a manual account left on: no hint
+      fixture.componentRef.setInput('account', { ...mockAccount, id: 2, balanceMode: 'MANUAL' });
+      fixture.detectChanges();
+      expect(hint()).toBeNull();
+
+      // a manual account switched off: hint
+      component.form.controls.manualBalance.setValue(false);
+      fixture.detectChanges();
+      expect(hint()?.textContent).toContain('Transactions will change this balance again.');
+
+      // a new account: no hint
+      fixture.componentRef.setInput('account', null);
+      fixture.detectChanges();
+      expect(hint()).toBeNull();
+    });
+
     it('should offer the Loan type when the account types include it', () => {
       // arrange
       const loan: AccountType = {

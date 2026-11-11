@@ -14,6 +14,7 @@ import {
   WritableSignal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
@@ -117,6 +118,16 @@ export class AccountEditFormComponent implements OnInit {
     /** The balance is typed in by hand instead of coming from transactions. */
     manualBalance: new FormControl(false, { nonNullable: true }),
   });
+
+  private readonly manualOn: Signal<boolean> = toSignal(
+    this.form.controls.manualBalance.valueChanges,
+    { initialValue: false },
+  );
+
+  /** A hand-entered account is being switched back to transaction-driven. */
+  switchingToTransactions: Signal<boolean> = computed(
+    (): boolean => this.account()?.balanceMode === 'MANUAL' && !this.manualOn(),
+  );
 
   /** Which account is shown (null when adding one). The form resets only when this changes. */
   private readonly accountId: Signal<number | null> = computed(

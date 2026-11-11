@@ -38,7 +38,7 @@
       }
       @if (form.controls.balance.errors?.['min']) {
         <small data-testid="balance-error" class="text-rose-700 dark:text-rose-400">
-          Enter the amount you still owe, as a positive number.
+          Enter the amount you still owe (0 or more).
         </small>
       }
       @if (unchanged()) {

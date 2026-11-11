@@ -76,7 +76,10 @@ export class AccountApiService {
    * @returns the entries, newest first (empty when none were recorded).
    */
   getBalanceHistory(accountId: number): Observable<AccountSnapshot[]> {
-    return this.http.get<AccountSnapshot[]>(`${this.apiUrl}/${accountId}/balance-history`);
+    return this.http.get<AccountSnapshot[]>(
+      `${this.apiUrl}/${accountId}/balance-history`,
+      SKIP_TOAST_OPTIONS,
+    );
   }
 
   /**

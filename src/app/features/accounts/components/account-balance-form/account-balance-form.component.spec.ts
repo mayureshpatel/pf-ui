@@ -116,11 +116,9 @@ describe('AccountBalanceFormComponent', () => {
     expect(spy).not.toHaveBeenCalled();
   });
 
-  it('should say what the current balance is, in cents-safe terms, and unchanged balance still submits', () => {
+  it('should flag a typed balance that equals the current one, compared in whole cents', () => {
     // arrange
     setup(account());
-    const spy = vi.fn();
-    component.recorded.subscribe(spy);
     component.form.patchValue({ balance: 12000 });
 
     // assert & verify

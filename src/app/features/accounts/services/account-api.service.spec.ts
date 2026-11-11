@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { environment } from '@env';
+import { SKIP_GENERIC_ERROR_TOAST } from '@core/auth/error.interceptor';
 import { AccountApiService } from './account-api.service';
 import {
   Account,
@@ -168,6 +169,7 @@ describe('AccountApiService', () => {
 
       const req = httpMock.expectOne(`${apiUrl}/7/balance-history`);
       expect(req.request.method).toBe('GET');
+      expect(req.request.context.get(SKIP_GENERIC_ERROR_TOAST)).toBe(true);
       req.flush(history);
       expect(result).toEqual(history);
     });

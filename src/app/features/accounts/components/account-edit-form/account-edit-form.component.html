@@ -47,6 +47,11 @@
     <small class="text-muted-color">
       For investments, savings and loans you update yourself instead of importing transactions.
     </small>
+    @if (switchingToTransactions()) {
+      <small data-testid="manual-off-hint" class="text-muted-color">
+        Transactions will change this balance again.
+      </small>
+    }
   </div>
 
   <div class="flex flex-col gap-1">

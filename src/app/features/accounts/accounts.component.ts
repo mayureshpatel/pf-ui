@@ -200,10 +200,8 @@ export class AccountsComponent implements OnInit {
   openAccount(account: Account): void {
     if (this.panelMode() === 'account' && this.selectedId() === account.id) return;
     this.confirmDiscardIfDirty((): void => {
-      this.selectedId.set(account.id);
-      this.balanceHistory.set([]);
+      this.select(account);
       this.go('account');
-      this.refreshHistory();
     });
   }
 
@@ -211,7 +209,7 @@ export class AccountsComponent implements OnInit {
   startEdit(account?: Account): void {
     if (this.panelMode() === 'edit' && (!account || account.id === this.selectedId())) return;
     this.confirmDiscardIfDirty((): void => {
-      if (account) this.selectedId.set(account.id);
+      if (account) this.select(account);
       this.go('edit');
     });
   }
@@ -226,7 +224,7 @@ export class AccountsComponent implements OnInit {
     }
     if (this.panelMode() === 'reconcile' && (!account || account.id === this.selectedId())) return;
     this.confirmDiscardIfDirty((): void => {
-      if (account) this.selectedId.set(account.id);
+      if (account) this.select(account);
       this.go('reconcile');
     });
   }
@@ -235,7 +233,7 @@ export class AccountsComponent implements OnInit {
   startBalance(account?: Account): void {
     if (this.panelMode() === 'balance' && (!account || account.id === this.selectedId())) return;
     this.confirmDiscardIfDirty((): void => {
-      if (account) this.selectedId.set(account.id);
+      if (account) this.select(account);
       this.go('balance');
     });
   }
@@ -360,6 +358,14 @@ export class AccountsComponent implements OnInit {
           }
         },
       });
+  }
+
+  /** Makes an account the shown one; a different account drops the old history and loads its own. */
+  private select(account: Account): void {
+    if (this.selectedId() === account.id) return;
+    this.selectedId.set(account.id);
+    this.balanceHistory.set([]);
+    this.refreshHistory();
   }
 
   /** Loads the balance history of the shown account when it is hand-entered; otherwise clears it. */

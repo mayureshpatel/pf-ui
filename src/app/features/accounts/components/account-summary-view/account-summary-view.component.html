@@ -27,7 +27,7 @@
       <div class="flex items-baseline justify-between">
         <dt data-testid="money-in-label" class="text-sm text-muted-color">Your money in</dt>
         <dd data-testid="money-in" class="m-0 font-semibold tabular-nums">
-          @if (account().moneyIn === null) {
+          @if (account().moneyIn == null) {
             —
           } @else {
             {{ account().moneyIn! < 0 ? '-' : ''
@@ -43,12 +43,12 @@
         <dd
           data-testid="gain"
           class="m-0 font-semibold tabular-nums"
-          [class.text-emerald-700]="account().gain !== null && account().gain! > 0"
-          [class.dark:text-emerald-400]="account().gain !== null && account().gain! > 0"
-          [class.text-rose-700]="account().gain !== null && account().gain! < 0"
-          [class.dark:text-rose-400]="account().gain !== null && account().gain! < 0"
+          [class.text-emerald-700]="account().gain != null && account().gain! > 0"
+          [class.dark:text-emerald-400]="account().gain != null && account().gain! > 0"
+          [class.text-rose-700]="account().gain != null && account().gain! < 0"
+          [class.dark:text-rose-400]="account().gain != null && account().gain! < 0"
         >
-          @if (account().gain === null) {
+          @if (account().gain == null) {
             —
           } @else {
             {{ account().gain! > 0 ? '+' : account().gain! < 0 ? '-' : ''

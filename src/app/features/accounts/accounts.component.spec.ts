@@ -317,6 +317,33 @@ describe('AccountsComponent', () => {
       expect(component.balanceHistory()).toEqual(history);
     });
 
+    it('should show the history of the account the panel is about, not the previous one', () => {
+      // arrange
+      const a = roth({ id: 5, name: 'A' });
+      const b = roth({ id: 6, name: 'B' });
+      const hist = (id: number, balance: number): AccountSnapshot[] =>
+        [{ id, snapshotDate: '2026-11-01', balance }] as AccountSnapshot[];
+      loadWith([a, b]);
+      mockAccountApi.getBalanceHistory.mockImplementation((id: number) =>
+        of(id === 5 ? hist(1, 111) : hist(2, 222)),
+      );
+      component.openAccount(component.accounts()[0]);
+      expect(component.balanceHistory()).toEqual(hist(1, 111));
+
+      // act: another row's menu, then Back
+      component.startBalance(component.accounts()[1]);
+      component.back();
+
+      // assert & verify
+      expect(component.selectedId()).toBe(6);
+      expect(component.balanceHistory()).toEqual(hist(2, 222));
+
+      // and the same through Edit
+      component.openAccount(component.accounts()[0]);
+      component.startEdit(component.accounts()[1]);
+      expect(component.balanceHistory()).toEqual(hist(2, 222));
+    });
+
     it('should not load history for a derived account', () => {
       // arrange
       loadWith([acct(1, 'Checking', 100, true)]);

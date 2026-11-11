@@ -120,6 +120,26 @@ describe('AccountSummaryViewComponent', () => {
       expect(text('gain')).toBe('—');
     });
 
+    it('should show dashes when money in and gain are undefined', () => {
+      // act
+      render(manual({ moneyIn: undefined as never, gain: undefined as never }));
+
+      // assert & verify
+      expect(text('money-in')).toBe('—');
+      expect(text('gain')).toBe('—');
+    });
+
+    it('should show a gain of exactly zero as a plain amount, with no sign or colour', () => {
+      // act
+      render(manual({ gain: 0 }));
+
+      // assert & verify
+      const gain = fixture.nativeElement.querySelector('[data-testid="gain"]');
+      expect(gain.textContent.trim()).toBe('$0.00');
+      expect(gain.className).not.toContain('text-rose');
+      expect(gain.className).not.toContain('text-emerald');
+    });
+
     it('should offer Update balance, not Reconcile with statement, and emit updateBalance', () => {
       // arrange
       render(manual());
