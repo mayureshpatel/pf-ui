@@ -74,6 +74,21 @@ export class AccountEditFormComponent implements OnInit {
     },
     { label: 'Synovus', value: BankName.SYNOVUS, description: 'Synovus bank export format' },
     {
+      label: 'Ally savings',
+      value: BankName.ALLY,
+      description: 'Ally savings account export format',
+    },
+    {
+      label: 'Fidelity 401(k)',
+      value: BankName.FIDELITY_RETIREMENT,
+      description: 'Fidelity 401(k) history export format',
+    },
+    {
+      label: 'Fidelity brokerage',
+      value: BankName.FIDELITY_BROKERAGE,
+      description: 'Fidelity brokerage (Roth IRA) activity export format',
+    },
+    {
       label: 'Universal CSV',
       value: BankName.UNIVERSAL,
       description: 'Auto-detect columns (Date, Amount, Description)',

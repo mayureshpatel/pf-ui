@@ -48,6 +48,19 @@ describe('AccountEditFormComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  describe('bankOptions', () => {
+    it('offers the savings and investment import formats', () => {
+      const options = component.bankOptions.map((o) => [o.label, o.value]);
+      expect(options).toEqual(
+        expect.arrayContaining([
+          ['Ally savings', BankName.ALLY],
+          ['Fidelity 401(k)', BankName.FIDELITY_RETIREMENT],
+          ['Fidelity brokerage', BankName.FIDELITY_BROKERAGE],
+        ]),
+      );
+    });
+  });
+
   describe('isEditMode', () => {
     it('should be false when account is null and true when an account is provided', () => {
       fixture.componentRef.setInput('account', null);

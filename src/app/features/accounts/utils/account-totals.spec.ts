@@ -149,6 +149,9 @@ describe('account-totals', () => {
       // assert & verify
       expect(bankLabel(BankName.CAPITAL_ONE)).toBe('Capital One');
       expect(bankLabel(BankName.STANDARD)).toBe('Standard CSV');
+      expect(bankLabel(BankName.ALLY)).toBe('Ally savings');
+      expect(bankLabel(BankName.FIDELITY_RETIREMENT)).toBe('Fidelity 401(k)');
+      expect(bankLabel(BankName.FIDELITY_BROKERAGE)).toBe('Fidelity brokerage');
       expect(bankLabel(null)).toBe('');
       expect(bankLabel(undefined)).toBe('');
     });

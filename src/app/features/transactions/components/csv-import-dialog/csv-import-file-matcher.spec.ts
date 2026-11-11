@@ -49,6 +49,17 @@ describe('matchFile', () => {
     expect(matchFile('standard-2026-03.csv', accounts).bankName).toBe(BankName.STANDARD);
   });
 
+  it.each([
+    ['ally-2026-10.csv', BankName.ALLY],
+    ['ally-savings-2026-10.csv', BankName.ALLY],
+    ['fidelity-retirement-2026-10.csv', BankName.FIDELITY_RETIREMENT],
+    ['fidelity401k-2026-10.csv', BankName.FIDELITY_RETIREMENT],
+    ['fidelity-brokerage-2026-10.csv', BankName.FIDELITY_BROKERAGE],
+    ['fidelity-roth-2026-10.csv', BankName.FIDELITY_BROKERAGE],
+  ])('recognises the investment and savings bank alias in %s', (name: string, bank: BankName) => {
+    expect(matchFile(name, accounts).bankName).toBe(bank);
+  });
+
   it('matches case-insensitively including the extension', () => {
     const result = matchFile('discover-2026-02.CSV', accounts);
     expect(result.accountId).toBe(2);

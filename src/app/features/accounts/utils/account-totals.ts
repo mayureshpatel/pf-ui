@@ -85,6 +85,9 @@ const BANK_LABELS: Record<BankName, string> = {
   [BankName.CAPITAL_ONE]: 'Capital One',
   [BankName.DISCOVER]: 'Discover',
   [BankName.SYNOVUS]: 'Synovus',
+  [BankName.ALLY]: 'Ally savings',
+  [BankName.FIDELITY_RETIREMENT]: 'Fidelity 401(k)',
+  [BankName.FIDELITY_BROKERAGE]: 'Fidelity brokerage',
   [BankName.STANDARD]: 'Standard CSV',
   [BankName.UNIVERSAL]: 'Universal CSV',
 };
