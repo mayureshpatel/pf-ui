@@ -118,7 +118,11 @@ export class TransactionEditFormComponent {
   /** Filtered suggestions for the merchant autocomplete. */
   readonly filteredMerchants: WritableSignal<Merchant[]> = signal([]);
 
-  /** Options for the transaction type selector. */
+  /**
+   * Options for the transaction type selector. There is deliberately no Transfer choice (PF-936):
+   * a stored transfer needs a direction and a counterpart, so transfers come from the transfer
+   * review, which creates proper pairs, not from this form.
+   */
   readonly typeOptions = [
     {
       label: 'Expense',
@@ -131,12 +135,6 @@ export class TransactionEditFormComponent {
       value: TransactionType.INCOME,
       icon: 'pi-plus-circle',
       color: 'text-emerald-500',
-    },
-    {
-      label: 'Transfer',
-      value: TransactionType.TRANSFER,
-      icon: 'pi-sync',
-      color: 'text-surface-500',
     },
   ];
 
