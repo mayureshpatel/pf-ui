@@ -53,6 +53,27 @@ describe('account-totals', () => {
       expect(totals).toEqual({ assets: 23020.15, liabilities: 1853.03, netWorth: 21167.12 });
     });
 
+    it('should count a liability stored as +500 and one stored as -500 as the same -500 of net worth', () => {
+      // act
+      const positive = accountTotals([account(1, 'Card', 500, type(false))]);
+      const negative = accountTotals([account(1, 'Card', -500, type(false))]);
+
+      // assert & verify
+      expect(positive).toEqual({ assets: 0, liabilities: 500, netWorth: -500 });
+      expect(negative).toEqual(positive);
+    });
+
+    it('should count a LOAN account as debt', () => {
+      // arrange
+      const loan = { ...type(false), code: 'LOAN' };
+
+      // act
+      const totals = accountTotals([account(1, 'Car loan', -12000, loan)]);
+
+      // assert & verify
+      expect(totals).toEqual({ assets: 0, liabilities: 12000, netWorth: -12000 });
+    });
+
     it('should go negative when liabilities exceed assets', () => {
       // assert & verify
       expect(
