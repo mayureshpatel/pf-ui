@@ -7,6 +7,19 @@ const LOOKUPS = {
 };
 
 describe('transaction-filter-chips', () => {
+  it('should label the hand-entered types in sentence case', () => {
+    // act & assert & verify
+    expect(buildFilterChips({ type: TransactionType.CONTRIBUTION }, LOOKUPS)).toEqual([
+      { key: 'type', label: 'Contribution' },
+    ]);
+    expect(buildFilterChips({ type: TransactionType.EMPLOYER_CONTRIBUTION }, LOOKUPS)).toEqual([
+      { key: 'type', label: 'Employer contribution' },
+    ]);
+    expect(buildFilterChips({ type: TransactionType.EARNINGS }, LOOKUPS)).toEqual([
+      { key: 'type', label: 'Earnings' },
+    ]);
+  });
+
   it('should produce no chips for an empty filter or one with only a period and search', () => {
     // assert & verify
     expect(buildFilterChips({}, LOOKUPS)).toEqual([]);

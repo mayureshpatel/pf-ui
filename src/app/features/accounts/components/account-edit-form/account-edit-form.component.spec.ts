@@ -450,6 +450,52 @@ describe('AccountEditFormComponent', () => {
       expect(hint()).toBeNull();
     });
 
+    describe('loan default', () => {
+      const loan: AccountType = {
+        ...mockAccountTypes[0],
+        code: 'LOAN',
+        label: 'Loan',
+        isAsset: false,
+      };
+
+      it('should switch the toggle on when the type is changed to Loan while creating', () => {
+        // arrange
+        fixture.componentRef.setInput('account', null);
+        fixture.detectChanges();
+        expect(component.form.controls.manualBalance.value).toBe(false);
+
+        // act
+        component.form.controls.type.setValue(loan);
+
+        // assert & verify
+        expect(component.form.controls.manualBalance.value).toBe(true);
+      });
+
+      it('should leave the toggle alone for other types while creating', () => {
+        // arrange
+        fixture.componentRef.setInput('account', null);
+        fixture.detectChanges();
+
+        // act
+        component.form.controls.type.setValue(mockAccountTypes[0]);
+
+        // assert & verify
+        expect(component.form.controls.manualBalance.value).toBe(false);
+      });
+
+      it('should not force the toggle on an existing derived account whose type is changed to Loan', () => {
+        // arrange
+        fixture.componentRef.setInput('account', { ...mockAccount, balanceMode: 'DERIVED' });
+        fixture.detectChanges();
+
+        // act
+        component.form.controls.type.setValue(loan);
+
+        // assert & verify
+        expect(component.form.controls.manualBalance.value).toBe(false);
+      });
+    });
+
     it('should offer the Loan type when the account types include it', () => {
       // arrange
       const loan: AccountType = {

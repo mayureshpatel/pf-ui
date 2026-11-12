@@ -93,6 +93,16 @@ describe('TransactionListComponent', () => {
     expect(all('th').some((th) => th.textContent?.trim() === 'Date')).toBe(true);
   });
 
+  it('should show a contribution as a plus-signed inflow in the income colour', () => {
+    // act
+    render([txn({ id: 1, type: TransactionType.CONTRIBUTION, amount: 500 })]);
+
+    // assert & verify
+    const amount = all('span').find((el) => el.textContent?.trim() === '+$500.00');
+    expect(amount).toBeTruthy();
+    expect(amount?.className).toContain('text-emerald-700');
+  });
+
   it('should mark a day heading partial at a page boundary', () => {
     // act
     render([txn({ id: 1, date: '2026-10-17' })], { page: 0, pageCount: 3 });

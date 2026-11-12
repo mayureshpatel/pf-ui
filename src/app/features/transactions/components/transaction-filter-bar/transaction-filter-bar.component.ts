@@ -85,6 +85,9 @@ export class TransactionFilterBarComponent {
     { label: 'Expense', value: TransactionType.EXPENSE },
     { label: 'Transfer', value: TransactionType.TRANSFER },
     { label: 'Adjustment', value: TransactionType.ADJUSTMENT },
+    { label: 'Contribution', value: TransactionType.CONTRIBUTION },
+    { label: 'Employer contribution', value: TransactionType.EMPLOYER_CONTRIBUTION },
+    { label: 'Earnings', value: TransactionType.EARNINGS },
   ];
 
   /** Whether the user chose Custom range from the buttons (the pickers then stay visible). */

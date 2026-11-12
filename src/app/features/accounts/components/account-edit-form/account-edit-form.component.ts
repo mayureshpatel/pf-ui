@@ -14,7 +14,7 @@ import {
   WritableSignal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
@@ -143,6 +143,15 @@ export class AccountEditFormComponent implements OnInit {
   );
 
   constructor() {
+    // a loan has no transactions to derive its balance from, so choosing the Loan type while
+    // creating turns the hand-entered toggle on (the owner can still turn it off); an existing
+    // account is never changed by this
+    this.form.controls.type.valueChanges.pipe(takeUntilDestroyed()).subscribe((type): void => {
+      if (!this.isEditMode() && type?.code === 'LOAN') {
+        this.form.controls.manualBalance.setValue(true);
+      }
+    });
+
     effect((): void => {
       const key: string = this.formKey();
       // the fill at init already covered this key; only a different account refills

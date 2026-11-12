@@ -132,7 +132,11 @@ describe('account-totals', () => {
       expect(liabilities.subtotal).toBe(-1853.03);
     });
 
-    it('should keep a liability with a positive balance in Liabilities and show the honest subtotal', () => {
+    // the old spec pinned the signed sum (-75) for a positive-balance card. Loans are stored
+    // positive by design, so a signed sum made the group header disagree with the Overview's
+    // liabilities total (which uses absolute balances); the subtotal is now minus the sum of
+    // absolute balances, so a positive-balance liability counts as money owed: -(25 + 100).
+    it('should keep a liability with a positive balance in Liabilities and subtotal it as money owed', () => {
       // arrange
       const accounts = [
         account(1, 'Overpaid card', 25, type(false)),
@@ -140,7 +144,23 @@ describe('account-totals', () => {
       ];
 
       // assert & verify
-      expect(groupAccounts(accounts)[0].subtotal).toBe(-75);
+      expect(groupAccounts(accounts)[0].subtotal).toBe(-125);
+    });
+
+    it('should subtotal liabilities as minus the sum of absolute balances when a positive-stored loan is mixed with negative cards', () => {
+      // arrange
+      const accounts = [
+        account(1, 'Discover', -1200, type(false)),
+        account(2, 'Venture', -800, type(false)),
+        account(3, 'Lexus loan', 18000, type(false)),
+      ];
+
+      // act
+      const liabilities = groupAccounts(accounts)[0];
+
+      // assert & verify
+      expect(liabilities.subtotal).toBe(-20000);
+      expect(liabilities.subtotal).toBe(-accountTotals(accounts).liabilities);
     });
   });
 
