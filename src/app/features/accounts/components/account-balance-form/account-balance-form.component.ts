@@ -3,7 +3,6 @@ import {
   Component,
   computed,
   effect,
-  inject,
   input,
   InputSignal,
   OnInit,
