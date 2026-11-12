@@ -129,6 +129,16 @@ export class TransactionListComponent {
     });
   }
 
+  /** True for income and for the hand-entered inflows (contribution, employer contribution, earnings). */
+  isInflow(txn: Transaction): boolean {
+    return (
+      txn.type === TransactionType.INCOME ||
+      txn.type === TransactionType.CONTRIBUTION ||
+      txn.type === TransactionType.EMPLOYER_CONTRIBUTION ||
+      txn.type === TransactionType.EARNINGS
+    );
+  }
+
   /** Accessible name of a row checkbox: enough to tell rows with the same merchant apart. */
   rowLabel(txn: Transaction): string {
     const name: string = txn.merchant?.name ?? txn.description;

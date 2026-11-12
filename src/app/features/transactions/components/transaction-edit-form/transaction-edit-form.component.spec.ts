@@ -16,6 +16,8 @@ import { AuthService } from '@core/auth/auth.service';
 import { Category } from '@models/category.model';
 import { Merchant } from '@models/merchant.model';
 import { User } from '@models/auth.model';
+import { Account } from '@models/account.model';
+import { TransactionType } from '@models/transaction.model';
 
 describe('TransactionEditFormComponent', () => {
   let component: TransactionEditFormComponent;
@@ -637,6 +639,78 @@ describe('TransactionEditFormComponent', () => {
       // assert & verify
       expect(buttons.map((b) => b.id)).toEqual(['type-option-EXPENSE', 'type-option-INCOME']);
       expect(fixture.nativeElement.querySelector('#type-option-TRANSFER')).toBeNull();
+    });
+  });
+
+  describe('hand-entered types (contribution, employer contribution, earnings)', () => {
+    const manualAccount = { id: 7, name: 'Roth IRA', balanceMode: 'MANUAL' } as unknown as Account;
+    const checking = { id: 8, name: 'Checking', balanceMode: 'DERIVED' } as unknown as Account;
+
+    const optionIds = (): string[] =>
+      (
+        Array.from(fixture.nativeElement.querySelectorAll('#type-options button')) as HTMLElement[]
+      ).map((b) => b.id);
+
+    it('should add Contribution, Employer contribution and Earnings once a MANUAL account is selected', () => {
+      // arrange
+      fixture.detectChanges();
+      component.accounts.set([checking, manualAccount]);
+
+      // act
+      component.form.patchValue({ accountId: 7 });
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(optionIds()).toEqual([
+        'type-option-EXPENSE',
+        'type-option-INCOME',
+        'type-option-CONTRIBUTION',
+        'type-option-EMPLOYER_CONTRIBUTION',
+        'type-option-EARNINGS',
+      ]);
+      const labels = (
+        Array.from(fixture.nativeElement.querySelectorAll('#type-options button')) as HTMLElement[]
+      ).map((b) => b.textContent?.trim());
+      expect(labels.slice(2)).toEqual(['Contribution', 'Employer contribution', 'Earnings']);
+    });
+
+    it('should keep only Expense and Income for a derived-balance account', () => {
+      // arrange
+      fixture.detectChanges();
+      component.accounts.set([checking, manualAccount]);
+
+      // act
+      component.form.patchValue({ accountId: 8 });
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(optionIds()).toEqual(['type-option-EXPENSE', 'type-option-INCOME']);
+    });
+
+    it('should show and select the type of an existing CONTRIBUTION row even when its account is not yet known', () => {
+      // arrange
+      fixture.componentRef.setInput('transaction', {
+        id: 5,
+        date: '2026-10-19T00:00:00Z',
+        amount: 500,
+        description: '401k',
+        type: TransactionType.CONTRIBUTION,
+        category: null,
+        merchant: null,
+        account: { id: 7 },
+        tags: [],
+      });
+      fixture.detectChanges();
+
+      // act
+      const selected = fixture.nativeElement.querySelector(
+        '#type-option-CONTRIBUTION',
+      ) as HTMLElement | null;
+
+      // assert & verify
+      expect(selected).not.toBeNull();
+      expect(selected?.className).toContain('border-primary');
+      expect(component.form.value.type).toBe(TransactionType.CONTRIBUTION);
     });
   });
 });

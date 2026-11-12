@@ -10,6 +10,9 @@ export class FormatTransactionTypeAmountPipe implements PipeTransform {
     switch (type.toLowerCase()) {
       case 'income':
       case 'transfer-in':
+      case 'contribution':
+      case 'employer_contribution':
+      case 'earnings':
         return `+${formattedCurrency}`;
       case 'expense':
       case 'transfer':

@@ -51,7 +51,7 @@ export class AccountListComponent {
         command: (): void => this.viewTransactions.emit(account),
       },
       {
-        label: 'Reconcile',
+        label: account.balanceMode === 'MANUAL' ? 'Update balance' : 'Reconcile',
         icon: 'pi pi-sync',
         command: (): void => this.reconcileAccount.emit(account),
       },

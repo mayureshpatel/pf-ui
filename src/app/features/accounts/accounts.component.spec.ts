@@ -7,7 +7,7 @@ import { AccountApiService } from './services/account-api.service';
 import { AccountEditFormComponent } from './components/account-edit-form/account-edit-form.component';
 import { ToastService } from '@core/services/toast.service';
 import { Confirmation, ConfirmationService } from 'primeng/api';
-import { Account, AccountType, BankName } from '@models/account.model';
+import { Account, AccountSnapshot, AccountType, BankName } from '@models/account.model';
 import { of, Subject, throwError } from 'rxjs';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 
@@ -15,7 +15,16 @@ describe('AccountsComponent', () => {
   let component: AccountsComponent;
   let fixture: ComponentFixture<AccountsComponent>;
   let mockAccountApi: Mocked<
-    Pick<AccountApiService, 'getAccounts' | 'getAccountTypes' | 'create' | 'update' | 'delete'>
+    Pick<
+      AccountApiService,
+      | 'getAccounts'
+      | 'getAccountTypes'
+      | 'create'
+      | 'update'
+      | 'delete'
+      | 'recordBalance'
+      | 'getBalanceHistory'
+    >
   >;
   let mockToast: Mocked<Pick<ToastService, 'success' | 'error'>>;
   let mockConfirmationService: { confirm: Mock<(confirmation: Confirmation) => void> };
@@ -58,7 +67,10 @@ describe('AccountsComponent', () => {
       create: vi.fn(),
       update: vi.fn(),
       delete: vi.fn(),
+      recordBalance: vi.fn(),
+      getBalanceHistory: vi.fn(),
     };
+    mockAccountApi.getBalanceHistory.mockReturnValue(of([]));
     mockToast = { success: vi.fn(), error: vi.fn() };
     mockConfirmationService = { confirm: vi.fn() };
     mockRouter = { navigate: vi.fn() };
@@ -275,6 +287,163 @@ describe('AccountsComponent', () => {
       // assert & verify
       expect(mockAccountApi.getAccounts).toHaveBeenCalledTimes(1);
       expect(component.panelMode()).toBe('reconcile');
+    });
+  });
+
+  describe('hand-entered balance', () => {
+    const roth = (over: Partial<Account> = {}): Account =>
+      ({
+        ...acct(5, 'Roth IRA', 12000, true),
+        balanceMode: 'MANUAL',
+        moneyIn: 10000,
+        gain: 2000,
+        ...over,
+      }) as Account;
+    const history = [
+      { id: 2, snapshotDate: '2026-11-01', balance: 12000 },
+      { id: 1, snapshotDate: '2026-10-01', balance: 11000 },
+    ] as AccountSnapshot[];
+
+    it('should load the balance history when a hand-entered account is opened', () => {
+      // arrange
+      loadWith([roth()]);
+      mockAccountApi.getBalanceHistory.mockReturnValue(of(history));
+
+      // act
+      component.openAccount(component.accounts()[0]);
+
+      // assert & verify
+      expect(mockAccountApi.getBalanceHistory).toHaveBeenCalledWith(5);
+      expect(component.balanceHistory()).toEqual(history);
+    });
+
+    it('should show the history of the account the panel is about, not the previous one', () => {
+      // arrange
+      const a = roth({ id: 5, name: 'A' });
+      const b = roth({ id: 6, name: 'B' });
+      const hist = (id: number, balance: number): AccountSnapshot[] =>
+        [{ id, snapshotDate: '2026-11-01', balance }] as AccountSnapshot[];
+      loadWith([a, b]);
+      mockAccountApi.getBalanceHistory.mockImplementation((id: number) =>
+        of(id === 5 ? hist(1, 111) : hist(2, 222)),
+      );
+      component.openAccount(component.accounts()[0]);
+      expect(component.balanceHistory()).toEqual(hist(1, 111));
+
+      // act: another row's menu, then Back
+      component.startBalance(component.accounts()[1]);
+      component.back();
+
+      // assert & verify
+      expect(component.selectedId()).toBe(6);
+      expect(component.balanceHistory()).toEqual(hist(2, 222));
+
+      // and the same through Edit
+      component.openAccount(component.accounts()[0]);
+      component.startEdit(component.accounts()[1]);
+      expect(component.balanceHistory()).toEqual(hist(2, 222));
+    });
+
+    it('should not load history for a derived account', () => {
+      // arrange
+      loadWith([acct(1, 'Checking', 100, true)]);
+      mockAccountApi.getBalanceHistory.mockClear();
+
+      // act
+      component.openAccount(component.accounts()[0]);
+
+      // assert & verify
+      expect(mockAccountApi.getBalanceHistory).not.toHaveBeenCalled();
+    });
+
+    it('should open the balance step from Update balance, and from Reconcile for a manual account', () => {
+      // arrange
+      loadWith([roth()]);
+
+      // act
+      component.startReconcile(component.accounts()[0]);
+
+      // assert & verify
+      expect(component.panelMode()).toBe('balance');
+      expect(component.panelTitle()).toBe('Update balance, Roth IRA');
+      expect(component.highlightedId()).toBe(5);
+      component.back();
+      expect(component.panelMode()).toBe('account');
+    });
+
+    it('should record the balance, refresh the account and history, and toast', () => {
+      // arrange
+      loadWith([roth()]);
+      component.startBalance(component.accounts()[0]);
+      mockAccountApi.recordBalance.mockReturnValue(of(9));
+      mockAccountApi.getAccounts.mockReturnValue(of([roth({ currentBalance: 13000, gain: 3000 })]));
+      mockAccountApi.getBalanceHistory.mockReturnValue(of(history));
+      const request = { accountId: 5, balance: 13000, asOfDate: '2026-11-11', version: 1 };
+
+      // act
+      component.onBalanceRecorded(request);
+
+      // assert & verify
+      expect(mockAccountApi.recordBalance).toHaveBeenCalledWith(request);
+      expect(mockToast.success).toHaveBeenCalledWith('Balance updated');
+      expect(component.panelMode()).toBe('account');
+      expect(component.selectedAccount()?.currentBalance).toBe(13000);
+      expect(component.balanceHistory()).toEqual(history);
+    });
+
+    it('should tell the user to reload on a 409 and reload the accounts', () => {
+      // arrange
+      loadWith([roth()]);
+      component.startBalance(component.accounts()[0]);
+      mockAccountApi.recordBalance.mockReturnValue(
+        throwError(() => ({ status: 409, error: { detail: 'stale' } })),
+      );
+      mockAccountApi.getAccounts.mockClear();
+
+      // act
+      component.onBalanceRecorded({ accountId: 5, balance: 1, asOfDate: '2026-11-11', version: 1 });
+
+      // assert & verify
+      expect(mockToast.error).toHaveBeenCalledWith(
+        'This account was changed elsewhere. Reload the accounts and try again.',
+      );
+      expect(mockAccountApi.getAccounts).toHaveBeenCalled();
+      expect(component.panelMode()).toBe('balance');
+    });
+
+    it('should show the server message on a 400', () => {
+      // arrange
+      loadWith([roth()]);
+      component.startBalance(component.accounts()[0]);
+      mockAccountApi.recordBalance.mockReturnValue(
+        throwError(() => ({ status: 400, error: { detail: 'Not a hand-entered account' } })),
+      );
+
+      // act
+      component.onBalanceRecorded({ accountId: 5, balance: 1, asOfDate: '2026-11-11', version: 1 });
+
+      // assert & verify
+      expect(mockToast.error).toHaveBeenCalledWith('Not a hand-entered account');
+    });
+
+    it('should put a loan under Liabilities with its balance and count it in net worth', () => {
+      // arrange
+      const lexus = {
+        ...acct(8, 'Lexus loan', 18000, false),
+        type: { ...credit, code: 'LOAN', label: 'Loan' },
+        balanceMode: 'MANUAL',
+        moneyIn: null,
+        gain: null,
+      } as Account;
+
+      // act
+      loadWith([acct(1, 'Checking', 50000, true), lexus]);
+
+      // assert & verify
+      const liabilities = component.groups().find((g) => g.key === 'LIABILITIES');
+      expect(liabilities?.accounts.map((a) => a.name)).toEqual(['Lexus loan']);
+      expect(component.totals().liabilities).toBe(18000);
+      expect(component.totals().netWorth).toBe(32000);
     });
   });
 

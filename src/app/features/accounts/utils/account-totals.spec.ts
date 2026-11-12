@@ -53,6 +53,27 @@ describe('account-totals', () => {
       expect(totals).toEqual({ assets: 23020.15, liabilities: 1853.03, netWorth: 21167.12 });
     });
 
+    it('should count a liability stored as +500 and one stored as -500 as the same -500 of net worth', () => {
+      // act
+      const positive = accountTotals([account(1, 'Card', 500, type(false))]);
+      const negative = accountTotals([account(1, 'Card', -500, type(false))]);
+
+      // assert & verify
+      expect(positive).toEqual({ assets: 0, liabilities: 500, netWorth: -500 });
+      expect(negative).toEqual(positive);
+    });
+
+    it('should count a LOAN account as debt', () => {
+      // arrange
+      const loan = { ...type(false), code: 'LOAN' };
+
+      // act
+      const totals = accountTotals([account(1, 'Car loan', -12000, loan)]);
+
+      // assert & verify
+      expect(totals).toEqual({ assets: 0, liabilities: 12000, netWorth: -12000 });
+    });
+
     it('should go negative when liabilities exceed assets', () => {
       // assert & verify
       expect(
@@ -111,7 +132,11 @@ describe('account-totals', () => {
       expect(liabilities.subtotal).toBe(-1853.03);
     });
 
-    it('should keep a liability with a positive balance in Liabilities and show the honest subtotal', () => {
+    // the old spec pinned the signed sum (-75) for a positive-balance card. Loans are stored
+    // positive by design, so a signed sum made the group header disagree with the Overview's
+    // liabilities total (which uses absolute balances); the subtotal is now minus the sum of
+    // absolute balances, so a positive-balance liability counts as money owed: -(25 + 100).
+    it('should keep a liability with a positive balance in Liabilities and subtotal it as money owed', () => {
       // arrange
       const accounts = [
         account(1, 'Overpaid card', 25, type(false)),
@@ -119,7 +144,23 @@ describe('account-totals', () => {
       ];
 
       // assert & verify
-      expect(groupAccounts(accounts)[0].subtotal).toBe(-75);
+      expect(groupAccounts(accounts)[0].subtotal).toBe(-125);
+    });
+
+    it('should subtotal liabilities as minus the sum of absolute balances when a positive-stored loan is mixed with negative cards', () => {
+      // arrange
+      const accounts = [
+        account(1, 'Discover', -1200, type(false)),
+        account(2, 'Venture', -800, type(false)),
+        account(3, 'Lexus loan', 18000, type(false)),
+      ];
+
+      // act
+      const liabilities = groupAccounts(accounts)[0];
+
+      // assert & verify
+      expect(liabilities.subtotal).toBe(-20000);
+      expect(liabilities.subtotal).toBe(-accountTotals(accounts).liabilities);
     });
   });
 
@@ -128,6 +169,9 @@ describe('account-totals', () => {
       // assert & verify
       expect(bankLabel(BankName.CAPITAL_ONE)).toBe('Capital One');
       expect(bankLabel(BankName.STANDARD)).toBe('Standard CSV');
+      expect(bankLabel(BankName.ALLY)).toBe('Ally savings');
+      expect(bankLabel(BankName.FIDELITY_RETIREMENT)).toBe('Fidelity 401(k)');
+      expect(bankLabel(BankName.FIDELITY_BROKERAGE)).toBe('Fidelity brokerage');
       expect(bankLabel(null)).toBe('');
       expect(bankLabel(undefined)).toBe('');
     });

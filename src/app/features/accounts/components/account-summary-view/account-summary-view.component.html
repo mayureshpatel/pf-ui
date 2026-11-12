@@ -1,6 +1,11 @@
 <div class="flex flex-col gap-4">
   <div>
     <p data-testid="subtitle" class="text-sm text-muted-color">{{ subtitle() }}</p>
+    @if (isManual()) {
+      <p data-testid="balance-label" class="mt-2 text-sm text-muted-color">
+        {{ isLoan() ? 'Remaining balance' : 'Market value' }}
+      </p>
+    }
     <p
       data-testid="balance"
       class="mt-2 text-3xl font-bold tracking-tight tabular-nums"
@@ -15,14 +20,66 @@
     </p>
   </div>
 
-  <div class="flex flex-col gap-2">
-    <button
-      type="button"
-      class="cursor-pointer rounded-lg bg-primary-700 px-3 py-2 text-sm font-medium text-white hover:bg-primary-800"
-      (click)="reconcile.emit()"
+  @if (isManual() && !isLoan()) {
+    <dl
+      class="m-0 rounded-xl border border-surface-200 bg-surface-50 p-3 dark:border-surface-700 dark:bg-surface-800"
     >
-      Reconcile with statement
-    </button>
+      <div class="flex items-baseline justify-between">
+        <dt data-testid="money-in-label" class="text-sm text-muted-color">Your money in</dt>
+        <dd data-testid="money-in" class="m-0 font-semibold tabular-nums">
+          @if (account().moneyIn == null) {
+            —
+          } @else {
+            {{ account().moneyIn! < 0 ? '-' : ''
+            }}{{
+              (account().moneyIn! < 0 ? -account().moneyIn! : account().moneyIn!)
+                | formatCurrency: true : account().currency.code
+            }}
+          }
+        </dd>
+      </div>
+      <div class="mt-2 flex items-baseline justify-between">
+        <dt data-testid="gain-label" class="text-sm text-muted-color">Gain</dt>
+        <dd
+          data-testid="gain"
+          class="m-0 font-semibold tabular-nums"
+          [class.text-emerald-700]="account().gain != null && account().gain! > 0"
+          [class.dark:text-emerald-400]="account().gain != null && account().gain! > 0"
+          [class.text-rose-700]="account().gain != null && account().gain! < 0"
+          [class.dark:text-rose-400]="account().gain != null && account().gain! < 0"
+        >
+          @if (account().gain == null) {
+            —
+          } @else {
+            {{ account().gain! > 0 ? '+' : account().gain! < 0 ? '-' : ''
+            }}{{
+              (account().gain! < 0 ? -account().gain! : account().gain!)
+                | formatCurrency: true : account().currency.code
+            }}
+          }
+        </dd>
+      </div>
+    </dl>
+  }
+
+  <div class="flex flex-col gap-2">
+    @if (isManual()) {
+      <button
+        type="button"
+        class="cursor-pointer rounded-lg bg-primary-700 px-3 py-2 text-sm font-medium text-white hover:bg-primary-800"
+        (click)="updateBalance.emit()"
+      >
+        Update balance
+      </button>
+    } @else {
+      <button
+        type="button"
+        class="cursor-pointer rounded-lg bg-primary-700 px-3 py-2 text-sm font-medium text-white hover:bg-primary-800"
+        (click)="reconcile.emit()"
+      >
+        Reconcile with statement
+      </button>
+    }
     <button
       type="button"
       class="cursor-pointer rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium dark:border-surface-700"
@@ -45,4 +102,8 @@
       Delete account
     </button>
   </div>
+
+  @if (isManual()) {
+    <app-account-balance-history [entries]="history()" [currencyCode]="account().currency.code" />
+  }
 </div>

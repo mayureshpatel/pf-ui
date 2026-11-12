@@ -14,6 +14,7 @@ import {
   WritableSignal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
@@ -74,6 +75,21 @@ export class AccountEditFormComponent implements OnInit {
     },
     { label: 'Synovus', value: BankName.SYNOVUS, description: 'Synovus bank export format' },
     {
+      label: 'Ally savings',
+      value: BankName.ALLY,
+      description: 'Ally savings account export format',
+    },
+    {
+      label: 'Fidelity 401(k)',
+      value: BankName.FIDELITY_RETIREMENT,
+      description: 'Fidelity 401(k) history export format',
+    },
+    {
+      label: 'Fidelity brokerage',
+      value: BankName.FIDELITY_BROKERAGE,
+      description: 'Fidelity brokerage (Roth IRA) activity export format',
+    },
+    {
       label: 'Universal CSV',
       value: BankName.UNIVERSAL,
       description: 'Auto-detect columns (Date, Amount, Description)',
@@ -99,7 +115,19 @@ export class AccountEditFormComponent implements OnInit {
     ),
     currentBalance: new FormControl(0, { nonNullable: true, validators: [Validators.required] }),
     bankName: new FormControl<BankName | null>(null),
+    /** The balance is typed in by hand instead of coming from transactions. */
+    manualBalance: new FormControl(false, { nonNullable: true }),
   });
+
+  private readonly manualOn: Signal<boolean> = toSignal(
+    this.form.controls.manualBalance.valueChanges,
+    { initialValue: false },
+  );
+
+  /** A hand-entered account is being switched back to transaction-driven. */
+  switchingToTransactions: Signal<boolean> = computed(
+    (): boolean => this.account()?.balanceMode === 'MANUAL' && !this.manualOn(),
+  );
 
   /** Which account is shown (null when adding one). The form resets only when this changes. */
   private readonly accountId: Signal<number | null> = computed(
@@ -115,6 +143,15 @@ export class AccountEditFormComponent implements OnInit {
   );
 
   constructor() {
+    // a loan has no transactions to derive its balance from, so choosing the Loan type while
+    // creating turns the hand-entered toggle on (the owner can still turn it off); an existing
+    // account is never changed by this
+    this.form.controls.type.valueChanges.pipe(takeUntilDestroyed()).subscribe((type): void => {
+      if (!this.isEditMode() && type?.code === 'LOAN') {
+        this.form.controls.manualBalance.setValue(true);
+      }
+    });
+
     effect((): void => {
       const key: string = this.formKey();
       // the fill at init already covered this key; only a different account refills
@@ -164,6 +201,12 @@ export class AccountEditFormComponent implements OnInit {
         bankName: rawValue.bankName ?? null,
         version: selectedAccount.version,
       };
+      // sent only when it matters: switching on, or switching a hand-entered account back off
+      if (rawValue.manualBalance) {
+        updateRequest.balanceMode = 'MANUAL';
+      } else if (selectedAccount.balanceMode === 'MANUAL') {
+        updateRequest.balanceMode = 'DERIVED';
+      }
 
       this.save.emit(updateRequest);
     } else {
@@ -174,6 +217,7 @@ export class AccountEditFormComponent implements OnInit {
         currencyCode: rawValue.currencyCode,
         bankName: rawValue.bankName ?? null,
       };
+      if (rawValue.manualBalance) createRequest.balanceMode = 'MANUAL';
 
       this.save.emit(createRequest);
     }
@@ -197,6 +241,7 @@ export class AccountEditFormComponent implements OnInit {
         currencyCode: account.currency.code,
         currentBalance: account.currentBalance,
         bankName: account.bank,
+        manualBalance: account.balanceMode === 'MANUAL',
       });
       this.form.controls.currentBalance.disable();
     } else {
@@ -207,6 +252,7 @@ export class AccountEditFormComponent implements OnInit {
         currencyCode: this.defaultCurrency,
         currentBalance: 0,
         bankName: null,
+        manualBalance: false,
       });
       this.form.controls.currentBalance.enable();
     }

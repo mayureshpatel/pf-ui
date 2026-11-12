@@ -756,6 +756,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/accounts/balance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record an account balance
+         * @description Records a hand-entered balance as of a date on a manual-balance account
+         */
+        post: operations["recordBalance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/account-types": {
         parameters: {
             query?: never;
@@ -1260,6 +1280,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/accounts/{id}/balance-history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List an account's balance history
+         * @description Returns the recorded balances for an account, newest first
+         */
+        get: operations["getBalanceHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/transactions/{id}": {
         parameters: {
             query?: never;
@@ -1601,6 +1641,7 @@ export interface components {
             type: string;
             currencyCode: string;
             bankName?: string;
+            balanceMode?: string;
             /** Format: int64 */
             version: number;
         };
@@ -1634,9 +1675,13 @@ export interface components {
             currentBalance?: number;
             currency?: components["schemas"]["CurrencyDto"];
             /** @enum {string} */
-            bank?: "CAPITAL_ONE" | "DISCOVER" | "SYNOVUS" | "STANDARD" | "UNIVERSAL";
+            bank?: "CAPITAL_ONE" | "DISCOVER" | "SYNOVUS" | "ALLY" | "FIDELITY_RETIREMENT" | "FIDELITY_BROKERAGE" | "STANDARD" | "UNIVERSAL";
             /** Format: int64 */
             version?: number;
+            /** @enum {string} */
+            balanceMode?: "DERIVED" | "MANUAL";
+            moneyIn?: number;
+            gain?: number;
         };
         AccountTypeDto: {
             code?: string;
@@ -1705,7 +1750,7 @@ export interface components {
             date?: string;
             description?: string;
             /** @enum {string} */
-            type?: "INCOME" | "EXPENSE" | "TRANSFER" | "TRANSFER_IN" | "TRANSFER_OUT" | "ADJUSTMENT";
+            type?: "INCOME" | "EXPENSE" | "TRANSFER" | "TRANSFER_IN" | "TRANSFER_OUT" | "ADJUSTMENT" | "CONTRIBUTION" | "EMPLOYER_CONTRIBUTION" | "EARNINGS";
             /** Format: date-time */
             postDate?: string;
             merchant?: components["schemas"]["MerchantDto"];
@@ -2015,6 +2060,7 @@ export interface components {
             startingBalance: number;
             currencyCode: string;
             bankName?: string;
+            balanceMode?: string;
         };
         TransactionPreviewDto: {
             /** Format: date-time */
@@ -2024,7 +2070,7 @@ export interface components {
             description?: string;
             amount?: number;
             /** @enum {string} */
-            type?: "INCOME" | "EXPENSE" | "TRANSFER" | "TRANSFER_IN" | "TRANSFER_OUT" | "ADJUSTMENT";
+            type?: "INCOME" | "EXPENSE" | "TRANSFER" | "TRANSFER_IN" | "TRANSFER_OUT" | "ADJUSTMENT" | "CONTRIBUTION" | "EMPLOYER_CONTRIBUTION" | "EARNINGS";
             suggestedCategory?: components["schemas"]["CategoryDto"];
             suggestedMerchant?: components["schemas"]["MerchantDto"];
             duplicate?: boolean;
@@ -2033,6 +2079,15 @@ export interface components {
             /** Format: int64 */
             accountId: number;
             newBalance: number;
+            /** Format: int64 */
+            version: number;
+        };
+        BalanceEntryRequest: {
+            /** Format: int64 */
+            accountId: number;
+            balance: number;
+            /** Format: date */
+            asOfDate: string;
             /** Format: int64 */
             version: number;
         };
@@ -2057,7 +2112,7 @@ export interface components {
             /** Format: int64 */
             accountId?: number;
             /** @enum {string} */
-            type?: "INCOME" | "EXPENSE" | "TRANSFER" | "TRANSFER_IN" | "TRANSFER_OUT" | "ADJUSTMENT";
+            type?: "INCOME" | "EXPENSE" | "TRANSFER" | "TRANSFER_IN" | "TRANSFER_OUT" | "ADJUSTMENT" | "CONTRIBUTION" | "EMPLOYER_CONTRIBUTION" | "EARNINGS";
             description?: string;
             categoryName?: string;
             vendorName?: string;
@@ -2474,6 +2529,14 @@ export interface components {
             remainingAmount?: number;
             /** Format: double */
             percentageUsed?: number;
+        };
+        AccountSnapshotDto: {
+            /** Format: int64 */
+            id?: number;
+            account?: components["schemas"]["AccountDto"];
+            /** Format: date */
+            snapshotDate?: string;
+            balance?: number;
         };
     };
     responses: never;
@@ -4135,6 +4198,57 @@ export interface operations {
             };
         };
     };
+    recordBalance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BalanceEntryRequest"];
+            };
+        };
+        responses: {
+            /** @description Balance recorded; snapshot id returned */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": number;
+                };
+            };
+            /** @description The account's balance is derived from transactions */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": number;
+                };
+            };
+            /** @description Forbidden -- the authenticated user does not own this account */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": number;
+                };
+            };
+            /** @description The account was modified since the supplied version was read */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": number;
+                };
+            };
+        };
+    };
     getAccountTypes: {
         parameters: {
             query?: never;
@@ -4783,6 +4897,37 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["PagedModel"];
+                };
+            };
+        };
+    };
+    getBalanceHistory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description History returned (possibly empty) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AccountSnapshotDto"][];
+                };
+            };
+            /** @description Forbidden -- the authenticated user does not own this account */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AccountSnapshotDto"][];
                 };
             };
         };

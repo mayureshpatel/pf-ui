@@ -1,0 +1,69 @@
+<div class="flex flex-col gap-4">
+  <div
+    class="rounded-xl border border-surface-200 bg-surface-50 p-3 dark:border-surface-700 dark:bg-surface-800"
+  >
+    <div class="flex items-baseline justify-between">
+      <span class="text-sm text-muted-color">{{
+        isLoan() ? 'Remaining balance' : 'Market value'
+      }}</span>
+      <span data-testid="app-balance" class="font-semibold tabular-nums">
+        {{ account().currentBalance | formatCurrency: true : account().currency.code }}
+      </span>
+    </div>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-4">
+    <div class="flex flex-col gap-2">
+      <label for="balanceAmount" class="text-sm font-medium">
+        {{ isLoan() ? 'Remaining balance owed' : 'Balance' }}
+      </label>
+      <p-inputNumber
+        inputId="balanceAmount"
+        formControlName="balance"
+        mode="currency"
+        [currency]="account().currency.code"
+        locale="en-US"
+        [minFractionDigits]="2"
+        [maxFractionDigits]="2"
+        [autofocus]="true"
+        class="w-full"
+        inputStyleClass="w-full py-3 text-2xl font-semibold"
+        placeholder="0.00"
+        (onKeyDown)="onKeyDown($event)"
+      />
+      @if (form.controls.balance.touched && form.controls.balance.errors?.['required']) {
+        <small data-testid="balance-error" class="text-rose-700 dark:text-rose-400">
+          Enter the balance.
+        </small>
+      }
+      @if (form.controls.balance.errors?.['min']) {
+        <small data-testid="balance-error" class="text-rose-700 dark:text-rose-400">
+          Enter the amount you still owe (0 or more).
+        </small>
+      }
+      @if (unchanged()) {
+        <small data-testid="unchanged" class="text-muted-color">
+          This matches the balance shown now. It will still be added to the history.
+        </small>
+      }
+    </div>
+
+    <div class="flex flex-col gap-1">
+      <label for="balanceDate" class="text-sm font-medium">As of</label>
+      <p-datepicker
+        inputId="balanceDate"
+        formControlName="asOfDate"
+        [showIcon]="true"
+        [maxDate]="maxDate"
+        dateFormat="yy-mm-dd"
+        placeholder="YYYY-MM-DD"
+        appendTo="body"
+      />
+      @if (form.controls.asOfDate.invalid && form.controls.asOfDate.touched) {
+        <small data-testid="date-error" class="text-rose-700 dark:text-rose-400">
+          Choose a date.
+        </small>
+      }
+    </div>
+  </form>
+</div>

@@ -17,6 +17,9 @@ const TYPE_LABELS: Partial<Record<TransactionType, string>> = {
   [TransactionType.EXPENSE]: 'Expense',
   [TransactionType.TRANSFER]: 'Transfer',
   [TransactionType.ADJUSTMENT]: 'Adjustment',
+  [TransactionType.CONTRIBUTION]: 'Contribution',
+  [TransactionType.EMPLOYER_CONTRIBUTION]: 'Employer contribution',
+  [TransactionType.EARNINGS]: 'Earnings',
 };
 
 const money = (value: number): string => `$${value.toLocaleString('en-US')}`;

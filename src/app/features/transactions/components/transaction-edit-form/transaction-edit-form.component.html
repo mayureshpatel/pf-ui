@@ -8,8 +8,8 @@
       <label for="type-options" class="text-sm font-medium text-surface-700 dark:text-surface-200">
         Type
       </label>
-      <div id="type-options" class="flex flex-row justify-center gap-3">
-        @for (option of typeOptions; track option.value) {
+      <div id="type-options" class="flex flex-row flex-wrap justify-center gap-3">
+        @for (option of visibleTypeOptions(); track option.value) {
           <button
             type="button"
             id="type-option-{{ option.value }}"

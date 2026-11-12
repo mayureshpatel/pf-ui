@@ -48,7 +48,9 @@ const byDisplayOrder = (a: Account, b: Account): number =>
 
 /**
  * Splits accounts into Assets and Liabilities (empty groups omitted), each ordered by account type
- * sort order, then name, then id. The subtotal is the plain sum of the group's balances.
+ * sort order, then name, then id. The Assets subtotal is the plain sum of balances; the
+ * Liabilities subtotal is minus the sum of absolute balances (loans are stored positive, cards
+ * negative), so it always agrees with the Overview's liabilities figure.
  *
  * @param accounts - Every account.
  */
@@ -57,13 +59,14 @@ export function groupAccounts(accounts: Account[]): AccountGroup[] {
     key: AccountGroup['key'],
     label: AccountGroup['label'],
     members: Account[],
+    subtotalOf: (members: Account[]) => number,
   ): AccountGroup | null =>
     members.length === 0
       ? null
       : {
           key,
           label,
-          subtotal: toCents(members.reduce((sum, a) => sum + a.currentBalance, 0)),
+          subtotal: toCents(subtotalOf(members)),
           accounts: [...members].sort(byDisplayOrder),
         };
 
@@ -72,11 +75,13 @@ export function groupAccounts(accounts: Account[]): AccountGroup[] {
       'ASSETS',
       'Assets',
       accounts.filter((a) => a.type.isAsset),
+      (members) => members.reduce((sum, a) => sum + a.currentBalance, 0),
     ),
     build(
       'LIABILITIES',
       'Liabilities',
       accounts.filter((a) => !a.type.isAsset),
+      (members) => -members.reduce((sum, a) => sum + Math.abs(a.currentBalance), 0),
     ),
   ].filter((group): group is AccountGroup => group !== null);
 }
@@ -85,6 +90,9 @@ const BANK_LABELS: Record<BankName, string> = {
   [BankName.CAPITAL_ONE]: 'Capital One',
   [BankName.DISCOVER]: 'Discover',
   [BankName.SYNOVUS]: 'Synovus',
+  [BankName.ALLY]: 'Ally savings',
+  [BankName.FIDELITY_RETIREMENT]: 'Fidelity 401(k)',
+  [BankName.FIDELITY_BROKERAGE]: 'Fidelity brokerage',
   [BankName.STANDARD]: 'Standard CSV',
   [BankName.UNIVERSAL]: 'Universal CSV',
 };

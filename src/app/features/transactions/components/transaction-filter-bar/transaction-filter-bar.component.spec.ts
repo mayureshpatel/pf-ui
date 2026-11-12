@@ -1,6 +1,6 @@
 import { Mock, vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { TransactionFilter } from '@models/transaction.model';
+import { TransactionFilter, TransactionType } from '@models/transaction.model';
 import { Popover } from 'primeng/popover';
 import { presetRange } from '../../utils/transaction-period';
 import { TransactionFilterBarComponent } from './transaction-filter-bar.component';
@@ -33,6 +33,20 @@ describe('TransactionFilterBarComponent', () => {
   });
 
   afterEach(() => vi.useRealTimers());
+
+  it('should offer the hand-entered types as type filters, in sentence case', () => {
+    // act
+    const options = fixture.componentInstance.typeOptions;
+
+    // assert & verify
+    expect(options).toContainEqual({ label: 'Contribution', value: TransactionType.CONTRIBUTION });
+    expect(options).toContainEqual({
+      label: 'Employer contribution',
+      value: TransactionType.EMPLOYER_CONTRIBUTION,
+    });
+    expect(options).toContainEqual({ label: 'Earnings', value: TransactionType.EARNINGS });
+    expect(options).toContainEqual({ label: 'Income', value: TransactionType.INCOME });
+  });
 
   it('should show the result count in plain words', () => {
     // act

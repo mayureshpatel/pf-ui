@@ -84,12 +84,15 @@ const EXCEL_ERROR =
   'Excel files (.xls, .xlsx) are not supported. Export the statement as CSV and add it again.';
 const PREVIEW_ERROR = 'Could not read this file. Check that the bank format matches the statement.';
 /**
- * The fixed `detail` of the backend's `CsvParsingException` handler. Only this detail is safe to
- * show: any other 400 from /upload (e.g. IllegalArgumentException, NumberFormatException) carries
- * raw exception text, and the problem's `type`/`title` are the generic defaults for every 400.
+ * The generic `detail` of the backend's `CsvParsingException` handler (used when the exception has
+ * no message of its own). Together with the handler's distinct {@link CSV_PARSING_TITLE}, it marks
+ * a detail that is safe to show: any other 400 from /upload (e.g. IllegalArgumentException,
+ * NumberFormatException) carries raw exception text and the generic "Bad Request" title.
  */
 const CSV_PARSING_DETAIL =
   'Failed to parse the provided CSV file. Please check the file format and try again.';
+/** The `title` only the `CsvParsingException` handler sets; its detail is the parser's own message. */
+const CSV_PARSING_TITLE = 'CSV parsing error';
 const HASH_ERROR = 'Could not read this file from disk.';
 const COMMIT_ERROR = 'The import could not be completed. Check your connection and try again.';
 const FAILED_RESULT_ERROR = 'This file could not be imported.';
@@ -164,8 +167,15 @@ function previewError(error: unknown): string {
   if (error instanceof HttpErrorResponse) {
     const body: unknown = error.error;
     if (typeof body === 'object' && body !== null && 'detail' in body) {
-      const detail: unknown = (body as { detail: unknown }).detail;
-      if (detail === CSV_PARSING_DETAIL) return `Could not read this file: ${detail}`;
+      const { detail, title } = body as { detail: unknown; title?: unknown };
+      // a parser's message names the file's own cell text and a row number, so show it
+      if (
+        typeof detail === 'string' &&
+        detail.trim() &&
+        (title === CSV_PARSING_TITLE || detail === CSV_PARSING_DETAIL)
+      ) {
+        return `Could not read this file: ${detail}`;
+      }
     }
   }
   return PREVIEW_ERROR;

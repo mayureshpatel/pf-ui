@@ -50,14 +50,19 @@
         [sheet]="panelMode() !== 'overview'"
         [moveFocus]="false"
         [showFooter]="
-          panelMode() === 'edit' || panelMode() === 'reconcile' || panelMode() === 'create'
+          panelMode() === 'edit' ||
+          panelMode() === 'reconcile' ||
+          panelMode() === 'balance' ||
+          panelMode() === 'create'
         "
         [saveLabel]="
           panelMode() === 'reconcile'
             ? 'Reconcile'
-            : panelMode() === 'create'
-              ? 'Add account'
-              : 'Save changes'
+            : panelMode() === 'balance'
+              ? 'Update balance'
+              : panelMode() === 'create'
+                ? 'Add account'
+                : 'Save changes'
         "
         [showDelete]="false"
         (save)="onPanelSave()"
@@ -74,7 +79,9 @@
               </button>
               <app-account-summary-view
                 [account]="account"
+                [history]="balanceHistory()"
                 (reconcile)="startReconcile()"
+                (updateBalance)="startBalance()"
                 (viewTransactions)="viewTransactions(account)"
                 (edit)="startEdit()"
                 (delete)="deleteAccount(account)"
@@ -93,6 +100,19 @@
                 [account]="account"
                 (reconciled)="onReconciled($event)"
                 (reloadRequested)="onReloadRequested()"
+              />
+            }
+          }
+          @case ('balance') {
+            @if (selectedAccount(); as account) {
+              <button type="button" class="mb-3 cursor-pointer text-sm underline" (click)="back()">
+                Back
+              </button>
+              <app-account-balance-form
+                #balanceForm
+                [account]="account"
+                [saving]="saving()"
+                (recorded)="onBalanceRecorded($event)"
               />
             }
           }

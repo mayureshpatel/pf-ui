@@ -139,6 +139,32 @@ export class TransactionEditFormComponent {
   ];
 
   /**
+   * Extra type choices for hand-balanced accounts, where nothing derives the balance from the
+   * transactions: money paid in by the owner, an employer match, and investment earnings. All
+   * three are inflows and never change the account's entered balance.
+   */
+  private readonly handEnteredTypeOptions = [
+    {
+      label: 'Contribution',
+      value: TransactionType.CONTRIBUTION,
+      icon: 'pi-arrow-circle-down',
+      color: 'text-emerald-500',
+    },
+    {
+      label: 'Employer contribution',
+      value: TransactionType.EMPLOYER_CONTRIBUTION,
+      icon: 'pi-building',
+      color: 'text-emerald-500',
+    },
+    {
+      label: 'Earnings',
+      value: TransactionType.EARNINGS,
+      icon: 'pi-chart-line',
+      color: 'text-emerald-500',
+    },
+  ];
+
+  /**
    * Strongly typed reactive form for transaction details.
    */
   readonly form = new FormGroup({
@@ -163,6 +189,35 @@ export class TransactionEditFormComponent {
     postDate: new FormControl<string | null>(null),
     merchant: new FormControl<Merchant | null>(null),
     tags: new FormControl<Tag[]>([], { nonNullable: true }),
+  });
+
+  /** The account currently chosen in the form, as a signal (drives which types are offered). */
+  private readonly selectedAccountId: Signal<number> = toSignal(
+    this.form.controls.accountId.valueChanges.pipe(startWith(this.form.controls.accountId.value)),
+    { initialValue: this.form.controls.accountId.value },
+  );
+
+  /** The type currently chosen in the form, as a signal. */
+  private readonly selectedType: Signal<TransactionType> = toSignal(
+    this.form.controls.type.valueChanges.pipe(startWith(this.form.controls.type.value)),
+    { initialValue: this.form.controls.type.value },
+  );
+
+  /**
+   * The type choices to show: Expense and Income always, plus Contribution, Employer contribution
+   * and Earnings when the chosen account is a hand-balanced one or the transaction being edited
+   * already has one of those types (so an imported row never shows no type selected).
+   */
+  readonly visibleTypeOptions: Signal<typeof this.typeOptions> = computed(() => {
+    const handEntered: TransactionType[] = this.handEnteredTypeOptions.map((o) => o.value);
+    const account: Account | undefined = this.accounts().find(
+      (a: Account): boolean => a.id === this.selectedAccountId(),
+    );
+    const showHandEntered: boolean =
+      account?.balanceMode === 'MANUAL' || handEntered.includes(this.selectedType());
+    return showHandEntered
+      ? [...this.typeOptions, ...this.handEnteredTypeOptions]
+      : this.typeOptions;
   });
 
   /** Indicates if the component is in edit mode. */

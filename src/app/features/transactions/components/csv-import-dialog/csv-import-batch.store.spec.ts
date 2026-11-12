@@ -277,6 +277,22 @@ describe('CsvImportBatchStore', () => {
       expect(fileByName('discover-2026-01.csv').status).toBe('ready');
     });
 
+    it("shows a parser's own row-level message when the backend marks the problem as a CSV parsing error", async () => {
+      const parserMessage = "Unsupported Fidelity brokerage action 'SOMETHING NEW' at row 3.";
+      previews['capone-2026-01.csv'] = new HttpErrorResponse({
+        status: 400,
+        error: { status: 400, title: 'CSV parsing error', detail: parserMessage },
+      });
+      store.addFiles([csv('capone-2026-01.csv')]);
+
+      await store.previewAll();
+
+      expect(fileByName('capone-2026-01.csv')).toMatchObject({
+        status: 'failed',
+        error: expect.stringContaining(parserMessage),
+      });
+    });
+
     it('shows a generic message instead of any other backend detail', async () => {
       previews['capone-2026-01.csv'] = new HttpErrorResponse({
         status: 400,

@@ -23,6 +23,12 @@ const BANK_ALIASES: Readonly<Record<string, BankName>> = {
   capitalone: BankName.CAPITAL_ONE,
   discover: BankName.DISCOVER,
   synovus: BankName.SYNOVUS,
+  ally: BankName.ALLY,
+  allysavings: BankName.ALLY,
+  fidelityretirement: BankName.FIDELITY_RETIREMENT,
+  fidelity401k: BankName.FIDELITY_RETIREMENT,
+  fidelitybrokerage: BankName.FIDELITY_BROKERAGE,
+  fidelityroth: BankName.FIDELITY_BROKERAGE,
   standard: BankName.STANDARD,
   universal: BankName.UNIVERSAL,
 };

@@ -427,8 +427,8 @@
 
 <ng-template #amountText let-txn>
   <span
-    [class.text-emerald-700]="txn.type === TransactionType.INCOME"
-    [class.dark:text-emerald-400]="txn.type === TransactionType.INCOME"
+    [class.text-emerald-700]="isInflow(txn)"
+    [class.dark:text-emerald-400]="isInflow(txn)"
     [class.text-surface-500]="isTransfer(txn)"
   >
     {{ txn.amount | formatTransactionTypeAmount: txn.type }}
