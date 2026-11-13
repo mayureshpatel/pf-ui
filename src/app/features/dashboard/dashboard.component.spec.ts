@@ -3,12 +3,14 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { of, Subject, throwError } from 'rxjs';
+import { Observable, of, Subject, throwError } from 'rxjs';
 import { DashboardComponent } from './dashboard.component';
 import { DashboardApiService } from './services/dashboard-api.service';
 import { CategoryApiService } from '@features/categories/services/category-api.service';
 import { ToastService } from '@core/services/toast.service';
+import { TransactionApiService } from '@features/transactions/services/transaction-api.service';
 import { ActionType, DashboardPulse } from '@models/dashboard.model';
+import { PageResponse, Transaction } from '@models/transaction.model';
 import { PulseCardComponent } from './components/pulse-card/pulse-card.component';
 import { YtdSummaryComponent } from './components/ytd-summary/ytd-summary.component';
 import { KeptCardComponent } from './components/kept-card/kept-card.component';
@@ -29,6 +31,18 @@ describe('DashboardComponent', () => {
     >
   >;
   let mockToast: Mocked<Pick<ToastService, 'success' | 'error' | 'info'>>;
+  let mockTransactionApi: Mocked<Pick<TransactionApiService, 'getTransactions'>>;
+
+  /** A one-row page, shaped like the transactions endpoint's reply. */
+  function latestPage(date: string | null): Observable<PageResponse<Transaction>> {
+    return of({
+      content: date ? [{ date }] : [],
+      totalElements: date ? 1 : 0,
+      totalPages: date ? 1 : 0,
+      number: 0,
+      size: 1,
+    } as unknown as PageResponse<Transaction>);
+  }
 
   const mockPulse: DashboardPulse = {
     currentIncome: 1000,
@@ -58,6 +72,7 @@ describe('DashboardComponent', () => {
       getMerchantBreakdown: vi.fn().mockReturnValue(of(mockMerchants)),
     };
     mockToast = { success: vi.fn(), error: vi.fn(), info: vi.fn() };
+    mockTransactionApi = { getTransactions: vi.fn().mockReturnValue(latestPage('2026-08-31')) };
 
     TestBed.configureTestingModule({
       imports: [DashboardComponent],
@@ -65,6 +80,7 @@ describe('DashboardComponent', () => {
         { provide: DashboardApiService, useValue: mockDashboardApi },
         { provide: CategoryApiService, useValue: {} },
         { provide: ToastService, useValue: mockToast },
+        { provide: TransactionApiService, useValue: mockTransactionApi },
         provideRouter([]),
       ],
     }).compileComponents();
@@ -321,6 +337,110 @@ describe('DashboardComponent', () => {
     });
   });
 
+  describe('period with nothing in it', () => {
+    const emptyPulse = {
+      currentIncome: 0,
+      previousIncome: 3157.92,
+      currentExpense: 0,
+      previousExpense: 7.08,
+      currentSavingsRate: 0,
+      previousSavingsRate: 0,
+    };
+
+    function emptyState(): HTMLElement | null {
+      return fixture.nativeElement.querySelector('app-empty-period');
+    }
+
+    function arrangeEmpty(latestDate: string | null): void {
+      // arrange -- November 11, 2026, so Last Month is October
+      setUp(new Date(2026, 10, 11));
+      mockDashboardApi.getPulse.mockReturnValue(of(emptyPulse));
+      mockTransactionApi.getTransactions.mockReturnValue(latestPage(latestDate));
+      fixture.detectChanges();
+      // the latest-data lookup resolves inside an effect, so the template needs a second pass
+      fixture.detectChanges();
+    }
+
+    it('should replace the three cards with one calm state instead of a 100% change', () => {
+      // act
+      arrangeEmpty('2026-08-31');
+
+      // assert & verify
+      expect(emptyState()).not.toBeNull();
+      expect(fixture.debugElement.queryAll(By.directive(PulseCardComponent)).length).toBe(0);
+      expect(fixture.debugElement.query(By.directive(KeptCardComponent))).toBeNull();
+      expect(emptyState()?.textContent).toContain('No income or spending in October 2026');
+      expect(fixture.nativeElement.textContent).not.toContain('100%');
+    });
+
+    it('should offer a jump to the latest month that has data', () => {
+      // act
+      arrangeEmpty('2026-08-31');
+
+      // assert & verify
+      const anchor: HTMLAnchorElement = emptyState()!.querySelector('a') as HTMLAnchorElement;
+      expect(anchor.textContent?.trim()).toBe('Jump to August 2026');
+      expect(anchor.getAttribute('href')).toBe('/dashboard?period=CUSTOM&month=8&year=2026');
+      expect(mockTransactionApi.getTransactions).toHaveBeenCalledWith(
+        {},
+        { page: 0, size: 1, sort: 'date,desc' },
+      );
+    });
+
+    it('should offer no jump when the account has no transactions at all', () => {
+      // act
+      arrangeEmpty(null);
+
+      // assert & verify
+      expect(emptyState()).not.toBeNull();
+      expect(emptyState()?.querySelector('a')).toBeNull();
+    });
+
+    it('should offer no jump when the latest data is already inside the shown period', () => {
+      // act -- only a transfer lands in October, so the cards are empty but there is nowhere to jump
+      arrangeEmpty('2026-10-05');
+
+      // assert & verify
+      expect(emptyState()?.querySelector('a')).toBeNull();
+    });
+
+    it('should offer no jump to a month the period picker cannot reach', () => {
+      // act -- the picker offers five years back from 2026
+      arrangeEmpty('2019-03-05');
+
+      // assert & verify
+      expect(emptyState()?.querySelector('a')).toBeNull();
+    });
+
+    it('should keep the three cards, and skip the lookup, when the period has data', () => {
+      // arrange
+      setUp(new Date(2026, 10, 11));
+
+      // act
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(emptyState()).toBeNull();
+      expect(fixture.debugElement.queryAll(By.directive(PulseCardComponent)).length).toBe(2);
+      expect(mockTransactionApi.getTransactions).not.toHaveBeenCalled();
+    });
+
+    it('should still show deltas when only one side of the period is empty', () => {
+      // arrange -- income but no spending is a real result, not an empty period
+      setUp(new Date(2026, 10, 11));
+      mockDashboardApi.getPulse.mockReturnValue(
+        of({ ...emptyPulse, currentIncome: 500, previousIncome: 400 }),
+      );
+
+      // act
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(emptyState()).toBeNull();
+      expect(fixture.debugElement.queryAll(By.directive(PulseCardComponent)).length).toBe(2);
+    });
+  });
+
   describe('period in the URL', () => {
     let harness: RouterTestingHarness;
     let router: Router;
@@ -338,12 +458,14 @@ describe('DashboardComponent', () => {
         getMerchantBreakdown: vi.fn().mockReturnValue(of(mockMerchants)),
       };
       mockToast = { success: vi.fn(), error: vi.fn(), info: vi.fn() };
+      mockTransactionApi = { getTransactions: vi.fn().mockReturnValue(latestPage('2026-08-31')) };
 
       TestBed.configureTestingModule({
         providers: [
           { provide: DashboardApiService, useValue: mockDashboardApi },
           { provide: CategoryApiService, useValue: {} },
           { provide: ToastService, useValue: mockToast },
+          { provide: TransactionApiService, useValue: mockTransactionApi },
           provideRouter([{ path: 'dashboard', component: DashboardComponent }]),
         ],
       });
