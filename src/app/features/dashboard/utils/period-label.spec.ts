@@ -24,12 +24,36 @@ describe('period-label', () => {
       expect(result).toEqual({ start: '2026-08-02', end: '2026-08-31' });
     });
 
-    it('should cross a year boundary', () => {
+    it('should compare a year-to-date range against the same dates the prior year', () => {
       // act
-      const result = previousRange({ start: '2026-01-01', end: '2026-01-10' });
+      const result = previousRange({ start: '2026-01-01', end: '2026-11-12' });
 
       // assert & verify
-      expect(result).toEqual({ start: '2025-12-22', end: '2025-12-31' });
+      expect(result).toEqual({ start: '2025-01-01', end: '2025-11-12' });
+    });
+
+    it('should compare a full calendar year against the whole prior year', () => {
+      // act
+      const result = previousRange({ start: '2025-01-01', end: '2025-12-31' });
+
+      // assert & verify
+      expect(result).toEqual({ start: '2024-01-01', end: '2024-12-31' });
+    });
+
+    it('should clamp Feb 29 to Feb 28 when the prior year is not a leap year', () => {
+      // act
+      const result = previousRange({ start: '2028-01-01', end: '2028-02-29' });
+
+      // assert & verify
+      expect(result).toEqual({ start: '2027-01-01', end: '2027-02-28' });
+    });
+
+    it('should keep the same-length window for whole January, which lands on December', () => {
+      // act
+      const result = previousRange({ start: '2026-01-01', end: '2026-01-31' });
+
+      // assert & verify
+      expect(result).toEqual({ start: '2025-12-01', end: '2025-12-31' });
     });
   });
 
@@ -76,6 +100,17 @@ describe('period-label', () => {
   });
 
   describe('describePeriod', () => {
+    it('should name both years for a year-to-date comparison', () => {
+      // act
+      const text = describePeriod(
+        { start: '2026-01-01', end: '2026-11-12' },
+        { start: '2025-01-01', end: '2025-11-12' },
+      );
+
+      // assert & verify
+      expect(text).toBe('Jan 1 to Nov 12, 2026 compared with Jan 1 to Nov 12, 2025');
+    });
+
     it('should join the current and previous labels in plain words', () => {
       // act
       const text = describePeriod(monthRange(3, 2026), previousMonthRange(3, 2026));

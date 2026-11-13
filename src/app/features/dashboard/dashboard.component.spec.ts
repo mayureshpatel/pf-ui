@@ -355,25 +355,24 @@ describe('DashboardComponent', () => {
       expect(subtitleOnPage()).toBe(expected);
     });
 
-    it('should read THIS_YEAR against the 290 days before it', () => {
+    it('should read THIS_YEAR against the same dates last year', () => {
       // act
       component.selectedPreset.set('THIS_YEAR');
       fixture.detectChanges();
 
-      // assert & verify -- Jan 1 to Oct 17 is 290 days, so the window ends Dec 31, 2025 and
-      // starts Mar 17, 2025
-      const expected = 'Jan 1 to Oct 17, 2026 compared with Mar 17 to Dec 31, 2025';
+      // assert & verify
+      const expected = 'Jan 1 to Oct 17, 2026 compared with Jan 1 to Oct 17, 2025';
       expect(component.periodSubtitle()).toBe(expected);
       expect(subtitleOnPage()).toBe(expected);
     });
 
-    it('should read LAST_YEAR against the 365 days before it', () => {
+    it('should read LAST_YEAR against the whole year before it', () => {
       // act
       component.selectedPreset.set('LAST_YEAR');
       fixture.detectChanges();
 
-      // assert & verify -- 2024 is a leap year, so 365 days before Jan 1, 2025 is Jan 2, 2024
-      const expected = 'Jan 1 to Dec 31, 2025 compared with Jan 2 to Dec 31, 2024';
+      // assert & verify
+      const expected = 'Jan 1 to Dec 31, 2025 compared with Jan 1 to Dec 31, 2024';
       expect(component.periodSubtitle()).toBe(expected);
       expect(subtitleOnPage()).toBe(expected);
     });
