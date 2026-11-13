@@ -73,6 +73,17 @@ export class ShellComponent {
   }
 
   /**
+   * Moves focus to the main content, for the skip link. The link's own `#` target would be read as
+   * a route change by the router, so the jump is made here.
+   *
+   * @param event - The click on the skip link.
+   */
+  skipToMain(event: Event): void {
+    event.preventDefault();
+    document.getElementById('main-content')?.focus();
+  }
+
+  /**
    * Initiates the logout process.
    */
   logout(): void {
