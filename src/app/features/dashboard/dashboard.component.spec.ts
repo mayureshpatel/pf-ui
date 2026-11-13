@@ -561,6 +561,74 @@ describe('DashboardComponent', () => {
     });
   });
 
+  describe('drill-down links', () => {
+    function cards(): PulseCardComponent[] {
+      return fixture.debugElement
+        .queryAll(By.directive(PulseCardComponent))
+        .map((c) => c.componentInstance as PulseCardComponent);
+    }
+
+    it('should link Income and Expenses to their transactions for a preset period', () => {
+      // arrange -- June 15, 2026, so LAST_MONTH is May
+      setUp(new Date(2026, 5, 15));
+      fixture.detectChanges();
+
+      // act
+      component.selectedPreset.set('LAST_MONTH');
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(cards()[0].link()).toEqual({
+        type: 'INCOME',
+        startDate: '2026-05-01',
+        endDate: '2026-05-31',
+      });
+      expect(cards()[1].link()).toEqual({
+        type: 'EXPENSE',
+        startDate: '2026-05-01',
+        endDate: '2026-05-31',
+      });
+    });
+
+    it('should use the whole picked month for a custom period', () => {
+      // arrange
+      setUp(new Date(2026, 5, 15));
+      fixture.detectChanges();
+
+      // act
+      component.selectedPreset.set('CUSTOM');
+      component.selectedMonth.set(3);
+      component.selectedYear.set(2022);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(cards()[1].link()).toEqual({
+        type: 'EXPENSE',
+        startDate: '2022-03-01',
+        endDate: '2022-03-31',
+      });
+    });
+
+    it("should link each merchant row to that merchant's expenses for the period", () => {
+      // arrange
+      setUp(new Date(2026, 5, 15));
+      fixture.detectChanges();
+      component.selectedPreset.set('LAST_MONTH');
+      fixture.detectChanges();
+
+      // act
+      const anchor: HTMLAnchorElement = fixture.nativeElement.querySelector(
+        '[data-testid="merchant-row"] a',
+      );
+
+      // assert & verify -- merchants are ranked by total, so Merchant 7 leads
+      expect(anchor.getAttribute('href')).toBe(
+        '/transactions?type=EXPENSE&startDate=2026-05-01&endDate=2026-05-31&merchant=Merchant%207',
+      );
+      expect(anchor.getAttribute('aria-label')).toBe('Merchant 7: view transactions');
+    });
+  });
+
   // PF-864: the full subtitle for each preset, at a fixed clock. A preset is compared with the
   // immediately preceding window of the same number of days (DashboardService.getPulse), so these
   // strings are not "the previous month/year". The clock is local midday, and the strings depend
