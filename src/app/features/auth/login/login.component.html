@@ -2,10 +2,10 @@
   <p-card class="w-full max-w-md card-soft">
     <ng-template pTemplate="header">
       <div class="flex flex-col items-center pt-8 pb-4">
-        <div class="bg-primary/10 rounded-2xl p-4 mb-4">
+        <div class="bg-primary/10 rounded-xl p-4 mb-4">
           <i class="pi pi-wallet text-5xl text-primary" aria-hidden="true"></i>
         </div>
-        <h1 class="text-3xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight">Personal Finance</h1>
+        <h1 class="heading-page">Personal Finance</h1>
         <p class="text-muted-color mt-1 text-lg">Sign in to your ledger.</p>
         <p class="text-muted-color mt-1 text-sm">Self-hosted. Your data stays on your server.</p>
       </div>
@@ -34,7 +34,7 @@
           [attr.aria-describedby]="usernameInvalid() ? 'username-error' : null"
         />
         @if (usernameInvalid()) {
-          <small id="username-error" class="text-rose-500 font-medium flex items-center gap-1 animate-fade-in">
+          <small id="username-error" class="text-rose-700 dark:text-rose-400 font-medium flex items-center gap-1 animate-fade-in">
             <i class="pi pi-times-circle text-xs" aria-hidden="true"></i> Username is required
           </small>
         }
@@ -68,7 +68,7 @@
           </button>
         </div>
         @if (passwordInvalid()) {
-          <small id="password-error" class="text-rose-500 font-medium flex items-center gap-1 animate-fade-in">
+          <small id="password-error" class="text-rose-700 dark:text-rose-400 font-medium flex items-center gap-1 animate-fade-in">
             <i class="pi pi-times-circle text-xs" aria-hidden="true"></i> Password is required
           </small>
         }

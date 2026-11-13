@@ -1,9 +1,7 @@
 <div class="flex w-full flex-col gap-4">
   <app-screen-toolbar [showDivider]="false">
     <div toolbarTitle>
-      <h1 class="text-3xl font-bold tracking-tight text-surface-900 dark:text-surface-0">
-        Transactions
-      </h1>
+      <h1 class="heading-page">Transactions</h1>
     </div>
     <div toolbarFilters>
       <div class="flex items-center gap-2">
@@ -55,7 +53,7 @@
       >
         @if (isEmpty()) {
           <div
-            class="rounded-2xl border border-surface-200 p-10 text-center dark:border-surface-800"
+            class="rounded-xl border border-surface-200 p-10 text-center dark:border-surface-800"
           >
             @switch (emptyKind()) {
               @case ('filtered') {
@@ -254,7 +252,7 @@
                     [value]="bothMerchant()"
                     (valueChange)="bothMerchant.set($event); bothMerchantError.set(null)"
                   />
-                  <h3 class="mb-0 mt-4 text-sm font-semibold">Categories</h3>
+                  <h3 class="heading-panel mb-0 mt-4">Categories</h3>
                 }
                 <app-rule-match-list
                   class="mt-4 block"
@@ -266,7 +264,7 @@
                   (selectionChange)="onRuleSelection($event)"
                 />
                 @if (ruleKind() === 'both') {
-                  <h3 class="mb-0 mt-4 text-sm font-semibold">Merchants</h3>
+                  <h3 class="heading-panel mb-0 mt-4">Merchants</h3>
                   <app-rule-match-list
                     class="mt-2 block"
                     [matchConfig]="merchantConfig"

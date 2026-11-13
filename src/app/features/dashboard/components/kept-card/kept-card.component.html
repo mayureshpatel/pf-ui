@@ -6,7 +6,7 @@
       <span
         data-testid="kept-amount"
         class="text-4xl font-bold tracking-tight tabular-nums"
-        [class]="isNegative() ? 'text-rose-600 dark:text-rose-400' : 'text-primary-700 dark:text-primary-400'"
+        [class]="isNegative() ? 'text-rose-700 dark:text-rose-400' : 'text-primary-700 dark:text-primary-400'"
       >
         {{ kept() | formatCurrency }}
       </span>
@@ -15,7 +15,7 @@
         class="rounded-full px-2.5 py-0.5 text-sm font-medium"
         [class]="
           savingsRate() < 0 && income() > 0
-            ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+            ? 'bg-rose-500/10 text-rose-700 dark:text-rose-400'
             : 'bg-primary/10 text-primary-700 dark:text-primary-400'
         "
       >
@@ -25,10 +25,10 @@
 
     <span data-testid="kept-change" class="flex items-center gap-1.5 text-sm text-muted-color">
       @if (change() > 0) {
-        <i class="pi pi-arrow-up text-xs text-emerald-600 dark:text-emerald-400"></i>
+        <i class="pi pi-arrow-up text-xs text-emerald-700 dark:text-emerald-400"></i>
         {{ changeAmount() | formatCurrency }} more than last period
       } @else if (change() < 0) {
-        <i class="pi pi-arrow-down text-xs text-rose-600 dark:text-rose-400"></i>
+        <i class="pi pi-arrow-down text-xs text-rose-700 dark:text-rose-400"></i>
         {{ changeAmount() | formatCurrency }} less than last period
       } @else {
         Same as last period

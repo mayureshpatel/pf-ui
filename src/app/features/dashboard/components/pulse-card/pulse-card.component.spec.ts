@@ -340,11 +340,11 @@ describe('PulseCardComponent', () => {
 
     it('should apply a custom color class when provided, falling back to a default otherwise', () => {
       // act
-      setInputs({ value: 550, previousValue: 500, color: 'text-rose-600' });
+      setInputs({ value: 550, previousValue: 500, color: 'text-rose-700' });
 
       // assert & verify
       const valueEl = fixture.nativeElement.querySelector('[data-testid="pulse-amount"]');
-      expect(valueEl.className).toContain('text-rose-600');
+      expect(valueEl.className).toContain('text-rose-700');
     });
   });
 });

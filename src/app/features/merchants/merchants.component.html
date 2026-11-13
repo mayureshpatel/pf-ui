@@ -1,9 +1,7 @@
 <div class="flex w-full flex-col gap-4">
   <app-screen-toolbar [showDivider]="false">
     <div toolbarTitle>
-      <h1 class="text-3xl font-bold tracking-tight text-surface-900 dark:text-surface-0">
-        Merchants
-      </h1>
+      <h1 class="heading-page">Merchants</h1>
     </div>
     <div toolbarFilters>
       <p-button label="Add merchant" icon="pi pi-plus" (onClick)="startAdd()" />
@@ -23,7 +21,7 @@
       <div class="flex min-w-0 flex-col gap-4">
         @if (totalRecords() === 0 && !dataSearching()) {
           <div
-            class="rounded-2xl border border-surface-200 p-10 text-center dark:border-surface-800"
+            class="rounded-xl border border-surface-200 p-10 text-center dark:border-surface-800"
           >
             <p class="font-medium">No merchants yet</p>
             <p class="text-muted-color">

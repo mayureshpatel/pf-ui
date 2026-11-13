@@ -3,7 +3,7 @@
     aria-labelledby="card-net-worth-title"
     class="rounded-xl border border-surface-200 bg-surface-0 p-4 dark:border-surface-800 dark:bg-surface-900"
   >
-    <h3 id="card-net-worth-title" class="m-0 text-sm font-normal text-muted-color">Net worth</h3>
+    <h3 id="card-net-worth-title" class="stat-label m-0">Net worth</h3>
     <p data-testid="card-net-worth-value" class="m-0 mt-1 text-2xl font-bold tabular-nums">
       {{ dollars(summary().netWorth) }}
     </p>
@@ -16,7 +16,7 @@
     aria-labelledby="card-assets-title"
     class="rounded-xl border border-surface-200 bg-surface-0 p-4 dark:border-surface-800 dark:bg-surface-900"
   >
-    <h3 id="card-assets-title" class="m-0 text-sm font-normal text-muted-color">Assets</h3>
+    <h3 id="card-assets-title" class="stat-label m-0">Assets</h3>
     <p data-testid="card-assets-value" class="m-0 mt-1 text-2xl font-bold tabular-nums">
       {{ dollars(summary().assets) }}
     </p>
@@ -29,7 +29,7 @@
     aria-labelledby="card-debts-title"
     class="rounded-xl border border-surface-200 bg-surface-0 p-4 dark:border-surface-800 dark:bg-surface-900"
   >
-    <h3 id="card-debts-title" class="m-0 text-sm font-normal text-muted-color">Debts</h3>
+    <h3 id="card-debts-title" class="stat-label m-0">Debts</h3>
     <p data-testid="card-debts-value" class="m-0 mt-1 text-2xl font-bold tabular-nums">
       {{ dollars(summary().debts) }}
     </p>
@@ -42,7 +42,7 @@
     aria-labelledby="card-liquid-title"
     class="rounded-xl border border-surface-200 bg-surface-0 p-4 dark:border-surface-800 dark:bg-surface-900"
   >
-    <h3 id="card-liquid-title" class="m-0 text-sm font-normal text-muted-color">Liquid cash</h3>
+    <h3 id="card-liquid-title" class="stat-label m-0">Liquid cash</h3>
     <p data-testid="card-liquid-value" class="m-0 mt-1 text-2xl font-bold tabular-nums">
       {{ dollars(summary().liquidCash) }}
     </p>

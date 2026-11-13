@@ -614,7 +614,7 @@ describe('TransactionEditFormComponent', () => {
       // act
       fixture.debugElement.query(By.directive(AutoComplete)).componentInstance.show();
       fixture.detectChanges();
-      const row = Array.from(document.querySelectorAll('.pi-plus-circle'))
+      const row = Array.from(document.querySelectorAll('.pi-plus'))
         .map((icon) => icon.parentElement as HTMLElement)
         .find((el) => el.textContent?.includes('+ Create'));
 

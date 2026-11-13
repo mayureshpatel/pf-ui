@@ -1,9 +1,7 @@
 <div class="flex w-full flex-col gap-4">
   <app-screen-toolbar [showDivider]="false" class="mb-2">
     <div toolbarTitle>
-      <h1 class="text-4xl font-extrabold tracking-tight text-surface-900 dark:text-surface-0">
-        Reports
-      </h1>
+      <h1 class="heading-page">Reports</h1>
       <p class="mt-1 text-lg italic text-muted-color">
         Explore where your money comes from and goes
       </p>
@@ -113,12 +111,7 @@
 
     <div class="flex flex-col gap-1">
       <app-drill-breadcrumb [crumbs]="crumbs()" (stepBack)="onStepBack($event)" />
-      <h2
-        id="results-heading"
-        #heading
-        tabindex="-1"
-        class="m-0 text-xl font-semibold outline-none"
-      >
+      <h2 id="results-heading" #heading tabindex="-1" class="heading-section m-0 outline-none">
         {{ headingText() }}
       </h2>
       <p class="m-0 text-sm text-muted-color">

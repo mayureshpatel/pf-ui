@@ -12,13 +12,13 @@
   <div class="flex flex-col gap-6 py-2">
     <!-- Analysis Summary Card -->
     <div
-      class="p-5 rounded-2xl bg-primary/5 border border-primary/10 flex gap-4 items-center animate-in fade-in slide-in-from-top-2 duration-500"
+      class="p-5 rounded-xl bg-primary/5 border border-primary/10 flex gap-4 items-center animate-in fade-in slide-in-from-top-2 duration-500"
     >
       <div class="w-12 h-12 bg-primary/10 flex items-center justify-center shrink-0 card-soft">
         <i class="pi pi-bolt text-primary text-xl"></i>
       </div>
       <div class="flex flex-col">
-        <h3 class="font-black text-surface-900 dark:text-surface-0 tracking-tight">
+        <h3 class="heading-card">
           {{ totalCount() }} Transaction{{ totalCount() === 1 ? '' : 's' }} Identified
         </h3>
         <p class="text-xs text-muted-color leading-normal uppercase font-bold tracking-tighter">
@@ -102,7 +102,7 @@
             </td>
             <td>
               <span
-                class="text-xs font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-2 py-0.5 rounded ring-1 ring-emerald-200/50"
+                class="text-xs font-black text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-2 py-0.5 rounded-md ring-1 ring-emerald-200/50"
               >
                 {{ txn.newValue }}
               </span>

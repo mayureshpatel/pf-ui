@@ -8,7 +8,7 @@
 <div class="grid grid-cols-5 grid-rows-[auto_1fr] min-h-screen">
   <!-- Header -->
   <header
-    class="col-span-5 flex items-center justify-between px-6 h-16 border-b-2 border-b-surface-300"
+    class="col-span-5 flex items-center justify-between px-6 h-16 border-b-2 border-b-surface-300 dark:border-b-surface-700"
   >
     <div class="flex items-center gap-4">
       <p-button
@@ -45,7 +45,7 @@
   </header>
 
   <!-- Left Navigation -->
-  <div class="hidden lg:block border-r-2 border-r-surface-300">
+  <div class="hidden lg:block border-r-2 border-r-surface-300 dark:border-r-surface-700">
     <!-- Drawer for mobile -->
     <p-drawer [(visible)]="sidebarVisible" [modal]="true" appendTo="body" class="lg:hidden">
       <ng-template pTemplate="header">

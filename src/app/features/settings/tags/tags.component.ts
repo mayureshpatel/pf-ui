@@ -1,3 +1,4 @@
+import { ButtonModule } from 'primeng/button';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
@@ -50,6 +51,7 @@ type TagPanelMode = 'overview' | 'tag' | 'add';
   selector: 'app-tags',
   standalone: true,
   imports: [
+    ButtonModule,
     SkeletonModule,
     ScreenToolbarComponent,
     SidePanelComponent,

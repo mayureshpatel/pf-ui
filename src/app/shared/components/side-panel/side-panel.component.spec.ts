@@ -177,7 +177,7 @@ describe('SidePanelComponent', () => {
       // assert & verify
       expect(q('aside').className).not.toContain('fixed');
       expect(q('aside').className).not.toContain('inset-0');
-      expect(q('aside').className).toContain('rounded-2xl');
+      expect(q('aside').className).toContain('rounded-xl');
     });
 
     it('should take focus after first render by default', async () => {

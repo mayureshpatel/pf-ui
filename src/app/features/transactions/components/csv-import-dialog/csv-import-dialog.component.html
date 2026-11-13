@@ -79,7 +79,7 @@
       #stepHeading
       data-testid="step-heading"
       tabindex="-1"
-      class="m-0 text-xl font-semibold text-surface-900 outline-none dark:text-surface-0"
+      class="heading-section m-0 outline-none"
     >
       {{ currentStep().heading }}
     </h2>
@@ -90,16 +90,13 @@
           <section
             data-testid="preview-failures"
             aria-labelledby="csv-import-failures-heading"
-            class="rounded-2xl border border-rose-200 bg-rose-50 p-4 dark:border-rose-900 dark:bg-rose-950"
+            class="rounded-xl border border-rose-200 bg-rose-50 p-4 dark:border-rose-900 dark:bg-rose-950"
           >
             <h3
               id="csv-import-failures-heading"
-              class="m-0 flex items-center gap-2 text-sm font-semibold text-rose-900 dark:text-rose-100"
+              class="heading-panel m-0 flex items-center gap-2 text-rose-900 dark:text-rose-100"
             >
-              <i
-                class="pi pi-exclamation-circle text-rose-600 dark:text-rose-400"
-                aria-hidden="true"
-              ></i>
+              <i class="pi pi-times-circle text-rose-700 dark:text-rose-400" aria-hidden="true"></i>
               {{ unreadableFiles().length }}
               {{ unreadableFiles().length === 1 ? 'file' : 'files' }} could not be read
             </h3>

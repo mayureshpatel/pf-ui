@@ -12,13 +12,13 @@
   <div class="flex flex-col gap-6 py-2">
     <!-- Context Header -->
     <div
-      class="p-5 rounded-2xl bg-primary/5 border border-primary/10 flex gap-4 items-center animate-in fade-in slide-in-from-top-2 duration-500">
+      class="p-5 rounded-xl bg-primary/5 border border-primary/10 flex gap-4 items-center animate-in fade-in slide-in-from-top-2 duration-500">
       <div
         class="w-12 h-12 bg-primary/10 flex items-center justify-center shrink-0 card-soft">
         <i class="pi pi-sync text-primary text-xl"></i>
       </div>
       <div>
-        <h3 class="font-black text-surface-900 dark:text-surface-0 tracking-tight">Pattern Match Results</h3>
+        <h3 class="heading-card">Pattern Match Results</h3>
         <p class="text-xs text-muted-color leading-normal">
           Confirming identified pairs will consolidate them as internal transfers,
           removing them from income and expense calculations.
@@ -48,7 +48,7 @@
           <!-- Outgoing Side -->
           <td class="py-4">
             <div class="flex flex-col gap-1.5">
-              <span class="font-mono font-black text-lg text-rose-600 dark:text-rose-400">
+              <span class="font-mono font-black text-lg text-rose-700 dark:text-rose-400">
                 {{ suggestion.sourceTransaction.amount | formatCurrency }}
               </span>
               <div class="flex flex-col">
@@ -71,7 +71,7 @@
                 <i class="pi pi-arrow-right text-primary text-xs"></i>
               </div>
               <span
-                class="px-2 py-0.5 rounded bg-primary/5 text-primary-700 dark:text-primary-400 text-xs font-black uppercase ring-1 ring-primary/10">
+                class="px-2 py-0.5 rounded-md bg-primary/5 text-primary-700 dark:text-primary-400 text-xs font-black uppercase ring-1 ring-primary/10">
                 {{ Math.round(suggestion.confidenceScore * 100) }}% Match
               </span>
             </div>
@@ -80,7 +80,7 @@
           <!-- Incoming Side -->
           <td class="py-4">
             <div class="flex flex-col gap-1.5">
-              <span class="font-mono font-black text-lg text-emerald-600 dark:text-emerald-400">
+              <span class="font-mono font-black text-lg text-emerald-700 dark:text-emerald-400">
                 +{{ Math.abs(suggestion.targetTransaction.amount) | formatCurrency }}
               </span>
               <div class="flex flex-col">
@@ -126,7 +126,7 @@
         <tr>
           <td colspan="4" class="text-center py-16">
             <div class="flex flex-col items-center gap-2 opacity-40">
-              <i class="pi pi-check-circle text-4xl text-emerald-500"></i>
+              <i class="pi pi-check-circle text-4xl text-emerald-700 dark:text-emerald-400"></i>
               <span class="font-bold uppercase tracking-widest text-xs">No pending transfers to match</span>
             </div>
           </td>

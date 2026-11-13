@@ -5,10 +5,7 @@
   class="flex min-w-0 flex-col gap-3 outline-none"
   [style.min-height.px]="heldHeight()"
 >
-  <h3
-    id="rule-match-heading"
-    class="m-0 text-sm font-semibold text-surface-900 dark:text-surface-0"
-  >
+  <h3 id="rule-match-heading" class="heading-panel m-0 text-surface-900 dark:text-surface-0">
     Matching transactions
   </h3>
 
@@ -129,7 +126,7 @@
             <div class="flex flex-col gap-4">
               @for (group of groups(); track group.key) {
                 <section data-testid="match-group" class="flex flex-col gap-2">
-                  <h4 class="m-0 flex items-center gap-2 text-sm font-semibold">
+                  <h4 class="heading-panel m-0 flex items-center gap-2">
                     <input
                       type="checkbox"
                       data-testid="group-checkbox"

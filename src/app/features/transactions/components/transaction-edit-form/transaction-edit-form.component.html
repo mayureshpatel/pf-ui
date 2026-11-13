@@ -14,26 +14,24 @@
             type="button"
             id="type-option-{{ option.value }}"
             (click)="form.patchValue({type: option.value})"
-            class="flex flex-col items-center justify-center p-4 rounded-2xl border transition-all duration-300 group"
+            class="flex flex-col items-center justify-center p-4 rounded-xl border transition-colors duration-150"
             [class.bg-primary]="form.value.type === option.value"
             [class.bg-primary-50]="form.value.type === option.value"
             [class.border-primary]="form.value.type === option.value"
-            [class.shadow-md]="form.value.type === option.value"
             [class.ring-1]="form.value.type === option.value"
             [class.ring-primary-200]="form.value.type === option.value"
             [class.bg-surface-0]="form.value.type !== option.value"
             [class.dark:bg-surface-900]="form.value.type !== option.value"
             [class.border-surface-200]="form.value.type !== option.value"
             [class.dark:border-surface-700]="form.value.type !== option.value"
-            [class.opacity-60]="form.value.type !== option.value"
-            [class.hover:opacity-100]="form.value.type !== option.value"
-            [class.hover:shadow-xl]="form.value.type !== option.value"
-            [class.hover:-translate-y-1]="form.value.type !== option.value"
+            [class.hover:border-primary-400]="form.value.type !== option.value"
+            [class.hover:bg-surface-50]="form.value.type !== option.value"
+            [class.dark:hover:bg-surface-800]="form.value.type !== option.value"
           >
             <i
-              [class]="'pi ' + option.icon + ' text-2xl mb-2 transition-transform group-hover:scale-110 ' + (form.value.type === option.value ? 'text-primary' : option.color)"></i>
+              [class]="'pi ' + option.icon + ' text-2xl mb-2 ' + (form.value.type === option.value ? 'text-primary' : option.color)"></i>
             <span
-              [class]="'text-xs font-semibold ' + (form.value.type === option.value ? 'text-primary-700 dark:text-primary-400' : 'text-surface-500 dark:text-surface-400')">
+              [class]="'text-xs font-semibold ' + (form.value.type === option.value ? 'text-primary-700 dark:text-primary-400' : 'text-surface-700 dark:text-surface-300')">
               {{ option.label }}
             </span>
           </button>
@@ -86,7 +84,7 @@
         <ng-template #item let-merchant>
           @if (isCreateSuggestion(merchant)) {
             <div class="flex items-center gap-2 text-primary-700 dark:text-primary-400 font-semibold">
-              <i class="pi pi-plus-circle"></i>
+              <i class="pi pi-plus" aria-hidden="true"></i>
               <span class="text-sm truncate">{{ merchant.name }}</span>
             </div>
           } @else {

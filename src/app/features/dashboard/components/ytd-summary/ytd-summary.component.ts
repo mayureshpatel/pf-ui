@@ -62,7 +62,7 @@ export class YtdSummaryComponent {
       return 'text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/20';
     }
 
-    return 'text-rose-600 bg-rose-50 dark:bg-rose-950/20';
+    return 'text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/20';
   });
 
   protected readonly Math = Math;

@@ -1,3 +1,4 @@
+import { ButtonModule } from 'primeng/button';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
@@ -64,6 +65,7 @@ type RulePanelMode = 'overview' | 'rule' | 'add';
   selector: 'app-merchant-rules',
   standalone: true,
   imports: [
+    ButtonModule,
     SkeletonModule,
     ScreenToolbarComponent,
     SidePanelComponent,

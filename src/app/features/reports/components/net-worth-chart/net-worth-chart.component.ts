@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  inject,
   input,
   InputSignal,
   output,
@@ -10,6 +11,8 @@ import {
 } from '@angular/core';
 import { ChartModule } from 'primeng/chart';
 import type { ChartData, ChartOptions } from 'chart.js';
+import { ThemeService } from '@core/services/theme.service';
+import { CHART_PALETTE, ChartPalette } from '@shared/utils/chart-palette';
 import { NetWorthMeasure, NetWorthPoint } from '../../models/reports.model';
 import { chartData as buildChartData, pointMonth } from '../../utils/net-worth-helpers';
 
@@ -32,10 +35,6 @@ const DOLLARS = new Intl.NumberFormat('en-US', {
   currency: 'USD',
   maximumFractionDigits: 0,
 });
-const ASSET_COLOR = '#10b981';
-const DEBT_COLOR = '#f43f5e';
-const LINE_COLOR = '#78716c';
-const TICK_COLOR = '#94a3b8';
 
 interface MonthOption {
   value: string;
@@ -62,17 +61,25 @@ export class NetWorthChartComponent {
   /** Emits the month (yyyy-MM) the user picked. */
   readonly monthSelect: OutputEmitterRef<string> = output<string>();
 
+  private readonly theme: ThemeService = inject(ThemeService);
+
+  /** Assets share the income color and debts the expense color, as on the Dashboard chart. */
+  private readonly palette: Signal<ChartPalette> = computed((): ChartPalette =>
+    this.theme.isDarkMode() ? CHART_PALETTE.dark : CHART_PALETTE.light,
+  );
+
   protected readonly dollars = (value: number): string => DOLLARS.format(value);
 
   protected readonly chartData: Signal<ChartData<'bar' | 'line'>> = computed(() => {
     const data = buildChartData(this.points(), this.measure());
+    const palette = this.palette();
     const datasets: ChartData<'bar' | 'line'>['datasets'] = [];
     if (data.assets.length) {
       datasets.push({
         type: 'bar',
         label: 'Assets',
         data: data.assets,
-        backgroundColor: ASSET_COLOR,
+        backgroundColor: palette.income,
         stack: 'balances',
       });
     }
@@ -81,7 +88,7 @@ export class NetWorthChartComponent {
         type: 'bar',
         label: 'Debts',
         data: data.debts,
-        backgroundColor: DEBT_COLOR,
+        backgroundColor: palette.expense,
         stack: 'balances',
       });
     }
@@ -90,8 +97,8 @@ export class NetWorthChartComponent {
         type: 'line',
         label: 'Net worth',
         data: data.netWorth,
-        borderColor: LINE_COLOR,
-        backgroundColor: LINE_COLOR,
+        borderColor: palette.legend,
+        backgroundColor: palette.legend,
         borderWidth: 2,
         pointRadius: 3,
       });
@@ -99,21 +106,26 @@ export class NetWorthChartComponent {
     return { labels: data.labels, datasets };
   });
 
-  protected readonly chartOptions: ChartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: { legend: { position: 'bottom', labels: { color: TICK_COLOR } } },
-    scales: {
-      x: { stacked: true, ticks: { color: TICK_COLOR }, grid: { display: false } },
-      y: {
-        stacked: true,
-        ticks: {
-          color: TICK_COLOR,
-          callback: (value: string | number): string => DOLLARS.format(Number(value)),
+  /** Chart configuration, recomputed when the theme changes. */
+  protected readonly chartOptions: Signal<ChartOptions> = computed((): ChartOptions => {
+    const palette = this.palette();
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { color: palette.legend } } },
+      scales: {
+        x: { stacked: true, ticks: { color: palette.text }, grid: { display: false } },
+        y: {
+          stacked: true,
+          ticks: {
+            color: palette.text,
+            callback: (value: string | number): string => DOLLARS.format(Number(value)),
+          },
+          grid: { color: palette.grid },
         },
       },
-    },
-  };
+    };
+  });
 
   protected readonly monthOptions: Signal<MonthOption[]> = computed((): MonthOption[] =>
     this.points().map((p: NetWorthPoint): MonthOption => ({

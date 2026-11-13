@@ -30,7 +30,9 @@
         class="w-full"
       />
       @if (form.controls.name.invalid && form.controls.name.touched) {
-        <small class="text-rose-500 font-medium flex items-center gap-1 animate-fade-in">
+        <small
+          class="text-rose-700 dark:text-rose-400 font-medium flex items-center gap-1 animate-fade-in"
+        >
           <i class="pi pi-times-circle text-xs"></i> A name is required
         </small>
       }

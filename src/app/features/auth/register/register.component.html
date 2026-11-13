@@ -2,10 +2,10 @@
   <p-card class="w-full max-w-md card-soft">
     <ng-template pTemplate="header">
       <div class="flex flex-col items-center pt-8 pb-4">
-        <div class="bg-primary/10 rounded-2xl p-4 mb-4">
+        <div class="bg-primary/10 rounded-xl p-4 mb-4">
           <i class="pi pi-wallet text-5xl text-primary"></i>
         </div>
-        <h1 class="text-3xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight">Create Account</h1>
+        <h1 class="heading-page">Create Account</h1>
         <p class="text-muted-color mt-1 text-lg">Join us and take control of your finances.</p>
       </div>
     </ng-template>
@@ -48,11 +48,11 @@
         @if (form.controls.username.invalid && form.controls.username.touched) {
           <div class="flex flex-col gap-1 mt-1 animate-fade-in">
             @if (form.controls.username.errors?.['required']) {
-              <small class="text-rose-500 font-medium flex items-center gap-1">
+              <small class="text-rose-700 dark:text-rose-400 font-medium flex items-center gap-1">
                 <i class="pi pi-times-circle text-xs"></i> Username is required
               </small>
             } @else {
-              <small class="text-rose-500 font-medium flex items-center gap-1">
+              <small class="text-rose-700 dark:text-rose-400 font-medium flex items-center gap-1">
                 <i class="pi pi-times-circle text-xs"></i> 3-50 chars, alphanumeric/underscores only
               </small>
             }
@@ -75,7 +75,7 @@
           autocomplete="email"
         />
         @if (form.controls.email.invalid && form.controls.email.touched) {
-          <small class="text-rose-500 font-medium flex items-center gap-1 mt-1 animate-fade-in">
+          <small class="text-rose-700 dark:text-rose-400 font-medium flex items-center gap-1 mt-1 animate-fade-in">
             <i class="pi pi-times-circle text-xs"></i> Valid email is required
           </small>
         }
@@ -97,7 +97,7 @@
           autocomplete="new-password"
         />
         @if (form.controls.password.invalid && form.controls.password.touched) {
-          <small class="text-rose-500 font-medium flex items-center gap-1 mt-1 animate-fade-in">
+          <small class="text-rose-700 dark:text-rose-400 font-medium flex items-center gap-1 mt-1 animate-fade-in">
             <i class="pi pi-times-circle text-xs"></i> Password must meet security requirements
           </small>
         }
@@ -121,11 +121,11 @@
         />
         @if (form.controls.confirmPassword.touched) {
           @if (form.controls.confirmPassword.errors?.['required']) {
-            <small class="text-rose-500 font-medium flex items-center gap-1 mt-1 animate-fade-in">
+            <small class="text-rose-700 dark:text-rose-400 font-medium flex items-center gap-1 mt-1 animate-fade-in">
               <i class="pi pi-times-circle text-xs"></i> Please confirm your password
             </small>
           } @else if (form.errors?.['passwordMismatch']) {
-            <small class="text-rose-500 font-medium flex items-center gap-1 mt-1 animate-fade-in">
+            <small class="text-rose-700 dark:text-rose-400 font-medium flex items-center gap-1 mt-1 animate-fade-in">
               <i class="pi pi-exclamation-triangle text-xs"></i> Passwords do not match
             </small>
           }
