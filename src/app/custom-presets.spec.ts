@@ -22,6 +22,8 @@ describe('FinancePreset light-mode contrast', () => {
   /** Resolves "#hex" or a "{primary.700}" / "{surface.100}" reference to a hex colour. */
   function hex(value: unknown): string {
     if (typeof value !== 'string') throw new Error(`not a colour: ${String(value)}`);
+    if (value === '{text.muted.color}')
+      return hex(read('semantic.colorScheme.light.text.mutedColor'));
     const ref = /^\{(primary|surface)\.(\d+)\}$/.exec(value);
     if (!ref) return value;
     const scope = ref[1] === 'primary' ? 'semantic.primary' : 'semantic.colorScheme.light.surface';
@@ -62,6 +64,27 @@ describe('FinancePreset light-mode contrast', () => {
 
       // assert & verify
       expect(contrast(muted, surface)).toBeGreaterThanOrEqual(AA);
+    });
+  });
+
+  describe('segmented control (SelectButton) labels', () => {
+    // the period presets sit unselected on the control's own surface.100 track
+    it('should keep the unselected label readable on its track', () => {
+      // arrange
+      const label = hex(read('components.togglebutton.colorScheme.light.root.color'));
+      const track = hex(read('semantic.colorScheme.light.surface.100'));
+
+      // assert & verify
+      expect(contrast(label, track)).toBeGreaterThanOrEqual(AA);
+    });
+
+    it('should keep the unselected icon readable on its track', () => {
+      // arrange
+      const icon = hex(read('components.togglebutton.colorScheme.light.icon.color'));
+      const track = hex(read('semantic.colorScheme.light.surface.100'));
+
+      // assert & verify
+      expect(contrast(icon, track)).toBeGreaterThanOrEqual(AA);
     });
   });
 });
