@@ -102,4 +102,16 @@ describe('ShellComponent', () => {
     });
   });
 
+  describe('avatar contrast', () => {
+    it('should not set white text on the mid emerald fill, which is 2.5:1', () => {
+      // act
+      const avatar: HTMLElement = fixture.nativeElement.querySelector('p-avatar');
+
+      // assert & verify -- primary-700 gives white 5.5:1; dark mode swaps to a dark label
+      expect(avatar.classList).toContain('bg-primary-700');
+      expect(avatar.classList).not.toContain('bg-primary');
+      expect(avatar.classList).toContain('dark:bg-primary-400');
+      expect(avatar.classList).toContain('dark:text-surface-900');
+    });
+  });
 });
