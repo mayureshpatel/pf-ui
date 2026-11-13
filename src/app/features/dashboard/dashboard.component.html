@@ -65,31 +65,35 @@
   } @else if (loadError() && !pulse()) {
     <app-page-error-state message="Failed to load dashboard data." (retry)="loadAllData()" />
   } @else {
-    <!-- Row 1: income, expenses, kept -->
-    <div class="grid grid-cols-1 gap-6 md:grid-cols-4">
-      <app-pulse-card
-        title="Income"
-        [value]="pulse()?.currentIncome || 0"
-        [previousValue]="pulse()?.previousIncome || 0"
-        color="text-emerald-600 dark:text-emerald-400"
-      />
-      <app-pulse-card
-        title="Expenses"
-        [value]="pulse()?.currentExpense || 0"
-        [previousValue]="pulse()?.previousExpense || 0"
-        [inverseTrend]="true"
-        color="text-rose-600 dark:text-rose-400"
-      />
-      <div class="md:col-span-2">
-        <app-kept-card
-          [income]="pulse()?.currentIncome || 0"
-          [expense]="pulse()?.currentExpense || 0"
-          [previousIncome]="pulse()?.previousIncome || 0"
-          [previousExpense]="pulse()?.previousExpense || 0"
-          [savingsRate]="pulse()?.currentSavingsRate || 0"
+    <!-- Row 1: income, expenses, kept, or one calm statement when the period has nothing in it -->
+    @if (isEmptyPeriod()) {
+      <app-empty-period [periodLabel]="periodLabel()" [latest]="latestJump()" />
+    } @else {
+      <div class="grid grid-cols-1 gap-6 md:grid-cols-4">
+        <app-pulse-card
+          title="Income"
+          [value]="pulse()?.currentIncome || 0"
+          [previousValue]="pulse()?.previousIncome || 0"
+          color="text-emerald-600 dark:text-emerald-400"
         />
+        <app-pulse-card
+          title="Expenses"
+          [value]="pulse()?.currentExpense || 0"
+          [previousValue]="pulse()?.previousExpense || 0"
+          [inverseTrend]="true"
+          color="text-rose-600 dark:text-rose-400"
+        />
+        <div class="md:col-span-2">
+          <app-kept-card
+            [income]="pulse()?.currentIncome || 0"
+            [expense]="pulse()?.currentExpense || 0"
+            [previousIncome]="pulse()?.previousIncome || 0"
+            [previousExpense]="pulse()?.previousExpense || 0"
+            [savingsRate]="pulse()?.currentSavingsRate || 0"
+          />
+        </div>
       </div>
-    </div>
+    }
 
     <!-- Row 2: trend and year to date -->
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">

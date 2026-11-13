@@ -41,6 +41,7 @@ import { KeptCardComponent } from './components/kept-card/kept-card.component';
 import { ReviewBannerComponent } from './components/review-banner/review-banner.component';
 import {
   describePeriod,
+  formatRange,
   monthRange,
   previousMonthRange,
   previousRange,
@@ -54,6 +55,8 @@ import {
   YEARS_BACK,
 } from './utils/period-url';
 import { CategoryChartComponent } from './components/category-chart/category-chart.component';
+import { EmptyPeriodComponent, LatestData } from './components/empty-period/empty-period.component';
+import { TransactionApiService } from '@features/transactions/services/transaction-api.service';
 import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen-toolbar';
 import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
 import { toLocalDateString } from '@shared/utils/transaction.utils';
@@ -84,6 +87,7 @@ type RangePreset = PeriodPreset;
     KeptCardComponent,
     ReviewBannerComponent,
     CategoryChartComponent,
+    EmptyPeriodComponent,
     FormatCurrencyPipe,
     PageErrorStateComponent,
   ],
@@ -95,6 +99,7 @@ export class DashboardComponent implements OnInit {
   private readonly categoryApi: CategoryApiService = inject(CategoryApiService);
   private readonly toast: ToastService = inject(ToastService);
   private readonly destroyRef: DestroyRef = inject(DestroyRef);
+  private readonly transactionApi: TransactionApiService = inject(TransactionApiService);
   private readonly route: ActivatedRoute = inject(ActivatedRoute);
   private readonly router: Router = inject(Router);
 
@@ -191,6 +196,46 @@ export class DashboardComponent implements OnInit {
   /** Identifies the latest load so a cancelled one never clears the loading flag. */
   private loadId = 0;
 
+  /** The selected period as people say it, for example "October 2026". */
+  readonly periodLabel: Signal<string> = computed((): string =>
+    formatRange(this.periodRange() ?? monthRange(this.selectedMonth(), this.selectedYear())),
+  );
+
+  /**
+   * Whether the selected period has no income and no spending at all. Zero against a prior figure
+   * reads as a 100% change, so an empty period gets its own state instead of the usual cards.
+   */
+  readonly isEmptyPeriod: Signal<boolean> = computed((): boolean => {
+    const pulse: DashboardPulse | null = this.pulse();
+    return pulse !== null && pulse.currentIncome === 0 && pulse.currentExpense === 0;
+  });
+
+  /** The date (yyyy-MM-dd) of the most recent transaction, looked up only when a period is empty. */
+  private readonly latestDataDate: WritableSignal<string | null> = signal(null);
+
+  /**
+   * The latest month with data and the dashboard link that opens it, or null when there is
+   * nowhere useful to jump: no data, data already inside this period, or a month the picker
+   * does not offer.
+   */
+  readonly latestJump: Signal<LatestData | null> = computed((): LatestData | null => {
+    const date: string | null = this.latestDataDate();
+    if (!date || !/^\d{4}-\d{2}/.test(date)) {
+      return null;
+    }
+    const year = Number(date.slice(0, 4));
+    const month = Number(date.slice(5, 7));
+    const range = this.periodRange() ?? monthRange(this.selectedMonth(), this.selectedYear());
+    if (date.slice(0, 10) >= range.start && date.slice(0, 10) <= range.end) {
+      return null;
+    }
+    const link: Params = buildPeriodParams('CUSTOM', month, year);
+    if (!parsePeriodParams(link, this.currentDate, this.defaultMonthYear())) {
+      return null;
+    }
+    return { label: formatRange(monthRange(month, year)), link };
+  });
+
   /**
    * Plain-language description of the selected period and what it is compared with. Mirrors the
    * backend: a custom month is compared with the previous calendar month, a preset range with
@@ -253,6 +298,13 @@ export class DashboardComponent implements OnInit {
       const month: number = this.selectedMonth();
       const year: number = this.selectedYear();
       untracked((): void => this.writePeriodToUrl(preset, month, year));
+    });
+
+    // when a period turns out to be empty, find where the data is so the empty state can point
+    effect((): void => {
+      if (this.isEmptyPeriod()) {
+        untracked((): void => this.loadLatestDataDate());
+      }
     });
   }
 
@@ -324,6 +376,18 @@ export class DashboardComponent implements OnInit {
           this.toast.error('Failed to update dashboard data.');
           this.loadError.set(true);
         },
+      });
+  }
+
+  /** Looks up the most recent transaction's date, ignoring the selected period. */
+  private loadLatestDataDate(): void {
+    this.latestDataDate.set(null);
+    this.transactionApi
+      .getTransactions({}, { page: 0, size: 1, sort: 'date,desc' })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (page): void => this.latestDataDate.set(page.content[0]?.date ?? null),
+        error: (): void => this.latestDataDate.set(null),
       });
   }
 
