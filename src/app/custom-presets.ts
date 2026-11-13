@@ -60,6 +60,16 @@ export const FinancePreset: Preset = definePreset(Aura, {
     },
   },
   components: {
+    // The segmented control's unselected labels (the dashboard period presets) are Aura's
+    // surface.500, 4.40:1 on their surface.100 track. The muted text token is tuned to pass.
+    togglebutton: {
+      colorScheme: {
+        light: {
+          root: { color: '{text.muted.color}' },
+          icon: { color: '{text.muted.color}' },
+        },
+      },
+    },
     // PF-870: Aura fills the light-mode primary button with primary.500, which gives white text
     // 2.54:1. primary.700 gives 5.48:1. Dark mode is left as Aura has it (primary.400 with dark
     // text). Tracks PF-862's choice of primary.700 for emerald text.
