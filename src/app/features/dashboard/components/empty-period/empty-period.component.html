@@ -1,0 +1,19 @@
+<section
+  aria-label="Nothing recorded for this period"
+  class="flex flex-col items-start gap-3 rounded-xl border border-surface-200 bg-surface-0 p-6 dark:border-surface-700 dark:bg-surface-900"
+>
+  <h2 class="m-0 text-lg font-semibold text-surface-900 dark:text-surface-0">
+    No income or spending in {{ periodLabel() }}
+  </h2>
+
+  @if (latest(); as data) {
+    <p class="m-0 text-sm text-muted-color">Latest data: {{ data.label }}</p>
+    <a
+      routerLink="/dashboard"
+      [queryParams]="data.link"
+      class="inline-flex min-h-11 items-center rounded-lg border border-surface-300 px-4 text-sm font-medium text-primary-700 no-underline outline-none hover:bg-surface-100 focus-visible:ring-2 focus-visible:ring-primary-600 sm:min-h-0 sm:py-2 dark:border-surface-600 dark:text-primary-400 dark:hover:bg-surface-800"
+    >
+      Jump to {{ data.label }}
+    </a>
+  }
+</section>
