@@ -110,7 +110,19 @@ describe('ReviewBannerComponent', () => {
 
     // assert & verify
     expect(fixture.nativeElement.querySelector('section')?.getAttribute('aria-label')).toBe(
-      'Needs your review',
+      'Needs your review, all time',
     );
+  });
+
+  it('should say the counts cover all time, not the period picked above', () => {
+    // act
+    render([{ type: ActionType.UNCATEGORIZED, count: 5, message: 'x' }]);
+
+    // assert & verify
+    const heading: string = fixture.nativeElement
+      .querySelector('h2')
+      .textContent.replace(/\s+/g, ' ')
+      .trim();
+    expect(heading).toBe('Needs your review · all time');
   });
 });
