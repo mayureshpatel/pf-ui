@@ -8,15 +8,17 @@
       <p data-testid="period-subtitle" class="mt-1 text-muted-color">{{ periodSubtitle() }}</p>
     </div>
 
-    <div toolbarFilters>
+    <div toolbarFilters class="min-w-0 max-w-full">
       <div class="flex flex-wrap items-center gap-4">
-        <p-selectButton
-          [(ngModel)]="selectedPreset"
-          [options]="presetOptions"
-          optionLabel="label"
-          optionValue="value"
-          class="custom-selectbutton"
-        />
+        <div class="max-w-full">
+          <p-selectButton
+            [(ngModel)]="selectedPreset"
+            [options]="presetOptions"
+            optionLabel="label"
+            optionValue="value"
+            class="custom-selectbutton max-w-full flex-wrap"
+          />
+        </div>
 
         @if (selectedPreset() === 'CUSTOM') {
           <div class="flex items-center gap-2">
@@ -32,7 +34,7 @@
               [options]="yearOptions"
               optionLabel="label"
               optionValue="value"
-              class="w-24"
+              class="w-28"
             />
           </div>
         }
@@ -69,7 +71,8 @@
     @if (isEmptyPeriod()) {
       <app-empty-period [periodLabel]="periodLabel()" [latest]="latestJump()" />
     } @else {
-      <div class="grid grid-cols-1 gap-6 md:grid-cols-4">
+      <!-- two columns until xl, then three equal ones: the sidebar takes a fifth of the width from lg, and four cards would be too narrow to hold the larger figure size -->
+      <div class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
         <app-pulse-card
           title="Income"
           [link]="incomeLink()"
@@ -85,7 +88,7 @@
           [inverseTrend]="true"
           color="text-rose-600 dark:text-rose-400"
         />
-        <div class="md:col-span-2">
+        <div class="md:col-span-2 xl:col-span-1">
           <app-kept-card
             [income]="pulse()?.currentIncome || 0"
             [expense]="pulse()?.currentExpense || 0"
