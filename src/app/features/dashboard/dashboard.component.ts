@@ -13,7 +13,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { finalize, forkJoin } from 'rxjs';
+import { finalize, forkJoin, Subscription } from 'rxjs';
 import { CardModule } from 'primeng/card';
 import { Select } from 'primeng/select';
 import { SkeletonModule } from 'primeng/skeleton';
@@ -164,6 +164,22 @@ export class DashboardComponent implements OnInit {
   });
 
   /**
+   * The calendar year the "so far" card reports on: the year the selected period ends in, or the
+   * picked year for a custom month. Keeping it tied to the period stops the card from showing the
+   * current year while the rest of the page shows another one.
+   */
+  readonly ytdYear: Signal<number> = computed((): number => {
+    const range = this.periodRange();
+    return range ? Number(range.end.slice(0, 4)) : this.selectedYear();
+  });
+
+  /** The in-flight load, cancelled when a newer one starts so a slow reply can't overwrite it. */
+  private loadSubscription: Subscription | null = null;
+
+  /** Identifies the latest load so a cancelled one never clears the loading flag. */
+  private loadId = 0;
+
+  /**
    * Plain-language description of the selected period and what it is compared with. Mirrors the
    * backend: a custom month is compared with the previous calendar month, a preset range with
    * the immediately preceding window of the same number of days.
@@ -231,19 +247,21 @@ export class DashboardComponent implements OnInit {
    * Fetches and aggregates all data points for the current filter set.
    */
   loadAllData(): void {
+    this.loadSubscription?.unsubscribe();
+    const loadId: number = ++this.loadId;
     this.loading.set(true);
     this.loadError.set(false);
     const range = this.periodRange();
     const month: number = this.selectedMonth();
     const year: number = this.selectedYear();
 
-    forkJoin({
+    this.loadSubscription = forkJoin({
       pulse: range
         ? this.dashboardApi.getPulse(undefined, undefined, range.start, range.end)
         : this.dashboardApi.getPulse(month, year),
 
       trends: this.dashboardApi.getCashFlowTrend(),
-      ytd: this.dashboardApi.getYtdSummary(year),
+      ytd: this.dashboardApi.getYtdSummary(this.ytdYear()),
       actions: this.dashboardApi.getActionItems(),
 
       categories: range
@@ -256,7 +274,11 @@ export class DashboardComponent implements OnInit {
     })
       .pipe(
         takeUntilDestroyed(this.destroyRef),
-        finalize(() => this.loading.set(false)),
+        finalize((): void => {
+          if (loadId === this.loadId) {
+            this.loading.set(false);
+          }
+        }),
       )
       .subscribe({
         next: (res): void => {

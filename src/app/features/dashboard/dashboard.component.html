@@ -98,7 +98,7 @@
       </div>
       <div class="lg:col-span-1">
         <app-ytd-summary
-          [year]="ytd()?.year || selectedYear()"
+          [year]="ytd()?.year || ytdYear()"
           [totalIncome]="ytd()?.totalIncome || 0"
           [totalExpense]="ytd()?.totalExpense || 0"
           [avgSavingsRate]="ytd()?.avgSavingsRate || 0"
