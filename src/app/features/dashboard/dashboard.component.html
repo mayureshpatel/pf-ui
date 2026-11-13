@@ -100,7 +100,7 @@
     <!-- Row 2: trend and year to date -->
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
       <div class="lg:col-span-2">
-        <app-cash-flow-trend [data]="trends()" />
+        <app-cash-flow-trend [data]="trends()" [focus]="focusMonth()" />
       </div>
       <div class="lg:col-span-1">
         <app-ytd-summary
@@ -127,9 +127,9 @@
       <div class="lg:col-span-2">
         <p-card class="h-full">
           <ng-template pTemplate="title">
-            <span class="text-lg font-semibold text-surface-900 dark:text-surface-0"
-              >Top merchants</span
-            >
+            <h2 class="m-0 text-lg font-semibold text-surface-900 dark:text-surface-0">
+              Top merchants
+            </h2>
           </ng-template>
 
           <ul class="m-0 flex list-none flex-col p-0">

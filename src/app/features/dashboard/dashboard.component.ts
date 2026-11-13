@@ -35,7 +35,10 @@ import { DashboardApiService } from './services/dashboard-api.service';
 import { CategoryApiService } from '@features/categories/services/category-api.service';
 import { ToastService } from '@core/services/toast.service';
 import { PulseCardComponent } from './components/pulse-card/pulse-card.component';
-import { CashFlowTrendComponent } from './components/cash-flow-trend/cash-flow-trend.component';
+import {
+  CashFlowTrendComponent,
+  FocusMonth,
+} from './components/cash-flow-trend/cash-flow-trend.component';
 import { YtdSummaryComponent } from './components/ytd-summary/ytd-summary.component';
 import { KeptCardComponent } from './components/kept-card/kept-card.component';
 import { ReviewBannerComponent } from './components/review-banner/review-banner.component';
@@ -228,6 +231,21 @@ export class DashboardComponent implements OnInit {
   merchantLink(merchantName: string): Params {
     return { ...this.expenseLink(), merchant: merchantName };
   }
+
+  /**
+   * The month the chart should pick out: the selected month when the period is a single month, and
+   * null for a whole year, where no one month stands for the period.
+   */
+  readonly focusMonth: Signal<FocusMonth | null> = computed((): FocusMonth | null => {
+    const preset: RangePreset = this.selectedPreset();
+    if (preset === 'THIS_YEAR' || preset === 'LAST_YEAR') {
+      return null;
+    }
+    const start: string = (
+      this.periodRange() ?? monthRange(this.selectedMonth(), this.selectedYear())
+    ).start;
+    return { year: Number(start.slice(0, 4)), month: Number(start.slice(5, 7)) };
+  });
 
   /** The selected period as people say it, for example "October 2026". */
   readonly periodLabel: Signal<string> = computed((): string =>

@@ -337,6 +337,39 @@ describe('DashboardComponent', () => {
     });
   });
 
+  describe('month picked out in the chart', () => {
+    beforeEach(() => {
+      setUp(new Date(2026, 5, 15)); // June 15, 2026
+      fixture.detectChanges();
+    });
+
+    it('should pick out last month for the Last Month preset', () => {
+      // act
+      component.selectedPreset.set('LAST_MONTH');
+
+      // assert & verify
+      expect(component.focusMonth()).toEqual({ month: 5, year: 2026 });
+    });
+
+    it('should pick out the chosen month for a custom period', () => {
+      // act
+      component.selectedPreset.set('CUSTOM');
+      component.selectedMonth.set(3);
+      component.selectedYear.set(2025);
+
+      // assert & verify
+      expect(component.focusMonth()).toEqual({ month: 3, year: 2025 });
+    });
+
+    it('should pick out no month for a whole year', () => {
+      // act
+      component.selectedPreset.set('THIS_YEAR');
+
+      // assert & verify
+      expect(component.focusMonth()).toBeNull();
+    });
+  });
+
   describe('period with nothing in it', () => {
     const emptyPulse = {
       currentIncome: 0,
@@ -958,6 +991,21 @@ describe('DashboardComponent', () => {
       const skeleton = fixture.nativeElement.querySelector('[data-testid="dashboard-skeleton"]');
       expect(skeleton.getAttribute('role')).toBe('status');
       expect(skeleton.textContent).toContain('Loading dashboard');
+    });
+  });
+  describe('card headings', () => {
+    it('should title the merchants card with a heading', () => {
+      // arrange
+      setUp(new Date(2026, 5, 15));
+
+      // act
+      fixture.detectChanges();
+
+      // assert & verify
+      const headings: string[] = Array.from<HTMLElement>(
+        fixture.nativeElement.querySelectorAll('h2'),
+      ).map((h: HTMLElement): string => h.textContent?.trim() ?? '');
+      expect(headings).toContain('Top merchants');
     });
   });
 });
