@@ -338,7 +338,8 @@ describe('DashboardComponent', () => {
       fixture.detectChanges();
 
       // assert & verify
-      const expected = 'Oct 1 to Oct 17, 2026 compared with Sep 14 to Sep 30, 2026';
+      const expected =
+        'Oct 1 to Oct 17, 2026 compared with the 17 days before (Sep 14 to Sep 30, 2026)';
       expect(component.periodSubtitle()).toBe(expected);
       expect(subtitleOnPage()).toBe(expected);
     });
@@ -349,7 +350,7 @@ describe('DashboardComponent', () => {
       fixture.detectChanges();
 
       // assert & verify
-      const expected = 'September 2026 compared with Aug 2 to Aug 31, 2026';
+      const expected = 'September 2026 compared with the 30 days before (Aug 2 to Aug 31, 2026)';
       expect(component.periodSubtitle()).toBe(expected);
       expect(subtitleOnPage()).toBe(expected);
     });

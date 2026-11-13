@@ -62,6 +62,11 @@ describe('period-label', () => {
       expect(formatRange({ start: '2026-10-01', end: '2026-10-13' })).toBe('Oct 1 to Oct 13, 2026');
     });
 
+    it('should print a single day once', () => {
+      // assert & verify
+      expect(formatRange({ start: '2026-10-31', end: '2026-10-31' })).toBe('Oct 31, 2026');
+    });
+
     it('should print both years when a range spans two years', () => {
       // assert & verify
       expect(formatRange({ start: '2025-12-01', end: '2026-01-13' })).toBe(
@@ -77,6 +82,28 @@ describe('period-label', () => {
 
       // assert & verify
       expect(text).toBe('March 2026 compared with February 2026');
+    });
+
+    it('should explain a same-length comparison window instead of printing it like a month', () => {
+      // act
+      const text = describePeriod(
+        { start: '2026-09-01', end: '2026-09-30' },
+        { start: '2026-08-02', end: '2026-08-31' },
+      );
+
+      // assert & verify
+      expect(text).toBe('September 2026 compared with the 30 days before (Aug 2 to Aug 31, 2026)');
+    });
+
+    it('should say "the day before" for a one-day comparison window', () => {
+      // act
+      const text = describePeriod(
+        { start: '2026-11-01', end: '2026-11-01' },
+        { start: '2026-10-31', end: '2026-10-31' },
+      );
+
+      // assert & verify
+      expect(text).toBe('Nov 1, 2026 compared with the day before (Oct 31, 2026)');
     });
   });
 });

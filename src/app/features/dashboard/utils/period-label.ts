@@ -75,13 +75,12 @@ export function previousMonthRange(month: number, year: number): DateRange {
 export function formatRange(range: DateRange): string {
   const start: Date = parse(range.start);
   const end: Date = parse(range.end);
-  const sameMonth: boolean =
-    start.getUTCFullYear() === end.getUTCFullYear() && start.getUTCMonth() === end.getUTCMonth();
-  const lastDay: number = new Date(
-    Date.UTC(end.getUTCFullYear(), end.getUTCMonth() + 1, 0),
-  ).getUTCDate();
 
-  if (sameMonth && start.getUTCDate() === 1 && end.getUTCDate() === lastDay) {
+  if (range.start === range.end) {
+    return SHORT_DATE_WITH_YEAR.format(start);
+  }
+
+  if (isWholeMonth(range)) {
     return MONTH_YEAR.format(start);
   }
 
@@ -92,6 +91,18 @@ export function formatRange(range: DateRange): string {
   return `${startLabel} to ${SHORT_DATE_WITH_YEAR.format(end)}`;
 }
 
+/** Whether a range is exactly one whole calendar month. */
+function isWholeMonth(range: DateRange): boolean {
+  const start: Date = parse(range.start);
+  const end: Date = parse(range.end);
+  const sameMonth: boolean =
+    start.getUTCFullYear() === end.getUTCFullYear() && start.getUTCMonth() === end.getUTCMonth();
+  const lastDay: number = new Date(
+    Date.UTC(end.getUTCFullYear(), end.getUTCMonth() + 1, 0),
+  ).getUTCDate();
+  return sameMonth && start.getUTCDate() === 1 && end.getUTCDate() === lastDay;
+}
+
 /**
  * The dashboard header's plain-language subtitle.
  *
@@ -99,5 +110,14 @@ export function formatRange(range: DateRange): string {
  * @param previous - The period the backend compares it against.
  */
 export function describePeriod(current: DateRange, previous: DateRange): string {
-  return `${formatRange(current)} compared with ${formatRange(previous)}`;
+  if (isWholeMonth(previous)) {
+    return `${formatRange(current)} compared with ${formatRange(previous)}`;
+  }
+
+  // a same-length window rarely lines up with a calendar month, so say what it is and then
+  // where it falls, rather than printing it in a different style from the period itself
+  const days: number =
+    Math.round((parse(previous.end).getTime() - parse(previous.start).getTime()) / DAY_MS) + 1;
+  const length: string = days === 1 ? 'the day before' : `the ${days} days before`;
+  return `${formatRange(current)} compared with ${length} (${formatRange(previous)})`;
 }
