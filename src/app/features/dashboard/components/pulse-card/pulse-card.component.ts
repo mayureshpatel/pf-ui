@@ -7,8 +7,8 @@ import {
   Signal,
 } from '@angular/core';
 import { CommonModule, formatCurrency } from '@angular/common';
+import { Params, RouterLink } from '@angular/router';
 import { CardModule } from 'primeng/card';
-import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
 
 /**
  * A reusable KPI card for the dashboard that displays a metric, its trend,
@@ -17,7 +17,7 @@ import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
 @Component({
   selector: 'app-pulse-card',
   standalone: true,
-  imports: [CommonModule, CardModule, FormatCurrencyPipe],
+  imports: [CommonModule, CardModule, RouterLink],
   templateUrl: './pulse-card.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -36,6 +36,9 @@ export class PulseCardComponent {
 
   /** Whether a positive trend should be considered 'bad' (e.g., for expenses). */
   readonly inverseTrend: InputSignal<boolean> = input<boolean>(false);
+
+  /** Query params for the Transactions page that list what is behind this number; no link when null. */
+  readonly link: InputSignal<Params | null> = input<Params | null>(null);
 
   /** Custom text color class for the main value. */
   readonly color: InputSignal<string | null> = input<string | null>(null);
@@ -62,21 +65,48 @@ export class PulseCardComponent {
     return ((this.value() - prev) / Math.abs(prev)) * 100;
   });
 
+  /** A change under this many percent is too small to call a move. */
+  private static readonly FLAT_BELOW = 0.05;
+
+  /** Whether the change is too small to show as anything but "no change". */
+  readonly isFlat: Signal<boolean> = computed(
+    (): boolean => Math.abs(this.trend()) < PulseCardComponent.FLAT_BELOW,
+  );
+
   /**
-   * Derived signal providing semantic Tailwind classes for the trend indicator.
+   * The size of the change as printed: a whole percent from 1% up, one decimal below it, so a
+   * +0.2% change does not read as "0%".
+   */
+  readonly trendLabel: Signal<string> = computed((): string => {
+    const size: number = Math.abs(this.trend());
+    return size < 1 ? size.toFixed(1) : size.toFixed(0);
+  });
+
+  /** Whether the previous period has a non-zero value to compare against. */
+  readonly hasComparison: Signal<boolean> = computed((): boolean => this.previousValue() !== 0);
+
+  /** The previous value formatted for the comparison line. */
+  readonly previousLabel: Signal<string> = computed((): string => {
+    if (this.type() === 'percent') {
+      return `${this.previousValue().toFixed(1)}%`;
+    }
+    return formatCurrency(this.previousValue(), 'en-US', '$', '1.2-2');
+  });
+
+  /**
+   * Derived signal providing semantic text color classes for the trend indicator. Uses the 700
+   * shade on light surfaces (400 in dark) for AA contrast at small sizes.
    */
   readonly trendStyles = computed(() => {
     const t: number = this.trend();
-    if (t === 0) {
-      return 'text-surface-500 bg-surface-100';
+    if (this.isFlat()) {
+      return 'text-muted-color';
     }
 
     const isPositive: boolean = t > 0;
     const isGood: boolean = this.inverseTrend() ? !isPositive : isPositive;
 
-    return isGood
-      ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 ring-emerald-200/50'
-      : 'text-rose-600 bg-rose-50 dark:bg-rose-900/30 ring-rose-200/50';
+    return isGood ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400';
   });
 
   /**
@@ -84,7 +114,7 @@ export class PulseCardComponent {
    */
   readonly trendIcon: Signal<string> = computed((): string => {
     const t: number = this.trend();
-    if (t === 0) {
+    if (this.isFlat()) {
       return 'pi pi-minus';
     }
     return t > 0 ? 'pi pi-arrow-up' : 'pi pi-arrow-down';

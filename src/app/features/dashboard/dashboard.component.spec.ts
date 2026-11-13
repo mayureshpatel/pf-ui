@@ -1,12 +1,16 @@
 import { vi, Mocked } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { of, throwError } from 'rxjs';
+import { provideRouter, Router } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
+import { Observable, of, Subject, throwError } from 'rxjs';
 import { DashboardComponent } from './dashboard.component';
 import { DashboardApiService } from './services/dashboard-api.service';
 import { CategoryApiService } from '@features/categories/services/category-api.service';
 import { ToastService } from '@core/services/toast.service';
+import { TransactionApiService } from '@features/transactions/services/transaction-api.service';
 import { ActionType, DashboardPulse } from '@models/dashboard.model';
+import { PageResponse, Transaction } from '@models/transaction.model';
 import { PulseCardComponent } from './components/pulse-card/pulse-card.component';
 import { YtdSummaryComponent } from './components/ytd-summary/ytd-summary.component';
 import { KeptCardComponent } from './components/kept-card/kept-card.component';
@@ -27,6 +31,18 @@ describe('DashboardComponent', () => {
     >
   >;
   let mockToast: Mocked<Pick<ToastService, 'success' | 'error' | 'info'>>;
+  let mockTransactionApi: Mocked<Pick<TransactionApiService, 'getTransactions'>>;
+
+  /** A one-row page, shaped like the transactions endpoint's reply. */
+  function latestPage(date: string | null): Observable<PageResponse<Transaction>> {
+    return of({
+      content: date ? [{ date }] : [],
+      totalElements: date ? 1 : 0,
+      totalPages: date ? 1 : 0,
+      number: 0,
+      size: 1,
+    } as unknown as PageResponse<Transaction>);
+  }
 
   const mockPulse: DashboardPulse = {
     currentIncome: 1000,
@@ -56,6 +72,7 @@ describe('DashboardComponent', () => {
       getMerchantBreakdown: vi.fn().mockReturnValue(of(mockMerchants)),
     };
     mockToast = { success: vi.fn(), error: vi.fn(), info: vi.fn() };
+    mockTransactionApi = { getTransactions: vi.fn().mockReturnValue(latestPage('2026-08-31')) };
 
     TestBed.configureTestingModule({
       imports: [DashboardComponent],
@@ -63,6 +80,8 @@ describe('DashboardComponent', () => {
         { provide: DashboardApiService, useValue: mockDashboardApi },
         { provide: CategoryApiService, useValue: {} },
         { provide: ToastService, useValue: mockToast },
+        { provide: TransactionApiService, useValue: mockTransactionApi },
+        provideRouter([]),
       ],
     }).compileComponents();
 
@@ -318,11 +337,497 @@ describe('DashboardComponent', () => {
     });
   });
 
+  describe('month picked out in the chart', () => {
+    beforeEach(() => {
+      setUp(new Date(2026, 5, 15)); // June 15, 2026
+      fixture.detectChanges();
+    });
+
+    it('should pick out last month for the Last Month preset', () => {
+      // act
+      component.selectedPreset.set('LAST_MONTH');
+
+      // assert & verify
+      expect(component.focusMonth()).toEqual({ month: 5, year: 2026 });
+    });
+
+    it('should pick out the chosen month for a custom period', () => {
+      // act
+      component.selectedPreset.set('CUSTOM');
+      component.selectedMonth.set(3);
+      component.selectedYear.set(2025);
+
+      // assert & verify
+      expect(component.focusMonth()).toEqual({ month: 3, year: 2025 });
+    });
+
+    it('should pick out no month for a whole year', () => {
+      // act
+      component.selectedPreset.set('THIS_YEAR');
+
+      // assert & verify
+      expect(component.focusMonth()).toBeNull();
+    });
+  });
+
+  describe('layout (real browser; skipped where the test runner has none)', () => {
+    /** jsdom has no layout engine, so these checks only mean something in a real browser. */
+    function hasLayout(): boolean {
+      const probe: HTMLDivElement = document.createElement('div');
+      probe.style.cssText = 'position:absolute;width:100px;height:10px';
+      document.body.appendChild(probe);
+      const laidOut: boolean = probe.offsetWidth === 100;
+      probe.remove();
+      return laidOut;
+    }
+
+    async function render(viewport: number, contentWidth: number): Promise<void> {
+      setUp(new Date(2026, 5, 15));
+      const { page } = await import('vitest/browser');
+      await page.viewport(viewport, 900);
+      fixture.nativeElement.style.display = 'block';
+      fixture.nativeElement.style.width = `${contentWidth}px`;
+      fixture.detectChanges();
+      fixture.detectChanges();
+    }
+
+    // content width is the viewport less the sidebar (a fifth, from lg) and the page padding
+    it.each([
+      [1024, 755],
+      [1280, 960],
+      [1440, 1088],
+    ])(
+      'should keep the Income figure at its larger size at a %ipx viewport',
+      async (viewport: number, contentWidth: number) => {
+        // arrange
+        if (!hasLayout()) {
+          return;
+        }
+
+        // act
+        await render(viewport, contentWidth);
+
+        // assert & verify -- wider screens must not quiet the headline figures
+        const figure: HTMLElement = fixture.nativeElement.querySelector(
+          '[data-testid="pulse-amount"]',
+        );
+        expect(getComputedStyle(figure).fontSize).toBe('30px');
+      },
+    );
+  });
+
+  describe('period with nothing in it', () => {
+    const emptyPulse = {
+      currentIncome: 0,
+      previousIncome: 3157.92,
+      currentExpense: 0,
+      previousExpense: 7.08,
+      currentSavingsRate: 0,
+      previousSavingsRate: 0,
+    };
+
+    function emptyState(): HTMLElement | null {
+      return fixture.nativeElement.querySelector('app-empty-period');
+    }
+
+    function arrangeEmpty(latestDate: string | null): void {
+      // arrange -- November 11, 2026, so Last Month is October
+      setUp(new Date(2026, 10, 11));
+      mockDashboardApi.getPulse.mockReturnValue(of(emptyPulse));
+      mockTransactionApi.getTransactions.mockReturnValue(latestPage(latestDate));
+      fixture.detectChanges();
+      // the latest-data lookup resolves inside an effect, so the template needs a second pass
+      fixture.detectChanges();
+    }
+
+    it('should replace the three cards with one calm state instead of a 100% change', () => {
+      // act
+      arrangeEmpty('2026-08-31');
+
+      // assert & verify
+      expect(emptyState()).not.toBeNull();
+      expect(fixture.debugElement.queryAll(By.directive(PulseCardComponent)).length).toBe(0);
+      expect(fixture.debugElement.query(By.directive(KeptCardComponent))).toBeNull();
+      expect(emptyState()?.textContent).toContain('No income or spending in October 2026');
+      expect(fixture.nativeElement.textContent).not.toContain('100%');
+    });
+
+    it('should offer a jump to the latest month that has data', () => {
+      // act
+      arrangeEmpty('2026-08-31');
+
+      // assert & verify
+      const anchor: HTMLAnchorElement = emptyState()!.querySelector('a') as HTMLAnchorElement;
+      expect(anchor.textContent?.trim()).toBe('Jump to August 2026');
+      expect(anchor.getAttribute('href')).toBe('/dashboard?period=CUSTOM&month=8&year=2026');
+      expect(mockTransactionApi.getTransactions).toHaveBeenCalledWith(
+        {},
+        { page: 0, size: 1, sort: 'date,desc' },
+      );
+    });
+
+    it('should offer no jump when the account has no transactions at all', () => {
+      // act
+      arrangeEmpty(null);
+
+      // assert & verify
+      expect(emptyState()).not.toBeNull();
+      expect(emptyState()?.querySelector('a')).toBeNull();
+    });
+
+    it('should offer no jump when the latest data is already inside the shown period', () => {
+      // act -- only a transfer lands in October, so the cards are empty but there is nowhere to jump
+      arrangeEmpty('2026-10-05');
+
+      // assert & verify
+      expect(emptyState()?.querySelector('a')).toBeNull();
+    });
+
+    it('should offer no jump to a month the period picker cannot reach', () => {
+      // act -- the picker offers five years back from 2026
+      arrangeEmpty('2019-03-05');
+
+      // assert & verify
+      expect(emptyState()?.querySelector('a')).toBeNull();
+    });
+
+    it('should keep the three cards, and skip the lookup, when the period has data', () => {
+      // arrange
+      setUp(new Date(2026, 10, 11));
+
+      // act
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(emptyState()).toBeNull();
+      expect(fixture.debugElement.queryAll(By.directive(PulseCardComponent)).length).toBe(2);
+      expect(mockTransactionApi.getTransactions).not.toHaveBeenCalled();
+    });
+
+    it('should still show deltas when only one side of the period is empty', () => {
+      // arrange -- income but no spending is a real result, not an empty period
+      setUp(new Date(2026, 10, 11));
+      mockDashboardApi.getPulse.mockReturnValue(
+        of({ ...emptyPulse, currentIncome: 500, previousIncome: 400 }),
+      );
+
+      // act
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(emptyState()).toBeNull();
+      expect(fixture.debugElement.queryAll(By.directive(PulseCardComponent)).length).toBe(2);
+    });
+  });
+
+  describe('period in the URL', () => {
+    let harness: RouterTestingHarness;
+    let router: Router;
+
+    async function setUpRouted(url: string, now: Date): Promise<void> {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(now);
+
+      mockDashboardApi = {
+        getPulse: vi.fn().mockReturnValue(of(mockPulse)),
+        getCashFlowTrend: vi.fn().mockReturnValue(of([])),
+        getYtdSummary: vi.fn().mockReturnValue(of({})),
+        getActionItems: vi.fn().mockReturnValue(of([])),
+        getCategoryBreakdown: vi.fn().mockReturnValue(of([])),
+        getMerchantBreakdown: vi.fn().mockReturnValue(of(mockMerchants)),
+      };
+      mockToast = { success: vi.fn(), error: vi.fn(), info: vi.fn() };
+      mockTransactionApi = { getTransactions: vi.fn().mockReturnValue(latestPage('2026-08-31')) };
+
+      TestBed.configureTestingModule({
+        providers: [
+          { provide: DashboardApiService, useValue: mockDashboardApi },
+          { provide: CategoryApiService, useValue: {} },
+          { provide: ToastService, useValue: mockToast },
+          { provide: TransactionApiService, useValue: mockTransactionApi },
+          provideRouter([{ path: 'dashboard', component: DashboardComponent }]),
+        ],
+      });
+      router = TestBed.inject(Router);
+      harness = await RouterTestingHarness.create();
+      component = await harness.navigateByUrl(url, DashboardComponent);
+      harness.detectChanges();
+    }
+
+    it('should open on the preset named in the URL', async () => {
+      // act
+      await setUpRouted('/dashboard?period=THIS_YEAR', new Date(2026, 5, 15));
+
+      // assert & verify
+      expect(component.selectedPreset()).toBe('THIS_YEAR');
+      expect(mockDashboardApi.getPulse).toHaveBeenLastCalledWith(
+        undefined,
+        undefined,
+        '2026-01-01',
+        '2026-06-15',
+      );
+    });
+
+    it('should open on a custom month and year from the URL', async () => {
+      // act
+      await setUpRouted('/dashboard?period=CUSTOM&month=3&year=2022', new Date(2026, 5, 15));
+
+      // assert & verify
+      expect(component.selectedPreset()).toBe('CUSTOM');
+      expect(component.selectedMonth()).toBe(3);
+      expect(component.selectedYear()).toBe(2022);
+      expect(mockDashboardApi.getPulse).toHaveBeenLastCalledWith(3, 2022);
+    });
+
+    it('should fall back to Last Month for an unusable URL and tidy it', async () => {
+      // act
+      await setUpRouted('/dashboard?period=NOPE', new Date(2026, 5, 15));
+
+      // assert & verify
+      expect(component.selectedPreset()).toBe('LAST_MONTH');
+      await vi.waitFor(() => expect(router.url).toBe('/dashboard'));
+    });
+
+    it('should write a picked preset to the URL', async () => {
+      // arrange
+      await setUpRouted('/dashboard', new Date(2026, 5, 15));
+
+      // act
+      component.selectedPreset.set('THIS_YEAR');
+      harness.detectChanges();
+
+      // assert & verify
+      await vi.waitFor(() => expect(router.url).toBe('/dashboard?period=THIS_YEAR'));
+    });
+
+    it('should write the month and year for a custom period', async () => {
+      // arrange
+      await setUpRouted('/dashboard', new Date(2026, 5, 15));
+
+      // act
+      component.selectedPreset.set('CUSTOM');
+      component.selectedMonth.set(3);
+      component.selectedYear.set(2022);
+      harness.detectChanges();
+
+      // assert & verify
+      await vi.waitFor(() => expect(router.url).toBe('/dashboard?period=CUSTOM&month=3&year=2022'));
+    });
+
+    it('should clear the parameter when the default Last Month is picked again', async () => {
+      // arrange
+      await setUpRouted('/dashboard?period=THIS_YEAR', new Date(2026, 5, 15));
+
+      // act
+      component.selectedPreset.set('LAST_MONTH');
+      harness.detectChanges();
+
+      // assert & verify
+      await vi.waitFor(() => expect(router.url).toBe('/dashboard'));
+    });
+
+    it('should follow the URL when it changes, such as the Dashboard nav link', async () => {
+      // arrange
+      await setUpRouted('/dashboard?period=THIS_YEAR', new Date(2026, 5, 15));
+      expect(component.selectedPreset()).toBe('THIS_YEAR');
+
+      // act
+      await harness.navigateByUrl('/dashboard');
+      harness.detectChanges();
+
+      // assert & verify
+      expect(component.selectedPreset()).toBe('LAST_MONTH');
+    });
+  });
+
+  describe('drill-down links', () => {
+    function cards(): PulseCardComponent[] {
+      return fixture.debugElement
+        .queryAll(By.directive(PulseCardComponent))
+        .map((c) => c.componentInstance as PulseCardComponent);
+    }
+
+    it('should link Income and Expenses to their transactions for a preset period', () => {
+      // arrange -- June 15, 2026, so LAST_MONTH is May
+      setUp(new Date(2026, 5, 15));
+      fixture.detectChanges();
+
+      // act
+      component.selectedPreset.set('LAST_MONTH');
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(cards()[0].link()).toEqual({
+        type: 'INCOME',
+        startDate: '2026-05-01',
+        endDate: '2026-05-31',
+      });
+      expect(cards()[1].link()).toEqual({
+        type: 'EXPENSE',
+        startDate: '2026-05-01',
+        endDate: '2026-05-31',
+      });
+    });
+
+    it('should use the whole picked month for a custom period', () => {
+      // arrange
+      setUp(new Date(2026, 5, 15));
+      fixture.detectChanges();
+
+      // act
+      component.selectedPreset.set('CUSTOM');
+      component.selectedMonth.set(3);
+      component.selectedYear.set(2022);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(cards()[1].link()).toEqual({
+        type: 'EXPENSE',
+        startDate: '2022-03-01',
+        endDate: '2022-03-31',
+      });
+    });
+
+    it("should link each merchant row to that merchant's expenses for the period", () => {
+      // arrange
+      setUp(new Date(2026, 5, 15));
+      fixture.detectChanges();
+      component.selectedPreset.set('LAST_MONTH');
+      fixture.detectChanges();
+
+      // act
+      const anchor: HTMLAnchorElement = fixture.nativeElement.querySelector(
+        '[data-testid="merchant-row"] a',
+      );
+
+      // assert & verify -- merchants are ranked by total, so Merchant 7 leads
+      expect(anchor.getAttribute('href')).toBe(
+        '/transactions?type=EXPENSE&startDate=2026-05-01&endDate=2026-05-31&merchant=Merchant%207',
+      );
+      expect(anchor.getAttribute('aria-label')).toBe('Merchant 7: view transactions');
+    });
+  });
+
   // PF-864: the full subtitle for each preset, at a fixed clock. A preset is compared with the
   // immediately preceding window of the same number of days (DashboardService.getPulse), so these
   // strings are not "the previous month/year". The clock is local midday, and the strings depend
   // on periodRange() being local calendar days (PF-861), so run under TZ=UTC,
   // TZ=America/New_York and TZ=Europe/Helsinki.
+  describe('ytd year follows the period', () => {
+    function lastYtdYear(): number {
+      const calls = mockDashboardApi.getYtdSummary.mock.calls;
+      return calls[calls.length - 1][0] as number;
+    }
+
+    it('should ask for last year when the LAST_YEAR preset is selected', () => {
+      // arrange -- June 15, 2026
+      setUp(new Date(2026, 5, 15));
+      fixture.detectChanges();
+
+      // act
+      component.selectedPreset.set('LAST_YEAR');
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(lastYtdYear()).toBe(2025);
+    });
+
+    it('should label the ytd card with last year even when the api returns no data', () => {
+      // arrange
+      setUp(new Date(2026, 5, 15));
+      fixture.detectChanges();
+
+      // act
+      component.selectedPreset.set('LAST_YEAR');
+      fixture.detectChanges();
+
+      // assert & verify
+      const ytdSummary = fixture.debugElement.query(By.directive(YtdSummaryComponent))
+        .componentInstance as YtdSummaryComponent;
+      expect(ytdSummary.year()).toBe(2025);
+    });
+
+    it('should ask for the current year for THIS_YEAR, THIS_MONTH and LAST_MONTH mid-year', () => {
+      // arrange
+      setUp(new Date(2026, 5, 15));
+      fixture.detectChanges();
+
+      for (const preset of ['THIS_YEAR', 'THIS_MONTH', 'LAST_MONTH'] as const) {
+        // act
+        component.selectedPreset.set(preset);
+        fixture.detectChanges();
+
+        // assert & verify
+        expect(lastYtdYear()).toBe(2026);
+      }
+    });
+
+    it('should ask for the previous year when LAST_MONTH is December of that year', () => {
+      // arrange -- January 10, 2026, so last month is December 2025
+      setUp(new Date(2026, 0, 10));
+      fixture.detectChanges();
+
+      // act
+      component.selectedPreset.set('LAST_MONTH');
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(lastYtdYear()).toBe(2025);
+    });
+
+    it('should use the picked year for a custom month', () => {
+      // arrange
+      setUp(new Date(2026, 5, 15));
+      fixture.detectChanges();
+
+      // act
+      component.selectedPreset.set('CUSTOM');
+      component.selectedMonth.set(3);
+      component.selectedYear.set(2024);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(lastYtdYear()).toBe(2024);
+    });
+  });
+
+  describe('concurrent loads', () => {
+    it('should keep the latest period results when an older request finishes last', () => {
+      // arrange -- the first load hangs, a later load answers immediately
+      setUp(new Date(2026, 5, 15));
+      const slowPulse = new Subject<DashboardPulse>();
+      mockDashboardApi.getPulse.mockReturnValueOnce(slowPulse);
+      fixture.detectChanges();
+
+      // act -- switch period (fast response), then the stale response arrives
+      mockDashboardApi.getPulse.mockReturnValue(of({ ...mockPulse, currentIncome: 777 }));
+      component.selectedPreset.set('THIS_YEAR');
+      fixture.detectChanges();
+      slowPulse.next({ ...mockPulse, currentIncome: 111 });
+      slowPulse.complete();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.pulse()?.currentIncome).toBe(777);
+    });
+
+    it('should clear the loading flag once the latest load completes', () => {
+      // arrange
+      setUp(new Date(2026, 5, 15));
+      const slowPulse = new Subject<DashboardPulse>();
+      mockDashboardApi.getPulse.mockReturnValueOnce(slowPulse);
+      fixture.detectChanges();
+
+      // act
+      mockDashboardApi.getPulse.mockReturnValue(of(mockPulse));
+      component.selectedPreset.set('THIS_YEAR');
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.loading()).toBe(false);
+    });
+  });
+
   describe('periodSubtitle per preset (PF-864)', () => {
     beforeEach(() => {
       setUp(new Date(2026, 9, 17, 12, 0)); // Oct 17, 2026
@@ -338,7 +843,8 @@ describe('DashboardComponent', () => {
       fixture.detectChanges();
 
       // assert & verify
-      const expected = 'Oct 1 to Oct 17, 2026 compared with Sep 14 to Sep 30, 2026';
+      const expected =
+        'Oct 1 to Oct 17, 2026 compared with the 17 days before (Sep 14 to Sep 30, 2026)';
       expect(component.periodSubtitle()).toBe(expected);
       expect(subtitleOnPage()).toBe(expected);
     });
@@ -349,30 +855,29 @@ describe('DashboardComponent', () => {
       fixture.detectChanges();
 
       // assert & verify
-      const expected = 'September 2026 compared with Aug 2 to Aug 31, 2026';
+      const expected = 'September 2026 compared with the 30 days before (Aug 2 to Aug 31, 2026)';
       expect(component.periodSubtitle()).toBe(expected);
       expect(subtitleOnPage()).toBe(expected);
     });
 
-    it('should read THIS_YEAR against the 290 days before it', () => {
+    it('should read THIS_YEAR against the same dates last year', () => {
       // act
       component.selectedPreset.set('THIS_YEAR');
       fixture.detectChanges();
 
-      // assert & verify -- Jan 1 to Oct 17 is 290 days, so the window ends Dec 31, 2025 and
-      // starts Mar 17, 2025
-      const expected = 'Jan 1 to Oct 17, 2026 compared with Mar 17 to Dec 31, 2025';
+      // assert & verify
+      const expected = 'Jan 1 to Oct 17, 2026 compared with Jan 1 to Oct 17, 2025';
       expect(component.periodSubtitle()).toBe(expected);
       expect(subtitleOnPage()).toBe(expected);
     });
 
-    it('should read LAST_YEAR against the 365 days before it', () => {
+    it('should read LAST_YEAR against the whole year before it', () => {
       // act
       component.selectedPreset.set('LAST_YEAR');
       fixture.detectChanges();
 
-      // assert & verify -- 2024 is a leap year, so 365 days before Jan 1, 2025 is Jan 2, 2024
-      const expected = 'Jan 1 to Dec 31, 2025 compared with Jan 2 to Dec 31, 2024';
+      // assert & verify
+      const expected = 'Jan 1 to Dec 31, 2025 compared with Jan 1 to Dec 31, 2024';
       expect(component.periodSubtitle()).toBe(expected);
       expect(subtitleOnPage()).toBe(expected);
     });
@@ -532,6 +1037,21 @@ describe('DashboardComponent', () => {
       const skeleton = fixture.nativeElement.querySelector('[data-testid="dashboard-skeleton"]');
       expect(skeleton.getAttribute('role')).toBe('status');
       expect(skeleton.textContent).toContain('Loading dashboard');
+    });
+  });
+  describe('card headings', () => {
+    it('should title the merchants card with a heading', () => {
+      // arrange
+      setUp(new Date(2026, 5, 15));
+
+      // act
+      fixture.detectChanges();
+
+      // assert & verify
+      const headings: string[] = Array.from<HTMLElement>(
+        fixture.nativeElement.querySelectorAll('h2'),
+      ).map((h: HTMLElement): string => h.textContent?.trim() ?? '');
+      expect(headings).toContain('Top merchants');
     });
   });
 });

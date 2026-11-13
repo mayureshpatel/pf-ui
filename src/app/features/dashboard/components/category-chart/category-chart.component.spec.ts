@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { CategoryChartComponent } from './category-chart.component';
 import { CategoryBreakdown } from '@models/dashboard.model';
 import { Category, CategoryType } from '@models/category.model';
@@ -31,6 +32,7 @@ describe('CategoryChartComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [CategoryChartComponent],
+      providers: [provideRouter([])],
     }).compileComponents();
 
     fixture = TestBed.createComponent(CategoryChartComponent);
@@ -185,5 +187,119 @@ describe('CategoryChartComponent', () => {
       expect(text).toContain('Try a different time period.');
       expect(rowEls()).toHaveLength(0);
     });
+  });
+
+  describe('drill-down links', () => {
+    const link = { type: 'EXPENSE', startDate: '2026-05-01', endDate: '2026-05-31' };
+
+    it('should render plain rows when no link params are given', () => {
+      // act
+      setCategories(mockBreakdown);
+
+      // assert & verify
+      expect(fixture.nativeElement.querySelector('[data-testid="category-row"] a')).toBeNull();
+    });
+
+    it("should link each row to that category's transactions for the period", () => {
+      // arrange
+      fixture.componentRef.setInput('link', link);
+
+      // act
+      setCategories(mockBreakdown);
+
+      // assert & verify
+      const anchor: HTMLAnchorElement = fixture.nativeElement.querySelector(
+        '[data-testid="category-row"] a',
+      );
+      expect(anchor.getAttribute('href')).toBe(
+        '/transactions?type=EXPENSE&startDate=2026-05-01&endDate=2026-05-31&categoryName=Rent',
+      );
+      expect(anchor.getAttribute('aria-label')).toBe('Rent: view transactions');
+    });
+
+    it('should send uncategorized spending to the Uncategorized filter', () => {
+      // arrange
+      fixture.componentRef.setInput('link', link);
+
+      // act
+      setCategories([{ category: null as unknown as Category, total: -50 }]);
+
+      // assert & verify
+      const anchor: HTMLAnchorElement = fixture.nativeElement.querySelector(
+        '[data-testid="category-row"] a',
+      );
+      expect(anchor.getAttribute('href')).toContain('categoryName=null');
+      expect(anchor.getAttribute('aria-label')).toBe('Uncategorized: view transactions');
+    });
+  });
+  describe('transfers and uncategorized', () => {
+    const transfer = (name: string): Category =>
+      ({ ...category(name, '#94A3B8'), type: CategoryType.TRANSFER }) as Category;
+
+    it('should keep transfer-type categories out of the ranked spending', () => {
+      // arrange & act
+      setCategories([
+        { category: transfer('Bank Transfer'), total: -5000.55 },
+        ...mockBreakdown.slice(0, 2),
+      ]);
+
+      // assert & verify
+      expect(component.rows().map((r) => r.name)).toEqual(['Rent', 'Groceries']);
+    });
+
+    it('should total the transfers counted as spending, shown apart from the ranking', () => {
+      // arrange & act
+      setCategories([
+        { category: transfer('Bank Transfer'), total: -5000 },
+        { category: transfer('Card Payment'), total: -0.55 },
+        mockBreakdown[0],
+      ]);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.transferTotal()).toBeCloseTo(5000.55);
+      const note: string = fixture.nativeElement
+        .querySelector('[data-testid="category-transfers"]')
+        .textContent.replace(/\s+/g, ' ');
+      expect(note).toContain('$5,000.55');
+      expect(note).toContain('transfers');
+    });
+
+    it('should not show the transfer note when there are none', () => {
+      // arrange & act
+      setCategories(mockBreakdown);
+
+      // assert & verify
+      expect(fixture.nativeElement.querySelector('[data-testid="category-transfers"]')).toBeNull();
+    });
+
+    it('should still show the empty state when only transfers were recorded', () => {
+      // arrange & act
+      setCategories([{ category: transfer('Bank Transfer'), total: -100 }]);
+
+      // assert & verify
+      expect(component.hasData()).toBe(false);
+    });
+
+    it('should flag the uncategorized row as not yet categorized', () => {
+      // arrange & act
+      setCategories([{ category: null as unknown as Category, total: -50 }, mockBreakdown[0]]);
+      fixture.detectChanges();
+
+      // assert & verify
+      const flagged = component.rows().find((r) => r.name === 'Uncategorized')!;
+      expect(flagged.uncategorized).toBe(true);
+      expect(component.rows().find((r) => r.name === 'Rent')!.uncategorized).toBe(false);
+      expect(fixture.nativeElement.textContent).toContain('Not categorized yet');
+    });
+  });
+  it('should title the card with a heading so it can be jumped to', () => {
+    // arrange & act
+    setCategories(mockBreakdown);
+
+    // assert & verify
+    expect(fixture.nativeElement.querySelector('h2')?.textContent).toContain(
+      'Spending by Category',
+    );
   });
 });

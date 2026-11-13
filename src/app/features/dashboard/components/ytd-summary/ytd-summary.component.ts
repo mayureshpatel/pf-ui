@@ -36,6 +36,11 @@ export class YtdSummaryComponent {
   /** The average savings rate as a percentage. */
   readonly avgSavingsRate: InputSignal<number> = input.required<number>();
 
+  /** "so far" for the running year, "total" once the year has finished. */
+  readonly title: Signal<string> = computed((): string =>
+    this.year() < new Date().getFullYear() ? `${this.year()} total` : `${this.year()} so far`,
+  );
+
   /**
    * Derived signal calculating the net savings (Income - Expenses).
    */
