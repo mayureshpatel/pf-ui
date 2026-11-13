@@ -27,15 +27,32 @@ const SHORT_DATE_WITH_YEAR = new Intl.DateTimeFormat('en-US', {
 });
 
 /**
- * The window of the same inclusive length immediately before a range. Mirrors how
- * `DashboardService.getPulse` picks its comparison period for a date range.
+ * The window a date range is compared against. Mirrors how `DashboardService.getPulse` picks its
+ * comparison period: a range that starts on January 1 and ends in the same year (This Year, Last
+ * Year) is compared against the same dates one year earlier, with Feb 29 clamped to Feb 28; any
+ * other range is compared against the window of the same inclusive length immediately before it.
+ * Whole January is left on the same-length rule, which already lands on the prior December.
  *
  * @param range - The current period.
- * @returns The preceding period of the same length in days.
+ * @returns The period it is compared against.
  */
 export function previousRange(range: DateRange): DateRange {
   const start: Date = parse(range.start);
-  const days: number = Math.round((parse(range.end).getTime() - start.getTime()) / DAY_MS) + 1;
+  const end: Date = parse(range.end);
+
+  const startsJanuaryFirst: boolean = start.getUTCMonth() === 0 && start.getUTCDate() === 1;
+  const sameYear: boolean = start.getUTCFullYear() === end.getUTCFullYear();
+  const wholeJanuary: boolean = end.getUTCMonth() === 0 && end.getUTCDate() === 31;
+  if (startsJanuaryFirst && sameYear && !wholeJanuary) {
+    const year: number = start.getUTCFullYear() - 1;
+    const lastDay: number = new Date(Date.UTC(year, end.getUTCMonth() + 1, 0)).getUTCDate();
+    return {
+      start: toIso(new Date(Date.UTC(year, 0, 1))),
+      end: toIso(new Date(Date.UTC(year, end.getUTCMonth(), Math.min(end.getUTCDate(), lastDay)))),
+    };
+  }
+
+  const days: number = Math.round((end.getTime() - start.getTime()) / DAY_MS) + 1;
   return {
     start: toIso(new Date(start.getTime() - days * DAY_MS)),
     end: toIso(new Date(start.getTime() - DAY_MS)),
@@ -110,7 +127,7 @@ function isWholeMonth(range: DateRange): boolean {
  * @param previous - The period the backend compares it against.
  */
 export function describePeriod(current: DateRange, previous: DateRange): string {
-  if (isWholeMonth(previous)) {
+  if (isWholeMonth(previous) || isSameDatesPriorYear(current, previous)) {
     return `${formatRange(current)} compared with ${formatRange(previous)}`;
   }
 
@@ -120,4 +137,13 @@ export function describePeriod(current: DateRange, previous: DateRange): string 
     Math.round((parse(previous.end).getTime() - parse(previous.start).getTime()) / DAY_MS) + 1;
   const length: string = days === 1 ? 'the day before' : `the ${days} days before`;
   return `${formatRange(current)} compared with ${length} (${formatRange(previous)})`;
+}
+
+/** Whether `previous` is the same calendar dates as `current`, one year earlier. */
+function isSameDatesPriorYear(current: DateRange, previous: DateRange): boolean {
+  return (
+    current.start.slice(5) === previous.start.slice(5) &&
+    Number(current.start.slice(0, 4)) - 1 === Number(previous.start.slice(0, 4)) &&
+    Number(current.end.slice(0, 4)) - 1 === Number(previous.end.slice(0, 4))
+  );
 }
