@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { YtdSummaryComponent } from './ytd-summary.component';
 
@@ -36,6 +37,52 @@ describe('YtdSummaryComponent', () => {
     expect(text).toContain('2026 so far');
     expect(text).toContain('$12,000.00');
     expect(text).toContain('$8,000.00');
+  });
+
+  describe('title', () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('should say "so far" for the current year', () => {
+      // arrange
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date(2026, 5, 15));
+
+      // act
+      setInputs(2026, 12000, 8000, 33.3);
+
+      // assert & verify
+      expect(fixture.nativeElement.textContent).toContain('2026 so far');
+    });
+
+    it('should say "total" instead of "so far" for a finished year', () => {
+      // arrange
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date(2026, 5, 15));
+
+      // act
+      setInputs(2025, 12000, 8000, 33.3);
+
+      // assert & verify
+      const text: string = fixture.nativeElement.textContent;
+      expect(text).toContain('2025 total');
+      expect(text).not.toContain('so far');
+    });
+  });
+
+  describe('scope caption', () => {
+    it('should say the card covers the whole year, not just the selected period', () => {
+      // act
+      setInputs(2026, 12000, 8000, 33.3);
+
+      // assert & verify
+      const caption: string = fixture.nativeElement.querySelector(
+        '[data-testid="ytd-scope"]',
+      ).textContent;
+      expect(caption).toContain('whole year');
+      expect(caption).toContain('not just the period');
+    });
   });
 
   describe('netSavings', () => {
@@ -129,5 +176,24 @@ describe('YtdSummaryComponent', () => {
     // assert & verify
     const bar = fixture.nativeElement.querySelector('.bg-primary.h-full');
     expect(bar.style.width).toBe('0%');
+  });
+  it('should title the card with a heading so it can be jumped to', () => {
+    // act
+    setInputs(2026, 12000, 8000, 33.3);
+
+    // assert & verify
+    expect(fixture.nativeElement.querySelector('h2')?.textContent).toContain('2026 so far');
+  });
+
+  it('should draw the income figure in the emerald shade that reads on white', () => {
+    // act
+    setInputs(2026, 12000, 8000, 33.3);
+
+    // assert & verify -- emerald-600 on white is 3.7:1, short of the 4.5:1 a 16px figure needs
+    const figure: HTMLElement = Array.from<HTMLElement>(
+      fixture.nativeElement.querySelectorAll('span'),
+    ).find((el: HTMLElement): boolean => el.textContent?.includes('$12,000.00') ?? false)!;
+    expect(figure.classList).toContain('text-emerald-700');
+    expect(figure.classList).not.toContain('text-emerald-600');
   });
 });

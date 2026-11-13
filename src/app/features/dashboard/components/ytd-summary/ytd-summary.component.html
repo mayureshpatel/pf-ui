@@ -1,15 +1,18 @@
 <p-card class="h-full">
   <div class="flex flex-col gap-6">
-    <span class="text-lg font-semibold text-surface-900 dark:text-surface-0"
-      >{{ year() }} so far</span
-    >
+    <div class="flex flex-col">
+      <h2 class="m-0 text-lg font-semibold text-surface-900 dark:text-surface-0">{{ title() }}</h2>
+      <span data-testid="ytd-scope" class="text-sm text-muted-color"
+        >For the whole year, not just the period</span
+      >
+    </div>
 
     <div class="grid grid-cols-1 gap-4">
       <div
         class="flex justify-between items-center p-3 rounded-xl border border-surface-100 dark:border-surface-800"
       >
         <span class="text-sm text-muted-color">Income</span>
-        <span class="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
+        <span class="font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">
           {{ totalIncome() | formatCurrency }}
         </span>
       </div>
