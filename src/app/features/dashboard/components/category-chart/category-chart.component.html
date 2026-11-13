@@ -1,36 +1,69 @@
+<ng-template #rowBody let-row let-chevron="chevron">
+  <div class="flex items-baseline justify-between gap-3">
+    <span class="min-w-0 truncate text-sm font-semibold text-surface-900 dark:text-surface-0"
+      >{{ row.name }}
+      @if (row.uncategorized) {
+        <span class="font-normal text-muted-color"> · Not categorized yet</span>
+      }
+    </span>
+    <span class="flex shrink-0 items-baseline gap-1">
+      <span class="text-sm font-medium tabular-nums text-surface-900 dark:text-surface-0">{{
+        row.amount | formatCurrency
+      }}</span>
+      @if (chevron) {
+        <i
+          class="pi pi-angle-right self-center text-xs text-muted-color opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+          aria-hidden="true"
+        ></i>
+      }
+    </span>
+  </div>
+  <div
+    aria-hidden="true"
+    class="h-2 w-full overflow-hidden rounded-full bg-surface-200 dark:bg-surface-700"
+  >
+    <div
+      class="h-full rounded-full"
+      [style.width.%]="row.widthPct"
+      [style.background-color]="row.color"
+    ></div>
+  </div>
+</ng-template>
+
 <p-card class="h-full">
   <ng-template pTemplate="title">
-    <span class="text-lg font-semibold text-surface-900 dark:text-surface-0">{{ title() }}</span>
+    <h2 class="m-0 text-lg font-semibold text-surface-900 dark:text-surface-0">{{ title() }}</h2>
   </ng-template>
 
   <div class="mt-4 w-full">
     @if (hasData()) {
-      <ul role="list" class="m-0 flex list-none flex-col gap-4 p-0">
+      <ul role="list" class="m-0 flex list-none flex-col gap-2 p-0">
         @for (row of rows(); track row.name) {
-          <li data-testid="category-row" class="flex flex-col gap-1.5">
-            <div class="flex items-baseline justify-between gap-3">
-              <span
-                class="min-w-0 truncate text-sm font-semibold text-surface-900 dark:text-surface-0"
-                >{{ row.name }}</span
+          <li data-testid="category-row">
+            @if (linkFor(row); as query) {
+              <a
+                routerLink="/transactions"
+                [queryParams]="query"
+                [attr.aria-label]="row.name + ': view transactions'"
+                class="group -mx-2 flex flex-col gap-1.5 rounded-lg px-2 py-1.5 text-inherit no-underline outline-none hover:bg-surface-100 focus-visible:ring-2 focus-visible:ring-primary-600 dark:hover:bg-surface-800"
               >
-              <span
-                class="shrink-0 text-sm font-medium tabular-nums text-surface-900 dark:text-surface-0"
-                >{{ row.amount | formatCurrency }}</span
-              >
-            </div>
-            <div
-              aria-hidden="true"
-              class="h-2 w-full overflow-hidden rounded-full bg-surface-200 dark:bg-surface-700"
-            >
-              <div
-                class="h-full rounded-full"
-                [style.width.%]="row.widthPct"
-                [style.background-color]="row.color"
-              ></div>
-            </div>
+                <ng-container
+                  *ngTemplateOutlet="rowBody; context: { $implicit: row, chevron: true }"
+                />
+              </a>
+            } @else {
+              <div class="flex flex-col gap-1.5">
+                <ng-container *ngTemplateOutlet="rowBody; context: { $implicit: row }" />
+              </div>
+            }
           </li>
         }
       </ul>
+      @if (transferTotal() > 0) {
+        <p data-testid="category-transfers" class="m-0 mt-4 text-sm text-muted-color">
+          Not ranked: {{ transferTotal() | formatCurrency }} in transfers recorded as spending.
+        </p>
+      }
     } @else {
       <div class="flex h-48 flex-col items-center justify-center text-center animate-fade-in">
         <div class="w-16 h-16 rounded-full flex items-center justify-center mb-4">
