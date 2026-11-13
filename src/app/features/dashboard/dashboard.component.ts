@@ -8,10 +8,12 @@ import {
   OnInit,
   Signal,
   signal,
+  untracked,
   WritableSignal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute, Params, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { finalize, forkJoin, Subscription } from 'rxjs';
 import { CardModule } from 'primeng/card';
@@ -43,13 +45,21 @@ import {
   previousMonthRange,
   previousRange,
 } from './utils/period-label';
+import {
+  buildPeriodParams,
+  parsePeriodParams,
+  PeriodPreset,
+  PeriodSelection,
+  YEARS_AHEAD,
+  YEARS_BACK,
+} from './utils/period-url';
 import { CategoryChartComponent } from './components/category-chart/category-chart.component';
 import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen-toolbar';
 import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
 import { toLocalDateString } from '@shared/utils/transaction.utils';
 import { PageErrorStateComponent } from '@shared/components/page-error-state/page-error-state.component';
 
-type RangePreset = 'THIS_MONTH' | 'LAST_MONTH' | 'THIS_YEAR' | 'LAST_YEAR' | 'CUSTOM';
+type RangePreset = PeriodPreset;
 
 /**
  * Main dashboard component: how the user is doing this period, plus what needs review.
@@ -85,6 +95,8 @@ export class DashboardComponent implements OnInit {
   private readonly categoryApi: CategoryApiService = inject(CategoryApiService);
   private readonly toast: ToastService = inject(ToastService);
   private readonly destroyRef: DestroyRef = inject(DestroyRef);
+  private readonly route: ActivatedRoute = inject(ActivatedRoute);
+  private readonly router: Router = inject(Router);
 
   private readonly currentDate: Date = new Date();
 
@@ -233,6 +245,15 @@ export class DashboardComponent implements OnInit {
 
       this.loadAllData();
     });
+
+    // keep the URL in step with the selected period, so Back from a drill-through, a bookmark
+    // and a shared link all return to the same view
+    effect((): void => {
+      const preset: RangePreset = this.selectedPreset();
+      const month: number = this.selectedMonth();
+      const year: number = this.selectedYear();
+      untracked((): void => this.writePeriodToUrl(preset, month, year));
+    });
   }
 
   /**
@@ -241,6 +262,12 @@ export class DashboardComponent implements OnInit {
   ngOnInit(): void {
     this.initializeSelectedPeriod();
     this.initializeYearOptions();
+
+    // the URL is the source of truth on arrival and whenever it changes, such as the Dashboard
+    // nav link returning to the default
+    this.route.queryParams
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((params: Params): void => this.applyPeriodFromUrl(params));
   }
 
   /**
@@ -301,16 +328,57 @@ export class DashboardComponent implements OnInit {
   }
 
   /**
+   * The month and year the dashboard opens on: the previous month, wrapping January to December.
+   */
+  private defaultMonthYear(): { month: number; year: number } {
+    return this.currentDate.getMonth() === 0
+      ? { month: 12, year: this.currentDate.getFullYear() - 1 }
+      : { month: this.currentDate.getMonth(), year: this.currentDate.getFullYear() };
+  }
+
+  /**
    * Sets default filters to the previous month on first load.
    */
   private initializeSelectedPeriod(): void {
-    if (this.currentDate.getMonth() === 0) {
-      this.selectedMonth.set(12);
-      this.selectedYear.set(this.currentDate.getFullYear() - 1);
-    } else {
-      this.selectedMonth.set(this.currentDate.getMonth());
-      this.selectedYear.set(this.currentDate.getFullYear());
+    const { month, year } = this.defaultMonthYear();
+    this.selectedMonth.set(month);
+    this.selectedYear.set(year);
+  }
+
+  /**
+   * Applies the period described by the URL, or the default when the URL describes none.
+   *
+   * @param params - The route's query params.
+   */
+  private applyPeriodFromUrl(params: Params): void {
+    const fallback = this.defaultMonthYear();
+    const period: PeriodSelection = parsePeriodParams(params, this.currentDate, fallback) ?? {
+      preset: 'LAST_MONTH',
+      ...fallback,
+    };
+    this.selectedPreset.set(period.preset);
+    this.selectedMonth.set(period.month);
+    this.selectedYear.set(period.year);
+  }
+
+  /**
+   * Writes the selected period to the URL, replacing the current history entry so each click
+   * does not add one, and skipping the write when the URL already says the same thing.
+   */
+  private writePeriodToUrl(preset: RangePreset, month: number, year: number): void {
+    const next: Params = buildPeriodParams(preset, month, year);
+    const current: Params = this.route.snapshot.queryParams;
+    const same: boolean = ['period', 'month', 'year'].every(
+      (key: string): boolean => String(next[key] ?? '') === String(current[key] ?? ''),
+    );
+    if (same) {
+      return;
     }
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: next,
+      replaceUrl: true,
+    });
   }
 
   /**
@@ -319,7 +387,7 @@ export class DashboardComponent implements OnInit {
   private initializeYearOptions(): void {
     const currentYear = this.currentDate.getFullYear();
     const years: YearOption[] = [];
-    for (let year = currentYear - 5; year <= currentYear + 1; year++) {
+    for (let year = currentYear - YEARS_BACK; year <= currentYear + YEARS_AHEAD; year++) {
       years.push({ label: year.toString(), value: year });
     }
     this.yearOptions = years;

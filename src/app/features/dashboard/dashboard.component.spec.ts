@@ -1,6 +1,8 @@
 import { vi, Mocked } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
+import { provideRouter, Router } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
 import { of, Subject, throwError } from 'rxjs';
 import { DashboardComponent } from './dashboard.component';
 import { DashboardApiService } from './services/dashboard-api.service';
@@ -63,6 +65,7 @@ describe('DashboardComponent', () => {
         { provide: DashboardApiService, useValue: mockDashboardApi },
         { provide: CategoryApiService, useValue: {} },
         { provide: ToastService, useValue: mockToast },
+        provideRouter([]),
       ],
     }).compileComponents();
 
@@ -315,6 +318,124 @@ describe('DashboardComponent', () => {
       // assert & verify
       expect(mockToast.error).toHaveBeenCalledWith('Failed to update dashboard data.');
       expect(component.loading()).toBe(false);
+    });
+  });
+
+  describe('period in the URL', () => {
+    let harness: RouterTestingHarness;
+    let router: Router;
+
+    async function setUpRouted(url: string, now: Date): Promise<void> {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(now);
+
+      mockDashboardApi = {
+        getPulse: vi.fn().mockReturnValue(of(mockPulse)),
+        getCashFlowTrend: vi.fn().mockReturnValue(of([])),
+        getYtdSummary: vi.fn().mockReturnValue(of({})),
+        getActionItems: vi.fn().mockReturnValue(of([])),
+        getCategoryBreakdown: vi.fn().mockReturnValue(of([])),
+        getMerchantBreakdown: vi.fn().mockReturnValue(of(mockMerchants)),
+      };
+      mockToast = { success: vi.fn(), error: vi.fn(), info: vi.fn() };
+
+      TestBed.configureTestingModule({
+        providers: [
+          { provide: DashboardApiService, useValue: mockDashboardApi },
+          { provide: CategoryApiService, useValue: {} },
+          { provide: ToastService, useValue: mockToast },
+          provideRouter([{ path: 'dashboard', component: DashboardComponent }]),
+        ],
+      });
+      router = TestBed.inject(Router);
+      harness = await RouterTestingHarness.create();
+      component = await harness.navigateByUrl(url, DashboardComponent);
+      harness.detectChanges();
+    }
+
+    it('should open on the preset named in the URL', async () => {
+      // act
+      await setUpRouted('/dashboard?period=THIS_YEAR', new Date(2026, 5, 15));
+
+      // assert & verify
+      expect(component.selectedPreset()).toBe('THIS_YEAR');
+      expect(mockDashboardApi.getPulse).toHaveBeenLastCalledWith(
+        undefined,
+        undefined,
+        '2026-01-01',
+        '2026-06-15',
+      );
+    });
+
+    it('should open on a custom month and year from the URL', async () => {
+      // act
+      await setUpRouted('/dashboard?period=CUSTOM&month=3&year=2022', new Date(2026, 5, 15));
+
+      // assert & verify
+      expect(component.selectedPreset()).toBe('CUSTOM');
+      expect(component.selectedMonth()).toBe(3);
+      expect(component.selectedYear()).toBe(2022);
+      expect(mockDashboardApi.getPulse).toHaveBeenLastCalledWith(3, 2022);
+    });
+
+    it('should fall back to Last Month for an unusable URL and tidy it', async () => {
+      // act
+      await setUpRouted('/dashboard?period=NOPE', new Date(2026, 5, 15));
+
+      // assert & verify
+      expect(component.selectedPreset()).toBe('LAST_MONTH');
+      await vi.waitFor(() => expect(router.url).toBe('/dashboard'));
+    });
+
+    it('should write a picked preset to the URL', async () => {
+      // arrange
+      await setUpRouted('/dashboard', new Date(2026, 5, 15));
+
+      // act
+      component.selectedPreset.set('THIS_YEAR');
+      harness.detectChanges();
+
+      // assert & verify
+      await vi.waitFor(() => expect(router.url).toBe('/dashboard?period=THIS_YEAR'));
+    });
+
+    it('should write the month and year for a custom period', async () => {
+      // arrange
+      await setUpRouted('/dashboard', new Date(2026, 5, 15));
+
+      // act
+      component.selectedPreset.set('CUSTOM');
+      component.selectedMonth.set(3);
+      component.selectedYear.set(2022);
+      harness.detectChanges();
+
+      // assert & verify
+      await vi.waitFor(() => expect(router.url).toBe('/dashboard?period=CUSTOM&month=3&year=2022'));
+    });
+
+    it('should clear the parameter when the default Last Month is picked again', async () => {
+      // arrange
+      await setUpRouted('/dashboard?period=THIS_YEAR', new Date(2026, 5, 15));
+
+      // act
+      component.selectedPreset.set('LAST_MONTH');
+      harness.detectChanges();
+
+      // assert & verify
+      await vi.waitFor(() => expect(router.url).toBe('/dashboard'));
+    });
+
+    it('should follow the URL when it changes, such as the Dashboard nav link', async () => {
+      // arrange
+      await setUpRouted('/dashboard?period=THIS_YEAR', new Date(2026, 5, 15));
+      expect(component.selectedPreset()).toBe('THIS_YEAR');
+
+      // act
+      await harness.navigateByUrl('/dashboard');
+      harness.detectChanges();
+
+      // assert & verify
+      expect(component.selectedPreset()).toBe('LAST_MONTH');
     });
   });
 
