@@ -370,6 +370,52 @@ describe('DashboardComponent', () => {
     });
   });
 
+  describe('layout (real browser; skipped where the test runner has none)', () => {
+    /** jsdom has no layout engine, so these checks only mean something in a real browser. */
+    function hasLayout(): boolean {
+      const probe: HTMLDivElement = document.createElement('div');
+      probe.style.cssText = 'position:absolute;width:100px;height:10px';
+      document.body.appendChild(probe);
+      const laidOut: boolean = probe.offsetWidth === 100;
+      probe.remove();
+      return laidOut;
+    }
+
+    async function render(viewport: number, contentWidth: number): Promise<void> {
+      setUp(new Date(2026, 5, 15));
+      const { page } = await import('vitest/browser');
+      await page.viewport(viewport, 900);
+      fixture.nativeElement.style.display = 'block';
+      fixture.nativeElement.style.width = `${contentWidth}px`;
+      fixture.detectChanges();
+      fixture.detectChanges();
+    }
+
+    // content width is the viewport less the sidebar (a fifth, from lg) and the page padding
+    it.each([
+      [1024, 755],
+      [1280, 960],
+      [1440, 1088],
+    ])(
+      'should keep the Income figure at its larger size at a %ipx viewport',
+      async (viewport: number, contentWidth: number) => {
+        // arrange
+        if (!hasLayout()) {
+          return;
+        }
+
+        // act
+        await render(viewport, contentWidth);
+
+        // assert & verify -- wider screens must not quiet the headline figures
+        const figure: HTMLElement = fixture.nativeElement.querySelector(
+          '[data-testid="pulse-amount"]',
+        );
+        expect(getComputedStyle(figure).fontSize).toBe('30px');
+      },
+    );
+  });
+
   describe('period with nothing in it', () => {
     const emptyPulse = {
       currentIncome: 0,
