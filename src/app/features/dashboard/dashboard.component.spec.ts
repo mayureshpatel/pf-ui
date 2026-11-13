@@ -1,7 +1,7 @@
 import { vi, Mocked } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { DashboardComponent } from './dashboard.component';
 import { DashboardApiService } from './services/dashboard-api.service';
 import { CategoryApiService } from '@features/categories/services/category-api.service';
@@ -323,6 +323,121 @@ describe('DashboardComponent', () => {
   // strings are not "the previous month/year". The clock is local midday, and the strings depend
   // on periodRange() being local calendar days (PF-861), so run under TZ=UTC,
   // TZ=America/New_York and TZ=Europe/Helsinki.
+  describe('ytd year follows the period', () => {
+    function lastYtdYear(): number {
+      const calls = mockDashboardApi.getYtdSummary.mock.calls;
+      return calls[calls.length - 1][0] as number;
+    }
+
+    it('should ask for last year when the LAST_YEAR preset is selected', () => {
+      // arrange -- June 15, 2026
+      setUp(new Date(2026, 5, 15));
+      fixture.detectChanges();
+
+      // act
+      component.selectedPreset.set('LAST_YEAR');
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(lastYtdYear()).toBe(2025);
+    });
+
+    it('should label the ytd card with last year even when the api returns no data', () => {
+      // arrange
+      setUp(new Date(2026, 5, 15));
+      fixture.detectChanges();
+
+      // act
+      component.selectedPreset.set('LAST_YEAR');
+      fixture.detectChanges();
+
+      // assert & verify
+      const ytdSummary = fixture.debugElement.query(By.directive(YtdSummaryComponent))
+        .componentInstance as YtdSummaryComponent;
+      expect(ytdSummary.year()).toBe(2025);
+    });
+
+    it('should ask for the current year for THIS_YEAR, THIS_MONTH and LAST_MONTH mid-year', () => {
+      // arrange
+      setUp(new Date(2026, 5, 15));
+      fixture.detectChanges();
+
+      for (const preset of ['THIS_YEAR', 'THIS_MONTH', 'LAST_MONTH'] as const) {
+        // act
+        component.selectedPreset.set(preset);
+        fixture.detectChanges();
+
+        // assert & verify
+        expect(lastYtdYear()).toBe(2026);
+      }
+    });
+
+    it('should ask for the previous year when LAST_MONTH is December of that year', () => {
+      // arrange -- January 10, 2026, so last month is December 2025
+      setUp(new Date(2026, 0, 10));
+      fixture.detectChanges();
+
+      // act
+      component.selectedPreset.set('LAST_MONTH');
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(lastYtdYear()).toBe(2025);
+    });
+
+    it('should use the picked year for a custom month', () => {
+      // arrange
+      setUp(new Date(2026, 5, 15));
+      fixture.detectChanges();
+
+      // act
+      component.selectedPreset.set('CUSTOM');
+      component.selectedMonth.set(3);
+      component.selectedYear.set(2024);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(lastYtdYear()).toBe(2024);
+    });
+  });
+
+  describe('concurrent loads', () => {
+    it('should keep the latest period results when an older request finishes last', () => {
+      // arrange -- the first load hangs, a later load answers immediately
+      setUp(new Date(2026, 5, 15));
+      const slowPulse = new Subject<DashboardPulse>();
+      mockDashboardApi.getPulse.mockReturnValueOnce(slowPulse);
+      fixture.detectChanges();
+
+      // act -- switch period (fast response), then the stale response arrives
+      mockDashboardApi.getPulse.mockReturnValue(of({ ...mockPulse, currentIncome: 777 }));
+      component.selectedPreset.set('THIS_YEAR');
+      fixture.detectChanges();
+      slowPulse.next({ ...mockPulse, currentIncome: 111 });
+      slowPulse.complete();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.pulse()?.currentIncome).toBe(777);
+    });
+
+    it('should clear the loading flag once the latest load completes', () => {
+      // arrange
+      setUp(new Date(2026, 5, 15));
+      const slowPulse = new Subject<DashboardPulse>();
+      mockDashboardApi.getPulse.mockReturnValueOnce(slowPulse);
+      fixture.detectChanges();
+
+      // act
+      mockDashboardApi.getPulse.mockReturnValue(of(mockPulse));
+      component.selectedPreset.set('THIS_YEAR');
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.loading()).toBe(false);
+    });
+  });
+
   describe('periodSubtitle per preset (PF-864)', () => {
     beforeEach(() => {
       setUp(new Date(2026, 9, 17, 12, 0)); // Oct 17, 2026
