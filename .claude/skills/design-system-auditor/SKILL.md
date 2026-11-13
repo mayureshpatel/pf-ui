@@ -44,9 +44,9 @@ there, matching its treatment here: a signal worth noting, not something to hard
    tooltip/axis-label callbacks (`cash-flow-trend.component.ts`, `income-expense-report.component.ts`,
    `category-chart.component.ts`) that format dates/numbers manually because neither pipe is usable
    inside a chart-config callback.
-4. **Modal vs. Drawer Sizing (soft warning, not a hard rule):** When reviewing a *new* create/edit
-   form, flag — don't auto-reject — a `p-dialog`-based form with 7+ fields, or a `DrawerComponent`
-   (`<app-drawer>`)-based form with 6 or fewer, per the modal-vs-drawer rule in `design-system.md`.
-   Field count is a heuristic starting point for a conversation, not something to hard-block on;
-   action/workflow dialogs (file upload, matching, bulk-apply flows) fall outside this rule
-   regardless of field count.
+4. **Panel vs. Dialog (soft warning, not a hard rule):** When reviewing a *new* create/edit form,
+   flag — don't auto-reject — one built as a `p-dialog` rather than in the page's docked side
+   panel (`SidePanelComponent`, `<app-side-panel>`), per the modal-vs-drawer rule in
+   `design-system.md`. A form opened from inside another form, and action/workflow dialogs (file
+   upload, matching, bulk-apply flows), fall outside this rule. `DrawerComponent` (`<app-drawer>`)
+   no longer exists (deleted 2026-11-13).
