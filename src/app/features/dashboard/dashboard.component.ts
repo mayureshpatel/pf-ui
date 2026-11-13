@@ -13,7 +13,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Params, Router } from '@angular/router';
+import { ActivatedRoute, Params, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { finalize, forkJoin, Subscription } from 'rxjs';
 import { CardModule } from 'primeng/card';
@@ -76,6 +76,7 @@ type RangePreset = PeriodPreset;
   imports: [
     CommonModule,
     FormsModule,
+    RouterLink,
     CardModule,
     Select,
     SelectButtonModule,
@@ -195,6 +196,38 @@ export class DashboardComponent implements OnInit {
 
   /** Identifies the latest load so a cancelled one never clears the loading flag. */
   private loadId = 0;
+
+  /**
+   * The selected period as the `yyyy-MM-dd` dates the Transactions page filters by: the preset's
+   * range, or the whole picked month for a custom period.
+   */
+  private readonly transactionDates: Signal<{ startDate: string; endDate: string }> = computed(
+    () => {
+      const range = this.periodRange() ?? monthRange(this.selectedMonth(), this.selectedYear());
+      return { startDate: range.start, endDate: range.end };
+    },
+  );
+
+  /** Transactions query for the income behind the Income card. */
+  readonly incomeLink: Signal<Params> = computed((): Params => ({
+    type: 'INCOME',
+    ...this.transactionDates(),
+  }));
+
+  /** Transactions query for the spending behind the Expenses card, categories and merchants. */
+  readonly expenseLink: Signal<Params> = computed((): Params => ({
+    type: 'EXPENSE',
+    ...this.transactionDates(),
+  }));
+
+  /**
+   * Transactions query for one merchant's spending in the selected period.
+   *
+   * @param merchantName - The merchant's display name, which the Transactions page filters by.
+   */
+  merchantLink(merchantName: string): Params {
+    return { ...this.expenseLink(), merchant: merchantName };
+  }
 
   /** The selected period as people say it, for example "October 2026". */
   readonly periodLabel: Signal<string> = computed((): string =>

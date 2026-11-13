@@ -72,12 +72,14 @@
       <div class="grid grid-cols-1 gap-6 md:grid-cols-4">
         <app-pulse-card
           title="Income"
+          [link]="incomeLink()"
           [value]="pulse()?.currentIncome || 0"
           [previousValue]="pulse()?.previousIncome || 0"
           color="text-emerald-600 dark:text-emerald-400"
         />
         <app-pulse-card
           title="Expenses"
+          [link]="expenseLink()"
           [value]="pulse()?.currentExpense || 0"
           [previousValue]="pulse()?.previousExpense || 0"
           [inverseTrend]="true"
@@ -115,7 +117,11 @@
 
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-5">
       <div class="lg:col-span-3">
-        <app-category-chart title="Top categories" [categories]="topCategories()" />
+        <app-category-chart
+          title="Top categories"
+          [categories]="topCategories()"
+          [link]="expenseLink()"
+        />
       </div>
 
       <div class="lg:col-span-2">
@@ -130,20 +136,33 @@
             @for (item of topMerchants(); track item.representativeMerchantId) {
               <li
                 data-testid="merchant-row"
-                class="flex items-baseline justify-between gap-3 border-b border-surface-100 py-3 last:border-b-0 dark:border-surface-800"
+                class="border-b border-surface-100 last:border-b-0 dark:border-surface-800"
               >
-                <div class="flex flex-col">
-                  <span class="font-medium text-surface-900 dark:text-surface-0">{{
-                    item.displayName
-                  }}</span>
-                  <span class="text-sm text-muted-color">
-                    {{ item.transactionCount }}
-                    {{ item.transactionCount === 1 ? 'transaction' : 'transactions' }}
+                <a
+                  routerLink="/transactions"
+                  [queryParams]="merchantLink(item.displayName)"
+                  [attr.aria-label]="item.displayName + ': view transactions'"
+                  class="group -mx-2 flex items-baseline justify-between gap-3 rounded-lg px-2 py-3 text-inherit no-underline outline-none hover:bg-surface-100 focus-visible:ring-2 focus-visible:ring-primary-600 dark:hover:bg-surface-800"
+                >
+                  <div class="flex min-w-0 flex-col">
+                    <span class="truncate font-medium text-surface-900 dark:text-surface-0">{{
+                      item.displayName
+                    }}</span>
+                    <span class="text-sm text-muted-color">
+                      {{ item.transactionCount }}
+                      {{ item.transactionCount === 1 ? 'transaction' : 'transactions' }}
+                    </span>
+                  </div>
+                  <span class="flex shrink-0 items-baseline gap-1">
+                    <span class="font-semibold tabular-nums text-surface-900 dark:text-surface-0">
+                      {{ item.total | formatCurrency }}
+                    </span>
+                    <i
+                      class="pi pi-angle-right self-center text-xs text-muted-color opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+                      aria-hidden="true"
+                    ></i>
                   </span>
-                </div>
-                <span class="font-semibold tabular-nums text-surface-900 dark:text-surface-0">
-                  {{ item.total | formatCurrency }}
-                </span>
+                </a>
               </li>
             } @empty {
               <li data-testid="merchants-empty" class="py-10 text-center text-muted-color">
