@@ -2,7 +2,7 @@
   <div class="flex flex-wrap items-center gap-2" role="group" aria-label="Filter by type">
     <button
       type="button"
-      class="cursor-pointer rounded-full border px-3 py-1 text-sm font-medium"
+      class="cursor-pointer rounded-full border px-3 py-1 text-sm font-medium max-lg:inline-flex max-lg:min-h-11 max-lg:items-center"
       [class]="pillClass(filter().type === 'ALL')"
       [attr.aria-pressed]="filter().type === 'ALL'"
       (click)="setType('ALL')"
@@ -12,7 +12,7 @@
     @for (type of types(); track type) {
       <button
         type="button"
-        class="cursor-pointer rounded-full border px-3 py-1 text-sm font-medium"
+        class="cursor-pointer rounded-full border px-3 py-1 text-sm font-medium max-lg:inline-flex max-lg:min-h-11 max-lg:items-center"
         [class]="pillClass(filter().type === type)"
         [attr.aria-pressed]="filter().type === type"
         (click)="setType(type)"
@@ -23,7 +23,7 @@
   </div>
   <button
     type="button"
-    class="cursor-pointer rounded-full border px-3 py-1 text-sm font-medium"
+    class="cursor-pointer rounded-full border px-3 py-1 text-sm font-medium max-lg:inline-flex max-lg:min-h-11 max-lg:items-center"
     [class]="pillClass(filter().unusedOnly)"
     [attr.aria-pressed]="filter().unusedOnly"
     (click)="toggleUnused()"
@@ -32,7 +32,7 @@
   </button>
   <input
     type="search"
-    class="min-w-48 flex-1 rounded-lg border border-surface-300 bg-surface-0 px-3 py-1.5 text-sm dark:border-surface-700 dark:bg-surface-900"
+    class="min-w-48 flex-1 rounded-lg border border-surface-300 bg-surface-0 px-3 py-1.5 text-sm max-lg:min-h-11 dark:border-surface-700 dark:bg-surface-900"
     placeholder="Search categories"
     aria-label="Search categories"
     [value]="filter().search"

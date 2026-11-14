@@ -5,7 +5,13 @@
     </div>
     <div toolbarFilters>
       <div class="flex flex-wrap gap-2">
-        <p-button label="Add category" icon="pi pi-plus" (onClick)="startAdd()" />
+        <p-button
+          label="Add category"
+          icon="pi pi-plus"
+          [severity]="onlyAddMode() ? 'secondary' : 'primary'"
+          [outlined]="onlyAddMode()"
+          (onClick)="startAdd()"
+        />
         <p-button
           data-testid="add-several"
           label="Add several"
@@ -14,16 +20,6 @@
           [outlined]="true"
           (onClick)="startBulkAdd()"
         />
-        @if (isEmpty()) {
-          <p-button
-            data-testid="add-starter"
-            label="Add a starter set"
-            icon="pi pi-sparkles"
-            severity="secondary"
-            [outlined]="true"
-            (onClick)="startStarter()"
-          />
-        }
       </div>
     </div>
   </app-screen-toolbar>
@@ -49,20 +45,20 @@
     </div>
   } @else {
     <div class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_26rem]">
-      <div class="flex min-w-0 flex-col gap-4">
+      <div class="flex min-w-0 flex-col gap-4 outline-none" tabindex="-1" data-focus-results>
         @if (categories().length === 0) {
-          <div
-            class="rounded-xl border border-surface-200 p-10 text-center dark:border-surface-800"
+          <app-empty-state
+            title="No categories yet"
+            description="Categories organise your income and expenses; group them under parent categories. Not sure where to start? Add a suggested set and untick anything you do not want."
           >
-            <p class="font-medium">No categories yet</p>
-            <p class="text-muted-color">
-              Create categories to organize your income and expenses. You can group them under
-              parent categories.
-            </p>
-            <p class="text-muted-color">
-              Not sure where to start? Add a suggested set and untick anything you do not want.
-            </p>
-          </div>
+            <p-button
+              data-testid="add-starter-empty"
+              label="Add a starter set"
+              severity="secondary"
+              [outlined]="true"
+              (onClick)="startStarter()"
+            />
+          </app-empty-state>
         } @else {
           <app-category-filters
             [filter]="filter()"
@@ -71,10 +67,7 @@
             (filterChange)="setFilter($event)"
           />
           @if (visibleNodes().length === 0) {
-            <div
-              class="rounded-xl border border-surface-200 p-10 text-center dark:border-surface-800"
-            >
-              <p class="mb-3 font-medium">No categories match these filters</p>
+            <app-empty-state [title]="noMatchTitle()">
               <p-button
                 data-testid="clear-filters"
                 label="Clear filters"
@@ -82,7 +75,7 @@
                 [outlined]="true"
                 (onClick)="clearFilters()"
               />
-            </div>
+            </app-empty-state>
           } @else {
             <app-category-tree
               [nodes]="visibleNodes()"
@@ -108,7 +101,7 @@
         [title]="panelTitle()"
         [saving]="saving()"
         [showClose]="panelMode() !== 'overview' && !onlyAddMode()"
-        [sheet]="panelMode() !== 'overview' && panelMode() !== 'selection'"
+        [sheet]="panelMode() !== 'overview' && panelMode() !== 'selection' && !onlyAddMode()"
         [moveFocus]="false"
         [showFooter]="
           panelMode() === 'category' ||
@@ -183,16 +176,6 @@
               [saving]="saving()"
               (save)="saveCategory($event)"
             />
-            @if (onlyAddMode()) {
-              <button
-                type="button"
-                data-testid="add-starter-inline"
-                class="mt-3 cursor-pointer text-sm underline"
-                (click)="startStarter()"
-              >
-                Or add a starter set
-              </button>
-            }
           }
           @case ('bulk') {
             <app-category-bulk-form

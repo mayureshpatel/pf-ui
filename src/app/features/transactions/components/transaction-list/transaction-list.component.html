@@ -3,6 +3,9 @@
   [attr.aria-busy]="loading() ? 'true' : null"
   [class]="loading() && transactions().length > 0 ? 'pointer-events-none opacity-60' : ''"
 >
+  @if (loading() && transactions().length === 0) {
+    <span role="status" class="sr-only">Loading transactions</span>
+  }
   @if (!grouped()) {
     <p
       data-testid="flat-note"
@@ -143,8 +146,8 @@
             data-testid="skeleton-row"
             class="border-t border-surface-100 dark:border-surface-800"
           >
-            <td [attr.colspan]="columnCount()" class="px-3 py-3">
-              <div class="h-4 animate-pulse rounded-md bg-surface-200 dark:bg-surface-700"></div>
+            <td [attr.colspan]="columnCount()" class="px-3 py-3.5">
+              <p-skeleton height="1.25rem" borderRadius="0.375rem" />
             </td>
           </tr>
         }
@@ -264,7 +267,7 @@
             data-testid="card-skeleton-row"
             class="border-t border-surface-100 px-3 py-4 dark:border-surface-800"
           >
-            <div class="h-4 animate-pulse rounded-md bg-surface-200 dark:bg-surface-700"></div>
+            <p-skeleton height="1.25rem" borderRadius="0.375rem" />
           </li>
         }
       </ul>

@@ -43,6 +43,7 @@
       data-testid="filters-button"
       [label]="appliedCount() > 0 ? 'Filters ' + appliedCount() : 'Filters'"
       icon="pi pi-sliders-h"
+      styleClass="max-lg:min-h-11"
       severity="secondary"
       [outlined]="true"
       (onClick)="filtersPopover.toggle($event)"
@@ -170,7 +171,7 @@
       <button
         type="button"
         data-testid="clear-all"
-        class="cursor-pointer text-sm text-muted-color underline"
+        class="cursor-pointer text-sm text-muted-color underline max-lg:min-h-11 max-lg:px-2"
         (click)="onClearAll()"
       >
         Clear all

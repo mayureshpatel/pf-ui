@@ -107,6 +107,9 @@ import { TransferMatchingDialogComponent } from './components/transfer-matching-
 import { BulkEditData } from './components/transaction-bulk-form/transaction-bulk-form.component';
 import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
 import { toApiDateTimeString } from '@shared/utils/transaction.utils';
+import { focusAfterClear } from '@shared/utils/focus-after-clear';
+import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
+import { SkeletonModule } from 'primeng/skeleton';
 import { PageErrorStateComponent } from '@shared/components/page-error-state/page-error-state.component';
 import { CategoryRuleApiService } from '@features/settings/category-rules/services/category-rule-api.service';
 import {
@@ -171,6 +174,8 @@ const RULE_MERCHANT_PAGE_SIZE = 2000;
     CsvImportDialogComponent,
     TransferMatchingDialogComponent,
     PageErrorStateComponent,
+    EmptyStateComponent,
+    SkeletonModule,
     RuleEditFormComponent,
     RuleMatchListComponent,
   ],
@@ -770,6 +775,23 @@ export class TransactionsComponent implements OnInit {
       .getTags()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((data: Tag[]): void => this.tags.set(data));
+  }
+
+  /** Names what found nothing: the search text when there is one, otherwise the filters. */
+  readonly noMatchTitle: Signal<string> = computed((): string => {
+    const search: string = (this.state().filter.description ?? '').trim();
+    return search ? `No transactions match "${search}"` : 'No transactions match these filters';
+  });
+
+  /**
+   * Drops every filter from the empty state and hands focus to the search box, since the button
+   * that was used goes with the empty state.
+   */
+  clearFiltersFromEmpty(): void {
+    this.onFilterChange({});
+    afterNextRender((): void => focusAfterClear(this.host.nativeElement), {
+      injector: this.injector,
+    });
   }
 
   /** Applies a new filter (period, search, popover, chips) and returns to the first page. */

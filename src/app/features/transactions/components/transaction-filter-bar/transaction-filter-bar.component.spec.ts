@@ -92,6 +92,16 @@ describe('TransactionFilterBarComponent', () => {
     );
   });
 
+  it('should keep Clear all a 44px touch target on phone', () => {
+    // arrange
+    render({ accountId: 3 });
+
+    // assert & verify
+    expect(q<HTMLButtonElement>('[data-testid="clear-all"]').className).toContain(
+      'max-lg:min-h-11',
+    );
+  });
+
   it('should clear every filter but keep the period when Clear all is used', () => {
     // arrange
     const start = new Date(2026, 9, 1);
