@@ -27,7 +27,7 @@
       @if (showDelete()) {
         <button
           type="button"
-          class="cursor-pointer rounded-lg border border-rose-300 px-3 py-1.5 text-sm text-rose-700 dark:text-rose-400"
+          class="cursor-pointer rounded-lg border border-rose-300 px-3 py-1.5 text-sm max-md:min-h-11 text-rose-700 dark:text-rose-400"
           (click)="delete.emit()"
         >
           Delete
@@ -35,7 +35,7 @@
       }
       <button
         type="button"
-        class="cursor-pointer rounded-lg bg-primary-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-800 disabled:opacity-50"
+        class="cursor-pointer rounded-lg bg-primary-700 px-3 py-1.5 text-sm max-md:min-h-11 font-medium text-white hover:bg-primary-800 disabled:opacity-50"
         [disabled]="saving() || !valid()"
         (click)="save.emit()"
       >

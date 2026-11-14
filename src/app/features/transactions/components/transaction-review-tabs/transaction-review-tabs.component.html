@@ -12,7 +12,7 @@
       [attr.aria-controls]="tabPanelId"
       [attr.tabindex]="activeTab() === 'ALL' ? 0 : -1"
       [attr.aria-selected]="activeTab() === 'ALL'"
-      class="cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium"
+      class="cursor-pointer rounded-lg px-3 py-1.5 text-sm max-md:min-h-11 font-medium"
       [class]="
         activeTab() === 'ALL'
           ? 'bg-surface-0 text-surface-900 shadow-sm dark:bg-surface-900 dark:text-surface-0'
@@ -32,7 +32,7 @@
         [attr.aria-controls]="tabPanelId"
         [attr.tabindex]="activeTab() === 'NEEDS_CATEGORY' ? 0 : -1"
         [attr.aria-selected]="activeTab() === 'NEEDS_CATEGORY'"
-        class="cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium"
+        class="cursor-pointer rounded-lg px-3 py-1.5 text-sm max-md:min-h-11 font-medium"
         [class]="
           activeTab() === 'NEEDS_CATEGORY'
             ? 'bg-surface-0 text-surface-900 shadow-sm dark:bg-surface-900 dark:text-surface-0'
@@ -53,7 +53,7 @@
   @if (transferCount() > 0) {
     <button
       type="button"
-      class="cursor-pointer rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-900 hover:border-amber-500 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"
+      class="cursor-pointer rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm max-md:min-h-11 font-medium text-amber-900 hover:border-amber-500 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"
       (click)="reviewTransfers.emit()"
     >
       <span class="tabular-nums">{{ transferCount() | number }}</span> possible transfers, review

@@ -56,7 +56,7 @@
             @if (patterns().length > 0) {
               <button
                 type="button"
-                class="cursor-pointer rounded-lg border border-surface-300 px-3 py-1.5 text-sm font-medium dark:border-surface-700"
+                class="cursor-pointer rounded-lg border border-surface-300 px-3 py-1.5 text-sm max-md:min-h-11 font-medium dark:border-surface-700"
                 (click)="openReview()"
               >
                 Review patterns
@@ -140,7 +140,7 @@
               <p class="m-0 mb-2 text-sm">Couldn't load patterns.</p>
               <button
                 type="button"
-                class="cursor-pointer rounded-lg border border-surface-300 px-3 py-1.5 text-sm font-medium dark:border-surface-700"
+                class="cursor-pointer rounded-lg border border-surface-300 px-3 py-1.5 text-sm max-md:min-h-11 font-medium dark:border-surface-700"
                 (click)="loadPatterns()"
               >
                 Retry

@@ -6,7 +6,8 @@
   3. Radii: rounded-md (controls), rounded-lg (rows, nav), rounded-xl (cards, panels), rounded-full.
   4. Headings: an h1 uses `heading-page`; no heading is heavier than bold.
   5. Icons: one glyph per meaning (see DESIGN.md, Iconography).
-  6. Figures: money and counts use `stat-figure`, `stat-figure-lg` or `row-amount`, not a loose
+  6. Headings: every h2 to h6 carries a role class (heading-section, heading-card, heading-panel, stat-label).
+  7. Figures: money and counts use `stat-figure`, `stat-figure-lg` or `row-amount`, not a loose
      weight plus `tabular-nums`.
 
 Run from pf-ui:  python3 scripts/check-design-rules.py     (exit 1 when anything is found)
@@ -57,6 +58,8 @@ for path in sorted(glob.glob(os.path.join(ROOT, '**', '*.html'), recursive=True)
         tokens = match.group(2).split()
         if match.group(1) == 'h1' and 'heading-page' not in tokens:
             report(path, text, match.start(), 'an h1 uses heading-page')
+        if match.group(1) != 'h1' and not any(t in tokens for t in ('heading-section', 'heading-card', 'heading-panel', 'stat-label')):
+            report(path, text, match.start(), f'{match.group(1)}: use heading-section, heading-card, heading-panel or stat-label')
         if 'font-black' in tokens or 'font-extrabold' in tokens:
             report(path, text, match.start(), f'{match.group(1)}: no heading is heavier than bold')
 

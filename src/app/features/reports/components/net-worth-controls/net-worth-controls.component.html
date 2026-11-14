@@ -8,7 +8,7 @@
       @for (measure of measures; track measure.value) {
         <button
           type="button"
-          class="cursor-pointer border-r border-surface-300 px-3 py-1.5 text-sm last:border-r-0 dark:border-surface-700"
+          class="cursor-pointer border-r border-surface-300 px-3 py-1.5 text-sm max-md:min-h-11 last:border-r-0 dark:border-surface-700"
           [class]="
             state().measure === measure.value
               ? 'bg-primary-700 text-white hover:bg-primary-800'
