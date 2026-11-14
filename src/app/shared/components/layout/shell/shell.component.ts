@@ -59,7 +59,10 @@ export class ShellComponent {
   ];
 
   /** Names the drawer for screen readers (PrimeNG gives it only a generic role). */
-  protected readonly drawerPt = { root: { 'aria-label': 'Navigation' } };
+  protected readonly drawerPt = {
+    root: { 'aria-label': 'Navigation' },
+    pcCloseButton: { root: { class: 'size-11' } },
+  };
 
   private readonly openNav = viewChild('openNav', { read: ElementRef });
 

@@ -48,7 +48,7 @@
         (onClick)="logout()"
         pTooltip="Logout"
         ariaLabel="Logout"
-        styleClass="size-11"
+        styleClass="size-11 !text-rose-700 dark:!text-rose-400"
       />
     </div>
   </header>
@@ -99,7 +99,7 @@
       icon="pi pi-sign-out"
       [text]="true"
       severity="danger"
-      styleClass="w-full justify-start"
+      styleClass="min-h-11 w-full justify-start !text-rose-700 dark:!text-rose-400"
       class="sm:hidden"
       (onClick)="logout()"
     />
@@ -110,9 +110,9 @@
   @for (item of navItems; track item.label) {
     <a
       [routerLink]="item.routerLink"
-      routerLinkActive="bg-primary-100 text-primary-700 dark:bg-primary-950 dark:text-primary-400"
+      routerLinkActive="bg-primary-100 font-medium text-primary-700 border-l-primary-700 dark:bg-primary-950 dark:text-primary-400 dark:border-l-primary-400"
       ariaCurrentWhenActive="page"
-      class="flex items-center gap-3 rounded-lg px-4 py-3 transition-colors hover:bg-surface-100 dark:hover:bg-surface-800"
+      class="flex items-center gap-3 rounded-lg border-l-4 border-l-transparent py-3 pl-3 pr-4 transition-colors outline-primary-700 hover:bg-surface-100 focus-visible:outline-2 focus-visible:outline-offset-2 dark:outline-primary-400 dark:hover:bg-surface-800"
       (click)="sidebarVisible.set(false)"
     >
       <i [class]="item.icon" aria-hidden="true"></i>

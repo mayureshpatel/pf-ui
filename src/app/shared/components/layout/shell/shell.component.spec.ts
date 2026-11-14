@@ -170,6 +170,19 @@ describe('ShellComponent', () => {
       );
     });
 
+    it('should size the drawer buttons to 44px and set Log out in rose-700', async () => {
+      // act
+      await openDrawer();
+
+      // assert & verify
+      const logout = document.querySelector('[data-testid="drawer-logout"] button')!;
+      expect(logout.classList).toContain('min-h-11');
+      expect(logout.classList).toContain('!text-rose-700');
+      expect(document.querySelector('.p-drawer-close-button button')?.classList).toContain(
+        'size-11',
+      );
+    });
+
     it('should offer Logout in its footer, for phones where the header hides it', async () => {
       // act
       await openDrawer();
@@ -209,6 +222,32 @@ describe('ShellComponent', () => {
         'Recurring',
         'Settings',
       ]);
+    });
+
+    it('should mark the current link with a bar and weight, not colour alone (PF-943)', async () => {
+      // act
+      await TestBed.inject(Router).navigateByUrl('/dashboard');
+      fixture.detectChanges();
+
+      // assert & verify
+      const current: HTMLElement = fixture.nativeElement.querySelector(
+        'nav a[aria-current="page"]',
+      );
+      expect(current.classList).toContain('font-medium');
+      expect(current.classList).toContain('border-l-primary-700');
+      expect(current.classList).toContain('border-l-4');
+    });
+
+    it('should give every nav link the one shared focus ring', () => {
+      // act
+      const links = Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('nav a'));
+
+      // assert & verify
+      expect(links.length).toBeGreaterThan(0);
+      for (const link of links) {
+        expect(link.classList).toContain('focus-visible:outline-2');
+        expect(link.classList).toContain('outline-primary-700');
+      }
     });
 
     it('should not present the avatar as a control', () => {
