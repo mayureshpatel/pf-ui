@@ -17,6 +17,7 @@ import {
   bucketLabel,
   formatMeasure,
   Granularity,
+  MEASURE_BAR_CLASS,
   MEASURE_LABELS,
   trendGranularity,
 } from '../../utils/explore-helpers';
@@ -59,6 +60,9 @@ export class TrendChartComponent {
 
   protected readonly measureLabel: Signal<string> = computed(
     (): string => MEASURE_LABELS[this.measure()],
+  );
+  protected readonly barClass: Signal<string> = computed(
+    (): string => MEASURE_BAR_CLASS[this.measure()],
   );
   protected readonly hasComparison: Signal<boolean> = computed(
     (): boolean => (this.trend()?.comparison.length ?? 0) > 0,

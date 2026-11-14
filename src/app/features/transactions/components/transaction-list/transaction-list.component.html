@@ -240,7 +240,7 @@
             <td class="hidden px-2 py-2 sm:px-3 text-muted-color sm:table-cell">
               {{ txn.account.name }}
             </td>
-            <td class="px-2 py-2 sm:px-3 text-right font-semibold tabular-nums">
+            <td class="px-2 py-2 sm:px-3 text-right row-amount">
               <ng-container *ngTemplateOutlet="amountText; context: { $implicit: txn }" />
             </td>
             @if (!compact()) {
@@ -300,7 +300,7 @@
                     <ng-container
                       *ngTemplateOutlet="nameCell; context: { $implicit: txn, card: true }"
                     />
-                    <span data-testid="card-amount" class="shrink-0 font-semibold tabular-nums">
+                    <span data-testid="card-amount" class="shrink-0 row-amount">
                       <ng-container *ngTemplateOutlet="amountText; context: { $implicit: txn }" />
                     </span>
                   </div>

@@ -6,7 +6,6 @@
 /* custom variant for dark mode with .my-app-dark class */
 @custom-variant dark (&:where(.my-app-dark, .my-app-dark *));
 
-
 /*
  * The page owns its canvas and base text color in both themes, so nothing depends on the
  * browser's default. PrimeNG sets `color-scheme` on `.my-app-dark` itself.
@@ -50,4 +49,13 @@
 
 @utility stat-label {
   @apply text-sm font-normal text-muted-color;
+}
+@utility stat-figure {
+  @apply text-2xl font-extrabold tracking-tight tabular-nums;
+}
+@utility stat-figure-lg {
+  @apply text-3xl font-extrabold tracking-tight tabular-nums;
+}
+@utility row-amount {
+  @apply font-semibold tabular-nums;
 }

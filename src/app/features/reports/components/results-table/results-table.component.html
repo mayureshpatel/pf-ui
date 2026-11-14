@@ -78,7 +78,8 @@
         >
           <span
             data-bar
-            class="block h-2 rounded-full bg-primary-500"
+            class="block h-2 rounded-full"
+            [class]="barClass()"
             [style.width.%]="view.width"
           ></span>
           @if (view.tick !== null) {
@@ -90,7 +91,7 @@
           }
         </span>
 
-        <span data-value class="text-right font-semibold tabular-nums">{{ view.value }}</span>
+        <span data-value class="text-right row-amount">{{ view.value }}</span>
 
         <span class="hidden text-right text-sm sm:block">
           @if (view.change; as change) {
@@ -117,7 +118,7 @@
             <button
               type="button"
               data-menu
-              class="flex size-8 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent hover:bg-surface-100 dark:hover:bg-surface-800"
+              class="flex size-8 max-md:size-11 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent hover:bg-surface-100 dark:hover:bg-surface-800"
               aria-haspopup="menu"
               [attr.aria-expanded]="openMenu() === view.id"
               [attr.aria-label]="'Actions for ' + view.row.label"
@@ -183,7 +184,7 @@
         >
           {{ other.label }}
         </button>
-        <span class="font-semibold tabular-nums">{{ otherValue() }}</span>
+        <span class="row-amount">{{ otherValue() }}</span>
       </div>
     } @else if (expandedOther() && hiddenCount() > 0) {
       <div class="border-t border-surface-200 px-3 py-2 dark:border-surface-800">

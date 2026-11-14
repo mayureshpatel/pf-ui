@@ -4,7 +4,7 @@
       {{ plural(stats().categories, 'category', 'categories') }} in
       {{ plural(stats().groups, 'group', 'groups') }}
     </p>
-    <p class="mt-1 text-2xl font-bold tabular-nums">
+    <p class="mt-1 stat-figure">
       {{ plural(stats().transactions, 'transaction', 'transactions') }}
     </p>
     @if (stats().unused > 0) {

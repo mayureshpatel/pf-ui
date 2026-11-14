@@ -12,7 +12,7 @@
         class="flex justify-between items-center p-3 rounded-xl border border-surface-100 dark:border-surface-800"
       >
         <span class="text-sm text-muted-color">Income</span>
-        <span class="font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">
+        <span class="row-amount text-emerald-700 dark:text-emerald-400">
           {{ totalIncome() | formatCurrency }}
         </span>
       </div>
@@ -21,7 +21,7 @@
         class="flex justify-between items-center p-3 rounded-xl border border-surface-100 dark:border-surface-800"
       >
         <span class="text-sm text-muted-color">Expenses</span>
-        <span class="font-semibold tabular-nums text-rose-700 dark:text-rose-400">
+        <span class="row-amount text-rose-700 dark:text-rose-400">
           {{ totalExpense() | formatCurrency }}
         </span>
       </div>
@@ -30,7 +30,7 @@
         class="flex justify-between items-center p-4 rounded-xl bg-primary/5 border border-primary/10"
       >
         <span class="text-sm font-medium text-primary-700 dark:text-primary-400">Net savings</span>
-        <span class="text-xl font-bold tabular-nums text-primary-700 dark:text-primary-400">
+        <span class="stat-figure text-primary-700 dark:text-primary-400">
           {{ netSavings() | formatCurrency }}
         </span>
       </div>

@@ -73,7 +73,7 @@
           @if (p.totalMatches === 0) {
             <p class="m-0 font-medium">No transactions match</p>
           } @else {
-            <p class="m-0 font-semibold tabular-nums">
+            <p class="m-0 row-amount">
               {{ p.totalMatches }} {{ p.totalMatches === 1 ? 'match' : 'matches' }}
             </p>
             <ul class="m-0 mt-1 flex list-none flex-col gap-0.5 p-0 text-muted-color">

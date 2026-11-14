@@ -7,6 +7,7 @@ import {
 } from '../models/reports.model';
 import { defaultState } from './explore-state';
 import {
+  MEASURE_BAR_CLASS,
   applyStartView,
   reconcileDrill,
   biggestRow,
@@ -869,6 +870,17 @@ describe('explore helpers', () => {
       // assert & verify
       expect(note).toContain('"nope" isn\'t a known setting');
       expect(note).toContain('drill');
+    });
+  });
+
+  describe('MEASURE_BAR_CLASS (PF-942)', () => {
+    it('should colour spending rose, income emerald and the rest neutral, each with a dark partner', () => {
+      // assert & verify
+      expect(MEASURE_BAR_CLASS.SPENDING).toBe('bg-rose-600 dark:bg-rose-400');
+      expect(MEASURE_BAR_CLASS.INCOME).toBe('bg-emerald-600 dark:bg-emerald-400');
+      for (const measure of ['NET', 'SAVINGS_RATE', 'COUNT', 'AVERAGE'] as const) {
+        expect(MEASURE_BAR_CLASS[measure]).toBe('bg-surface-500 dark:bg-surface-400');
+      }
     });
   });
 });

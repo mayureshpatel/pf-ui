@@ -8,7 +8,7 @@
     }
     <p
       data-testid="balance"
-      class="mt-2 text-3xl font-bold tracking-tight tabular-nums"
+      class="mt-2 stat-figure-lg"
       [class.text-rose-700]="account().currentBalance < 0"
       [class.dark:text-rose-400]="account().currentBalance < 0"
     >
@@ -26,7 +26,7 @@
     >
       <div class="flex items-baseline justify-between">
         <dt data-testid="money-in-label" class="text-sm text-muted-color">Your money in</dt>
-        <dd data-testid="money-in" class="m-0 font-semibold tabular-nums">
+        <dd data-testid="money-in" class="m-0 row-amount">
           @if (account().moneyIn == null) {
             —
           } @else {
@@ -42,7 +42,7 @@
         <dt data-testid="gain-label" class="text-sm text-muted-color">Gain</dt>
         <dd
           data-testid="gain"
-          class="m-0 font-semibold tabular-nums"
+          class="m-0 row-amount"
           [class.text-emerald-700]="account().gain != null && account().gain! > 0"
           [class.dark:text-emerald-400]="account().gain != null && account().gain! > 0"
           [class.text-rose-700]="account().gain != null && account().gain! < 0"

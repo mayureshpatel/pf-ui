@@ -75,6 +75,16 @@ export const FinancePreset: Preset = definePreset(Aura, {
     // text). Tracks PF-862's choice of primary.700 for emerald text.
     button: {
       colorScheme: {
+        // The dark outlined and text buttons keep Aura's surface.500 (#78716c), 4.12:1 on the
+        // near-black page. surface.400 gives 7.7:1.
+        dark: {
+          outlined: {
+            secondary: { color: '{surface.400}', borderColor: '{surface.600}' },
+          },
+          text: {
+            secondary: { color: '{surface.400}' },
+          },
+        },
         light: {
           root: {
             primary: {

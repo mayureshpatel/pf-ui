@@ -163,7 +163,7 @@
           @if (panelMode() === 'bulk') {
             <p data-testid="selection-net" class="mb-3 text-sm text-muted-color">
               Net of the selection:
-              <span class="font-semibold tabular-nums">
+              <span class="row-amount">
                 {{ selectionNet() > 0 ? '+' : selectionNet() < 0 ? '-' : ''
                 }}{{ (selectionNet() < 0 ? -selectionNet() : selectionNet()) | formatCurrency }}
               </span>

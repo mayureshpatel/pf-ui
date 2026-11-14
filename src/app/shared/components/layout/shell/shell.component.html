@@ -22,7 +22,7 @@
       />
 
       <i class="pi pi-wallet text-2xl text-primary"></i>
-      <span class="text-2xl font-bold">Personal Finance</span>
+      <span class="whitespace-nowrap text-xl font-bold sm:text-2xl">Personal Finance</span>
     </div>
 
     <div class="flex items-center gap-4">
@@ -58,9 +58,9 @@
         @for (item of navItems; track item.label) {
           <a
             [routerLink]="item.routerLink"
-            routerLinkActive="bg-primary-100 text-primary-700"
+            routerLinkActive="bg-primary-100 text-primary-700 dark:bg-primary-950 dark:text-primary-400"
             ariaCurrentWhenActive="page"
-            class="flex items-center gap-3 px-4 py-3 rounded-lg text-color hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors"
+            class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors"
             (click)="sidebarVisible.set(false)"
           >
             <i [class]="item.icon"></i>
@@ -75,9 +75,9 @@
       @for (item of navItems; track item.label) {
         <a
           [routerLink]="item.routerLink"
-          routerLinkActive="bg-primary-100 text-primary-700"
+          routerLinkActive="bg-primary-100 text-primary-700 dark:bg-primary-950 dark:text-primary-400"
           ariaCurrentWhenActive="page"
-          class="flex items-center gap-3 px-4 py-3 rounded-lg text-color hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors"
+          class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors"
         >
           <i [class]="item.icon"></i>
           <span>{{ item.label }}</span>

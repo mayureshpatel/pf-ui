@@ -6,6 +6,8 @@
   3. Radii: rounded-md (controls), rounded-lg (rows, nav), rounded-xl (cards, panels), rounded-full.
   4. Headings: an h1 uses `heading-page`; no heading is heavier than bold.
   5. Icons: one glyph per meaning (see DESIGN.md, Iconography).
+  6. Figures: money and counts use `stat-figure`, `stat-figure-lg` or `row-amount`, not a loose
+     weight plus `tabular-nums`.
 
 Run from pf-ui:  python3 scripts/check-design-rules.py     (exit 1 when anything is found)
 """
@@ -47,6 +49,9 @@ for path in sorted(glob.glob(os.path.join(ROOT, '**', '*.html'), recursive=True)
                 report(path, text, match.start(), f'{token}: use the 700 shade with a dark: 400 partner')
             if re.fullmatch(r'(?:[\w-]+:)*rounded(-2xl|-3xl|-sm|-xs)?', token):
                 report(path, text, match.start(), f'{token}: use rounded-md, rounded-lg, rounded-xl or rounded-full')
+
+        if 'tabular-nums' in tokens and ('font-semibold' in tokens or 'font-bold' in tokens):
+            report(path, text, match.start(), 'figure: use stat-figure, stat-figure-lg or row-amount')
 
     for match in re.finditer(r'<(h[1-6])\b[^>]*?class="([^"]*)"', text, re.S):
         tokens = match.group(2).split()

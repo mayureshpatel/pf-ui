@@ -4,7 +4,7 @@
   >
     <div class="flex items-baseline justify-between">
       <span class="text-sm text-muted-color">In this app</span>
-      <span data-testid="app-balance" class="font-semibold tabular-nums">
+      <span data-testid="app-balance" class="row-amount">
         {{ account().currentBalance | formatCurrency: true : account().currency.code }}
       </span>
     </div>
@@ -12,7 +12,7 @@
       <span class="text-sm text-muted-color">Adjustment</span>
       <span
         data-testid="adjustment"
-        class="font-semibold tabular-nums"
+        class="row-amount"
         [class.text-emerald-700]="difference() > 0"
         [class.dark:text-emerald-400]="difference() > 0"
         [class.text-rose-700]="difference() < 0"

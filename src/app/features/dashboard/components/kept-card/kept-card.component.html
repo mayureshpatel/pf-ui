@@ -5,8 +5,12 @@
     <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
       <span
         data-testid="kept-amount"
-        class="text-4xl font-bold tracking-tight tabular-nums"
-        [class]="isNegative() ? 'text-rose-700 dark:text-rose-400' : 'text-primary-700 dark:text-primary-400'"
+        class="stat-figure-lg"
+        [class]="
+          isNegative()
+            ? 'text-rose-700 dark:text-rose-400'
+            : 'text-primary-700 dark:text-primary-400'
+        "
       >
         {{ kept() | formatCurrency }}
       </span>
