@@ -31,7 +31,7 @@
         } @else {
           <input
             type="search"
-            class="w-full rounded-lg border border-surface-300 bg-surface-0 px-3 py-2 text-sm dark:border-surface-700 dark:bg-surface-900"
+            class="w-full rounded-lg border border-surface-300 bg-surface-0 px-3 py-2 text-sm max-lg:min-h-11 dark:border-surface-700 dark:bg-surface-900"
             aria-label="Search merchants"
             placeholder="Search by name or city"
             [value]="searchTerm()"
@@ -57,7 +57,7 @@
         [title]="panelTitle()"
         [saving]="saving()"
         [showClose]="mode() !== 'overview' && !onlyAddMode()"
-        [sheet]="mode() !== 'overview'"
+        [sheet]="mode() !== 'overview' && !onlyAddMode()"
         [moveFocus]="false"
         [showFooter]="mode() === 'merchant' || mode() === 'add'"
         [saveLabel]="mode() === 'add' ? 'Add merchant' : 'Save changes'"
@@ -73,13 +73,16 @@
               [hasTransactions]="hasTransactions()"
               [statsFailed]="statsFailed()"
               (retryStats)="loadStats()"
-              (add)="startAdd()"
               (linkDescriptions)="openPicker()"
             />
           }
           @case ('merchant') {
             @if (selected(); as merchant) {
-              <button type="button" class="mb-3 inline-flex cursor-pointer items-center rounded-md text-sm underline max-lg:min-h-11" (click)="back()">
+              <button
+                type="button"
+                class="mb-3 inline-flex cursor-pointer items-center rounded-md text-sm underline max-lg:min-h-11"
+                (click)="back()"
+              >
                 Back to overview
               </button>
               <app-merchant-edit-form
@@ -98,7 +101,11 @@
           }
           @case ('add') {
             @if (!onlyAddMode()) {
-              <button type="button" class="mb-3 inline-flex cursor-pointer items-center rounded-md text-sm underline max-lg:min-h-11" (click)="back()">
+              <button
+                type="button"
+                class="mb-3 inline-flex cursor-pointer items-center rounded-md text-sm underline max-lg:min-h-11"
+                (click)="back()"
+              >
                 Back
               </button>
             }
@@ -122,7 +129,11 @@
                 (back)="back()"
               />
             } @else {
-              <button type="button" class="mb-3 inline-flex cursor-pointer items-center rounded-md text-sm underline max-lg:min-h-11" (click)="back()">
+              <button
+                type="button"
+                class="mb-3 inline-flex cursor-pointer items-center rounded-md text-sm underline max-lg:min-h-11"
+                (click)="back()"
+              >
                 Back to overview
               </button>
               <div class="flex flex-col gap-1">

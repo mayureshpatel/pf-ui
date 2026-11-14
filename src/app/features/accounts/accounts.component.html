@@ -46,7 +46,7 @@
         [saving]="saving()"
         [valid]="panelValid()"
         [showClose]="showClose()"
-        [sheet]="panelMode() !== 'overview'"
+        [sheet]="panelMode() !== 'overview' && !onlyAddMode()"
         [moveFocus]="false"
         [showFooter]="
           panelMode() === 'edit' ||

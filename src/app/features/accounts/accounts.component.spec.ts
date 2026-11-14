@@ -935,6 +935,15 @@ describe('AccountsComponent', () => {
       expect(aside().getAttribute('aria-label')).toBe('Add account');
     });
 
+    it('should keep the only-add form inline, never a modal sheet with no way out', () => {
+      // act
+      loadWith([]);
+
+      // assert & verify
+      expect(aside().className).not.toContain('fixed');
+      expect(aside().hasAttribute('aria-modal')).toBe(false);
+    });
+
     it('should keep Save disabled on the empty add form until it is valid', () => {
       // arrange
       loadWith([acct(1, 'A', 1, true)]);

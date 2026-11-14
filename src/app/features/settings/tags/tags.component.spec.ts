@@ -242,6 +242,16 @@ describe('TagsComponent', () => {
     expect(rows()).toHaveLength(2);
   });
 
+  it('should dock the panel from lg like Accounts and Merchants, not xl', async () => {
+    // act
+    await create();
+
+    // assert & verify
+    const grid: HTMLElement = fixture.nativeElement.querySelector('app-side-panel').parentElement;
+    expect(grid.className).toContain('list-panel-grid');
+    expect(grid.className).not.toContain('xl:');
+  });
+
   it('should add a tag for the user, open it and say so', async () => {
     // arrange
     await create();

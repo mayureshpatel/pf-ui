@@ -1,7 +1,9 @@
+<!-- PF-945: appended to the body so Esc, which PrimeNG listens for on the document, cannot also reach the side panel behind this dialog and raise its Discard prompt. -->
 <p-dialog
   [header]="dialogHeader()"
   [(visible)]="visible"
   appRestoreFocusOnHide
+  appendTo="body"
   [modal]="true"
   [draggable]="false"
   [resizable]="false"
@@ -16,12 +18,7 @@
     }
 
     <div class="flex flex-col gap-2">
-      <label
-        for="merchant-name"
-        class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200"
-      >
-        Name
-      </label>
+      <label for="merchant-name" class="text-sm font-medium"> Name </label>
       <input
         pInputText
         id="merchant-name"
@@ -40,12 +37,7 @@
 
     <div class="grid grid-cols-2 gap-4">
       <div class="flex flex-col gap-2">
-        <label
-          for="merchant-city"
-          class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200"
-        >
-          City
-        </label>
+        <label for="merchant-city" class="text-sm font-medium"> City </label>
         <input
           pInputText
           id="merchant-city"
@@ -55,12 +47,7 @@
         />
       </div>
       <div class="flex flex-col gap-2">
-        <label
-          for="merchant-state"
-          class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200"
-        >
-          State
-        </label>
+        <label for="merchant-state" class="text-sm font-medium"> State </label>
         <input
           pInputText
           id="merchant-state"
@@ -73,12 +60,7 @@
 
     <div class="grid grid-cols-2 gap-4">
       <div class="flex flex-col gap-2">
-        <label
-          for="merchant-postal-code"
-          class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200"
-        >
-          Postal Code
-        </label>
+        <label for="merchant-postal-code" class="text-sm font-medium"> Postal Code </label>
         <input
           pInputText
           id="merchant-postal-code"
@@ -88,12 +70,7 @@
         />
       </div>
       <div class="flex flex-col gap-2">
-        <label
-          for="merchant-country"
-          class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200"
-        >
-          Country
-        </label>
+        <label for="merchant-country" class="text-sm font-medium"> Country </label>
         <input
           pInputText
           id="merchant-country"

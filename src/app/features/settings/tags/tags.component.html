@@ -4,7 +4,7 @@
       <h2 class="heading-section">Tags</h2>
     </div>
     <div toolbarActions class="flex gap-2">
-      <p-button label="Add tag" icon="pi pi-plus" size="small" (onClick)="startAdd()" />
+      <p-button label="Add tag" icon="pi pi-plus" (onClick)="startAdd()" />
     </div>
   </app-screen-toolbar>
 
@@ -17,7 +17,7 @@
       <p-skeleton height="14rem" borderRadius="1rem" />
     </div>
   } @else {
-    <div class="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_24rem]">
+    <div class="list-panel-grid gap-4">
       <div
         class="flex min-w-0 flex-col gap-3"
         [attr.aria-busy]="loading()"
@@ -51,7 +51,7 @@
             id="tags-search"
             type="search"
             placeholder="Search tags"
-            class="w-full rounded-lg border border-surface-300 bg-surface-0 px-3 py-2 text-sm dark:border-surface-700 dark:bg-surface-900"
+            class="w-full rounded-lg border border-surface-300 bg-surface-0 px-3 py-2 text-sm max-lg:min-h-11 dark:border-surface-700 dark:bg-surface-900"
             [value]="search()"
             (input)="search.set($any($event.target).value)"
           />
@@ -62,7 +62,7 @@
               <p class="mb-3 font-medium">No tags match</p>
               <button
                 type="button"
-                class="cursor-pointer rounded-lg border border-surface-300 px-3 py-1.5 text-sm max-md:min-h-11 hover:bg-surface-100 disabled:opacity-50 dark:border-surface-700 dark:hover:bg-surface-800"
+                class="cursor-pointer rounded-lg border border-surface-300 px-3 py-1.5 text-sm max-lg:min-h-11 hover:bg-surface-100 disabled:opacity-50 dark:border-surface-700 dark:hover:bg-surface-800"
                 (click)="clearSearch()"
               >
                 Clear search
@@ -104,7 +104,7 @@
       </div>
 
       <app-side-panel
-        class="order-first block xl:order-none"
+        class="order-first block lg:order-none"
         [title]="panelTitle()"
         [saving]="saving()"
         [showClose]="panelMode() !== 'overview' && !onlyAddMode()"
@@ -122,18 +122,19 @@
               <p class="m-0 text-lg row-amount">
                 {{ tags().length }} {{ tags().length === 1 ? 'tag' : 'tags' }}
               </p>
-              <p class="m-0 text-muted-color">
+              <p class="m-0 text-muted-color max-lg:hidden">
                 Tags group transactions independently of category. Add them to a transaction from
                 the Transactions page.
               </p>
-              <div>
-                <p-button label="Add tag" icon="pi pi-plus" size="small" (onClick)="startAdd()" />
-              </div>
             </div>
           }
           @case ('tag') {
             @if (selectedTag(); as tag) {
-              <button type="button" class="mb-3 inline-flex cursor-pointer items-center rounded-md text-sm underline max-lg:min-h-11" (click)="back()">
+              <button
+                type="button"
+                class="mb-3 inline-flex cursor-pointer items-center rounded-md text-sm underline max-lg:min-h-11"
+                (click)="back()"
+              >
                 Back to overview
               </button>
               <app-tag-edit-form
@@ -150,7 +151,11 @@
           }
           @case ('add') {
             @if (!onlyAddMode()) {
-              <button type="button" class="mb-3 inline-flex cursor-pointer items-center rounded-md text-sm underline max-lg:min-h-11" (click)="back()">
+              <button
+                type="button"
+                class="mb-3 inline-flex cursor-pointer items-center rounded-md text-sm underline max-lg:min-h-11"
+                (click)="back()"
+              >
                 Back
               </button>
             }

@@ -71,13 +71,13 @@ describe('MerchantListComponent', () => {
     expect(rows[1]).toContain('1 link');
   });
 
-  it('should show No location and No links for a bare merchant', () => {
+  it('should show no location line, only No links, for a bare merchant', () => {
     // act
     render();
 
     // assert & verify
     const row = all('[data-testid="open-merchant"]')[2];
-    expect(text(row)).toContain('No location');
+    expect(text(row)).not.toContain('No location');
     expect(text(row)).toContain('No links');
   });
 
@@ -111,6 +111,8 @@ describe('MerchantListComponent', () => {
     expect(rows[1].className).toContain('bg-primary-50');
     expect(rows[1].className).toContain('dark:bg-primary-900/30');
     expect(rows[0].className).not.toContain('bg-primary-50');
+    expect(rows[1].className).toContain('border-l-primary-700');
+    expect(rows[0].className).toContain('border-l-transparent');
   });
 
   it('should dim the rows and mark them busy while loading', () => {

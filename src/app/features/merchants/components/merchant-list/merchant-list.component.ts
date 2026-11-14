@@ -9,7 +9,7 @@ import {
   Signal,
 } from '@angular/core';
 import { Merchant } from '@models/merchant.model';
-import { linksLabel, locationLabel } from '../../utils/merchant-helpers';
+import { linksLabel, locationLabel, NO_LOCATION } from '../../utils/merchant-helpers';
 
 /**
  * The merchants as two-line rows with a pager. It renders the page it is given and owns no state:
@@ -38,6 +38,11 @@ export class MerchantListComponent {
   readonly clearSearch: OutputEmitterRef<void> = output<void>();
 
   readonly location: (merchant: Merchant) => string = locationLabel;
+
+  /** A merchant with no city or state shows no location line at all. */
+  hasLocation(merchant: Merchant): boolean {
+    return locationLabel(merchant) !== NO_LOCATION;
+  }
 
   readonly rangeText: Signal<string> = computed((): string => {
     const first: number = this.page() * this.pageSize() + 1;

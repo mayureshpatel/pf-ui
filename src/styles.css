@@ -66,3 +66,12 @@
     min-height: 2.75rem;
   }
 }
+
+/* The list-plus-panel layout (R-04): one column, then the list beside a 26rem docked panel from lg. */
+@utility list-panel-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  @media (min-width: 1024px) {
+    grid-template-columns: minmax(0, 1fr) 26rem;
+  }
+}

@@ -83,19 +83,18 @@ describe('MerchantOverviewComponent', () => {
     expect(button('Link descriptions')).toBeUndefined();
   });
 
-  it('should emit add and linkDescriptions', () => {
+  it('should emit linkDescriptions and leave Add merchant to the toolbar', () => {
     // arrange
     const events: string[] = [];
-    component.add.subscribe(() => events.push('add'));
     component.linkDescriptions.subscribe(() => events.push('link'));
     render(5, 3);
 
     // act
-    button('Add merchant')?.click();
     button('Link descriptions')?.click();
 
     // assert & verify
-    expect(events).toEqual(['add', 'link']);
+    expect(events).toEqual(['link']);
+    expect(button('Add merchant')).toBeUndefined();
   });
 
   // PF-883: a failed totals load must not leave the skeleton pulsing for ever
