@@ -1,10 +1,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
-import { ChangeDetectionStrategy, Component, signal, Signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, signal, Signal, WritableSignal } from '@angular/core';
 
 import { ShellComponent } from './shell.component';
 import { AuthService } from '@core/auth/auth.service';
+import { ReviewCountService } from '@core/services/review-count.service';
 
 @Component({
   selector: 'app-stub-page',
@@ -18,16 +19,24 @@ describe('ShellComponent', () => {
   let fixture: ComponentFixture<ShellComponent>;
   let mockAuthService: { username: Signal<string>; logout: () => void };
   let logoutSpy: ReturnType<typeof vi.fn<() => void>>;
+  let uncategorized: WritableSignal<number>;
 
   beforeEach(async () => {
     logoutSpy = vi.fn<() => void>();
     mockAuthService = { username: signal('testuser'), logout: logoutSpy };
+    uncategorized = signal(0);
 
     await TestBed.configureTestingModule({
       imports: [ShellComponent, NoopAnimationsModule],
       providers: [
-        provideRouter([{ path: 'dashboard', component: StubPageComponent }]),
+        provideRouter([
+          { path: 'dashboard', component: StubPageComponent },
+          { path: 'merchants', component: StubPageComponent },
+          { path: 'transactions', component: StubPageComponent },
+          { path: 'transactions/:id', component: StubPageComponent },
+        ]),
         { provide: AuthService, useValue: mockAuthService },
+        { provide: ReviewCountService, useValue: { uncategorized, refresh: vi.fn() } },
       ],
     }).compileComponents();
 
@@ -204,24 +213,37 @@ describe('ShellComponent', () => {
       expect(header.classList).not.toContain('border-b-2');
     });
 
-    it('should list the links with Reports after Budgets', () => {
+    it('should list the links in three groups: Overview, Money and Setup (PF-947)', () => {
       // act
-      const labels = Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('nav a')).map(
-        (a) => a.textContent?.trim(),
+      const groups = Array.from<HTMLElement>(
+        fixture.nativeElement.querySelectorAll('nav [role="group"]'),
+      ).map((g) => ({
+        label: g.querySelector('[data-testid="nav-group-label"]')?.textContent?.trim(),
+        links: Array.from(g.querySelectorAll('a')).map((a) => a.textContent?.trim()),
+      }));
+
+      // assert & verify
+      expect(groups).toEqual([
+        { label: 'Overview', links: ['Dashboard', 'Reports'] },
+        { label: 'Money', links: ['Transactions', 'Accounts', 'Budgets', 'Recurring'] },
+        { label: 'Setup', links: ['Categories', 'Merchants', 'Settings'] },
+      ]);
+    });
+
+    it('should label each group for screen readers and keep the labels out of the tab order (PF-947)', () => {
+      // act
+      const groups = Array.from<HTMLElement>(
+        fixture.nativeElement.querySelectorAll('nav [role="group"]'),
       );
 
       // assert & verify
-      expect(labels).toEqual([
-        'Dashboard',
-        'Transactions',
-        'Accounts',
-        'Budgets',
-        'Reports',
-        'Categories',
-        'Merchants',
-        'Recurring',
-        'Settings',
-      ]);
+      expect(groups).toHaveLength(3);
+      for (const group of groups) {
+        const labelId = group.getAttribute('aria-labelledby')!;
+        const label = group.querySelector<HTMLElement>(`#${labelId}`)!;
+        expect(label.tagName).toBe('P');
+        expect(label.getAttribute('tabindex')).toBeNull();
+      }
     });
 
     it('should mark the current link with a bar and weight, not colour alone (PF-943)', async () => {
@@ -257,6 +279,109 @@ describe('ShellComponent', () => {
       // assert & verify
       expect(avatar.classList).not.toContain('cursor-pointer');
       expect(avatar.getAttribute('aria-hidden')).toBe('true');
+    });
+  });
+
+  describe('header page name (PF-947)', () => {
+    const pageName = (): HTMLElement =>
+      fixture.nativeElement.querySelector('[data-testid="header-page-name"]');
+
+    it('should name the page after navigation, including a sub-route', async () => {
+      // act
+      const router = TestBed.inject(Router);
+      await router.navigateByUrl('/merchants');
+      fixture.detectChanges();
+      expect(pageName().textContent?.trim()).toBe('Merchants');
+
+      await router.navigateByUrl('/transactions/42?tab=review');
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(pageName().textContent?.trim()).toBe('Transactions');
+    });
+
+    it('should hide the name from the accessibility tree, since the page heading names the page', () => {
+      expect(pageName().getAttribute('aria-hidden')).toBe('true');
+    });
+
+    it('should show the name only below lg and the wordmark text only from lg up', () => {
+      const wordmark = Array.from<HTMLElement>(
+        fixture.nativeElement.querySelectorAll('header span'),
+      ).find((el) => el.textContent?.trim() === 'Personal Finance')!;
+
+      expect(pageName().classList).toContain('lg:hidden');
+      expect(wordmark.classList).toContain('hidden');
+      expect(wordmark.classList).toContain('lg:inline');
+    });
+
+    it('should stay in view while the page scrolls below lg, on an opaque background', () => {
+      const header: HTMLElement = fixture.nativeElement.querySelector('header');
+
+      expect(header.classList).toContain('sticky');
+      expect(header.classList).toContain('top-0');
+      expect(header.classList).toContain('lg:static');
+      expect(header.classList).toContain('bg-surface-0');
+      expect(header.classList).toContain('dark:bg-surface-950');
+    });
+
+    it('should truncate a long name rather than push the buttons off screen', () => {
+      expect(pageName().classList).toContain('truncate');
+      expect(pageName().parentElement!.classList).toContain('min-w-0');
+    });
+  });
+
+  describe('Transactions badge (PF-947)', () => {
+    const badge = (): HTMLElement | null =>
+      fixture.nativeElement.querySelector('[data-testid="transactions-badge"]');
+    const transactionsLink = (): HTMLElement =>
+      Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('nav a')).find((a) =>
+        a.textContent?.includes('Transactions'),
+      )!;
+
+    it('should show the count, and tell screen readers what it means', () => {
+      uncategorized.set(5);
+      fixture.detectChanges();
+
+      expect(badge()!.textContent?.trim()).toBe('5');
+      expect(badge()!.getAttribute('aria-hidden')).toBe('true');
+      expect(transactionsLink().querySelector('.sr-only')!.textContent).toContain(
+        '5 need a category',
+      );
+    });
+
+    it('should show nothing at zero', () => {
+      uncategorized.set(0);
+      fixture.detectChanges();
+
+      expect(badge()).toBeNull();
+      expect(transactionsLink().querySelector('.sr-only')).toBeNull();
+    });
+
+    it('should cap the figure at 99+', () => {
+      uncategorized.set(100);
+      fixture.detectChanges();
+      expect(badge()!.textContent?.trim()).toBe('99+');
+
+      uncategorized.set(99);
+      fixture.detectChanges();
+      expect(badge()!.textContent?.trim()).toBe('99');
+    });
+
+    it('should put the badge on the Transactions link only', () => {
+      uncategorized.set(3);
+      fixture.detectChanges();
+
+      expect(
+        fixture.nativeElement.querySelectorAll('[data-testid="transactions-badge"]'),
+      ).toHaveLength(1);
+    });
+
+    it('should ask for the count once when the shell opens', () => {
+      const service = TestBed.inject(ReviewCountService) as unknown as {
+        refresh: ReturnType<typeof vi.fn>;
+      };
+
+      expect(service.refresh).toHaveBeenCalledTimes(1);
     });
   });
 });
