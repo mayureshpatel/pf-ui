@@ -54,6 +54,12 @@ export class ApplyRulesDialogComponent {
   );
 
   /** Indicates if the update volume is high enough to warrant a warning. */
+  /** The confirm button says how many changes it will make. */
+  readonly applyLabel: Signal<string> = computed((): string => {
+    const count: number = this.totalCount();
+    return `Apply ${count} ${count === 1 ? 'change' : 'changes'}`;
+  });
+
   readonly isLargeUpdate: Signal<boolean> = computed((): boolean => this.totalCount() > 50);
 
   /**

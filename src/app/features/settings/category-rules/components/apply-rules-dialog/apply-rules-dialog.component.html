@@ -11,9 +11,7 @@
 >
   <div class="flex flex-col gap-6 py-2">
     <!-- Analysis Summary Card -->
-    <div
-      class="p-5 rounded-xl bg-primary/5 border border-primary/10 flex gap-4 items-center animate-in fade-in slide-in-from-top-2 duration-500"
-    >
+    <div class="p-5 rounded-xl bg-primary/5 border border-primary/10 flex gap-4 items-center">
       <div class="w-12 h-12 bg-primary/10 flex items-center justify-center shrink-0 card-soft">
         <i class="pi pi-bolt text-primary text-xl"></i>
       </div>
@@ -21,7 +19,7 @@
         <h3 class="heading-card">
           {{ totalCount() }} Transaction{{ totalCount() === 1 ? '' : 's' }} Identified
         </h3>
-        <p class="text-xs text-muted-color leading-normal uppercase font-bold tracking-tighter">
+        <p class="text-sm text-muted-color">
           {{ fieldLabel() }} values will be assigned based on your active ruleset.
         </p>
       </div>
@@ -30,11 +28,11 @@
     <!-- Scale Warning -->
     @if (isLargeUpdate()) {
       <div
-        class="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 flex items-center gap-3 animate-in zoom-in-95 duration-300"
+        class="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 flex items-center gap-3"
       >
         <i class="pi pi-exclamation-triangle text-amber-600 dark:text-amber-400"></i>
-        <span class="text-xs font-bold text-amber-900 dark:text-amber-100 italic">
-          Large batch detected. Application may take a few seconds to synchronize with all accounts.
+        <span class="text-sm font-medium text-amber-900 dark:text-amber-100">
+          This is a large batch, so applying it may take a few seconds.
         </span>
       </div>
     }
@@ -42,9 +40,8 @@
     <!-- Change Ledger -->
     <div class="flex flex-col gap-3">
       <div class="flex items-center justify-between px-1">
-        <span
-          class="text-xs font-black uppercase tracking-widest text-surface-400 dark:text-surface-500"
-          >Projected Change Ledger</span
+        <span class="text-sm font-semibold text-surface-700 dark:text-surface-200"
+          >Changes to apply</span
         >
         <span class="text-xs font-mono font-bold text-muted-color">{{ totalCount() }} entries</span>
       </div>
@@ -59,17 +56,11 @@
       >
         <ng-template #header>
           <tr>
-            <th id="desc" class="py-3 font-bold text-surface-700 dark:text-surface-200">
-              Description
-            </th>
-            <th id="prev" class="py-3 font-bold text-surface-700 dark:text-surface-200">Current</th>
-            <th id="next" class="py-3 font-bold text-surface-700 dark:text-surface-200">
-              New Value
-            </th>
+            <th id="desc" class="py-3 font-semibold">Description</th>
+            <th id="prev" class="py-3 font-semibold">Current</th>
+            <th id="next" class="py-3 font-semibold">New Value</th>
             @if (showsRule()) {
-              <th id="rule" class="py-3 font-bold text-surface-700 dark:text-surface-200">
-                Decided by
-              </th>
+              <th id="rule" class="py-3 font-semibold">Decided by</th>
             }
           </tr>
         </ng-template>
@@ -88,21 +79,16 @@
             </td>
             <td>
               @if (txn.oldValue) {
-                <span
-                  class="text-xs font-bold text-surface-400 dark:text-surface-500 line-through decoration-rose-500/50 decoration-2 italic"
-                >
+                <span class="text-xs text-muted-color line-through">
                   {{ txn.oldValue }}
                 </span>
               } @else {
-                <span
-                  class="text-xs font-black uppercase text-surface-300 dark:text-surface-700 tracking-widest italic"
-                  >Unset</span
-                >
+                <span class="text-xs text-muted-color">Unset</span>
               }
             </td>
             <td>
               <span
-                class="text-xs font-black text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-2 py-0.5 rounded-md ring-1 ring-emerald-200/50"
+                class="text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-2 py-0.5 rounded-md ring-1 ring-emerald-200/50"
               >
                 {{ txn.newValue }}
               </span>
@@ -119,21 +105,22 @@
   </div>
 
   <ng-template #footer>
-    <div class="flex justify-end gap-3 pt-4 border-t border-surface-100 dark:border-surface-800">
+    <div class="flex justify-end gap-3">
       <p-button
         label="Cancel"
         [text]="true"
         severity="secondary"
+        styleClass="min-h-11"
         (onClick)="onCancel()"
         [disabled]="loading()"
       />
       <p-button
-        label="Commit Changes"
+        [label]="applyLabel()"
         icon="pi pi-check"
         (onClick)="onConfirm()"
         [loading]="loading()"
         [disabled]="loading()"
-        [raised]="true"
+        styleClass="min-h-11"
       />
     </div>
   </ng-template>

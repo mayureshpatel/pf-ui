@@ -10,6 +10,7 @@ import {
   OutputEmitterRef,
   Signal,
 } from '@angular/core';
+import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { RestoreFocusOnHideDirective } from '@shared/directives/restore-focus-on-hide.directive';
 
@@ -20,7 +21,7 @@ import { RestoreFocusOnHideDirective } from '@shared/directives/restore-focus-on
 @Component({
   selector: 'app-budget-copy-dialog',
   standalone: true,
-  imports: [DialogModule, RestoreFocusOnHideDirective],
+  imports: [ButtonModule, DialogModule, RestoreFocusOnHideDirective],
   templateUrl: './budget-copy-dialog.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

@@ -106,7 +106,7 @@ describe('BudgetCopyDialogComponent', () => {
   describe('default focus target', () => {
     const firstEnabled = (): string | undefined =>
       document.body
-        .querySelector<HTMLButtonElement>('.p-dialog-content button:not([disabled])')
+        .querySelector<HTMLButtonElement>('.p-dialog-footer button:not([disabled])')
         ?.textContent?.trim();
 
     it('should be Fill gaps when there are limits to add', () => {

@@ -51,6 +51,16 @@ describe('ApplyRulesDialogComponent', () => {
     });
   });
 
+  describe('applyLabel', () => {
+    it('PF-945: should say how many changes the button will apply', () => {
+      setPreviewItems([preview('AMZN', '', 'Shopping')]);
+      expect(component.applyLabel()).toBe('Apply 1 change');
+
+      setPreviewItems([preview('AMZN', '', 'Shopping'), preview('WALMART', '', 'Groceries')]);
+      expect(component.applyLabel()).toBe('Apply 2 changes');
+    });
+  });
+
   describe('isLargeUpdate', () => {
     it('should be false at exactly the 50-item threshold', () => {
       setPreviewItems(Array.from({ length: 50 }, (_, i) => preview(`txn ${i}`, '', 'Shopping')));
@@ -106,7 +116,7 @@ describe('ApplyRulesDialogComponent', () => {
       // assert & verify
       const text: string = fixture.nativeElement.textContent;
       expect(text).toContain('0 Transactions Identified');
-      expect(text).not.toContain('Large batch detected');
+      expect(text).not.toContain('This is a large batch');
       expect(fixture.nativeElement.querySelectorAll('tbody tr')).toHaveLength(0);
     });
 
@@ -125,7 +135,7 @@ describe('ApplyRulesDialogComponent', () => {
     it('should show the large-batch warning once over 50 matches', () => {
       setPreviewItems(Array.from({ length: 51 }, (_, i) => preview(`txn ${i}`, '', 'Shopping')));
 
-      expect(fixture.nativeElement.textContent).toContain('Large batch detected');
+      expect(fixture.nativeElement.textContent).toContain('This is a large batch');
     });
 
     it('should render the field label in the header and summary copy', () => {

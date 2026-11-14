@@ -51,7 +51,7 @@ test.describe('Settings', () => {
     await expect(applyDialog.getByText(transaction.description)).toBeVisible();
     await expect(applyDialog.getByText('Uncategorized')).toBeVisible();
     await expect(applyDialog.getByText(category.name)).toBeVisible();
-    await applyDialog.getByRole('button', {name: 'Commit Changes'}).click();
+    await applyDialog.getByRole('button', { name: /^Apply \d+ changes?$/ }).click();
     await expect(page.getByText('Rules successfully applied to transactions.')).toBeVisible();
     await expect(applyDialog).toBeHidden();
 
