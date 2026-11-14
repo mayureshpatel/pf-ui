@@ -53,8 +53,8 @@ test.describe('Budgets', () => {
     await expect(row).toContainText('$180.00 left');
     await expect(panel).toHaveAccessibleName(category.name);
 
-    // Back to the month overview
-    await panel.getByRole('button', {name: 'Back to overview'}).click();
+    // Back to the month overview (PF-946 dropped the separate 'Back to overview'; Close does it)
+    await panel.getByRole('button', {name: 'Close', exact: true}).click();
     await expect(panel).toHaveAccessibleName('Overview');
     await expect(panel.getByTestId('left-to-spend')).toContainText('$180.00');
 

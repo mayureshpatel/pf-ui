@@ -33,7 +33,7 @@ test.describe('Account Reconciliation', () => {
     await page.getByTestId('open-account').filter({hasText: account.name}).click();
     await expect(panel).toHaveAccessibleName(account.name);
 
-    await panel.getByRole('button', {name: 'Back to overview'}).click();
+    await panel.getByRole('button', {name: 'Close', exact: true}).click();
     await expect(panel).toHaveAccessibleName('Overview');
   });
 
