@@ -16,10 +16,11 @@
     @if (showClose()) {
       <button
         type="button"
-        class="shrink-0 cursor-pointer rounded-md px-2 text-sm underline max-lg:min-h-11 max-lg:min-w-11"
+        aria-label="Close"
+        class="inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md hover:bg-surface-100 dark:hover:bg-surface-800 max-lg:size-11"
         (click)="closePanel.emit()"
       >
-        Close
+        <i class="pi pi-times" aria-hidden="true"></i>
       </button>
     }
   </div>

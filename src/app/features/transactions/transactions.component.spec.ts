@@ -1590,7 +1590,7 @@ describe('TransactionsComponent', () => {
       };
       const panelButton = (name: RegExp): HTMLButtonElement | undefined =>
         Array.from<HTMLButtonElement>(fixture.nativeElement.querySelectorAll('aside button')).find(
-          (b) => name.test((b.textContent ?? '').trim()),
+          (b) => name.test((b.textContent ?? '').trim() || (b.getAttribute('aria-label') ?? '')),
         );
 
       it('should hide the floating bar while a panel is open, so it never covers the panel footer', () => {

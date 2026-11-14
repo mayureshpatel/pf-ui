@@ -8,7 +8,7 @@
         <div class="flex items-center gap-1">
           <button
             type="button"
-            class="cursor-pointer rounded-lg px-2 py-2 hover:bg-surface-100 dark:hover:bg-surface-800"
+            class="cursor-pointer rounded-lg px-2 py-2 hover:bg-surface-100 max-lg:min-h-11 max-lg:min-w-11 dark:hover:bg-surface-800"
             aria-label="Previous month"
             (click)="previousMonth()"
           >
@@ -19,7 +19,7 @@
           </span>
           <button
             type="button"
-            class="cursor-pointer rounded-lg px-2 py-2 hover:bg-surface-100 dark:hover:bg-surface-800"
+            class="cursor-pointer rounded-lg px-2 py-2 hover:bg-surface-100 max-lg:min-h-11 max-lg:min-w-11 dark:hover:bg-surface-800"
             aria-label="Next month"
             (click)="nextMonth()"
           >
@@ -76,7 +76,7 @@
           }
           @case ('category') {
             @if (selectedRow(); as row) {
-              <button type="button" class="mb-3 cursor-pointer text-sm underline" (click)="back()">
+              <button type="button" class="mb-3 inline-flex cursor-pointer items-center rounded-md text-sm underline max-lg:min-h-11" (click)="back()">
                 Back to overview
               </button>
               <app-budget-category-view
@@ -93,7 +93,7 @@
             }
           }
           @case ('add') {
-            <button type="button" class="mb-3 cursor-pointer text-sm underline" (click)="back()">
+            <button type="button" class="mb-3 inline-flex cursor-pointer items-center rounded-md text-sm underline max-lg:min-h-11" (click)="back()">
               Back
             </button>
             <app-budget-add-form

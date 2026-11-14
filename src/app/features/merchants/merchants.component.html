@@ -79,7 +79,7 @@
           }
           @case ('merchant') {
             @if (selected(); as merchant) {
-              <button type="button" class="mb-3 cursor-pointer text-sm underline" (click)="back()">
+              <button type="button" class="mb-3 inline-flex cursor-pointer items-center rounded-md text-sm underline max-lg:min-h-11" (click)="back()">
                 Back to overview
               </button>
               <app-merchant-edit-form
@@ -98,7 +98,7 @@
           }
           @case ('add') {
             @if (!onlyAddMode()) {
-              <button type="button" class="mb-3 cursor-pointer text-sm underline" (click)="back()">
+              <button type="button" class="mb-3 inline-flex cursor-pointer items-center rounded-md text-sm underline max-lg:min-h-11" (click)="back()">
                 Back
               </button>
             }
@@ -122,7 +122,7 @@
                 (back)="back()"
               />
             } @else {
-              <button type="button" class="mb-3 cursor-pointer text-sm underline" (click)="back()">
+              <button type="button" class="mb-3 inline-flex cursor-pointer items-center rounded-md text-sm underline max-lg:min-h-11" (click)="back()">
                 Back to overview
               </button>
               <div class="flex flex-col gap-1">

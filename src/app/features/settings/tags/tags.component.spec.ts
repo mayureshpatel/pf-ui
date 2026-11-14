@@ -50,7 +50,7 @@ describe('TagsComponent', () => {
     rows().map((r) => r.querySelector('[data-tag-name]')!.textContent!.trim());
   const button = (label: string): HTMLButtonElement | undefined =>
     (Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]).find(
-      (b) => b.textContent?.trim() === label,
+      (b) => b.textContent?.trim() === label || b.getAttribute('aria-label') === label,
     );
   const makeDirty = (): void => {
     component['tagForm']()!.form.controls.name.setValue('Changed');

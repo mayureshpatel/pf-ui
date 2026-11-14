@@ -51,7 +51,7 @@ describe('SidePanelComponent', () => {
   const q = <T extends HTMLElement>(s: string): T => fixture.nativeElement.querySelector(s) as T;
   const button = (name: RegExp): HTMLButtonElement | undefined =>
     Array.from<HTMLButtonElement>(fixture.nativeElement.querySelectorAll('button')).find((b) =>
-      name.test(b.textContent ?? ''),
+      name.test((b.textContent ?? '') + (b.getAttribute('aria-label') ?? '')),
     );
 
   beforeEach(async () => {
@@ -349,10 +349,12 @@ describe('SidePanelComponent', () => {
 
       // assert & verify
       expect(buttons).toHaveLength(3);
-      for (const control of buttons) {
+      for (const control of buttons.slice(1)) {
         expect(control.className).toContain('max-lg:min-h-11');
       }
-      expect(buttons[0].className).toContain('max-lg:min-w-11');
+      expect(buttons[0].className).toContain('max-lg:size-11');
+      expect(buttons[0].getAttribute('aria-label')).toBe('Close');
+      expect(buttons[0].querySelector('.pi-times')).toBeTruthy();
       expect(buttons[1].className).toContain('dark:border-rose-800');
     });
   });

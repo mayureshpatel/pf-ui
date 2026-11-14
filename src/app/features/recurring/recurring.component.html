@@ -99,7 +99,7 @@
           }
           @case ('item') {
             @if (selected(); as item) {
-              <button type="button" class="mb-3 cursor-pointer text-sm underline" (click)="back()">
+              <button type="button" class="mb-3 inline-flex cursor-pointer items-center rounded-md text-sm underline max-lg:min-h-11" (click)="back()">
                 Back to overview
               </button>
               <app-recurring-edit-form
@@ -119,7 +119,7 @@
           }
           @case ('add') {
             @if (!onlyAddMode()) {
-              <button type="button" class="mb-3 cursor-pointer text-sm underline" (click)="back()">
+              <button type="button" class="mb-3 inline-flex cursor-pointer items-center rounded-md text-sm underline max-lg:min-h-11" (click)="back()">
                 Back
               </button>
             }
@@ -133,7 +133,7 @@
             />
           }
           @case ('review') {
-            <button type="button" class="mb-3 cursor-pointer text-sm underline" (click)="back()">
+            <button type="button" class="mb-3 inline-flex cursor-pointer items-center rounded-md text-sm underline max-lg:min-h-11" (click)="back()">
               Back to overview
             </button>
             @if (patternsError()) {

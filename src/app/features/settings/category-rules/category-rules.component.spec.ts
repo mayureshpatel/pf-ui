@@ -83,7 +83,7 @@ describe('CategoryRulesComponent', () => {
     Array.from(fixture.nativeElement.querySelectorAll('[data-rule-row]'));
   const button = (label: string): HTMLButtonElement | undefined =>
     (Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]).find(
-      (b) => b.textContent?.trim() === label,
+      (b) => b.textContent?.trim() === label || b.getAttribute('aria-label') === label,
     );
   const makeDirty = (): void => {
     component['ruleForm']()!.form.controls.priority.setValue(9);

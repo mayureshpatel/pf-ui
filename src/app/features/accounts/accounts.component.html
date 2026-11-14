@@ -44,6 +44,7 @@
         class="order-first block lg:order-none"
         [title]="panelTitle()"
         [saving]="saving()"
+        [valid]="panelValid()"
         [showClose]="showClose()"
         [sheet]="panelMode() !== 'overview'"
         [moveFocus]="false"
@@ -72,7 +73,11 @@
           }
           @case ('account') {
             @if (selectedAccount(); as account) {
-              <button type="button" class="mb-3 cursor-pointer text-sm underline" (click)="back()">
+              <button
+                type="button"
+                class="mb-3 inline-flex cursor-pointer items-center rounded-md text-sm underline max-lg:min-h-11"
+                (click)="back()"
+              >
                 Back to overview
               </button>
               <app-account-summary-view
@@ -90,7 +95,11 @@
           }
           @case ('reconcile') {
             @if (selectedAccount(); as account) {
-              <button type="button" class="mb-3 cursor-pointer text-sm underline" (click)="back()">
+              <button
+                type="button"
+                class="mb-3 inline-flex cursor-pointer items-center rounded-md text-sm underline max-lg:min-h-11"
+                (click)="back()"
+              >
                 Back
               </button>
               <app-account-reconcile-form
@@ -103,7 +112,11 @@
           }
           @case ('balance') {
             @if (selectedAccount(); as account) {
-              <button type="button" class="mb-3 cursor-pointer text-sm underline" (click)="back()">
+              <button
+                type="button"
+                class="mb-3 inline-flex cursor-pointer items-center rounded-md text-sm underline max-lg:min-h-11"
+                (click)="back()"
+              >
                 Back
               </button>
               <app-account-balance-form
@@ -116,7 +129,11 @@
           }
           @default {
             @if (showBack()) {
-              <button type="button" class="mb-3 cursor-pointer text-sm underline" (click)="back()">
+              <button
+                type="button"
+                class="mb-3 inline-flex cursor-pointer items-center rounded-md text-sm underline max-lg:min-h-11"
+                (click)="back()"
+              >
                 Back
               </button>
             }

@@ -119,6 +119,13 @@ export class AccountEditFormComponent implements OnInit {
     manualBalance: new FormControl(false, { nonNullable: true }),
   });
 
+  private readonly status: Signal<string> = toSignal(this.form.statusChanges, {
+    initialValue: this.form.status,
+  });
+
+  /** Whether the form can be submitted; the panel's Save button follows it. */
+  readonly valid: Signal<boolean> = computed((): boolean => this.status() === 'VALID');
+
   private readonly manualOn: Signal<boolean> = toSignal(
     this.form.controls.manualBalance.valueChanges,
     { initialValue: false },

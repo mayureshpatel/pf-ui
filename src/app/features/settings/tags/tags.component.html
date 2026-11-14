@@ -133,7 +133,7 @@
           }
           @case ('tag') {
             @if (selectedTag(); as tag) {
-              <button type="button" class="mb-3 cursor-pointer text-sm underline" (click)="back()">
+              <button type="button" class="mb-3 inline-flex cursor-pointer items-center rounded-md text-sm underline max-lg:min-h-11" (click)="back()">
                 Back to overview
               </button>
               <app-tag-edit-form
@@ -150,7 +150,7 @@
           }
           @case ('add') {
             @if (!onlyAddMode()) {
-              <button type="button" class="mb-3 cursor-pointer text-sm underline" (click)="back()">
+              <button type="button" class="mb-3 inline-flex cursor-pointer items-center rounded-md text-sm underline max-lg:min-h-11" (click)="back()">
                 Back
               </button>
             }

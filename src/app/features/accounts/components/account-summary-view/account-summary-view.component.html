@@ -66,7 +66,7 @@
     @if (isManual()) {
       <button
         type="button"
-        class="cursor-pointer rounded-lg bg-primary-700 px-3 py-2 text-sm font-medium text-white hover:bg-primary-800"
+        class="cursor-pointer rounded-lg bg-primary-700 px-3 py-2 text-sm font-medium max-lg:min-h-11 text-white hover:bg-primary-800"
         (click)="updateBalance.emit()"
       >
         Update balance
@@ -74,7 +74,7 @@
     } @else {
       <button
         type="button"
-        class="cursor-pointer rounded-lg bg-primary-700 px-3 py-2 text-sm font-medium text-white hover:bg-primary-800"
+        class="cursor-pointer rounded-lg bg-primary-700 px-3 py-2 text-sm font-medium max-lg:min-h-11 text-white hover:bg-primary-800"
         (click)="reconcile.emit()"
       >
         Reconcile with statement
@@ -82,21 +82,21 @@
     }
     <button
       type="button"
-      class="cursor-pointer rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium dark:border-surface-700"
+      class="cursor-pointer rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium max-lg:min-h-11 dark:border-surface-700"
       (click)="viewTransactions.emit()"
     >
       View transactions
     </button>
     <button
       type="button"
-      class="cursor-pointer rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium dark:border-surface-700"
+      class="cursor-pointer rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium max-lg:min-h-11 dark:border-surface-700"
       (click)="edit.emit()"
     >
       Edit details
     </button>
     <button
       type="button"
-      class="cursor-pointer rounded-lg border border-rose-300 px-3 py-2 text-sm font-medium text-rose-700 dark:text-rose-400"
+      class="cursor-pointer rounded-lg border border-rose-300 px-3 py-2 text-sm font-medium max-lg:min-h-11 text-rose-700 dark:text-rose-400"
       (click)="delete.emit()"
     >
       Delete account
