@@ -936,6 +936,16 @@ describe('AccountsComponent', () => {
       expect(aside().getAttribute('aria-label')).toBe('Add account');
     });
 
+    it('should point the first-use description at the open form, not at an Add button', () => {
+      // act
+      loadWith([]);
+
+      // assert & verify
+      expect(
+        fixture.nativeElement.querySelector('[data-testid="empty-state"]').textContent,
+      ).toContain('Fill in the form');
+    });
+
     it('should keep the only-add form inline, never a modal sheet with no way out', () => {
       // act
       loadWith([]);

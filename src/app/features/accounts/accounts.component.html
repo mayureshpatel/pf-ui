@@ -21,6 +21,7 @@
       <span class="sr-only">Loading accounts</span>
       <div class="flex min-w-0 flex-col gap-4">
         <p-skeleton height="12rem" borderRadius="1rem" />
+        <p-skeleton height="12rem" borderRadius="1rem" />
         <p-skeleton height="10rem" borderRadius="1rem" />
       </div>
       <p-skeleton class="order-first block lg:order-none" height="16rem" borderRadius="1rem" />
@@ -42,7 +43,11 @@
         } @else if (!loading()) {
           <app-empty-state
             title="No accounts yet"
-            description="Add your first account to start tracking your balances."
+            [description]="
+              onlyAddMode()
+                ? 'Fill in the form to add your first account and start tracking your balances.'
+                : 'Add your first account to start tracking your balances.'
+            "
           />
         }
       </div>

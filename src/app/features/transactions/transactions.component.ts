@@ -107,6 +107,7 @@ import { TransferMatchingDialogComponent } from './components/transfer-matching-
 import { BulkEditData } from './components/transaction-bulk-form/transaction-bulk-form.component';
 import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
 import { toApiDateTimeString } from '@shared/utils/transaction.utils';
+import { focusAfterClear } from '@shared/utils/focus-after-clear';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { SkeletonModule } from 'primeng/skeleton';
 import { PageErrorStateComponent } from '@shared/components/page-error-state/page-error-state.component';
@@ -788,11 +789,9 @@ export class TransactionsComponent implements OnInit {
    */
   clearFiltersFromEmpty(): void {
     this.onFilterChange({});
-    afterNextRender(
-      (): void =>
-        this.host.nativeElement.querySelector<HTMLInputElement>('input[type="search"]')?.focus(),
-      { injector: this.injector },
-    );
+    afterNextRender((): void => focusAfterClear(this.host.nativeElement), {
+      injector: this.injector,
+    });
   }
 
   /** Applies a new filter (period, search, popover, chips) and returns to the first page. */

@@ -48,9 +48,11 @@
     >
       <div
         role="tabpanel"
+        tabindex="-1"
+        data-focus-results
         [id]="tabPanelId"
         [attr.aria-labelledby]="activeTabId()"
-        class="flex min-w-0 flex-col gap-3"
+        class="flex min-w-0 flex-col gap-3 outline-none"
         [class.pb-24]="selectedIds().length > 0"
       >
         @if (isEmpty()) {

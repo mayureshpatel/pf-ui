@@ -45,7 +45,7 @@
     </div>
   } @else {
     <div class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_26rem]">
-      <div class="flex min-w-0 flex-col gap-4">
+      <div class="flex min-w-0 flex-col gap-4 outline-none" tabindex="-1" data-focus-results>
         @if (categories().length === 0) {
           <app-empty-state
             title="No categories yet"

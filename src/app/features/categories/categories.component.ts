@@ -47,6 +47,7 @@ import { TransactionApiService } from '@features/transactions/services/transacti
 import { ToastService } from '@core/services/toast.service';
 import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen-toolbar';
 import { SidePanelComponent } from '@shared/components/side-panel/side-panel.component';
+import { focusAfterClear } from '@shared/utils/focus-after-clear';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { PageErrorStateComponent } from '@shared/components/page-error-state/page-error-state.component';
 import { CategoryFiltersComponent } from './components/category-filters/category-filters.component';
@@ -300,11 +301,9 @@ export class CategoriesComponent implements OnInit {
   /** Clears every filter and hands focus to the search box, since the button that was used goes. */
   clearFilters(): void {
     this.setFilter(NO_FILTER);
-    afterNextRender(
-      (): void =>
-        this.host.nativeElement.querySelector<HTMLInputElement>('input[type="search"]')?.focus(),
-      { injector: this.injector },
-    );
+    afterNextRender((): void => focusAfterClear(this.host.nativeElement), {
+      injector: this.injector,
+    });
   }
 
   toggleExpand(id: number): void {
