@@ -60,6 +60,13 @@ export const FinancePreset: Preset = definePreset(Aura, {
     },
   },
   components: {
+    // PF-948: Aura's dark skeleton is white at 6% on the near-black page, about 1.1:1, so a
+    // loading block is barely there. 12% keeps it calm and visible.
+    skeleton: {
+      colorScheme: {
+        dark: { root: { background: 'rgba(255, 255, 255, 0.12)' } },
+      },
+    },
     // The segmented control's unselected labels (the dashboard period presets) are Aura's
     // surface.500, 4.40:1 on their surface.100 track. The muted text token is tuned to pass.
     togglebutton: {

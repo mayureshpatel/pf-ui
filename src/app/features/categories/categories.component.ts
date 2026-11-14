@@ -5,6 +5,7 @@ import {
   computed,
   DestroyRef,
   effect,
+  ElementRef,
   inject,
   Injector,
   OnInit,
@@ -46,6 +47,7 @@ import { TransactionApiService } from '@features/transactions/services/transacti
 import { ToastService } from '@core/services/toast.service';
 import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen-toolbar';
 import { SidePanelComponent } from '@shared/components/side-panel/side-panel.component';
+import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { PageErrorStateComponent } from '@shared/components/page-error-state/page-error-state.component';
 import { CategoryFiltersComponent } from './components/category-filters/category-filters.component';
 import { CategoryTreeComponent } from './components/category-tree/category-tree.component';
@@ -85,6 +87,7 @@ export type CategoryPanelMode = 'overview' | 'category' | 'add' | 'bulk' | 'star
     SkeletonModule,
     ScreenToolbarComponent,
     PageErrorStateComponent,
+    EmptyStateComponent,
     SidePanelComponent,
     CategoryFiltersComponent,
     CategoryTreeComponent,
@@ -115,6 +118,7 @@ export class CategoriesComponent implements OnInit {
   /** A save, add or delete is in flight. */
   readonly saving: WritableSignal<boolean> = signal(false);
 
+  private readonly host: ElementRef<HTMLElement> = inject(ElementRef<HTMLElement>);
   readonly filter: WritableSignal<CategoryFilter> = signal(NO_FILTER);
   readonly expandedIds: WritableSignal<ReadonlySet<number>> = signal(new Set<number>());
   readonly tickedIds: WritableSignal<ReadonlySet<number>> = signal(new Set<number>());
@@ -287,8 +291,20 @@ export class CategoriesComponent implements OnInit {
     }
   }
 
+  /** Names what found nothing: the search text when there is one, otherwise the filters. */
+  readonly noMatchTitle: Signal<string> = computed((): string => {
+    const search: string = this.filter().search.trim();
+    return search ? `No categories match "${search}"` : 'No categories match these filters';
+  });
+
+  /** Clears every filter and hands focus to the search box, since the button that was used goes. */
   clearFilters(): void {
     this.setFilter(NO_FILTER);
+    afterNextRender(
+      (): void =>
+        this.host.nativeElement.querySelector<HTMLInputElement>('input[type="search"]')?.focus(),
+      { injector: this.injector },
+    );
   }
 
   toggleExpand(id: number): void {

@@ -1,3 +1,4 @@
+import { SkeletonModule } from 'primeng/skeleton';
 import { NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
@@ -32,7 +33,7 @@ interface SortColumn {
 @Component({
   selector: 'app-transaction-list',
   standalone: true,
-  imports: [FormatTransactionTypeAmountPipe, FormatCurrencyPipe, NgTemplateOutlet],
+  imports: [FormatTransactionTypeAmountPipe, FormatCurrencyPipe, NgTemplateOutlet, SkeletonModule],
   providers: [FormatCurrencyPipe],
   templateUrl: './transaction-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

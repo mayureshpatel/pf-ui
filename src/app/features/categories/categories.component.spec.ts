@@ -686,7 +686,7 @@ describe('CategoriesComponent', () => {
 
   describe('starter set', () => {
     const starterButton = (): HTMLElement | null =>
-      fixture.nativeElement.querySelector('[data-testid="add-starter"] button');
+      fixture.nativeElement.querySelector('[data-testid="add-starter-empty"] button');
     const starterForm = (): CategoryStarterFormComponent =>
       fixture.debugElement.query(By.directive(CategoryStarterFormComponent)).componentInstance;
 
@@ -741,15 +741,19 @@ describe('CategoriesComponent', () => {
       expect(component.panelMode()).toBe('add');
     });
 
-    it('should also offer it inside the add form of an empty page', () => {
+    it('should offer it as an outlined button in the empty state of an empty page', () => {
       // arrange
       loadWith([], []);
 
       // act
-      fixture.nativeElement.querySelector('[data-testid="add-starter-inline"]').click();
+      const button: HTMLElement = fixture.nativeElement.querySelector(
+        '[data-testid="add-starter-empty"] button',
+      );
+      button.click();
       fixture.detectChanges();
 
       // assert & verify
+      expect(button.className).toContain('p-button-outlined');
       expect(component.panelMode()).toBe('starter');
     });
 
@@ -1248,6 +1252,15 @@ describe('CategoriesComponent', () => {
       expect(fixture.nativeElement.querySelector('app-side-panel')).toBe(panel);
     });
 
+    it('should keep the first-use add form inline, never a modal sheet with no way out', () => {
+      // act
+      loadWith([], []);
+
+      // assert & verify
+      expect(aside().getAttribute('role')).toBeNull();
+      expect(aside().className).not.toContain('fixed');
+    });
+
     it('should show No categories yet beside the add form when there are none', () => {
       // act
       loadWith([], []);
@@ -1264,7 +1277,8 @@ describe('CategoriesComponent', () => {
       fixture.detectChanges();
 
       // assert & verify
-      expect(fixture.nativeElement.textContent).toContain('No categories match these filters');
+      expect(fixture.nativeElement.textContent).toContain('No categories match "zzzz"');
+      expect(fixture.nativeElement.querySelector('[role="status"] h2')).not.toBeNull();
 
       // act
       fixture.nativeElement
@@ -1276,6 +1290,32 @@ describe('CategoriesComponent', () => {
       expect(component.filtering()).toBe(false);
       expect(fixture.nativeElement.querySelectorAll('[data-testid="open-category"]').length).toBe(
         4,
+      );
+    });
+
+    it('should name the filters, not a search, when only a type filter found nothing', () => {
+      // act
+      component.setFilter({ ...NO_FILTER, unusedOnly: true, search: 'zzzz' });
+      component.setFilter({ ...NO_FILTER, search: ' ', unusedOnly: true });
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.noMatchTitle()).toBe('No categories match these filters');
+    });
+
+    it('should hand focus to the search box once Clear filters has removed its own button', async () => {
+      // arrange
+      component.setFilter({ ...NO_FILTER, search: 'zzzz' });
+      fixture.detectChanges();
+
+      // act
+      component.clearFilters();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      // assert & verify
+      expect(document.activeElement).toBe(
+        fixture.nativeElement.querySelector('input[type="search"]'),
       );
     });
 

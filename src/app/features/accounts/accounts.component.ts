@@ -40,6 +40,7 @@ import { AccountGroup, AccountTotals, accountTotals, groupAccounts } from './uti
 import { ToastService } from '@core/services/toast.service';
 import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen-toolbar';
 import { finalize, forkJoin } from 'rxjs';
+import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { PageErrorStateComponent } from '@shared/components/page-error-state/page-error-state.component';
 
 @Component({
@@ -50,6 +51,7 @@ import { PageErrorStateComponent } from '@shared/components/page-error-state/pag
     SkeletonModule,
     ScreenToolbarComponent,
     PageErrorStateComponent,
+    EmptyStateComponent,
     SidePanelComponent,
     AccountOverviewComponent,
     AccountListComponent,

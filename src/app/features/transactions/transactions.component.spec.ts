@@ -3235,8 +3235,52 @@ describe('TransactionsComponent', () => {
         const root: HTMLElement = fixture.nativeElement;
         expect(root.querySelector('app-transaction-filter-bar')).toBeTruthy();
         expect(root.querySelector('app-transaction-review-tabs')).toBeTruthy();
-        expect(root.textContent).toContain('No transactions match these filters');
+        expect(root.textContent).toContain('No transactions match "zzz"');
         expect(root.querySelector('[data-testid="empty-clear-filters"]')).toBeTruthy();
+        expect(root.querySelector('[role="status"] h2')).not.toBeNull();
+      });
+
+      it('should hand focus to the search box after Clear filters removes its own button', async () => {
+        // arrange
+        openAt({ description: 'zzz' });
+
+        // act
+        component.clearFiltersFromEmpty();
+        fixture.detectChanges();
+        await fixture.whenStable();
+
+        // assert & verify
+        expect(document.activeElement).toBe(
+          fixture.nativeElement.querySelector('input[type="search"]'),
+        );
+      });
+
+      it('should show an announced skeleton, never a blank box, while the existence check is pending', () => {
+        // arrange
+        openAt({ startDate: '2026-11-01', endDate: '2026-11-30' });
+        component.anyTransactionsExist.set(null);
+        fixture.detectChanges();
+
+        // assert & verify
+        const checking: HTMLElement | null = fixture.nativeElement.querySelector(
+          '[data-testid="empty-checking"]',
+        );
+        expect(checking?.getAttribute('role')).toBe('status');
+        expect(checking?.textContent).toContain('Loading transactions');
+        expect(checking?.querySelector('p-skeleton')).not.toBeNull();
+      });
+
+      it('should offer only outlined actions in the box, leaving the filled Add to the toolbar', () => {
+        // arrange
+        openAt({});
+        component.onFilterChange({});
+        fixture.detectChanges();
+
+        // assert & verify
+        const box: HTMLElement = fixture.nativeElement.querySelector('[data-testid="empty-state"]');
+        const buttons: HTMLElement[] = Array.from(box.querySelectorAll('button'));
+        expect(buttons.length).toBe(2);
+        for (const button of buttons) expect(button.className).toContain('p-button-outlined');
       });
 
       it('should say there are no transactions yet when nothing is applied and nothing exists', () => {
