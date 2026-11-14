@@ -31,7 +31,7 @@
             <button
               type="button"
               data-testid="open-account"
-              class="flex min-w-0 flex-1 cursor-pointer items-center gap-3 py-3 pl-3 pr-4 text-left"
+              class="flex min-h-17 min-w-0 flex-1 cursor-pointer items-center gap-3 py-3 pl-3 pr-4 text-left"
               [attr.aria-current]="selectedId() === account.id ? 'true' : null"
               (click)="openAccount.emit(account)"
             >

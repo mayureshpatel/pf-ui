@@ -101,7 +101,7 @@ describe('TagsComponent', () => {
       mode: component['panelMode'](),
       title: fixture.nativeElement.querySelector('aside h2').textContent.trim(),
     };
-    button('Back to overview')!.click();
+    button('Close')!.click();
     await settle();
     const afterBack = component['panelMode']();
     rows()[0].click();
@@ -505,7 +505,7 @@ describe('TagsComponent', () => {
     await settle();
     await new Promise((resolve) => setTimeout(resolve));
     const inPanel = document.activeElement?.tagName;
-    button('Back to overview')!.click();
+    button('Close')!.click();
     await settle();
     await new Promise((resolve) => setTimeout(resolve));
 

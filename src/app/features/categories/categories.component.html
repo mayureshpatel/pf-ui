@@ -142,9 +142,6 @@
           }
           @case ('category') {
             @if (selectedCategory(); as category) {
-              <button type="button" class="mb-3 inline-flex cursor-pointer items-center rounded-md text-sm underline max-lg:min-h-11" (click)="back()">
-                Back to overview
-              </button>
               <app-category-edit-form
                 #editForm
                 [category]="category"
@@ -170,7 +167,11 @@
           }
           @case ('add') {
             @if (!onlyAddMode()) {
-              <button type="button" class="mb-3 inline-flex cursor-pointer items-center rounded-md text-sm underline max-lg:min-h-11" (click)="back()">
+              <button
+                type="button"
+                class="mb-3 inline-flex cursor-pointer items-center rounded-md text-sm underline max-lg:min-h-11"
+                (click)="back()"
+              >
                 Back
               </button>
             }

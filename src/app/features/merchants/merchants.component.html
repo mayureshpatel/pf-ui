@@ -78,13 +78,6 @@
           }
           @case ('merchant') {
             @if (selected(); as merchant) {
-              <button
-                type="button"
-                class="mb-3 inline-flex cursor-pointer items-center rounded-md text-sm underline max-lg:min-h-11"
-                (click)="back()"
-              >
-                Back to overview
-              </button>
               <app-merchant-edit-form
                 #editForm
                 [merchant]="merchant"
@@ -129,13 +122,6 @@
                 (back)="back()"
               />
             } @else {
-              <button
-                type="button"
-                class="mb-3 inline-flex cursor-pointer items-center rounded-md text-sm underline max-lg:min-h-11"
-                (click)="back()"
-              >
-                Back to overview
-              </button>
               <div class="flex flex-col gap-1">
                 <label id="link-target-label" for="link-target" class="text-sm font-medium">
                   Link to

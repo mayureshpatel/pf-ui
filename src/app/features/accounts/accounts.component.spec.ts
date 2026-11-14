@@ -912,7 +912,7 @@ describe('AccountsComponent', () => {
       ).toContain('$750.00');
     });
 
-    it('should show the account view with a Back to overview link when a row is opened', () => {
+    it('should show the account view with Close as the one way back when a row is opened', () => {
       // arrange
       loadWith([acct(1, 'Checking', 100, true)]);
 
@@ -922,7 +922,8 @@ describe('AccountsComponent', () => {
 
       // assert & verify
       expect(aside().getAttribute('aria-label')).toBe('Checking');
-      expect(panelButton('Back to overview')).toBeTruthy();
+      expect(panelButton('Close')).toBeTruthy();
+      expect(panelButton('Back to overview')).toBeUndefined();
     });
 
     it('should show No accounts yet and the add form when there are no accounts', () => {

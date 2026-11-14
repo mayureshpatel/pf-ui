@@ -76,9 +76,6 @@
           }
           @case ('category') {
             @if (selectedRow(); as row) {
-              <button type="button" class="mb-3 inline-flex cursor-pointer items-center rounded-md text-sm underline max-lg:min-h-11" (click)="back()">
-                Back to overview
-              </button>
               <app-budget-category-view
                 #categoryView
                 [row]="row"
@@ -93,7 +90,11 @@
             }
           }
           @case ('add') {
-            <button type="button" class="mb-3 inline-flex cursor-pointer items-center rounded-md text-sm underline max-lg:min-h-11" (click)="back()">
+            <button
+              type="button"
+              class="mb-3 inline-flex cursor-pointer items-center rounded-md text-sm underline max-lg:min-h-11"
+              (click)="back()"
+            >
               Back
             </button>
             <app-budget-add-form
