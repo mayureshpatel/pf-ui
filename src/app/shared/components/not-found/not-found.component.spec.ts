@@ -25,6 +25,13 @@ describe('NotFoundComponent', () => {
     fixture.detectChanges();
   });
 
+  it('moves focus to its heading so the change of page is announced', () => {
+    const heading: HTMLElement = fixture.nativeElement.querySelector('h1');
+
+    expect(heading.getAttribute('tabindex')).toBe('-1');
+    expect(document.activeElement).toBe(heading);
+  });
+
   it('shows a clear not-found message', () => {
     expect(fixture.nativeElement.textContent).toContain('Page not found');
   });
