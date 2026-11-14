@@ -56,6 +56,7 @@ describe('PageErrorStateComponent', () => {
     const root: HTMLElement = fixture.nativeElement.querySelector('[role="alert"]');
     expect(root).not.toBeNull();
     expect(root.textContent).toContain('Your data is unchanged');
+    expect(root.textContent).not.toMatch(/data service|running/i);
     expect(fixture.nativeElement.innerHTML).not.toContain('animate-pulse');
     expect(
       fixture.nativeElement.querySelector('.pi-exclamation-triangle').getAttribute('aria-hidden'),
