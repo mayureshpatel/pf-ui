@@ -12,10 +12,11 @@
   [attr.inert]="sidebarVisible() ? '' : null"
 >
   <!-- Header -->
+  <!-- PF-947: below lg the header stays put and names the page, so the page is known after scrolling. -->
   <header
-    class="col-span-5 flex items-center justify-between px-4 sm:px-6 h-16 border-b border-b-surface-200 dark:border-b-surface-800"
+    class="sticky top-0 z-20 col-span-5 flex h-16 items-center justify-between border-b border-b-surface-200 bg-surface-0 px-4 dark:border-b-surface-800 dark:bg-surface-950 sm:px-6 lg:static"
   >
-    <div class="flex items-center gap-3">
+    <div class="flex min-w-0 items-center gap-3">
       <p-button
         #openNav
         icon="pi pi-bars"
@@ -29,10 +30,18 @@
       />
 
       <i class="pi pi-wallet text-xl text-primary" aria-hidden="true"></i>
-      <span class="whitespace-nowrap text-base font-semibold">Personal Finance</span>
+      <span class="hidden whitespace-nowrap text-base font-semibold lg:inline"
+        >Personal Finance</span
+      >
+      <span
+        data-testid="header-page-name"
+        aria-hidden="true"
+        class="min-w-0 truncate text-base font-semibold lg:hidden"
+        >{{ pageName() }}</span
+      >
     </div>
 
-    <div class="hidden items-center gap-4 sm:flex">
+    <div class="hidden shrink-0 items-center gap-4 sm:flex">
       <span class="text-muted-color">{{ username() }}</span>
       <p-avatar
         aria-hidden="true"
@@ -107,16 +116,41 @@
 </p-drawer>
 
 <ng-template #navLinks>
-  @for (item of navItems; track item.label) {
-    <a
-      [routerLink]="item.routerLink"
-      routerLinkActive="bg-primary-100 font-medium text-primary-700 border-l-primary-700 dark:bg-primary-950 dark:text-primary-400 dark:border-l-primary-400"
-      ariaCurrentWhenActive="page"
-      class="flex items-center gap-3 rounded-lg border-l-4 border-l-transparent py-3 pl-3 pr-4 transition-colors outline-primary-700 hover:bg-surface-100 focus-visible:outline-2 focus-visible:outline-offset-2 dark:outline-primary-400 dark:hover:bg-surface-800"
-      (click)="sidebarVisible.set(false)"
+  @for (group of navGroups; track group.label; let first = $first) {
+    <div
+      role="group"
+      [attr.aria-labelledby]="'nav-group-' + group.label"
+      class="flex flex-col gap-1"
     >
-      <i [class]="item.icon" aria-hidden="true"></i>
-      <span>{{ item.label }}</span>
-    </a>
+      <p
+        [id]="'nav-group-' + group.label"
+        data-testid="nav-group-label"
+        class="px-3 pb-1 text-xs font-semibold text-muted-color"
+        [class.pt-4]="!first"
+      >
+        {{ group.label }}
+      </p>
+      @for (item of group.items; track item.label) {
+        <a
+          [routerLink]="item.routerLink"
+          routerLinkActive="bg-primary-100 font-medium text-primary-700 border-l-primary-700 dark:bg-primary-950 dark:text-primary-400 dark:border-l-primary-400"
+          ariaCurrentWhenActive="page"
+          class="flex items-center gap-3 rounded-lg border-l-4 border-l-transparent py-3 pl-3 pr-4 transition-colors outline-primary-700 hover:bg-surface-100 focus-visible:outline-2 focus-visible:outline-offset-2 dark:outline-primary-400 dark:hover:bg-surface-800"
+          (click)="sidebarVisible.set(false)"
+        >
+          <i [class]="item.icon" aria-hidden="true"></i>
+          <span>{{ item.label }}</span>
+          @if (item.routerLink === '/transactions' && transactionsBadge(); as badge) {
+            <span
+              data-testid="transactions-badge"
+              aria-hidden="true"
+              class="ml-auto rounded-full bg-surface-200 px-2 text-xs font-semibold leading-5 text-surface-800 dark:bg-surface-700 dark:text-surface-100"
+              >{{ badge }}</span
+            >
+            <span class="sr-only">, {{ badge }} need a category</span>
+          }
+        </a>
+      }
+    </div>
   }
 </ng-template>

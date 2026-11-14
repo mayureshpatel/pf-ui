@@ -51,6 +51,7 @@ import { Tag } from '@models/tag.model';
 import { TransactionApiService } from './services/transaction-api.service';
 import { TransactionUrlStateService } from './services/transaction-url-state.service';
 import { DashboardApiService } from '@features/dashboard/services/dashboard-api.service';
+import { ReviewCountService } from '@core/services/review-count.service';
 import { ActionItem, ActionType } from '@models/dashboard.model';
 import { isSameTransactionState } from './utils/transaction-state';
 import {
@@ -498,6 +499,7 @@ export class TransactionsComponent implements OnInit {
   });
 
   private readonly dashboardApi: DashboardApiService = inject(DashboardApiService);
+  private readonly reviewCountService: ReviewCountService = inject(ReviewCountService);
   private readonly editForm: Signal<TransactionEditFormComponent | undefined> =
     viewChild<TransactionEditFormComponent>('editForm');
   private readonly bulkForm: Signal<TransactionBulkFormComponent | undefined> =
@@ -1323,6 +1325,8 @@ export class TransactionsComponent implements OnInit {
             uncategorized: count(ActionType.UNCATEGORIZED),
             transfers: count(ActionType.TRANSFER_REVIEW),
           });
+          // PF-947: the navigation badge shows the same number, so hand it over rather than fetch.
+          this.reviewCountService.set(count(ActionType.UNCATEGORIZED));
         },
         error: (): void => this.reviewCounts.set({ uncategorized: 0, transfers: 0 }),
       });
