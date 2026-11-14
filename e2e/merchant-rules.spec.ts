@@ -291,7 +291,7 @@ test.describe('Merchant rules', () => {
       );
       await expect(dialog.getByRole('row').filter({ hasText: linked })).toHaveCount(0);
 
-      await dialog.getByRole('button', { name: 'Commit Changes' }).click();
+      await dialog.getByRole('button', { name: /^Apply \d+ changes?$/ }).click();
       await expect(page.getByText('2 transactions got a merchant.')).toBeVisible();
       await expect(dialog).toBeHidden();
     });

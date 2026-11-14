@@ -5,11 +5,14 @@ import { Merchant, TransactionDescription } from '@models/merchant.model';
  * @param merchant the merchant to describe.
  * @returns the location text.
  */
+/** What `locationLabel` says when a merchant has neither city nor state. */
+export const NO_LOCATION = 'No location';
+
 export function locationLabel(merchant: Merchant): string {
   const parts: string[] = [merchant.city, merchant.state]
     .map((part: string | null): string => (part ?? '').trim())
     .filter((part: string): boolean => part.length > 0);
-  return parts.length > 0 ? parts.join(', ') : 'No location';
+  return parts.length > 0 ? parts.join(', ') : NO_LOCATION;
 }
 
 /**

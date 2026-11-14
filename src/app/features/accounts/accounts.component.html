@@ -1,9 +1,7 @@
 <div class="flex w-full flex-col gap-4">
-  <app-screen-toolbar [showDivider]="false">
+  <app-screen-toolbar>
     <div toolbarTitle>
-      <h1 class="text-3xl font-bold tracking-tight text-surface-900 dark:text-surface-0">
-        Accounts
-      </h1>
+      <h1 class="heading-page">Accounts</h1>
     </div>
     <div toolbarFilters>
       <p-button label="Add account" icon="pi pi-plus" (onClick)="startCreate()" />
@@ -34,7 +32,7 @@
           />
         } @else if (!loading()) {
           <div
-            class="rounded-2xl border border-surface-200 p-10 text-center dark:border-surface-800"
+            class="rounded-xl border border-surface-200 p-10 text-center dark:border-surface-800"
           >
             <p class="font-medium">No accounts yet</p>
             <p class="text-muted-color">Add your first account to start tracking your balances.</p>
@@ -46,8 +44,9 @@
         class="order-first block lg:order-none"
         [title]="panelTitle()"
         [saving]="saving()"
+        [valid]="panelValid()"
         [showClose]="showClose()"
-        [sheet]="panelMode() !== 'overview'"
+        [sheet]="panelMode() !== 'overview' && !onlyAddMode()"
         [moveFocus]="false"
         [showFooter]="
           panelMode() === 'edit' ||
@@ -74,9 +73,6 @@
           }
           @case ('account') {
             @if (selectedAccount(); as account) {
-              <button type="button" class="mb-3 cursor-pointer text-sm underline" (click)="back()">
-                Back to overview
-              </button>
               <app-account-summary-view
                 [account]="account"
                 [history]="balanceHistory()"
@@ -92,7 +88,11 @@
           }
           @case ('reconcile') {
             @if (selectedAccount(); as account) {
-              <button type="button" class="mb-3 cursor-pointer text-sm underline" (click)="back()">
+              <button
+                type="button"
+                class="mb-3 inline-flex cursor-pointer items-center rounded-md text-sm underline max-lg:min-h-11"
+                (click)="back()"
+              >
                 Back
               </button>
               <app-account-reconcile-form
@@ -105,7 +105,11 @@
           }
           @case ('balance') {
             @if (selectedAccount(); as account) {
-              <button type="button" class="mb-3 cursor-pointer text-sm underline" (click)="back()">
+              <button
+                type="button"
+                class="mb-3 inline-flex cursor-pointer items-center rounded-md text-sm underline max-lg:min-h-11"
+                (click)="back()"
+              >
                 Back
               </button>
               <app-account-balance-form
@@ -118,7 +122,11 @@
           }
           @default {
             @if (showBack()) {
-              <button type="button" class="mb-3 cursor-pointer text-sm underline" (click)="back()">
+              <button
+                type="button"
+                class="mb-3 inline-flex cursor-pointer items-center rounded-md text-sm underline max-lg:min-h-11"
+                (click)="back()"
+              >
                 Back
               </button>
             }

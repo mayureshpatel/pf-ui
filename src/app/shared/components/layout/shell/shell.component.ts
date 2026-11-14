@@ -1,17 +1,19 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
+  effect,
   inject,
   Signal,
   signal,
+  viewChild,
   WritableSignal,
 } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AvatarModule } from 'primeng/avatar';
 import { ButtonModule } from 'primeng/button';
 import { DrawerModule } from 'primeng/drawer';
-import { MenuModule } from 'primeng/menu';
-import { RippleModule } from 'primeng/ripple';
 import { MenuItem } from 'primeng/api';
 import { AuthService } from '@core/auth/auth.service';
 import { Tooltip } from 'primeng/tooltip';
@@ -25,14 +27,13 @@ import { Tooltip } from 'primeng/tooltip';
   selector: 'app-shell',
   standalone: true,
   imports: [
+    NgTemplateOutlet,
     RouterOutlet,
     RouterLink,
     RouterLinkActive,
     AvatarModule,
     ButtonModule,
     DrawerModule,
-    MenuModule,
-    RippleModule,
     Tooltip,
   ],
   templateUrl: './shell.component.html',
@@ -50,26 +51,55 @@ export class ShellComponent {
     { label: 'Transactions', icon: 'pi pi-list', routerLink: '/transactions' },
     { label: 'Accounts', icon: 'pi pi-wallet', routerLink: '/accounts' },
     { label: 'Budgets', icon: 'pi pi-calendar', routerLink: '/budgets' },
+    { label: 'Reports', icon: 'pi pi-chart-bar', routerLink: '/reports' },
     { label: 'Categories', icon: 'pi pi-tags', routerLink: '/categories' },
     { label: 'Merchants', icon: 'pi pi-shop', routerLink: '/merchants' },
     { label: 'Recurring', icon: 'pi pi-refresh', routerLink: '/recurring' },
     { label: 'Settings', icon: 'pi pi-cog', routerLink: '/settings' },
-    { label: 'Reports', icon: 'pi pi-chart-bar', routerLink: '/reports' },
   ];
 
-  userMenuItems: MenuItem[] = [
-    {
-      label: 'Logout',
-      icon: 'pi pi-sign-out',
-      command: (): void => this.logout(),
-    },
-  ];
+  /** Names the drawer for screen readers (PrimeNG gives it only a generic role). */
+  protected readonly drawerPt = {
+    root: { 'aria-label': 'Navigation' },
+    pcCloseButton: { root: { class: 'size-11' } },
+  };
+
+  private readonly openNav = viewChild('openNav', { read: ElementRef });
+
+  private wasOpen = false;
+
+  constructor() {
+    // Closing by any route (Escape, close button, link click) returns focus to the menu button,
+    // without waiting for the drawer's leave animation to report back.
+    effect((): void => {
+      const open = this.sidebarVisible();
+      if (this.wasOpen && !open) {
+        this.restoreFocus();
+      }
+      this.wasOpen = open;
+    });
+  }
 
   /**
    * Toggles the sidebar visibility.
    */
   toggleSidebar(): void {
     this.sidebarVisible.update((v: boolean): boolean => !v);
+  }
+
+  /** Moves focus into the drawer once it is open, so the keyboard starts at its first link. */
+  focusDrawer(): void {
+    document.querySelector<HTMLElement>('[data-testid="drawer-nav"] a')?.focus();
+  }
+
+  /**
+   * Returns focus to the menu button when the drawer closes. The grid is inert until the next
+   * change detection, so the focus waits a tick.
+   */
+  restoreFocus(): void {
+    setTimeout((): void => {
+      this.openNav()?.nativeElement.querySelector('button')?.focus();
+    }, 0);
   }
 
   /**

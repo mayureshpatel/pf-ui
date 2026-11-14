@@ -7,7 +7,7 @@
       {{ outcome.createdSubcategories === 1 ? 'subcategory' : 'subcategories' }}.
     </p>
     <div>
-      <h3 class="mb-1 text-sm font-medium">Skipped ({{ outcome.skipped.length }})</h3>
+      <h3 class="mb-1 heading-panel">Skipped ({{ outcome.skipped.length }})</h3>
       <ul class="m-0 flex list-none flex-col gap-1 p-0 text-sm" data-testid="skipped-list">
         @for (item of outcome.skipped; track $index) {
           <li class="flex flex-wrap justify-between gap-x-2 break-words">
@@ -27,7 +27,7 @@
     <button
       type="button"
       data-testid="bulk-done"
-      class="cursor-pointer self-end rounded-lg bg-primary-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-800"
+      class="cursor-pointer self-end rounded-lg bg-primary-700 px-3 py-1.5 text-sm max-md:min-h-11 font-medium text-white hover:bg-primary-800"
       (click)="done.emit()"
     >
       Done

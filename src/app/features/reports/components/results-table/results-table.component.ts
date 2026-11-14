@@ -23,6 +23,7 @@ import {
   GROUP_LABELS,
   isAdditive,
   isDrillable,
+  MEASURE_BAR_CLASS,
   MEASURE_LABELS,
   Tone,
   topWithOther,
@@ -92,6 +93,9 @@ export class ResultsTableComponent {
   );
   protected readonly measureLabel: Signal<string> = computed(
     (): string => MEASURE_LABELS[this.measure()],
+  );
+  protected readonly barClass: Signal<string> = computed(
+    (): string => MEASURE_BAR_CLASS[this.measure()],
   );
   protected readonly sortOptions: Signal<{ value: SortKey; label: string }[]> = computed(() => [
     { value: 'value' as SortKey, label: this.measureLabel() },

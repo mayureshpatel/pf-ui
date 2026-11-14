@@ -2,81 +2,88 @@
   <p-card class="w-full max-w-md card-soft">
     <ng-template pTemplate="header">
       <div class="flex flex-col items-center pt-8 pb-4">
-        <div class="bg-primary/10 rounded-2xl p-4 mb-4">
-          <i class="pi pi-wallet text-5xl text-primary"></i>
+        <div class="bg-primary/10 rounded-xl p-4 mb-4">
+          <i class="pi pi-wallet text-5xl text-primary" aria-hidden="true"></i>
         </div>
-        <h1 class="text-3xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight">Personal Finance</h1>
-        <p class="text-muted-color mt-1 text-lg">Welcome back! Please sign in.</p>
+        <h1 class="heading-page">Personal Finance</h1>
+        <p class="text-muted-color mt-1 text-lg">Sign in to your ledger.</p>
+        <p class="text-muted-color mt-1 text-sm">Self-hosted. Your data stays on your server.</p>
       </div>
     </ng-template>
 
     <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-6 py-2">
       @if (errorMessage()) {
-        <p-message severity="error" variant="simple" class="w-full animate-fade-in">
+        <p-message severity="error" variant="simple" class="w-full animate-fade-in" role="alert">
           {{ errorMessage() }}
         </p-message>
       }
 
       <!-- Username Input -->
       <div class="flex flex-col gap-2">
-        <label for="username" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
+        <label for="username" class="text-sm font-medium text-surface-700 dark:text-surface-200">
           Username
         </label>
-        <div class="p-input-icon-left w-full">
-          <i class="pi pi-user text-muted-color"></i>
-          <input
-            pInputText
-            id="username"
-            formControlName="username"
-            placeholder="Enter your username"
-            class="w-full pl-10"
-            autocomplete="username"
-          />
-        </div>
-        @if (form.controls.username.invalid && form.controls.username.touched) {
-          <small class="text-rose-500 font-medium flex items-center gap-1 animate-fade-in">
-            <i class="pi pi-times-circle text-xs"></i> Username is required
+        <input
+          pInputText
+          id="username"
+          formControlName="username"
+          class="w-full"
+          autocomplete="username"
+          [invalid]="usernameInvalid()"
+          [attr.aria-invalid]="usernameInvalid() ? 'true' : null"
+          [attr.aria-describedby]="usernameInvalid() ? 'username-error' : null"
+        />
+        @if (usernameInvalid()) {
+          <small id="username-error" class="text-rose-700 dark:text-rose-400 font-medium flex items-center gap-1 animate-fade-in">
+            <i class="pi pi-times-circle text-xs" aria-hidden="true"></i> Username is required
           </small>
         }
       </div>
 
       <!-- Password Input -->
       <div class="flex flex-col gap-2">
-        <label for="password" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
+        <label for="password" class="text-sm font-medium text-surface-700 dark:text-surface-200">
           Password
         </label>
-        <p-password
-          id="password"
-          formControlName="password"
-          placeholder="Enter your password"
-          [feedback]="false"
-          [toggleMask]="true"
-          styleClass="w-full"
-          inputStyleClass="w-full py-2"
-          autocomplete="current-password"
-        />
-        @if (form.controls.password.invalid && form.controls.password.touched) {
-          <small class="text-rose-500 font-medium flex items-center gap-1 animate-fade-in">
-            <i class="pi pi-times-circle text-xs"></i> Password is required
+        <div class="relative">
+          <input
+            pInputText
+            id="password"
+            formControlName="password"
+            [type]="showPassword() ? 'text' : 'password'"
+            class="w-full pr-12"
+            autocomplete="current-password"
+            [invalid]="passwordInvalid()"
+            [attr.aria-invalid]="passwordInvalid() ? 'true' : null"
+            [attr.aria-describedby]="passwordInvalid() ? 'password-error' : null"
+          />
+          <button
+            type="button"
+            class="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-md text-muted-color hover:text-surface-900 dark:hover:text-surface-0 cursor-pointer"
+            [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
+            [attr.aria-pressed]="showPassword()"
+            (click)="togglePasswordVisibility()"
+          >
+            <i class="pi" [class.pi-eye]="!showPassword()" [class.pi-eye-slash]="showPassword()" aria-hidden="true"></i>
+          </button>
+        </div>
+        @if (passwordInvalid()) {
+          <small id="password-error" class="text-rose-700 dark:text-rose-400 font-medium flex items-center gap-1 animate-fade-in">
+            <i class="pi pi-times-circle text-xs" aria-hidden="true"></i> Password is required
           </small>
         }
       </div>
 
-      <!-- Remember Me & Actions -->
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <p-checkbox
-            formControlName="rememberMe"
-            [binary]="true"
-            inputId="rememberMe"
-          />
-          <label for="rememberMe" class="text-sm font-medium text-surface-600 dark:text-surface-300 cursor-pointer">
-            Keep me signed in
-          </label>
-        </div>
-        <a class="text-sm font-bold text-primary-700 dark:text-primary-400 hover:underline cursor-pointer">
-          Forgot password?
-        </a>
+      <!-- Remember Me -->
+      <div class="flex items-center gap-2 min-h-11">
+        <p-checkbox
+          formControlName="rememberMe"
+          [binary]="true"
+          inputId="rememberMe"
+        />
+        <label for="rememberMe" class="text-sm font-medium text-surface-600 dark:text-surface-300 cursor-pointer py-3">
+          Keep me signed in
+        </label>
       </div>
 
       <p-button
@@ -86,16 +93,9 @@
         [loading]="isSubmitting()"
         [disabled]="isSubmitting()"
         size="large"
-        [raised]="true"
+        styleClass="w-full"
         class="w-full"
       />
-
-      <div class="text-center text-muted-color text-sm">
-        Don't have an account?
-        <a routerLink="/register" class="text-primary-700 dark:text-primary-400 font-bold hover:underline ml-1">
-          Create account
-        </a>
-      </div>
     </form>
   </p-card>
 </div>

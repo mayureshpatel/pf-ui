@@ -489,8 +489,11 @@ export class TransactionsComponent implements OnInit {
         return `${this.selectedTransactions().length} selected`;
       case 'rule':
         return 'Create rule';
-      default:
-        return 'Edit transaction';
+      default: {
+        const transaction: Transaction | null = this.selectedTransaction();
+        const name: string | undefined = transaction?.merchant?.name || transaction?.description;
+        return name ? `Edit ${name}` : 'Edit transaction';
+      }
     }
   });
 

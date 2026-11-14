@@ -71,7 +71,7 @@ describe('KeptCardComponent', () => {
       // assert & verify
       expect(component.kept()).toBe(-500);
       expect(component.isNegative()).toBe(true);
-      expect(query('[data-testid="kept-amount"]').className).toContain('text-rose-600');
+      expect(query('[data-testid="kept-amount"]').className).toContain('text-rose-700');
     });
   });
 
@@ -119,7 +119,7 @@ describe('KeptCardComponent', () => {
       // assert & verify
       const pill = query('[data-testid="kept-rate"]');
       expect(pill.textContent?.trim()).toBe('-50.0% of income');
-      expect(pill.className).toContain('text-rose-600');
+      expect(pill.className).toContain('text-rose-700');
       expect(pill.className).not.toContain('text-primary');
     });
 

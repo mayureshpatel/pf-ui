@@ -28,16 +28,16 @@
               </button>
             </th>
             <td class="hidden px-3 py-2 sm:table-cell" aria-hidden="true">
-              <span class="block h-2 w-full rounded bg-surface-100 dark:bg-surface-800">
+              <span class="block h-2 w-full rounded-full bg-surface-100 dark:bg-surface-800">
                 <span
                   data-bar
-                  class="block h-2 rounded"
+                  class="block h-2 rounded-full"
                   [class]="view.group.kind === 'DEBT' ? 'bg-rose-500' : 'bg-primary-500'"
                   [style.width.%]="view.width"
                 ></span>
               </span>
             </td>
-            <td class="px-3 py-2 text-right font-semibold tabular-nums">{{ view.balance }}</td>
+            <td class="px-3 py-2 text-right row-amount">{{ view.balance }}</td>
             <td class="px-3 py-2 text-right tabular-nums" [class]="toneClass(view.change.tone)">
               {{ view.change.text }}
             </td>

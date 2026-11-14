@@ -2,9 +2,7 @@
   aria-label="Nothing recorded for this period"
   class="flex flex-col items-start gap-3 rounded-xl border border-surface-200 bg-surface-0 p-6 dark:border-surface-700 dark:bg-surface-900"
 >
-  <h2 class="m-0 text-lg font-semibold text-surface-900 dark:text-surface-0">
-    No income or spending in {{ periodLabel() }}
-  </h2>
+  <h2 class="heading-card m-0">No income or spending in {{ periodLabel() }}</h2>
 
   @if (latest(); as data) {
     <p class="m-0 text-sm text-muted-color">Latest data: {{ data.label }}</p>

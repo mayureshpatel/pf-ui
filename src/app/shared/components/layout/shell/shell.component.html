@@ -5,32 +5,40 @@
   class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-surface-0 focus:px-4 focus:py-3 focus:text-primary-700 focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary-600 dark:focus:bg-surface-900 dark:focus:text-primary-400"
   >Skip to main content</a
 >
-<div class="grid grid-cols-5 grid-rows-[auto_1fr] min-h-screen">
+
+<!-- The drawer is appended to the body, so it sits outside this grid; while it is open the grid is inert, which keeps Tab and screen readers inside the drawer. -->
+<div
+  class="grid grid-cols-5 grid-rows-[auto_1fr] min-h-screen"
+  [attr.inert]="sidebarVisible() ? '' : null"
+>
   <!-- Header -->
   <header
-    class="col-span-5 flex items-center justify-between px-6 h-16 border-b-2 border-b-surface-300"
+    class="col-span-5 flex items-center justify-between px-4 sm:px-6 h-16 border-b border-b-surface-200 dark:border-b-surface-800"
   >
-    <div class="flex items-center gap-4">
+    <div class="flex items-center gap-3">
       <p-button
+        #openNav
         icon="pi pi-bars"
         [text]="true"
         severity="secondary"
         (onClick)="toggleSidebar()"
         ariaLabel="Open navigation"
         [buttonProps]="{ autofocus: false }"
+        styleClass="size-11"
         class="lg:hidden"
       />
 
-      <i class="pi pi-wallet text-2xl text-primary"></i>
-      <span class="text-2xl font-bold">Personal Finance</span>
+      <i class="pi pi-wallet text-xl text-primary" aria-hidden="true"></i>
+      <span class="whitespace-nowrap text-base font-semibold">Personal Finance</span>
     </div>
 
-    <div class="flex items-center gap-4">
-      <span class="text-muted-color hidden sm:block">{{ username() }}</span>
+    <div class="hidden items-center gap-4 sm:flex">
+      <span class="text-muted-color">{{ username() }}</span>
       <p-avatar
+        aria-hidden="true"
         [label]="username().charAt(0).toUpperCase()"
         shape="circle"
-        class="cursor-pointer bg-primary-700 text-white dark:bg-primary-400 dark:text-surface-900"
+        class="bg-primary-700 text-white dark:bg-primary-400 dark:text-surface-900"
       />
 
       <p-button
@@ -40,49 +48,18 @@
         (onClick)="logout()"
         pTooltip="Logout"
         ariaLabel="Logout"
+        styleClass="size-11 !text-rose-700 dark:!text-rose-400"
       />
     </div>
   </header>
 
-  <!-- Left Navigation -->
-  <div class="hidden lg:block border-r-2 border-r-surface-300">
-    <!-- Drawer for mobile -->
-    <p-drawer [(visible)]="sidebarVisible" [modal]="true" appendTo="body" class="lg:hidden">
-      <ng-template pTemplate="header">
-        <div class="flex items-center gap-2">
-          <i class="pi pi-wallet text-2xl text-primary"></i>
-          <span class="text-xl font-semibold text-color">Finance</span>
-        </div>
-      </ng-template>
-      <nav aria-label="Main Navigation" class="flex flex-col gap-1 mt-4">
-        @for (item of navItems; track item.label) {
-          <a
-            [routerLink]="item.routerLink"
-            routerLinkActive="bg-primary-100 text-primary-700"
-            ariaCurrentWhenActive="page"
-            class="flex items-center gap-3 px-4 py-3 rounded-lg text-color hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors"
-            (click)="sidebarVisible.set(false)"
-          >
-            <i [class]="item.icon"></i>
-            <span>{{ item.label }}</span>
-          </a>
-        }
-      </nav>
-    </p-drawer>
-
-    <!-- Sidebar for desktop -->
-    <nav aria-label="Main Navigation" class="flex flex-col gap-1 p-4 flex-1">
-      @for (item of navItems; track item.label) {
-        <a
-          [routerLink]="item.routerLink"
-          routerLinkActive="bg-primary-100 text-primary-700"
-          ariaCurrentWhenActive="page"
-          class="flex items-center gap-3 px-4 py-3 rounded-lg text-color hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors"
-        >
-          <i [class]="item.icon"></i>
-          <span>{{ item.label }}</span>
-        </a>
-      }
+  <!-- Left Navigation (desktop) -->
+  <div class="hidden border-r border-r-surface-200 dark:border-r-surface-800 lg:block">
+    <nav
+      aria-label="Main Navigation"
+      class="sticky top-0 flex max-h-screen flex-col gap-1 overflow-y-auto p-4"
+    >
+      <ng-container [ngTemplateOutlet]="navLinks" />
     </nav>
   </div>
 
@@ -95,3 +72,51 @@
     <router-outlet />
   </main>
 </div>
+
+<!-- Navigation drawer (tablet and phone) -->
+<p-drawer
+  [(visible)]="sidebarVisible"
+  [modal]="true"
+  appendTo="body"
+  ariaCloseLabel="Close navigation"
+  [pt]="drawerPt"
+  class="lg:hidden"
+  (onShow)="focusDrawer()"
+>
+  <ng-template pTemplate="header">
+    <div class="flex items-center gap-2">
+      <i class="pi pi-wallet text-xl text-primary" aria-hidden="true"></i>
+      <span class="text-base font-semibold">Personal Finance</span>
+    </div>
+  </ng-template>
+  <nav aria-label="Main Navigation" data-testid="drawer-nav" class="mt-4 flex flex-col gap-1">
+    <ng-container [ngTemplateOutlet]="navLinks" />
+  </nav>
+  <ng-template pTemplate="footer">
+    <p-button
+      data-testid="drawer-logout"
+      label="Log out"
+      icon="pi pi-sign-out"
+      [text]="true"
+      severity="danger"
+      styleClass="min-h-11 w-full justify-start !text-rose-700 dark:!text-rose-400"
+      class="sm:hidden"
+      (onClick)="logout()"
+    />
+  </ng-template>
+</p-drawer>
+
+<ng-template #navLinks>
+  @for (item of navItems; track item.label) {
+    <a
+      [routerLink]="item.routerLink"
+      routerLinkActive="bg-primary-100 font-medium text-primary-700 border-l-primary-700 dark:bg-primary-950 dark:text-primary-400 dark:border-l-primary-400"
+      ariaCurrentWhenActive="page"
+      class="flex items-center gap-3 rounded-lg border-l-4 border-l-transparent py-3 pl-3 pr-4 transition-colors outline-primary-700 hover:bg-surface-100 focus-visible:outline-2 focus-visible:outline-offset-2 dark:outline-primary-400 dark:hover:bg-surface-800"
+      (click)="sidebarVisible.set(false)"
+    >
+      <i [class]="item.icon" aria-hidden="true"></i>
+      <span>{{ item.label }}</span>
+    </a>
+  }
+</ng-template>

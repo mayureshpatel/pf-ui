@@ -1,18 +1,20 @@
-<div class="flex flex-col items-center justify-center min-h-[60vh] text-center animate-fade-in">
-  <div class="relative mb-8">
-    <div class="absolute -inset-4 bg-amber-500/10 rounded-full blur-2xl animate-pulse"></div>
-    <i class="pi pi-exclamation-triangle text-8xl text-amber-500/60 relative"></i>
-  </div>
-  <h2 class="text-3xl font-bold text-surface-900 dark:text-surface-0 mb-3">Something Went Wrong</h2>
-  <p class="text-muted-color mb-8 max-w-lg leading-relaxed text-lg">
-    {{ message() }}
+<div role="alert" class="flex min-h-80 flex-col items-center justify-center text-center">
+  <i
+    class="pi pi-exclamation-triangle mb-4 text-4xl text-amber-700 dark:text-amber-400"
+    aria-hidden="true"
+  ></i>
+  <h2 class="heading-section mb-3">Couldn't load this page</h2>
+  <p class="max-w-lg text-lg leading-relaxed text-muted-color">{{ message() }}</p>
+  <p class="mb-6 mt-1 text-sm text-muted-color">
+    Your data is unchanged. Try again, and if it keeps failing, check that the data service is
+    running.
   </p>
 
   <p-button
-    label="Retry"
+    [label]="retrying() ? 'Retrying…' : 'Retry'"
     icon="pi pi-refresh"
-    (onClick)="retry.emit()"
+    [loading]="retrying()"
+    (onClick)="onRetry()"
     severity="primary"
-    [raised]="true"
   />
 </div>

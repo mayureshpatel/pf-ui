@@ -1,9 +1,7 @@
 <div class="flex w-full flex-col gap-4">
-  <app-screen-toolbar [showDivider]="false" class="mb-2">
+  <app-screen-toolbar class="mb-2">
     <div toolbarTitle>
-      <h1 class="text-4xl font-extrabold tracking-tight text-surface-900 dark:text-surface-0">
-        Reports
-      </h1>
+      <h1 class="heading-page">Reports</h1>
       <p class="mt-1 text-lg italic text-muted-color">
         Explore where your money comes from and goes
       </p>
@@ -17,7 +15,7 @@
       >
         <button
           type="button"
-          class="cursor-pointer border-r border-surface-300 px-4 py-1.5 text-sm dark:border-surface-700"
+          class="cursor-pointer border-r border-surface-300 px-4 py-1.5 text-sm max-md:min-h-11 dark:border-surface-700"
           [class]="
             view() === 'explorer'
               ? 'bg-primary-700 text-white hover:bg-primary-800'
@@ -30,7 +28,7 @@
         </button>
         <button
           type="button"
-          class="cursor-pointer px-4 py-1.5 text-sm"
+          class="cursor-pointer px-4 py-1.5 text-sm max-md:min-h-11"
           [class]="
             view() === 'networth'
               ? 'bg-primary-700 text-white hover:bg-primary-800'
@@ -48,14 +46,14 @@
       <div toolbarActions class="flex items-center gap-2">
         <button
           type="button"
-          class="cursor-pointer rounded-lg border border-surface-300 px-3 py-1.5 text-sm hover:bg-surface-100 dark:border-surface-700 dark:hover:bg-surface-800"
+          class="cursor-pointer rounded-lg border border-surface-300 px-3 py-1.5 text-sm max-md:min-h-11 hover:bg-surface-100 dark:border-surface-700 dark:hover:bg-surface-800"
           (click)="copyLink()"
         >
           <i class="pi pi-link mr-1" aria-hidden="true"></i>Copy link
         </button>
         <button
           type="button"
-          class="cursor-pointer rounded-lg border border-surface-300 px-3 py-1.5 text-sm hover:bg-surface-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-surface-700 dark:hover:bg-surface-800"
+          class="cursor-pointer rounded-lg border border-surface-300 px-3 py-1.5 text-sm max-md:min-h-11 hover:bg-surface-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-surface-700 dark:hover:bg-surface-800"
           [disabled]="!result()"
           (click)="exportCsv()"
         >
@@ -83,7 +81,7 @@
 
     <button
       type="button"
-      class="cursor-pointer self-start rounded-lg border border-surface-300 px-3 py-1.5 text-sm sm:hidden dark:border-surface-700"
+      class="cursor-pointer self-start rounded-lg border border-surface-300 px-3 py-1.5 text-sm max-md:min-h-11 sm:hidden dark:border-surface-700"
       [attr.aria-expanded]="controlsOpen()"
       aria-controls="explorer-settings"
       (click)="controlsOpen.set(!controlsOpen())"
@@ -113,12 +111,7 @@
 
     <div class="flex flex-col gap-1">
       <app-drill-breadcrumb [crumbs]="crumbs()" (stepBack)="onStepBack($event)" />
-      <h2
-        id="results-heading"
-        #heading
-        tabindex="-1"
-        class="m-0 text-xl font-semibold outline-none"
-      >
+      <h2 id="results-heading" #heading tabindex="-1" class="heading-section m-0 outline-none">
         {{ headingText() }}
       </h2>
       <p class="m-0 text-sm text-muted-color">

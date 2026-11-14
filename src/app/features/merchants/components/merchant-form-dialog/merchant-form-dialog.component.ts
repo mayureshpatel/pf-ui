@@ -77,7 +77,7 @@ export class MerchantFormDialogComponent {
   readonly isCreateMode: Signal<boolean> = computed((): boolean => this.merchant() === null);
 
   readonly dialogHeader: Signal<string> = computed((): string =>
-    this.isCreateMode() ? 'Add Merchant' : 'Edit Merchant',
+    this.isCreateMode() ? 'Add merchant' : 'Edit merchant',
   );
 
   /**

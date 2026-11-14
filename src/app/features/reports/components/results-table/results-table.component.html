@@ -73,24 +73,25 @@
         }
 
         <span
-          class="relative order-last col-span-3 h-2 rounded bg-surface-100 dark:bg-surface-800 sm:order-none sm:col-span-1"
+          class="relative order-last col-span-3 h-2 rounded-full bg-surface-100 dark:bg-surface-800 sm:order-none sm:col-span-1"
           aria-hidden="true"
         >
           <span
             data-bar
-            class="block h-2 rounded bg-primary-500"
+            class="block h-2 rounded-full"
+            [class]="barClass()"
             [style.width.%]="view.width"
           ></span>
           @if (view.tick !== null) {
             <span
               data-tick
-              class="absolute -top-0.5 h-3 w-0.5 bg-surface-500"
+              class="absolute -top-0.5 h-3 w-0.5 bg-surface-500 dark:bg-surface-400"
               [style.left.%]="view.tick"
             ></span>
           }
         </span>
 
-        <span data-value class="text-right font-semibold tabular-nums">{{ view.value }}</span>
+        <span data-value class="text-right row-amount">{{ view.value }}</span>
 
         <span class="hidden text-right text-sm sm:block">
           @if (view.change; as change) {
@@ -117,7 +118,7 @@
             <button
               type="button"
               data-menu
-              class="flex size-8 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent hover:bg-surface-100 dark:hover:bg-surface-800"
+              class="flex size-8 max-md:size-11 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent hover:bg-surface-100 dark:hover:bg-surface-800"
               aria-haspopup="menu"
               [attr.aria-expanded]="openMenu() === view.id"
               [attr.aria-label]="'Actions for ' + view.row.label"
@@ -136,7 +137,7 @@
                   <button
                     type="button"
                     role="menuitem"
-                    class="w-full cursor-pointer rounded border-0 bg-transparent px-3 py-2 text-left text-sm hover:bg-surface-100 dark:hover:bg-surface-800"
+                    class="w-full cursor-pointer rounded-md border-0 bg-transparent px-3 py-2 text-left text-sm hover:bg-surface-100 dark:hover:bg-surface-800"
                     (click)="act('drill', view.row)"
                   >
                     Drill into {{ view.row.label }}
@@ -146,7 +147,7 @@
                   <button
                     type="button"
                     role="menuitem"
-                    class="w-full cursor-pointer rounded border-0 bg-transparent px-3 py-2 text-left text-sm hover:bg-surface-100 dark:hover:bg-surface-800"
+                    class="w-full cursor-pointer rounded-md border-0 bg-transparent px-3 py-2 text-left text-sm hover:bg-surface-100 dark:hover:bg-surface-800"
                     (click)="act('filterOnly', view.row)"
                   >
                     Filter to {{ view.row.label }} and keep grouping by {{ currentLabel() }}
@@ -156,7 +157,7 @@
                   <button
                     type="button"
                     role="menuitem"
-                    class="w-full cursor-pointer rounded border-0 bg-transparent px-3 py-2 text-left text-sm hover:bg-surface-100 dark:hover:bg-surface-800"
+                    class="w-full cursor-pointer rounded-md border-0 bg-transparent px-3 py-2 text-left text-sm hover:bg-surface-100 dark:hover:bg-surface-800"
                     (click)="act('openTransactions', view.row)"
                   >
                     Open transactions
@@ -183,7 +184,7 @@
         >
           {{ other.label }}
         </button>
-        <span class="font-semibold tabular-nums">{{ otherValue() }}</span>
+        <span class="row-amount">{{ otherValue() }}</span>
       </div>
     } @else if (expandedOther() && hiddenCount() > 0) {
       <div class="border-t border-surface-200 px-3 py-2 dark:border-surface-800">

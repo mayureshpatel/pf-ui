@@ -22,6 +22,19 @@ import {
 
 export const OTHER_KEY = '__other__';
 
+/**
+ * The bar fill for a measure. Colour carries meaning (DESIGN.md, Meaning-First Rule): rose is money
+ * out, emerald is money in, and the measures that are neither (net, rate, count, average) are neutral.
+ */
+export const MEASURE_BAR_CLASS: Record<Measure, string> = {
+  SPENDING: 'bg-rose-600 dark:bg-rose-400',
+  INCOME: 'bg-emerald-600 dark:bg-emerald-400',
+  NET: 'bg-surface-500 dark:bg-surface-400',
+  SAVINGS_RATE: 'bg-surface-500 dark:bg-surface-400',
+  COUNT: 'bg-surface-500 dark:bg-surface-400',
+  AVERAGE: 'bg-surface-500 dark:bg-surface-400',
+};
+
 export const MEASURE_LABELS: Record<Measure, string> = {
   SPENDING: 'Spending',
   INCOME: 'Income',

@@ -51,7 +51,7 @@ describe('SidePanelComponent', () => {
   const q = <T extends HTMLElement>(s: string): T => fixture.nativeElement.querySelector(s) as T;
   const button = (name: RegExp): HTMLButtonElement | undefined =>
     Array.from<HTMLButtonElement>(fixture.nativeElement.querySelectorAll('button')).find((b) =>
-      name.test(b.textContent ?? ''),
+      name.test((b.textContent ?? '') + (b.getAttribute('aria-label') ?? '')),
     );
 
   beforeEach(async () => {
@@ -177,7 +177,7 @@ describe('SidePanelComponent', () => {
       // assert & verify
       expect(q('aside').className).not.toContain('fixed');
       expect(q('aside').className).not.toContain('inset-0');
-      expect(q('aside').className).toContain('rounded-2xl');
+      expect(q('aside').className).toContain('rounded-xl');
     });
 
     it('should take focus after first render by default', async () => {
@@ -208,6 +208,154 @@ describe('SidePanelComponent', () => {
 
       // assert & verify
       expect(document.activeElement).toBe(q('aside'));
+    });
+  });
+
+  describe('modal sheet (PF-944)', () => {
+    const mockViewport = (wide: boolean): { change: (matches: boolean) => void } => {
+      let listener: ((event: { matches: boolean }) => void) | undefined;
+      vi.spyOn(window, 'matchMedia').mockReturnValue({
+        matches: wide,
+        addEventListener: (_: string, fn: (event: { matches: boolean }) => void): void => {
+          listener = fn;
+        },
+        removeEventListener: (): void => undefined,
+      } as unknown as MediaQueryList);
+      return { change: (matches: boolean): void => listener?.({ matches }) };
+    };
+
+    const open = (): ComponentFixture<HostComponent> => {
+      const opened = TestBed.createComponent(HostComponent);
+      opened.detectChanges();
+      return opened;
+    };
+
+    afterEach(() => vi.restoreAllMocks());
+
+    it('should be a modal dialog and make the rest of the page inert below the lg breakpoint', () => {
+      // arrange
+      mockViewport(false);
+
+      // act
+      const narrow = open();
+      const aside: HTMLElement = narrow.nativeElement.querySelector('aside');
+
+      // assert & verify
+      expect(aside.getAttribute('role')).toBe('dialog');
+      expect(aside.getAttribute('aria-modal')).toBe('true');
+      expect(aside.getAttribute('aria-label')).toBe('Edit transaction');
+    });
+
+    it('should mark the outside siblings inert and lift them when the panel closes', () => {
+      // arrange
+      mockViewport(false);
+      const outside = document.createElement('div');
+      document.body.appendChild(outside);
+      const wrapper = document.createElement('section');
+      const beside = document.createElement('button');
+      wrapper.appendChild(beside);
+      document.body.appendChild(wrapper);
+
+      // act
+      const narrow = TestBed.createComponent(HostComponent);
+      wrapper.appendChild(narrow.nativeElement);
+      narrow.detectChanges();
+
+      // assert & verify
+      expect(beside.hasAttribute('inert')).toBe(true);
+      expect(outside.hasAttribute('inert')).toBe(false);
+
+      // act
+      narrow.destroy();
+
+      // assert & verify
+      expect(beside.hasAttribute('inert')).toBe(false);
+      outside.remove();
+      wrapper.remove();
+    });
+
+    it('should leave the global toast and confirm dialog reachable while the sheet is open', () => {
+      // arrange
+      mockViewport(false);
+      const wrapper = document.createElement('section');
+      const confirm = document.createElement('p-confirmdialog');
+      const toast = document.createElement('p-toast');
+      wrapper.append(confirm, toast);
+      document.body.appendChild(wrapper);
+
+      // act
+      const narrow = TestBed.createComponent(HostComponent);
+      wrapper.appendChild(narrow.nativeElement);
+      narrow.detectChanges();
+
+      // assert & verify
+      expect(confirm.hasAttribute('inert')).toBe(false);
+      expect(toast.hasAttribute('inert')).toBe(false);
+      wrapper.remove();
+    });
+
+    it('should stay a docked complementary region with nothing inert from lg up', () => {
+      // arrange
+      mockViewport(true);
+      const wrapper = document.createElement('section');
+      const beside = document.createElement('button');
+      wrapper.appendChild(beside);
+      document.body.appendChild(wrapper);
+
+      // act
+      const wide = TestBed.createComponent(HostComponent);
+      wrapper.appendChild(wide.nativeElement);
+      wide.detectChanges();
+      const aside: HTMLElement = wide.nativeElement.querySelector('aside');
+
+      // assert & verify
+      expect(aside.hasAttribute('role')).toBe(false);
+      expect(aside.hasAttribute('aria-modal')).toBe(false);
+      expect(beside.hasAttribute('inert')).toBe(false);
+      wrapper.remove();
+    });
+
+    it('should release the page when the viewport widens', () => {
+      // arrange
+      const viewport = mockViewport(false);
+      const wrapper = document.createElement('section');
+      const beside = document.createElement('button');
+      wrapper.appendChild(beside);
+      document.body.appendChild(wrapper);
+      const narrow = TestBed.createComponent(HostComponent);
+      wrapper.appendChild(narrow.nativeElement);
+      narrow.detectChanges();
+      expect(beside.hasAttribute('inert')).toBe(true);
+
+      // act
+      viewport.change(true);
+      narrow.detectChanges();
+
+      // assert & verify
+      expect(beside.hasAttribute('inert')).toBe(false);
+      expect(narrow.nativeElement.querySelector('aside').hasAttribute('role')).toBe(false);
+      wrapper.remove();
+    });
+
+    it('should give Close, Delete and Save a 44px minimum below lg, and Delete a dark border', () => {
+      // arrange
+      mockViewport(false);
+
+      // act
+      const narrow = open();
+      const buttons = Array.from<HTMLButtonElement>(
+        narrow.nativeElement.querySelectorAll('button'),
+      );
+
+      // assert & verify
+      expect(buttons).toHaveLength(3);
+      for (const control of buttons.slice(1)) {
+        expect(control.className).toContain('max-lg:min-h-11');
+      }
+      expect(buttons[0].className).toContain('max-lg:size-11');
+      expect(buttons[0].getAttribute('aria-label')).toBe('Close');
+      expect(buttons[0].querySelector('.pi-times')).toBeTruthy();
+      expect(buttons[1].className).toContain('dark:border-rose-800');
     });
   });
 });

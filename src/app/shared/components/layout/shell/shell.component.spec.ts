@@ -17,9 +17,11 @@ describe('ShellComponent', () => {
   let component: ShellComponent;
   let fixture: ComponentFixture<ShellComponent>;
   let mockAuthService: { username: Signal<string>; logout: () => void };
+  let logoutSpy: ReturnType<typeof vi.fn<() => void>>;
 
   beforeEach(async () => {
-    mockAuthService = { username: signal('testuser'), logout: () => undefined };
+    logoutSpy = vi.fn<() => void>();
+    mockAuthService = { username: signal('testuser'), logout: logoutSpy };
 
     await TestBed.configureTestingModule({
       imports: [ShellComponent, NoopAnimationsModule],
@@ -112,6 +114,149 @@ describe('ShellComponent', () => {
       expect(avatar.classList).not.toContain('bg-primary');
       expect(avatar.classList).toContain('dark:bg-primary-400');
       expect(avatar.classList).toContain('dark:text-surface-900');
+    });
+  });
+
+  describe('navigation drawer (PF-943)', () => {
+    const openDrawer = async (): Promise<void> => {
+      const button: HTMLButtonElement = fixture.nativeElement.querySelector('button:has(.pi-bars)');
+      button.click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+    };
+
+    afterEach(() => {
+      component.sidebarVisible.set(false);
+      fixture.detectChanges();
+    });
+
+    it('should move focus to the first link when it opens and make the page behind it inert', async () => {
+      // act
+      await openDrawer();
+
+      // assert & verify
+      const first: HTMLElement = document.querySelector('[data-testid="drawer-nav"] a')!;
+      expect(document.activeElement).toBe(first);
+      expect(fixture.nativeElement.querySelector('.grid').hasAttribute('inert')).toBe(true);
+    });
+
+    it('should name the drawer and label its close button', async () => {
+      // act
+      await openDrawer();
+
+      // assert & verify
+      expect(
+        document.querySelector('p-drawer .p-drawer, .p-drawer')?.getAttribute('aria-label'),
+      ).toBe('Navigation');
+      expect(
+        document.querySelector('.p-drawer-close-button button')?.getAttribute('aria-label'),
+      ).toBe('Close navigation');
+    });
+
+    it('should return focus to the menu button and lift the inert state when it closes', async () => {
+      // arrange
+      await openDrawer();
+
+      // act
+      component.sidebarVisible.set(false);
+      fixture.detectChanges();
+      await new Promise((resolve) => setTimeout(resolve, 800));
+
+      // assert & verify
+      expect(fixture.nativeElement.querySelector('.grid').hasAttribute('inert')).toBe(false);
+      expect(document.activeElement).toBe(
+        fixture.nativeElement.querySelector('button:has(.pi-bars)'),
+      );
+    });
+
+    it('should size the drawer buttons to 44px and set Log out in rose-700', async () => {
+      // act
+      await openDrawer();
+
+      // assert & verify
+      const logout = document.querySelector('[data-testid="drawer-logout"] button')!;
+      expect(logout.classList).toContain('min-h-11');
+      expect(logout.classList).toContain('!text-rose-700');
+      expect(document.querySelector('.p-drawer-close-button button')?.classList).toContain(
+        'size-11',
+      );
+    });
+
+    it('should offer Logout in its footer, for phones where the header hides it', async () => {
+      // act
+      await openDrawer();
+      document.querySelector<HTMLButtonElement>('[data-testid="drawer-logout"] button')?.click();
+
+      // assert & verify
+      expect(logoutSpy).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('frame (PF-943)', () => {
+    it('should use one brand string and a quiet 1px header rule', () => {
+      // act
+      const header: HTMLElement = fixture.nativeElement.querySelector('header');
+
+      // assert & verify
+      expect(header.textContent).toContain('Personal Finance');
+      expect(header.classList).toContain('border-b');
+      expect(header.classList).not.toContain('border-b-2');
+    });
+
+    it('should list the links with Reports after Budgets', () => {
+      // act
+      const labels = Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('nav a')).map(
+        (a) => a.textContent?.trim(),
+      );
+
+      // assert & verify
+      expect(labels).toEqual([
+        'Dashboard',
+        'Transactions',
+        'Accounts',
+        'Budgets',
+        'Reports',
+        'Categories',
+        'Merchants',
+        'Recurring',
+        'Settings',
+      ]);
+    });
+
+    it('should mark the current link with a bar and weight, not colour alone (PF-943)', async () => {
+      // act
+      await TestBed.inject(Router).navigateByUrl('/dashboard');
+      fixture.detectChanges();
+
+      // assert & verify
+      const current: HTMLElement = fixture.nativeElement.querySelector(
+        'nav a[aria-current="page"]',
+      );
+      expect(current.classList).toContain('font-medium');
+      expect(current.classList).toContain('border-l-primary-700');
+      expect(current.classList).toContain('border-l-4');
+    });
+
+    it('should give every nav link the one shared focus ring', () => {
+      // act
+      const links = Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('nav a'));
+
+      // assert & verify
+      expect(links.length).toBeGreaterThan(0);
+      for (const link of links) {
+        expect(link.classList).toContain('focus-visible:outline-2');
+        expect(link.classList).toContain('outline-primary-700');
+      }
+    });
+
+    it('should not present the avatar as a control', () => {
+      // act
+      const avatar: HTMLElement = fixture.nativeElement.querySelector('p-avatar');
+
+      // assert & verify
+      expect(avatar.classList).not.toContain('cursor-pointer');
+      expect(avatar.getAttribute('aria-hidden')).toBe('true');
     });
   });
 });

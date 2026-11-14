@@ -108,6 +108,12 @@ export class AccountsComponent implements OnInit {
     (): boolean => this.accounts().length === 0 && !this.loading() && this.panelMode() === 'create',
   );
 
+  /** Save follows the add and edit form; the other modes validate on submit. */
+  panelValid: Signal<boolean> = computed((): boolean => {
+    const mode: PanelMode = this.panelMode();
+    return mode === 'create' || mode === 'edit' ? (this.editForm()?.valid() ?? true) : true;
+  });
+
   showClose: Signal<boolean> = computed(
     (): boolean => this.panelMode() !== 'overview' && !this.onlyAddMode(),
   );

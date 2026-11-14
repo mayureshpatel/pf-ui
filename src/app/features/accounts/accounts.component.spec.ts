@@ -898,7 +898,7 @@ describe('AccountsComponent', () => {
     const panelButton = (label: string): HTMLButtonElement | undefined =>
       Array.from<HTMLButtonElement>(
         fixture.nativeElement.querySelectorAll('app-side-panel button'),
-      ).find((b) => b.textContent?.trim() === label);
+      ).find((b) => b.textContent?.trim() === label || b.getAttribute('aria-label') === label);
 
     it('should always render the panel, showing the overview with the totals by default', () => {
       // arrange
@@ -912,7 +912,7 @@ describe('AccountsComponent', () => {
       ).toContain('$750.00');
     });
 
-    it('should show the account view with a Back to overview link when a row is opened', () => {
+    it('should show the account view with Close as the one way back when a row is opened', () => {
       // arrange
       loadWith([acct(1, 'Checking', 100, true)]);
 
@@ -922,7 +922,8 @@ describe('AccountsComponent', () => {
 
       // assert & verify
       expect(aside().getAttribute('aria-label')).toBe('Checking');
-      expect(panelButton('Back to overview')).toBeTruthy();
+      expect(panelButton('Close')).toBeTruthy();
+      expect(panelButton('Back to overview')).toBeUndefined();
     });
 
     it('should show No accounts yet and the add form when there are no accounts', () => {
@@ -933,6 +934,35 @@ describe('AccountsComponent', () => {
       expect(fixture.nativeElement.textContent).toContain('No accounts yet');
       expect(fixture.nativeElement.querySelector('app-account-edit-form')).toBeTruthy();
       expect(aside().getAttribute('aria-label')).toBe('Add account');
+    });
+
+    it('should keep the only-add form inline, never a modal sheet with no way out', () => {
+      // act
+      loadWith([]);
+
+      // assert & verify
+      expect(aside().className).not.toContain('fixed');
+      expect(aside().hasAttribute('aria-modal')).toBe(false);
+    });
+
+    it('should keep Save disabled on the empty add form until it is valid', () => {
+      // arrange
+      loadWith([acct(1, 'A', 1, true)]);
+      component.startCreate();
+      fixture.detectChanges();
+      const save = (): HTMLButtonElement => panelButton('Add account') as HTMLButtonElement;
+
+      // assert & verify
+      expect(save().disabled).toBe(true);
+
+      // act
+      const form = component['editForm']()!.form;
+      form.controls.name.setValue('Rainy day');
+      form.controls.type.setValue(component.accountTypes()[0]);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(save().disabled).toBe(false);
     });
 
     it('should show the full skeleton on first load with no panel yet', () => {

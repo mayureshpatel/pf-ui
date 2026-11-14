@@ -1,0 +1,7 @@
+
+/* Phone: the buttons projected into the toolbar meet the 44px touch minimum. */
+@media (max-width: 1023px) {
+  :host ::ng-deep .p-button {
+    min-height: 2.75rem;
+  }
+}

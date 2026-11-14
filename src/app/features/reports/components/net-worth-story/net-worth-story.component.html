@@ -2,7 +2,7 @@
   aria-labelledby="net-worth-story-title"
   class="flex flex-col gap-2 rounded-xl border border-surface-200 bg-surface-0 p-4 dark:border-surface-800 dark:bg-surface-900"
 >
-  <h3 id="net-worth-story-title" class="m-0 text-sm font-semibold">{{ group().label }}</h3>
+  <h3 id="net-worth-story-title" class="heading-panel m-0">{{ group().label }}</h3>
   @if (story(); as s) {
     <p class="m-0 text-sm tabular-nums">
       Balance now {{ dollars(s.closingBalance) }}, from {{ dollars(s.openingBalance) }} at the start

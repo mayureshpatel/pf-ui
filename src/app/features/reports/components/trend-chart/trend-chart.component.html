@@ -4,9 +4,7 @@
     [attr.aria-busy]="loading()"
     [class.opacity-60]="loading()"
   >
-    <h3 class="m-0 mb-2 text-sm font-normal text-muted-color">
-      {{ measureLabel() }} by {{ granularity() }}
-    </h3>
+    <h3 class="stat-label m-0 mb-2">{{ measureLabel() }} by {{ granularity() }}</h3>
     <div class="flex h-28 items-end gap-1">
       @for (bar of bars(); track bar.bucket.start; let i = $index) {
         <div class="relative flex h-full flex-1 items-end">
@@ -22,9 +20,7 @@
             type="button"
             data-bar
             class="relative w-full min-h-0.5 cursor-pointer rounded-t border-0 p-0 hover:opacity-80"
-            [class]="
-              bar.negative ? 'bg-amber-500 dark:bg-amber-600' : 'bg-primary-500 dark:bg-primary-600'
-            "
+            [class]="bar.negative ? 'bg-amber-500 dark:bg-amber-600' : barClass()"
             [style.height.%]="bar.height"
             [style.background-image]="
               bar.bucket.partial

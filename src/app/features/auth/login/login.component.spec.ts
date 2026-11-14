@@ -124,10 +124,8 @@ describe('LoginComponent', () => {
     // arrange
     fixture.debugElement.query(By.css('#username')).nativeElement.value = 'jdoe';
     fixture.debugElement.query(By.css('#username')).nativeElement.dispatchEvent(new Event('input'));
-    fixture.debugElement.query(By.css('#password input')).nativeElement.value = 'hunter2';
-    fixture.debugElement
-      .query(By.css('#password input'))
-      .nativeElement.dispatchEvent(new Event('input'));
+    fixture.debugElement.query(By.css('#password')).nativeElement.value = 'hunter2';
+    fixture.debugElement.query(By.css('#password')).nativeElement.dispatchEvent(new Event('input'));
     fixture.detectChanges();
 
     // act
@@ -140,24 +138,67 @@ describe('LoginComponent', () => {
     );
   });
 
-  describe('PF-891: accessible link colour', () => {
-    function expectAccessibleLink(link: HTMLElement | undefined): void {
-      expect(link).toBeTruthy();
-      expect(link!.classList).toContain('text-primary-700');
-      expect(link!.classList).toContain('dark:text-primary-400');
-      expect(link!.classList).not.toContain('text-primary');
-    }
+  describe('single-owner sign-in surface', () => {
+    it('should not offer a dead "Forgot password?" link or a public "Create account" link', () => {
+      const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
 
-    it('should colour the "Forgot password" link with the accessible emerald pair', () => {
-      const links = Array.from(fixture.nativeElement.querySelectorAll('a')) as HTMLElement[];
+      expect(text).not.toContain('Forgot password');
+      expect(text).not.toContain('Create account');
+      expect(fixture.nativeElement.querySelector('a')).toBeNull();
+    });
+  });
 
-      expectAccessibleLink(links.find((a) => a.textContent?.includes('Forgot password')));
+  describe('form accessibility', () => {
+    const el = (): HTMLElement => fixture.nativeElement as HTMLElement;
+
+    it('should bind the password label to the real input', () => {
+      const input = el().querySelector<HTMLInputElement>('#password')!;
+
+      expect(input.tagName).toBe('INPUT');
+      expect(input.labels?.[0]?.textContent).toContain('Password');
     });
 
-    it('should colour the "Create account" link with the accessible emerald pair', () => {
-      const links = Array.from(fixture.nativeElement.querySelectorAll('a')) as HTMLElement[];
+    it('should focus the username field on load', () => {
+      expect(document.activeElement).toBe(el().querySelector('#username'));
+    });
 
-      expectAccessibleLink(links.find((a) => a.textContent?.includes('Create account')));
+    it('should reveal and hide the password through a labelled button', () => {
+      const input = el().querySelector<HTMLInputElement>('#password')!;
+      const toggle = el().querySelector<HTMLButtonElement>('button[aria-label="Show password"]')!;
+
+      toggle.click();
+      fixture.detectChanges();
+
+      expect(input.type).toBe('text');
+      expect(toggle.getAttribute('aria-label')).toBe('Hide password');
+      expect(toggle.getAttribute('aria-pressed')).toBe('true');
+
+      toggle.click();
+      fixture.detectChanges();
+
+      expect(input.type).toBe('password');
+    });
+
+    it('should mark empty touched fields invalid and link them to their error message', () => {
+      component.onSubmit();
+      fixture.detectChanges();
+
+      const username = el().querySelector('#username')!;
+      const password = el().querySelector('#password')!;
+      expect(username.getAttribute('aria-invalid')).toBe('true');
+      expect(username.getAttribute('aria-describedby')).toBe('username-error');
+      expect(el().querySelector('#username-error')?.textContent).toContain('Username is required');
+      expect(password.getAttribute('aria-invalid')).toBe('true');
+      expect(el().querySelector('#password-error')?.textContent).toContain('Password is required');
+    });
+
+    it('should move focus to the first invalid field after a failed submit', () => {
+      component.form.patchValue({ username: 'jdoe' });
+      el().querySelector<HTMLElement>('button[type="submit"]')?.focus();
+
+      component.onSubmit();
+
+      expect(document.activeElement).toBe(el().querySelector('#password'));
     });
   });
 });

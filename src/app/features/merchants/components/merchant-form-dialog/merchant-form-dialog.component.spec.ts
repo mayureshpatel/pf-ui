@@ -75,7 +75,7 @@ describe('MerchantFormDialogComponent', () => {
         country: 'USA',
       });
       expect(component.isCreateMode()).toBe(false);
-      expect(component.dialogHeader()).toBe('Edit Merchant');
+      expect(component.dialogHeader()).toBe('Edit merchant');
     });
 
     it('should call updateMerchant with the full field set and the merchant id on submit', () => {
@@ -157,7 +157,7 @@ describe('MerchantFormDialogComponent', () => {
         country: '',
       });
       expect(component.isCreateMode()).toBe(true);
-      expect(component.dialogHeader()).toBe('Add Merchant');
+      expect(component.dialogHeader()).toBe('Add merchant');
     });
 
     it('should call createMerchant with only the populated fields on submit', () => {

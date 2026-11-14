@@ -1,6 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NetWorthMeasure, NetWorthPoint } from '../../models/reports.model';
 import { NetWorthChartComponent } from './net-worth-chart.component';
+import { ThemeService } from '@core/services/theme.service';
+import { CHART_PALETTE } from '@shared/utils/chart-palette';
 
 const point = (date: string, assets: number, debts: number): NetWorthPoint => ({
   date,
@@ -47,6 +49,24 @@ describe('NetWorthChartComponent (PF-887)', () => {
     expect(datasets()[1].data).toEqual([-300, -400, -400]);
     expect(datasets()[2].data).toEqual([5520, 5570, 5600]);
     expect((datasets()[2] as { type?: string }).type).toBe('line');
+  });
+
+  it('should colour assets and debts from the shared chart palette, in both themes (PF-942)', () => {
+    // arrange
+    const theme = TestBed.inject(ThemeService);
+
+    // act & assert: light
+    theme.isDarkMode.set(false);
+    render();
+    expect(datasets()[0].backgroundColor).toBe(CHART_PALETTE.light.income);
+    expect(datasets()[1].backgroundColor).toBe(CHART_PALETTE.light.expense);
+
+    // act & assert: dark
+    theme.isDarkMode.set(true);
+    fixture.detectChanges();
+    expect(datasets()[0].backgroundColor).toBe(CHART_PALETTE.dark.income);
+    expect(datasets()[1].backgroundColor).toBe(CHART_PALETTE.dark.expense);
+    theme.isDarkMode.set(false);
   });
 
   it('should plot only the chosen side for Assets or Debts', () => {

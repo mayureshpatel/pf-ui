@@ -95,6 +95,8 @@ describe('BudgetsComponent', () => {
     view.form.markAsDirty();
   };
 
+  let wideViewport: ReturnType<typeof vi.spyOn>;
+
   beforeEach(async () => {
     mockBudgetApi = {
       getBudgetStatus: vi.fn().mockReturnValue(of(statuses)),
@@ -126,10 +128,20 @@ describe('BudgetsComponent', () => {
       ],
     }).compileComponents();
 
+    // these specs describe the desktop layout, where the panel docks beside the list; below lg it
+    // is a modal sheet (covered by the side-panel spec)
+    wideViewport = vi.spyOn(window, 'matchMedia').mockReturnValue({
+      matches: true,
+      addEventListener: (): void => undefined,
+      removeEventListener: (): void => undefined,
+    } as unknown as MediaQueryList);
+
     fixture = TestBed.createComponent(BudgetsComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });
+
+  afterEach(() => wideViewport.mockRestore());
 
   describe('loading', () => {
     it('should load the status, this month and last month together for the URL month', () => {

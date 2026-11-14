@@ -24,7 +24,7 @@
   </div>
 
   <ul
-    class="m-0 list-none overflow-hidden rounded-2xl border border-surface-200 bg-surface-0 p-0 dark:border-surface-800 dark:bg-surface-900"
+    class="m-0 list-none overflow-hidden rounded-xl border border-surface-200 bg-surface-0 p-0 dark:border-surface-800 dark:bg-surface-900"
   >
     @for (node of nodes(); track node.parent.id) {
       <li class="border-t border-surface-100 first:border-t-0 dark:border-surface-800">
@@ -89,7 +89,7 @@
             @if (parentCount(node) === null) {
               <span class="text-sm font-medium text-amber-700 dark:text-amber-400">Unused</span>
             } @else {
-              <span class="font-semibold tabular-nums">{{ parentCount(node) }}</span>
+              <span class="row-amount">{{ parentCount(node) }}</span>
             }
           </button>
         </div>

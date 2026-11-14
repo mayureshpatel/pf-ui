@@ -1,3 +1,12 @@
 <router-outlet></router-outlet>
-<p-toast></p-toast>
-<p-confirmDialog [pt]="confirmDialogPt" [style]="confirmDialogStyle"></p-confirmDialog>
+<!--
+  PF-945: top-centre, below the 4rem header, so a toast never covers the avatar or Logout; on a
+  phone it spans the viewport instead of overhanging the left edge.
+-->
+<p-toast position="top-center" [style]="toastStyle" [breakpoints]="toastBreakpoints"></p-toast>
+<p-confirmDialog
+  appRestoreFocusOnHide
+  rejectButtonStyleClass="p-button-text p-button-secondary"
+  [pt]="confirmDialogPt"
+  [style]="confirmDialogStyle"
+></p-confirmDialog>

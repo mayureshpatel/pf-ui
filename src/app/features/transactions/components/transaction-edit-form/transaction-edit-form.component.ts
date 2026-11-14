@@ -128,13 +128,13 @@ export class TransactionEditFormComponent {
       label: 'Expense',
       value: TransactionType.EXPENSE,
       icon: 'pi-minus-circle',
-      color: 'text-rose-500',
+      color: 'text-rose-700 dark:text-rose-400',
     },
     {
       label: 'Income',
       value: TransactionType.INCOME,
       icon: 'pi-plus-circle',
-      color: 'text-emerald-500',
+      color: 'text-emerald-700 dark:text-emerald-400',
     },
   ];
 
@@ -148,19 +148,19 @@ export class TransactionEditFormComponent {
       label: 'Contribution',
       value: TransactionType.CONTRIBUTION,
       icon: 'pi-arrow-circle-down',
-      color: 'text-emerald-500',
+      color: 'text-emerald-700 dark:text-emerald-400',
     },
     {
       label: 'Employer contribution',
       value: TransactionType.EMPLOYER_CONTRIBUTION,
       icon: 'pi-building',
-      color: 'text-emerald-500',
+      color: 'text-emerald-700 dark:text-emerald-400',
     },
     {
       label: 'Earnings',
       value: TransactionType.EARNINGS,
       icon: 'pi-chart-line',
-      color: 'text-emerald-500',
+      color: 'text-emerald-700 dark:text-emerald-400',
     },
   ];
 

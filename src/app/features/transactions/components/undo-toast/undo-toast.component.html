@@ -7,7 +7,7 @@
     <div
       #toast
       data-testid="undo-toast"
-      class="pointer-events-auto flex max-w-xl flex-wrap items-center gap-3 rounded-2xl bg-surface-900 px-4 py-3 text-surface-0 shadow-lg dark:bg-surface-100 dark:text-surface-900"
+      class="pointer-events-auto flex max-w-xl flex-wrap items-center gap-3 rounded-xl bg-surface-900 px-4 py-3 text-surface-0 shadow-lg dark:bg-surface-100 dark:text-surface-900"
       (focusin)="held.set(true)"
       (focusout)="onFocusOut($event, toast)"
       (mouseenter)="held.set(true)"

@@ -50,7 +50,7 @@ describe('TagsComponent', () => {
     rows().map((r) => r.querySelector('[data-tag-name]')!.textContent!.trim());
   const button = (label: string): HTMLButtonElement | undefined =>
     (Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]).find(
-      (b) => b.textContent?.trim() === label,
+      (b) => b.textContent?.trim() === label || b.getAttribute('aria-label') === label,
     );
   const makeDirty = (): void => {
     component['tagForm']()!.form.controls.name.setValue('Changed');
@@ -101,7 +101,7 @@ describe('TagsComponent', () => {
       mode: component['panelMode'](),
       title: fixture.nativeElement.querySelector('aside h2').textContent.trim(),
     };
-    button('Back to overview')!.click();
+    button('Close')!.click();
     await settle();
     const afterBack = component['panelMode']();
     rows()[0].click();
@@ -240,6 +240,16 @@ describe('TagsComponent', () => {
     expect(text()).not.toContain('Access Denied');
     expect(toast.info).toHaveBeenCalledWith('That tag no longer exists.');
     expect(rows()).toHaveLength(2);
+  });
+
+  it('should dock the panel from lg like Accounts and Merchants, not xl', async () => {
+    // act
+    await create();
+
+    // assert & verify
+    const grid: HTMLElement = fixture.nativeElement.querySelector('app-side-panel').parentElement;
+    expect(grid.className).toContain('list-panel-grid');
+    expect(grid.className).not.toContain('xl:');
   });
 
   it('should add a tag for the user, open it and say so', async () => {
@@ -495,7 +505,7 @@ describe('TagsComponent', () => {
     await settle();
     await new Promise((resolve) => setTimeout(resolve));
     const inPanel = document.activeElement?.tagName;
-    button('Back to overview')!.click();
+    button('Close')!.click();
     await settle();
     await new Promise((resolve) => setTimeout(resolve));
 

@@ -6,13 +6,13 @@
 >
   @for (group of groups(); track group.key) {
     <section
-      class="overflow-hidden rounded-2xl border border-surface-200 bg-surface-0 dark:border-surface-800 dark:bg-surface-900"
+      class="overflow-hidden rounded-xl border border-surface-200 bg-surface-0 dark:border-surface-800 dark:bg-surface-900"
     >
       <div
         data-testid="group-header"
         class="flex items-center justify-between gap-3 bg-surface-100 px-4 py-2 text-sm font-semibold dark:bg-surface-800"
       >
-        <h2 class="m-0 text-sm font-semibold">{{ group.label }}</h2>
+        <h2 class="heading-panel m-0">{{ group.label }}</h2>
         @if (group.monthlyTotal !== null) {
           <span class="tabular-nums">{{ group.monthlyTotal | currency }} / mo</span>
         } @else {
@@ -56,9 +56,7 @@
                     </span>
                   }
                 </span>
-                <span class="shrink-0 font-semibold tabular-nums">{{
-                  item.amount | currency
-                }}</span>
+                <span class="shrink-0 row-amount">{{ item.amount | currency }}</span>
               </button>
             </div>
           </li>

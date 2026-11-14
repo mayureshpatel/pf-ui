@@ -148,7 +148,7 @@ describe('YtdSummaryComponent', () => {
       setInputs(2026, 8000, 10000, -25);
 
       // assert & verify
-      expect(component.savingsRateStyles()).toContain('text-rose-600');
+      expect(component.savingsRateStyles()).toContain('text-rose-700');
     });
 
     it('should treat exactly 0% as the rose tier, not amber', () => {
@@ -156,7 +156,7 @@ describe('YtdSummaryComponent', () => {
       setInputs(2026, 10000, 10000, 0);
 
       // assert & verify
-      expect(component.savingsRateStyles()).toContain('text-rose-600');
+      expect(component.savingsRateStyles()).toContain('text-rose-700');
     });
   });
 

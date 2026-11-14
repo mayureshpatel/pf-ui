@@ -13,6 +13,7 @@
     "e2e": "playwright test",
     "e2e:ui": "playwright test --ui",
     "lint": "ng lint",
+    "check:design": "python3 scripts/check-design-rules.py",
     "generate:api:spec": "cd ../pf-data-service && ./mvnw test -Dtest=OpenApiSpecExportIntegrationTest -q",
     "generate:api": "npm run generate:api:spec && openapi-typescript ../pf-data-service/target/openapi.json -o src/app/generated/api-types.ts"
   },

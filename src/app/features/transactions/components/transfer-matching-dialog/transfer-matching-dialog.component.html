@@ -7,115 +7,132 @@
   [resizable]="false"
   [style]="{ width: '900px' }"
   [breakpoints]="{ '960px': '95vw' }"
-  class="p-fluid">
+  class="p-fluid"
+>
+  <div class="flex flex-col gap-4 py-2">
+    <p class="text-sm text-muted-color">
+      Approving a pair marks both transactions as an internal transfer, so they no longer count as
+      income or spending. Pairs at 90% or higher can be approved together; the rest are yours to
+      check one by one.
+    </p>
 
-  <div class="flex flex-col gap-6 py-2">
-    <!-- Context Header -->
-    <div
-      class="p-5 rounded-2xl bg-primary/5 border border-primary/10 flex gap-4 items-center animate-in fade-in slide-in-from-top-2 duration-500">
-      <div
-        class="w-12 h-12 bg-primary/10 flex items-center justify-center shrink-0 card-soft">
-        <i class="pi pi-sync text-primary text-xl"></i>
-      </div>
-      <div>
-        <h3 class="font-black text-surface-900 dark:text-surface-0 tracking-tight">Pattern Match Results</h3>
-        <p class="text-xs text-muted-color leading-normal">
-          Confirming identified pairs will consolidate them as internal transfers,
-          removing them from income and expense calculations.
-        </p>
-      </div>
+    <!-- What the last approval did, with the way back -->
+    <div role="status" aria-live="polite">
+      @if (lastApproved(); as batch) {
+        <div
+          data-testid="approval-status"
+          class="flex flex-wrap items-center gap-3 rounded-lg border border-surface-200 bg-surface-50 px-4 py-3 text-sm dark:border-surface-700 dark:bg-surface-900"
+        >
+          <span>
+            Approved {{ batch.items.length }} {{ batch.items.length === 1 ? 'pair' : 'pairs' }}.
+          </span>
+          <p-button
+            label="Undo"
+            severity="secondary"
+            variant="text"
+            styleClass="min-h-11"
+            [loading]="processing()"
+            (onClick)="undoLastApproval()"
+          />
+        </div>
+      }
     </div>
 
-    <!-- Comparison Ledger -->
+    <!-- Grouped tables sort by the group field; descending puts "Ready to approve" before "Needs review". -->
     <p-table
-      [value]="suggestions()"
+      [value]="rows()"
       [loading]="loading()"
-      [stripedRows]="true"
+      rowGroupMode="subheader"
+      groupRowsBy="group"
+      sortField="group"
+      [sortOrder]="-1"
       size="small"
-      class="overflow-hidden card-soft">
-
+      class="overflow-hidden card-soft"
+    >
       <ng-template #header>
         <tr>
-          <th id="source" class="py-4 font-bold text-surface-700 dark:text-surface-200">Source Account (Out)</th>
-          <th id="match" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-center w-32">Confidence</th>
-          <th id="target" class="py-4 font-bold text-surface-700 dark:text-surface-200">Target Account (In)</th>
-          <th id="actions" class="py-4 font-bold text-surface-700 dark:text-surface-200 text-center w-24">Action</th>
+          <th id="source" class="py-3 font-semibold">Money out</th>
+          <th id="match" class="py-3 text-center font-semibold w-32">Match</th>
+          <th id="target" class="py-3 font-semibold">Money in</th>
+          <th id="actions" class="py-3 text-center font-semibold w-40">Decision</th>
+        </tr>
+      </ng-template>
+
+      <ng-template #groupheader let-row>
+        <tr>
+          <td colspan="4" class="bg-surface-50 py-2 text-sm font-semibold dark:bg-surface-900">
+            {{ row.group }}
+          </td>
         </tr>
       </ng-template>
 
       <ng-template #body let-suggestion>
-        <tr class="hover:bg-surface-100/50 dark:hover:bg-surface-800/30 transition-colors duration-200">
-          <!-- Outgoing Side -->
-          <td class="py-4">
-            <div class="flex flex-col gap-1.5">
-              <span class="font-mono font-black text-lg text-rose-600 dark:text-rose-400">
+        <tr>
+          <!-- Outgoing side -->
+          <td class="py-3">
+            <div class="flex flex-col gap-1">
+              <span class="row-amount text-rose-700 dark:text-rose-400">
                 {{ suggestion.sourceTransaction.amount | formatCurrency }}
               </span>
-              <div class="flex flex-col">
-                <span
-                  class="text-sm font-bold text-surface-900 dark:text-surface-0">{{ suggestion.sourceTransaction.account.name }}</span>
-                <span
-                  class="text-xs text-muted-color uppercase font-bold tracking-tighter italic truncate max-w-50"
-                  [title]="suggestion.sourceTransaction.description">
-                  {{ suggestion.sourceTransaction.description }}
-                </span>
-              </div>
-            </div>
-          </td>
-
-          <!-- Logic Connection -->
-          <td class="text-center">
-            <div class="flex flex-col items-center gap-2">
-              <div
-                class="w-8 h-8 rounded-full flex items-center justify-center card-soft">
-                <i class="pi pi-arrow-right text-primary text-xs"></i>
-              </div>
+              <span class="text-sm font-medium">{{
+                suggestion.sourceTransaction.account.name
+              }}</span>
               <span
-                class="px-2 py-0.5 rounded bg-primary/5 text-primary-700 dark:text-primary-400 text-xs font-black uppercase ring-1 ring-primary/10">
-                {{ Math.round(suggestion.confidenceScore * 100) }}% Match
+                class="max-w-50 truncate text-xs text-muted-color"
+                [title]="suggestion.sourceTransaction.description"
+              >
+                {{ suggestion.sourceTransaction.description }}
               </span>
             </div>
           </td>
 
-          <!-- Incoming Side -->
-          <td class="py-4">
-            <div class="flex flex-col gap-1.5">
-              <span class="font-mono font-black text-lg text-emerald-600 dark:text-emerald-400">
+          <!-- Confidence -->
+          <td class="text-center">
+            <span
+              class="rounded-md px-2 py-0.5 text-xs font-semibold text-primary-700 dark:text-primary-400"
+            >
+              {{ Math.round(suggestion.confidenceScore * 100) }}% match
+            </span>
+          </td>
+
+          <!-- Incoming side -->
+          <td class="py-3">
+            <div class="flex flex-col gap-1">
+              <span class="row-amount text-emerald-700 dark:text-emerald-400">
                 +{{ Math.abs(suggestion.targetTransaction.amount) | formatCurrency }}
               </span>
-              <div class="flex flex-col">
-                <span
-                  class="text-sm font-bold text-surface-900 dark:text-surface-0">{{ suggestion.targetTransaction.account.name }}</span>
-                <span
-                  class="text-xs text-muted-color uppercase font-bold tracking-tighter italic truncate max-w-50"
-                  [title]="suggestion.targetTransaction.description">
-                  {{ suggestion.targetTransaction.description }}
-                </span>
-              </div>
+              <span class="text-sm font-medium">{{
+                suggestion.targetTransaction.account.name
+              }}</span>
+              <span
+                class="max-w-50 truncate text-xs text-muted-color"
+                [title]="suggestion.targetTransaction.description"
+              >
+                {{ suggestion.targetTransaction.description }}
+              </span>
             </div>
           </td>
 
-          <!-- Action Cell -->
+          <!-- Decision -->
           <td class="text-center">
-            <div class="flex flex-col gap-2 items-center">
+            <div class="flex flex-col items-stretch gap-2">
               <p-button
+                label="Approve"
                 icon="pi pi-check"
-                (onClick)="confirmMatch(suggestion)"
-                [rounded]="true"
-                severity="success"
-                pTooltip="Confirm Pair"
                 ariaLabel="Confirm Pair"
-                size="small"
+                severity="secondary"
+                variant="outlined"
+                styleClass="min-h-11 w-full"
+                (onClick)="confirmMatch(suggestion)"
               />
               <p-button
+                label="Ignore"
                 icon="pi pi-times"
-                (onClick)="ignoreMatch(suggestion)"
-                [rounded]="true"
-                [text]="true"
-                severity="secondary"
-                pTooltip="Ignore"
                 ariaLabel="Ignore"
-                size="small"
+                severity="secondary"
+                variant="text"
+                styleClass="min-h-11 w-full"
+                (onClick)="ignoreMatch(suggestion)"
               />
             </div>
           </td>
@@ -124,11 +141,11 @@
 
       <ng-template #emptymessage>
         <tr>
-          <td colspan="4" class="text-center py-16">
-            <div class="flex flex-col items-center gap-2 opacity-40">
-              <i class="pi pi-check-circle text-4xl text-emerald-500"></i>
-              <span class="font-bold uppercase tracking-widest text-xs">No pending transfers to match</span>
-            </div>
+          <td colspan="4" class="py-12 text-center text-muted-color">
+            <i
+              class="pi pi-check-circle mb-2 block text-3xl text-emerald-700 dark:text-emerald-400"
+            ></i>
+            No pending transfers to review
           </td>
         </tr>
       </ng-template>
@@ -136,19 +153,25 @@
   </div>
 
   <ng-template #footer>
-    <div class="flex justify-between items-center pt-4 border-t border-surface-100 dark:border-surface-800 w-full">
-      <span class="text-xs font-black uppercase tracking-widest text-muted-color">
-        {{ suggestions().length }} Pair{{ suggestions().length === 1 ? '' : 's' }} Found
+    <div class="flex w-full flex-wrap items-center justify-between gap-3">
+      <span class="text-sm text-muted-color">
+        {{ suggestions().length }} {{ suggestions().length === 1 ? 'pair' : 'pairs' }} to review
       </span>
       <div class="flex gap-3">
-        <p-button label="Close" [text]="true" severity="secondary" (onClick)="onHide()"/>
         <p-button
-          label="Approve All Matches"
+          label="Close"
+          variant="text"
+          severity="secondary"
+          styleClass="min-h-11"
+          (onClick)="onHide()"
+        />
+        <p-button
+          [label]="approveAllLabel()"
           icon="pi pi-check-circle"
-          (onClick)="confirmAll()"
-          [disabled]="suggestions().length === 0"
+          styleClass="min-h-11"
+          [disabled]="highConfidence().length === 0"
           [loading]="processing()"
-          [raised]="true"
+          (onClick)="confirmAll()"
         />
       </div>
     </div>

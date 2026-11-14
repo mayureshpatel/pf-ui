@@ -6,3 +6,72 @@
 /* custom variant for dark mode with .my-app-dark class */
 @custom-variant dark (&:where(.my-app-dark, .my-app-dark *));
 
+/*
+ * The page owns its canvas and base text color in both themes, so nothing depends on the
+ * browser's default. PrimeNG sets `color-scheme` on `.my-app-dark` itself.
+ */
+@layer base {
+  body {
+    @apply bg-surface-0 text-surface-900 dark:bg-surface-950 dark:text-surface-0;
+  }
+
+  /* Native inputs otherwise get the browser's gray placeholder, which fails 4.5:1 on white. */
+  ::placeholder {
+    color: var(--p-text-muted-color);
+    opacity: 1;
+  }
+}
+
+/*
+ * Heading roles (PF-942). A heading is sized by its role, never by the page it is on:
+ *   heading-page     the one h1 of a screen
+ *   heading-section  a titled section inside a screen (a Settings section, a dialog step)
+ *   heading-card     the title of a card or dialog
+ *   heading-panel    a small heading inside a panel, form or list
+ *   stat-label       the quiet label above a figure
+ * Figures stay the loudest thing on a screen; no heading goes heavier than bold.
+ */
+@utility heading-page {
+  @apply text-3xl font-bold tracking-tight;
+}
+
+@utility heading-section {
+  @apply text-xl font-semibold tracking-tight;
+}
+
+@utility heading-card {
+  @apply text-lg font-semibold;
+}
+
+@utility heading-panel {
+  @apply text-sm font-semibold;
+}
+
+@utility stat-label {
+  @apply text-sm font-normal text-muted-color;
+}
+@utility stat-figure {
+  @apply text-2xl font-extrabold tracking-tight tabular-nums;
+}
+@utility stat-figure-lg {
+  @apply text-3xl font-extrabold tracking-tight tabular-nums;
+}
+@utility row-amount {
+  @apply font-semibold tabular-nums;
+}
+
+/* Phone hit areas: PrimeNG's small buttons are about 32px tall; touch targets want 44px. */
+@media (max-width: 767px) {
+  .p-button.p-button-sm {
+    min-height: 2.75rem;
+  }
+}
+
+/* The list-plus-panel layout (R-04): one column, then the list beside a 26rem docked panel from lg. */
+@utility list-panel-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  @media (min-width: 1024px) {
+    grid-template-columns: minmax(0, 1fr) 26rem;
+  }
+}

@@ -144,6 +144,19 @@ describe('AccountListComponent', () => {
     expect(rows[1].className).toContain('dark:bg-primary-900/30');
   });
 
+  it('should mark the selected account with a bar and aria-current, not tint alone', () => {
+    // act
+    render({ selectedId: 3 });
+
+    // assert & verify
+    const rows = all('li');
+    expect(rows[1].className).toContain('border-l-primary-700');
+    expect(rows[1].className).toContain('dark:border-l-primary-400');
+    expect(rows[0].className).toContain('border-l-transparent');
+    expect(all('[data-testid="open-account"]')[1].getAttribute('aria-current')).toBe('true');
+    expect(all('[data-testid="open-account"]')[0].hasAttribute('aria-current')).toBe(false);
+  });
+
   it('should dim the list and mark it busy while reloading', () => {
     // act
     render({ loading: true });

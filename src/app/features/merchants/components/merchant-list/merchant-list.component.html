@@ -6,12 +6,12 @@
   @if (merchants().length === 0) {
     @if (searching()) {
       <div
-        class="flex flex-col items-center gap-3 rounded-2xl border border-surface-200 bg-surface-0 p-8 text-center dark:border-surface-800 dark:bg-surface-900"
+        class="flex flex-col items-center gap-3 rounded-xl border border-surface-200 bg-surface-0 p-8 text-center dark:border-surface-800 dark:bg-surface-900"
       >
         <p class="m-0 font-medium">No merchants match your search</p>
         <button
           type="button"
-          class="cursor-pointer rounded-lg border border-surface-300 px-3 py-1.5 text-sm dark:border-surface-700"
+          class="cursor-pointer rounded-lg border border-surface-300 px-3 py-1.5 text-sm max-lg:min-h-11 dark:border-surface-700"
           (click)="clearSearch.emit()"
         >
           Clear search
@@ -20,28 +20,35 @@
     }
   } @else {
     <ul
-      class="m-0 list-none overflow-hidden rounded-2xl border border-surface-200 bg-surface-0 p-0 dark:border-surface-800 dark:bg-surface-900"
+      class="m-0 list-none overflow-hidden rounded-xl border border-surface-200 bg-surface-0 p-0 dark:border-surface-800 dark:bg-surface-900"
     >
       @for (merchant of merchants(); track merchant.id) {
         <li class="border-t border-surface-100 first:border-t-0 dark:border-surface-800">
           <div
             data-testid="merchant-row"
-            [class]="selectedId() === merchant.id ? 'bg-primary-50 dark:bg-primary-900/30' : ''"
+            class="border-l-4"
+            [class]="
+              selectedId() === merchant.id
+                ? 'border-l-primary-700 bg-primary-50 dark:border-l-primary-400 dark:bg-primary-900/30'
+                : 'border-l-transparent'
+            "
           >
             <button
               type="button"
               data-testid="open-merchant"
               [attr.aria-current]="selectedId() === merchant.id ? 'true' : null"
-              class="flex w-full min-w-0 cursor-pointer items-center gap-3 px-4 py-3 text-left"
+              class="flex min-h-17 w-full min-w-0 cursor-pointer items-center gap-3 py-3 pl-3 pr-4 text-left"
               (click)="openMerchant.emit(merchant)"
             >
               <span class="min-w-0 flex-1">
                 <span class="block truncate font-medium text-surface-900 dark:text-surface-0">
                   {{ merchant.name }}
                 </span>
-                <span class="block truncate text-sm text-muted-color">
-                  {{ location(merchant) }}
-                </span>
+                @if (hasLocation(merchant)) {
+                  <span class="block truncate text-sm text-muted-color">
+                    {{ location(merchant) }}
+                  </span>
+                }
               </span>
               <span
                 class="shrink-0 text-sm tabular-nums"

@@ -1,7 +1,9 @@
-import { ChangeDetectionStrategy, Component, signal, WritableSignal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal, WritableSignal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { ConfirmationService, ConfirmEventType } from 'primeng/api';
+import { ConfirmDialog } from 'primeng/confirmdialog';
 import { Dialog } from 'primeng/dialog';
 import { RestoreFocusOnHideDirective } from './restore-focus-on-hide.directive';
 
@@ -66,5 +68,91 @@ describe('RestoreFocusOnHideDirective', () => {
       fixture.componentInstance.visible.set(false);
       fixture.detectChanges();
     }).not.toThrow();
+  });
+});
+
+describe('RestoreFocusOnHideDirective on a p-dialog header', () => {
+  it('PF-945: gives the header close button an accessible name unless the dialog sets its own', async () => {
+    @Component({
+      imports: [Dialog, RestoreFocusOnHideDirective],
+      template: `
+        <p-dialog id="plain" [visible]="true" appRestoreFocusOnHide header="A" />
+        <p-dialog
+          id="named"
+          [visible]="true"
+          appRestoreFocusOnHide
+          closeAriaLabel="Dismiss"
+          header="B"
+        />
+      `,
+      changeDetection: ChangeDetectionStrategy.OnPush,
+    })
+    class LabelHostComponent {}
+
+    await TestBed.configureTestingModule({
+      imports: [LabelHostComponent, NoopAnimationsModule],
+    }).compileComponents();
+    const labelFixture = TestBed.createComponent(LabelHostComponent);
+    labelFixture.detectChanges();
+
+    const dialogs: Dialog[] = labelFixture.debugElement
+      .queryAll(By.directive(Dialog))
+      .map((d) => d.injector.get(Dialog));
+    expect(dialogs[0].closeAriaLabel).toBe('Close');
+    expect(dialogs[1].closeAriaLabel).toBe('Dismiss');
+  });
+});
+
+describe('RestoreFocusOnHideDirective on a p-confirmDialog', () => {
+  @Component({
+    imports: [ConfirmDialog, RestoreFocusOnHideDirective],
+    template: `
+      <button id="trigger" (click)="ask()">Delete</button>
+      <p-confirmDialog appRestoreFocusOnHide />
+    `,
+    changeDetection: ChangeDetectionStrategy.OnPush,
+  })
+  class ConfirmHostComponent {
+    private readonly confirmation: ConfirmationService = inject(ConfirmationService);
+    ask(): void {
+      this.confirmation.confirm({ message: 'Delete it?', header: 'Delete?' });
+    }
+  }
+
+  let fixture: ComponentFixture<ConfirmHostComponent>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [ConfirmHostComponent, NoopAnimationsModule],
+      providers: [ConfirmationService],
+    }).compileComponents();
+    fixture = TestBed.createComponent(ConfirmHostComponent);
+    fixture.detectChanges();
+  });
+
+  it('PF-945: returns focus to the opener after the confirm closes, not to the page body', () => {
+    const trigger = fixture.debugElement.query(By.css('#trigger'))
+      .nativeElement as HTMLButtonElement;
+    trigger.focus();
+    trigger.click();
+    fixture.detectChanges();
+
+    // PrimeNG moves focus into the dialog on show; here the body stands in for "lost".
+    (document.activeElement as HTMLElement | null)?.blur();
+    expect(document.activeElement).not.toBe(trigger);
+
+    const confirm = fixture.debugElement
+      .query(By.directive(ConfirmDialog))
+      .injector.get(ConfirmDialog);
+    confirm.onHide.emit(ConfirmEventType.REJECT);
+
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it('PF-945: names the confirm dialog close button', () => {
+    const confirm = fixture.debugElement
+      .query(By.directive(ConfirmDialog))
+      .injector.get(ConfirmDialog);
+    expect(confirm.closeAriaLabel).toBe('Close');
   });
 });

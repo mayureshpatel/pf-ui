@@ -1,7 +1,9 @@
+<!-- PF-945: appended to the body so Esc, which PrimeNG listens for on the document, cannot also reach the side panel behind this dialog and raise its Discard prompt. -->
 <p-dialog
   [header]="title()"
   [(visible)]="visible"
   appRestoreFocusOnHide
+  appendTo="body"
   [modal]="true"
   [draggable]="false"
   [resizable]="false"
@@ -16,30 +18,29 @@
       Fill gaps only adds limits for categories that have none yet. Replace all also changes the
       limits that differ from last month.
     </p>
-    <div class="flex flex-wrap justify-end gap-2">
-      <button
-        type="button"
-        class="cursor-pointer rounded-lg bg-primary-700 px-3 py-2 text-sm font-medium text-white hover:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-50"
-        [disabled]="addCount() === 0"
-        (click)="onFill()"
-      >
-        Fill gaps
-      </button>
-      <button
-        type="button"
-        class="cursor-pointer rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 dark:border-surface-700"
-        [disabled]="addCount() + overwriteCount() === 0"
-        (click)="onReplace()"
-      >
-        Replace all
-      </button>
-      <button
-        type="button"
-        class="cursor-pointer rounded-lg px-3 py-2 text-sm font-medium underline"
-        (click)="onCancel()"
-      >
-        Cancel
-      </button>
-    </div>
   </div>
+  <!-- PF-877: Fill gaps first, so it (or Replace all when there is nothing to add) takes default focus, never Cancel. -->
+  <ng-template #footer>
+    <p-button
+      label="Fill gaps"
+      styleClass="min-h-11"
+      [disabled]="addCount() === 0"
+      (onClick)="onFill()"
+    />
+    <p-button
+      label="Replace all"
+      severity="secondary"
+      variant="outlined"
+      styleClass="min-h-11"
+      [disabled]="addCount() + overwriteCount() === 0"
+      (onClick)="onReplace()"
+    />
+    <p-button
+      label="Cancel"
+      severity="secondary"
+      variant="text"
+      styleClass="min-h-11"
+      (onClick)="onCancel()"
+    />
+  </ng-template>
 </p-dialog>

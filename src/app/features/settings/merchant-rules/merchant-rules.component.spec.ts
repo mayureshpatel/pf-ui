@@ -96,7 +96,7 @@ describe('MerchantRulesComponent', () => {
     Array.from(fixture.nativeElement.querySelectorAll('[data-rule-row]'));
   const button = (label: string): HTMLButtonElement | undefined =>
     (Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[]).find(
-      (b) => b.textContent?.trim() === label,
+      (b) => b.textContent?.trim() === label || b.getAttribute('aria-label') === label,
     );
   const makeDirty = (): void => {
     component['ruleForm']()!.form.controls.priority.setValue(9);
@@ -189,7 +189,7 @@ describe('MerchantRulesComponent', () => {
     expect(rows()[0].textContent).toContain('No merchant');
   });
 
-  it('should open a rule in the panel and return to overview on Back and Close', async () => {
+  it('should open a rule in the panel and return to overview on Close', async () => {
     // arrange
     await create();
 
@@ -200,7 +200,7 @@ describe('MerchantRulesComponent', () => {
       mode: component['panelMode'](),
       title: fixture.nativeElement.querySelector('aside h2').textContent.trim(),
     };
-    button('Back to overview')!.click();
+    button('Close')!.click();
     await settle();
     const afterBack = component['panelMode']();
     rows()[1].click();
@@ -636,7 +636,7 @@ describe('MerchantRulesComponent', () => {
     await settle();
     await new Promise((resolve) => setTimeout(resolve));
     const inPanel = document.activeElement?.tagName;
-    button('Back to overview')!.click();
+    button('Close')!.click();
     await settle();
     await new Promise((resolve) => setTimeout(resolve));
 
@@ -748,7 +748,7 @@ describe('MerchantRulesComponent', () => {
       expect(component['draft']()).not.toBeNull();
 
       // act
-      button('Back to overview')!.click();
+      button('Close')!.click();
       await settle();
 
       // assert & verify

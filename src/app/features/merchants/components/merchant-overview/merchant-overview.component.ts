@@ -25,7 +25,6 @@ export class MerchantOverviewComponent {
   /** The description totals could not be loaded (so the figure above will not arrive). */
   readonly statsFailed: InputSignal<boolean> = input<boolean>(false);
 
-  readonly add: OutputEmitterRef<void> = output<void>();
   readonly linkDescriptions: OutputEmitterRef<void> = output<void>();
   /** Asks the page to load the description totals again. */
   readonly retryStats: OutputEmitterRef<void> = output<void>();

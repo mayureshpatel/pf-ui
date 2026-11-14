@@ -1590,7 +1590,7 @@ describe('TransactionsComponent', () => {
       };
       const panelButton = (name: RegExp): HTMLButtonElement | undefined =>
         Array.from<HTMLButtonElement>(fixture.nativeElement.querySelectorAll('aside button')).find(
-          (b) => name.test((b.textContent ?? '').trim()),
+          (b) => name.test((b.textContent ?? '').trim() || (b.getAttribute('aria-label') ?? '')),
         );
 
       it('should hide the floating bar while a panel is open, so it never covers the panel footer', () => {
@@ -2902,7 +2902,9 @@ describe('TransactionsComponent', () => {
 
         // assert & verify
         expect(component.panelMode()).toBe('single');
-        expect(q('aside h2')?.textContent?.trim()).toBe('Edit transaction');
+        expect(q('aside h2')?.textContent?.trim()).toBe(
+          `Edit ${shell().merchant?.name || shell().description}`,
+        );
         expect(q('app-rule-edit-form')).toBeNull();
         expect(component.ruleStart()).toBeNull();
         expect(component.ruleDraft()).toBeNull();

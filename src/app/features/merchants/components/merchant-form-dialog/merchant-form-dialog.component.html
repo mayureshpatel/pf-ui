@@ -1,11 +1,14 @@
+<!-- PF-945: appended to the body so Esc, which PrimeNG listens for on the document, cannot also reach the side panel behind this dialog and raise its Discard prompt. -->
 <p-dialog
   [header]="dialogHeader()"
   [(visible)]="visible"
   appRestoreFocusOnHide
+  appendTo="body"
   [modal]="true"
   [draggable]="false"
   [resizable]="false"
   [style]="{ width: '500px' }"
+  [breakpoints]="{ '960px': '95vw' }"
   class="p-fluid"
 >
   <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-6 py-4">
@@ -16,12 +19,7 @@
     }
 
     <div class="flex flex-col gap-2">
-      <label
-        for="merchant-name"
-        class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200"
-      >
-        Name
-      </label>
+      <label for="merchant-name" class="text-sm font-medium"> Name </label>
       <input
         pInputText
         id="merchant-name"
@@ -30,7 +28,9 @@
         class="w-full"
       />
       @if (form.controls.name.invalid && form.controls.name.touched) {
-        <small class="text-rose-500 font-medium flex items-center gap-1 animate-fade-in">
+        <small
+          class="text-rose-700 dark:text-rose-400 font-medium flex items-center gap-1 animate-fade-in"
+        >
           <i class="pi pi-times-circle text-xs"></i> A name is required
         </small>
       }
@@ -38,12 +38,7 @@
 
     <div class="grid grid-cols-2 gap-4">
       <div class="flex flex-col gap-2">
-        <label
-          for="merchant-city"
-          class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200"
-        >
-          City
-        </label>
+        <label for="merchant-city" class="text-sm font-medium"> City </label>
         <input
           pInputText
           id="merchant-city"
@@ -53,12 +48,7 @@
         />
       </div>
       <div class="flex flex-col gap-2">
-        <label
-          for="merchant-state"
-          class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200"
-        >
-          State
-        </label>
+        <label for="merchant-state" class="text-sm font-medium"> State </label>
         <input
           pInputText
           id="merchant-state"
@@ -71,12 +61,7 @@
 
     <div class="grid grid-cols-2 gap-4">
       <div class="flex flex-col gap-2">
-        <label
-          for="merchant-postal-code"
-          class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200"
-        >
-          Postal Code
-        </label>
+        <label for="merchant-postal-code" class="text-sm font-medium"> Postal Code </label>
         <input
           pInputText
           id="merchant-postal-code"
@@ -86,12 +71,7 @@
         />
       </div>
       <div class="flex flex-col gap-2">
-        <label
-          for="merchant-country"
-          class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200"
-        >
-          Country
-        </label>
+        <label for="merchant-country" class="text-sm font-medium"> Country </label>
         <input
           pInputText
           id="merchant-country"
@@ -104,15 +84,21 @@
   </form>
 
   <ng-template #footer>
-    <div class="flex justify-end gap-3 pt-4 border-t border-surface-100 dark:border-surface-800">
-      <p-button label="Cancel" [text]="true" severity="secondary" (onClick)="onHide()" />
+    <div class="flex justify-end gap-3">
+      <p-button
+        label="Cancel"
+        [text]="true"
+        severity="secondary"
+        styleClass="min-h-11"
+        (onClick)="onHide()"
+      />
       <p-button
         label="Save"
         icon="pi pi-check"
         (onClick)="onSubmit()"
         [loading]="saving()"
         [disabled]="form.invalid || saving()"
-        [raised]="true"
+        styleClass="min-h-11"
       />
     </div>
   </ng-template>
