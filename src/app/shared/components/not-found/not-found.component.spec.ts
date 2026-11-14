@@ -26,7 +26,7 @@ describe('NotFoundComponent', () => {
   });
 
   it('shows a clear not-found message', () => {
-    expect(fixture.nativeElement.textContent).toContain('Page Not Found');
+    expect(fixture.nativeElement.textContent).toContain('Page not found');
   });
 
   it('links back to the dashboard', () => {
@@ -34,5 +34,24 @@ describe('NotFoundComponent', () => {
       .query(By.directive(RouterLink))
       .injector.get(RouterLink);
     expect(routerLink.urlTree?.toString()).toBe('/dashboard');
+  });
+
+  it('offers real links to the dashboard and to transactions', () => {
+    const links: HTMLAnchorElement[] = Array.from(fixture.nativeElement.querySelectorAll('a'));
+
+    expect(links.map((a) => a.getAttribute('href'))).toEqual(['/dashboard', '/transactions']);
+    for (const link of links) {
+      expect(link.className).toContain('min-h-11');
+    }
+  });
+
+  it('is calm and static: no glow, no pulse, a decorative icon', () => {
+    const html: string = fixture.nativeElement.innerHTML;
+
+    expect(html).not.toContain('animate-pulse');
+    expect(html).not.toContain('blur');
+    expect(fixture.nativeElement.querySelector('.pi-compass').getAttribute('aria-hidden')).toBe(
+      'true',
+    );
   });
 });

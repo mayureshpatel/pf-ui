@@ -1,10 +1,14 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
+  inject,
   input,
   InputSignal,
   output,
   OutputEmitterRef,
+  signal,
+  WritableSignal,
 } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 
@@ -35,4 +39,16 @@ export class PageErrorStateComponent {
    * Emitted when the user clicks Retry. The caller re-runs its own load method.
    */
   readonly retry: OutputEmitterRef<void> = output<void>();
+
+  /** True for a moment after Retry, so a repeat failure still reads as "it tried again". */
+  protected readonly retrying: WritableSignal<boolean> = signal(false);
+
+  private readonly destroyRef: DestroyRef = inject(DestroyRef);
+
+  protected onRetry(): void {
+    this.retrying.set(true);
+    this.retry.emit();
+    const timer = setTimeout((): void => this.retrying.set(false), 800);
+    this.destroyRef.onDestroy((): void => clearTimeout(timer));
+  }
 }

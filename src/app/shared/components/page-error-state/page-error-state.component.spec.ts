@@ -47,4 +47,39 @@ describe('PageErrorStateComponent', () => {
     // Assert
     expect(retrySpy).toHaveBeenCalledOnce();
   });
+
+  it('should announce itself as an alert, reassure that data is unchanged, and stay static', () => {
+    // Act
+    fixture.detectChanges();
+
+    // Assert
+    const root: HTMLElement = fixture.nativeElement.querySelector('[role="alert"]');
+    expect(root).not.toBeNull();
+    expect(root.textContent).toContain('Your data is unchanged');
+    expect(fixture.nativeElement.innerHTML).not.toContain('animate-pulse');
+    expect(
+      fixture.nativeElement.querySelector('.pi-exclamation-triangle').getAttribute('aria-hidden'),
+    ).toBe('true');
+  });
+
+  it('should show a Retrying state after Retry is pressed, then settle', async () => {
+    // Arrange
+    vi.useFakeTimers();
+    fixture.detectChanges();
+
+    // Act
+    fixture.debugElement.query(By.css('p-button button')).nativeElement.click();
+    fixture.detectChanges();
+
+    // Assert
+    expect(fixture.nativeElement.textContent).toContain('Retrying');
+
+    // Act
+    vi.advanceTimersByTime(900);
+    fixture.detectChanges();
+
+    // Assert
+    expect(fixture.nativeElement.textContent).not.toContain('Retrying');
+    vi.useRealTimers();
+  });
 });

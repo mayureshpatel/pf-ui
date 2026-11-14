@@ -1,7 +1,9 @@
 <aside
   tabindex="-1"
   [attr.aria-label]="title()"
-  class="flex flex-col overflow-y-auto bg-surface-0 p-4 dark:bg-surface-900"
+  [attr.role]="modal() ? 'dialog' : null"
+  [attr.aria-modal]="modal() ? 'true' : null"
+  class="flex flex-col overflow-y-auto bg-surface-0 p-4 outline-none dark:bg-surface-900"
   [class]="
     sheet()
       ? 'fixed inset-0 z-40 lg:static lg:z-auto lg:rounded-xl lg:border lg:border-surface-200 lg:dark:border-surface-800'
@@ -10,9 +12,13 @@
   (keydown.escape)="onEscape($event)"
 >
   <div class="mb-3 flex items-center justify-between gap-2">
-    <h2 class="heading-card">{{ title() }}</h2>
+    <h2 class="heading-card min-w-0 break-words">{{ title() }}</h2>
     @if (showClose()) {
-      <button type="button" class="cursor-pointer text-sm underline" (click)="closePanel.emit()">
+      <button
+        type="button"
+        class="shrink-0 cursor-pointer rounded-md px-2 text-sm underline max-lg:min-h-11 max-lg:min-w-11"
+        (click)="closePanel.emit()"
+      >
         Close
       </button>
     }
@@ -27,7 +33,7 @@
       @if (showDelete()) {
         <button
           type="button"
-          class="cursor-pointer rounded-lg border border-rose-300 px-3 py-1.5 text-sm max-md:min-h-11 text-rose-700 dark:text-rose-400"
+          class="cursor-pointer rounded-lg border border-rose-300 px-3 dark:border-rose-800 py-1.5 text-sm max-lg:min-h-11 text-rose-700 dark:text-rose-400"
           (click)="delete.emit()"
         >
           Delete
@@ -35,7 +41,7 @@
       }
       <button
         type="button"
-        class="cursor-pointer rounded-lg bg-primary-700 px-3 py-1.5 text-sm max-md:min-h-11 font-medium text-white hover:bg-primary-800 disabled:opacity-50"
+        class="cursor-pointer rounded-lg bg-primary-700 px-3 py-1.5 text-sm max-lg:min-h-11 font-medium text-white hover:bg-primary-800 disabled:opacity-50"
         [disabled]="saving() || !valid()"
         (click)="save.emit()"
       >

@@ -2902,7 +2902,9 @@ describe('TransactionsComponent', () => {
 
         // assert & verify
         expect(component.panelMode()).toBe('single');
-        expect(q('aside h2')?.textContent?.trim()).toBe('Edit transaction');
+        expect(q('aside h2')?.textContent?.trim()).toBe(
+          `Edit ${shell().merchant?.name || shell().description}`,
+        );
         expect(q('app-rule-edit-form')).toBeNull();
         expect(component.ruleStart()).toBeNull();
         expect(component.ruleDraft()).toBeNull();

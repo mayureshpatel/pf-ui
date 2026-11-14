@@ -86,12 +86,15 @@ export const routes: Routes = [
           import('./features/reports/reports.component').then((m) => m.ReportsComponent),
         title: 'Reports · Personal Finance',
       },
+      {
+        // inside the shell, so a bad URL keeps the navigation (signed-out visitors go to sign-in)
+        path: '**',
+        loadComponent: () =>
+          import('@shared/components/not-found/not-found.component').then(
+            (m) => m.NotFoundComponent,
+          ),
+        title: 'Page Not Found · Personal Finance',
+      },
     ],
-  },
-  {
-    path: '**',
-    loadComponent: () =>
-      import('@shared/components/not-found/not-found.component').then((m) => m.NotFoundComponent),
-    title: 'Page Not Found · Personal Finance',
   },
 ];

@@ -1,19 +1,24 @@
-<div class="flex flex-col items-center justify-center min-h-[60vh] text-center animate-fade-in">
-  <div class="relative mb-8">
-    <div class="absolute -inset-4 bg-primary/10 rounded-full blur-2xl animate-pulse"></div>
-    <i class="pi pi-compass text-8xl text-primary/40 relative"></i>
-  </div>
-  <h1 class="heading-page mb-3">Page Not Found</h1>
-  <p class="text-muted-color mb-8 max-w-lg leading-relaxed text-lg">
-    The page you're looking for doesn't exist or may have moved. Double-check the link, or head back
+<div class="flex min-h-96 flex-col items-center justify-center text-center">
+  <i class="pi pi-compass mb-4 text-4xl text-muted-color" aria-hidden="true"></i>
+  <h1 class="heading-page mb-3">Page not found</h1>
+  <p class="mb-6 max-w-lg text-lg leading-relaxed text-muted-color">
+    The page you're looking for doesn't exist or may have moved. Double-check the link, or go back
     to your dashboard.
   </p>
 
-  <p-button
-    label="Back to Dashboard"
-    icon="pi pi-home"
-    routerLink="/dashboard"
-    severity="primary"
-    [raised]="true"
-  />
+  <div class="flex flex-wrap items-center justify-center gap-3">
+    <a
+      routerLink="/dashboard"
+      class="inline-flex min-h-11 items-center gap-2 rounded-md bg-primary-700 px-4 py-2 font-medium text-white hover:bg-primary-800 dark:bg-primary-400 dark:text-surface-900 dark:hover:bg-primary-300"
+    >
+      <i class="pi pi-home" aria-hidden="true"></i>
+      Back to Dashboard
+    </a>
+    <a
+      routerLink="/transactions"
+      class="inline-flex min-h-11 items-center rounded-md px-4 py-2 font-medium text-primary-700 underline dark:text-primary-400"
+    >
+      Go to Transactions
+    </a>
+  </div>
 </div>

@@ -1,29 +1,20 @@
-import { ChangeDetectionStrategy, Component, input, InputSignal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 
-// todo: check if we can remove this
 /**
- * Toolbar component for screen-level operations.
+ * Toolbar component for screen-level operations: a title slot, a filters slot and an actions slot.
  *
  * @example
- * <app-screen-toolbar
- *    [showDivider]= true
- * >
+ * <app-screen-toolbar>
+ *   <h1 toolbarTitle class="heading-page">Accounts</h1>
+ *   <div toolbarFilters>...</div>
+ *   <div toolbarActions>...</div>
  * </app-screen-toolbar>
- </app-screen-toolbar>>
  */
 @Component({
   selector: 'app-screen-toolbar',
   standalone: true,
-  imports: [CommonModule],
   templateUrl: './screen-toolbar.html',
   styleUrl: './screen-toolbar.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ScreenToolbarComponent {
-  /**
-   * Whether to show a divider between filters and actions.
-   * Default: true
-   */
-  showDivider: InputSignal<boolean> = input(true);
-}
+export class ScreenToolbarComponent {}
