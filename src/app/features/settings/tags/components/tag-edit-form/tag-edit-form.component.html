@@ -11,19 +11,29 @@
 
   <div class="flex flex-col gap-1">
     <label for="tag-name" class="text-sm font-medium">Name</label>
-    <input pInputText id="tag-name" formControlName="name" class="w-full max-lg:min-h-11" />
+    <input
+      pInputText
+      id="tag-name"
+      formControlName="name"
+      class="w-full max-lg:min-h-11"
+      [attr.aria-invalid]="nameError() ? 'true' : null"
+      [attr.aria-describedby]="nameError() ? 'tag-name-error' : null"
+    />
     @if (nameError(); as error) {
-      <small class="text-rose-700 dark:text-rose-400">{{ error }}</small>
+      <small id="tag-name-error" role="alert" class="text-rose-700 dark:text-rose-400">{{
+        error
+      }}</small>
     }
   </div>
 
   <fieldset class="m-0 flex flex-col gap-2 border-0 p-0">
     <legend class="mb-1 text-sm font-medium">Color</legend>
-    <div class="flex flex-wrap gap-2">
+    <div appRovingFocus class="flex flex-wrap gap-2">
       @for (swatch of swatches; track swatch; let i = $index) {
         <button
           type="button"
-          class="size-8 cursor-pointer rounded-full border-2 max-lg:size-11"
+          class="inline-flex size-8 cursor-pointer items-center justify-center rounded-full border-2 max-lg:size-11"
+          [attr.tabindex]="swatchTabStop(i) ? 0 : -1"
           [attr.data-swatch]="i"
           [attr.aria-label]="swatchNames[i]"
           [attr.aria-pressed]="isSwatchSelected(swatch)"
@@ -34,7 +44,11 @@
               : 'border-transparent'
           "
           (click)="selectSwatch(swatch)"
-        ></button>
+        >
+          @if (isSwatchSelected(swatch)) {
+            <i class="pi pi-check text-xs text-white drop-shadow" aria-hidden="true"></i>
+          }
+        </button>
       }
     </div>
     <div class="flex items-center gap-2">
@@ -45,14 +59,18 @@
         id="tag-color"
         class="w-28 font-mono max-lg:min-h-11"
         maxlength="7"
-        placeholder="No colour"
+        placeholder="No color"
+        [attr.aria-invalid]="colorError() ? 'true' : null"
+        [attr.aria-describedby]="colorError() ? 'tag-color-error' : null"
         [value]="form.controls.color.value"
         (input)="onColorInput($any($event.target))"
         (blur)="form.controls.color.markAsTouched()"
       />
     </div>
     @if (colorError(); as error) {
-      <small class="text-rose-700 dark:text-rose-400">{{ error }}</small>
+      <small id="tag-color-error" role="alert" class="text-rose-700 dark:text-rose-400">{{
+        error
+      }}</small>
     }
   </fieldset>
 

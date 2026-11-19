@@ -1,9 +1,22 @@
 <form (ngSubmit)="submit()" [formGroup]="form" class="flex flex-col gap-4">
   <div class="flex flex-col gap-1">
     <label for="category-name" class="text-sm font-medium">Name</label>
-    <input pInputText id="category-name" formControlName="name" class="w-full" />
+    <input
+      pInputText
+      id="category-name"
+      formControlName="name"
+      class="w-full max-lg:min-h-11"
+      [attr.aria-invalid]="nameError() ? 'true' : null"
+      [attr.aria-describedby]="nameError() ? 'category-name-error' : null"
+    />
     @if (nameError(); as error) {
-      <small data-testid="name-error" class="text-rose-700 dark:text-rose-400">{{ error }}</small>
+      <small
+        id="category-name-error"
+        role="alert"
+        data-testid="name-error"
+        class="text-rose-700 dark:text-rose-400"
+        >{{ error }}</small
+      >
     }
   </div>
 
@@ -16,6 +29,7 @@
       [options]="typeOptions"
       optionLabel="label"
       optionValue="value"
+      styleClass="max-lg:min-h-11"
       appendTo="body"
     />
   </div>
@@ -33,17 +47,24 @@
       optionValue="value"
       placeholder="No parent"
       [showClear]="true"
+      styleClass="max-lg:min-h-11"
       appendTo="body"
     />
   </div>
 
   <fieldset class="m-0 flex flex-col gap-2 border-0 p-0">
     <legend class="mb-1 text-sm font-medium">Icon</legend>
-    <div class="flex flex-wrap gap-1">
+    <div appRovingFocus class="flex flex-wrap gap-1">
       @for (icon of icons; track icon; let i = $index) {
         <button
           type="button"
-          class="flex size-9 cursor-pointer items-center justify-center rounded-lg border border-surface-300 dark:border-surface-700"
+          class="flex size-9 cursor-pointer items-center justify-center rounded-lg border max-lg:size-11"
+          [class]="
+            form.controls.icon.value === icon
+              ? 'border-2 border-surface-900 dark:border-surface-0'
+              : 'border-surface-300 dark:border-surface-700'
+          "
+          [attr.tabindex]="iconTabStop(i) ? 0 : -1"
           [attr.data-testid]="'icon-' + i"
           [attr.aria-label]="iconLabel(icon)"
           [attr.aria-pressed]="form.controls.icon.value === icon"
@@ -59,11 +80,12 @@
 
   <fieldset class="m-0 flex flex-col gap-2 border-0 p-0">
     <legend class="mb-1 text-sm font-medium">Color</legend>
-    <div class="flex flex-wrap gap-2">
+    <div appRovingFocus class="flex flex-wrap gap-2">
       @for (color of colors; track color; let i = $index) {
         <button
           type="button"
-          class="size-8 cursor-pointer rounded-full border-2"
+          class="inline-flex size-8 cursor-pointer items-center justify-center rounded-full border-2 max-lg:size-11"
+          [attr.tabindex]="colorTabStop(i) ? 0 : -1"
           [attr.data-testid]="'color-' + i"
           [attr.aria-label]="colorNames[i]"
           [attr.aria-pressed]="form.controls.color.value === color"
@@ -74,13 +96,17 @@
               : 'border-transparent'
           "
           (click)="selectColor(color)"
-        ></button>
+        >
+          @if (form.controls.color.value === color) {
+            <i class="pi pi-check text-xs text-white drop-shadow" aria-hidden="true"></i>
+          }
+        </button>
       }
     </div>
   </fieldset>
 
   @if (errorMessage()) {
-    <p data-testid="form-error" class="text-sm text-rose-700 dark:text-rose-400">
+    <p role="alert" data-testid="form-error" class="text-sm text-rose-700 dark:text-rose-400">
       {{ errorMessage() }}
     </p>
   }
@@ -89,21 +115,24 @@
     <div class="flex flex-col gap-2">
       <button
         type="button"
-        class="cursor-pointer rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium dark:border-surface-700"
+        class="cursor-pointer rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium max-lg:min-h-11 dark:border-surface-700"
         (click)="viewTransactions.emit()"
       >
         View transactions
       </button>
       <button
         type="button"
-        class="cursor-pointer rounded-lg border border-rose-300 px-3 py-2 text-sm font-medium text-rose-700 disabled:cursor-not-allowed disabled:opacity-50 dark:text-rose-400"
+        class="cursor-pointer rounded-lg border border-rose-300 px-3 py-2 text-sm font-medium max-lg:min-h-11 text-rose-700 disabled:cursor-not-allowed disabled:opacity-50 dark:text-rose-400"
         [disabled]="deleteBlockedReason() !== null"
+        [attr.aria-describedby]="deleteBlockedReason() !== null ? 'category-delete-reason' : null"
         (click)="remove.emit()"
       >
         Delete category
       </button>
       @if (deleteBlockedReason(); as reason) {
-        <small data-testid="delete-reason" class="text-muted-color">{{ reason }}</small>
+        <small id="category-delete-reason" data-testid="delete-reason" class="text-muted-color">{{
+          reason
+        }}</small>
       }
     </div>
   }

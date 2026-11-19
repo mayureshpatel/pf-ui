@@ -300,4 +300,65 @@ describe('CategoryEditFormComponent', () => {
     expect(button('Delete category')).toBeUndefined();
     expect(button('View transactions')).toBeUndefined();
   });
+
+  describe('accessibility and touch targets', () => {
+    it('should link an invalid name to its alert and move focus to it on a failed submit', () => {
+      // arrange
+      render(null);
+      document.body.appendChild(fixture.nativeElement);
+
+      // act
+      component.submit();
+      fixture.detectChanges();
+
+      // assert & verify
+      const input = q<HTMLInputElement>('#category-name');
+      const error = q('[data-testid="name-error"]');
+      expect(input.getAttribute('aria-invalid')).toBe('true');
+      expect(input.getAttribute('aria-describedby')).toBe(error.id);
+      expect(error.getAttribute('role')).toBe('alert');
+      expect(document.activeElement).toBe(input);
+      fixture.nativeElement.remove();
+    });
+
+    it('should make the pickers one tab stop each and show the selection without colour alone', () => {
+      // act
+      render(null);
+      const icons = fixture.nativeElement.querySelectorAll('[data-testid^="icon-"]');
+      const colors = fixture.nativeElement.querySelectorAll('[data-testid^="color-"]');
+
+      // assert & verify
+      const stops = (list: NodeListOf<HTMLElement>): number =>
+        Array.from(list).filter((b) => b.getAttribute('tabindex') === '0').length;
+      expect(stops(icons)).toBe(1);
+      expect(stops(colors)).toBe(1);
+      expect(q('[data-testid="color-0"] .pi-check')).toBeTruthy();
+      expect(q('[data-testid="color-0"]').getAttribute('tabindex')).toBe('0');
+    });
+
+    it('should move the icon tab stop to the selected icon', () => {
+      // arrange
+      render(null);
+
+      // act
+      q('[data-testid="icon-3"]').click();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(q('[data-testid="icon-3"]').getAttribute('tabindex')).toBe('0');
+      expect(q('[data-testid="icon-0"]').getAttribute('tabindex')).toBe('-1');
+    });
+
+    it('should give picker buttons and the actions a 44px phone size', () => {
+      // act
+      render(groceries);
+
+      // assert & verify
+      expect(q('[data-testid="icon-0"]').className).toContain('max-lg:size-11');
+      expect(q('[data-testid="color-0"]').className).toContain('max-lg:size-11');
+      expect(q('#category-name').className).toContain('max-lg:min-h-11');
+      expect(button('View transactions')?.className).toContain('max-lg:min-h-11');
+      expect(button('Delete category')?.className).toContain('max-lg:min-h-11');
+    });
+  });
 });

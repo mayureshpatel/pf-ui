@@ -6,10 +6,19 @@
       id="name"
       formControlName="name"
       placeholder="For example, Personal checking"
-      class="w-full"
+      class="w-full max-lg:min-h-11"
+      [attr.aria-invalid]="form.controls.name.touched && form.controls.name.invalid ? 'true' : null"
+      [attr.aria-describedby]="
+        form.controls.name.touched && form.controls.name.invalid ? 'name-error' : null
+      "
     />
     @if (form.controls.name.touched && form.controls.name.invalid) {
-      <small data-testid="name-error" class="text-rose-700 dark:text-rose-400">
+      <small
+        id="name-error"
+        role="alert"
+        data-testid="name-error"
+        class="text-rose-700 dark:text-rose-400"
+      >
         Name is required.
       </small>
     }
@@ -25,22 +34,32 @@
       optionLabel="label"
       dataKey="code"
       placeholder="Select account type"
+      [attr.aria-invalid]="form.controls.type.touched && form.controls.type.invalid ? 'true' : null"
+      [attr.aria-describedby]="
+        form.controls.type.touched && form.controls.type.invalid ? 'type-error' : null
+      "
+      styleClass="max-lg:min-h-11"
       appendTo="body"
     />
     @if (form.controls.type.touched && form.controls.type.invalid) {
-      <small data-testid="type-error" class="text-rose-700 dark:text-rose-400">
+      <small
+        id="type-error"
+        role="alert"
+        data-testid="type-error"
+        class="text-rose-700 dark:text-rose-400"
+      >
         Choose an account type.
       </small>
     }
   </div>
 
   <div class="flex flex-col gap-1">
-    <label class="flex cursor-pointer items-center gap-2 text-sm font-medium">
+    <label class="flex cursor-pointer items-center gap-2 text-sm font-medium max-lg:min-h-11">
       <input
         type="checkbox"
         data-testid="manual-toggle"
         formControlName="manualBalance"
-        class="size-4 cursor-pointer"
+        class="size-4 cursor-pointer max-lg:size-5"
       />
       Balance is entered by hand
     </label>
@@ -65,13 +84,23 @@
       optionValue="value"
       placeholder="Select a bank"
       [showClear]="true"
+      styleClass="max-lg:min-h-11"
       appendTo="body"
     />
   </div>
 
   <div class="flex flex-col gap-1">
     <label for="currency" class="text-sm font-medium">Currency</label>
-    <input pInputText id="currency" formControlName="currencyCode" class="w-full" />
+    <input
+      pInputText
+      id="currency"
+      formControlName="currencyCode"
+      class="w-full max-lg:min-h-11"
+      aria-describedby="currency-hint"
+    />
+    <small id="currency-hint" class="text-muted-color">
+      Set when the account is created; it cannot change.
+    </small>
   </div>
 
   <div class="flex flex-col gap-1">
@@ -84,6 +113,8 @@
       mode="currency"
       [currency]="form.controls.currencyCode.value || 'USD'"
       locale="en-US"
+      styleClass="max-lg:min-h-11"
+      inputStyleClass="max-lg:min-h-11"
     />
     @if (isEditMode()) {
       <small class="text-muted-color">Change the balance by reconciling.</small>
@@ -91,6 +122,6 @@
   </div>
 
   @if (errorMessage()) {
-    <p-message severity="error">{{ errorMessage() }}</p-message>
+    <p-message severity="error" role="alert">{{ errorMessage() }}</p-message>
   }
 </form>

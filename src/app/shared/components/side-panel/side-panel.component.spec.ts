@@ -15,6 +15,8 @@ import { SidePanelComponent } from './side-panel.component';
       [showFooter]="showFooter()"
       [showClose]="showClose()"
       [sheet]="sheet()"
+      [submitOnEnter]="submitOnEnter()"
+      [invalidSaveFocusable]="invalidSaveFocusable()"
       (save)="saved()"
       (closePanel)="closed()"
       (delete)="deleted()"
@@ -31,6 +33,8 @@ class HostComponent {
   showFooter = signal(true);
   showClose = signal(true);
   sheet = signal(true);
+  submitOnEnter = signal(false);
+  invalidSaveFocusable = signal(false);
   panel = viewChild(SidePanelComponent);
   saved = vi.fn();
   closed = vi.fn();
@@ -89,6 +93,91 @@ describe('SidePanelComponent', () => {
     // assert & verify
     expect(button(/Delete/)).toBeUndefined();
     expect(button(/Save changes/)?.disabled).toBe(true);
+  });
+
+  it('should keep Save focusable while saving, ignore its clicks and mark it aria-disabled', () => {
+    // arrange
+    host.saving.set(true);
+    fixture.detectChanges();
+    const save = button(/Saving/);
+
+    // act
+    save?.focus();
+    save?.click();
+
+    // assert & verify
+    expect(save?.disabled).toBe(false);
+    expect(save?.getAttribute('aria-disabled')).toBe('true');
+    expect(document.activeElement).toBe(save);
+    expect(host.saved).not.toHaveBeenCalled();
+  });
+
+  it('should keep an invalid Save focusable and still emit when invalidSaveFocusable is set', () => {
+    // arrange
+    host.valid.set(false);
+    host.invalidSaveFocusable.set(true);
+    fixture.detectChanges();
+    const save = button(/Save changes/);
+
+    // act
+    save?.click();
+
+    // assert & verify
+    expect(save?.disabled).toBe(false);
+    expect(save?.getAttribute('aria-disabled')).toBe('true');
+    expect(host.saved).toHaveBeenCalledTimes(1);
+  });
+
+  describe('Enter to save', () => {
+    const pressEnter = (target: Element): void => {
+      target.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }),
+      );
+    };
+
+    const addInput = (type = 'text', role?: string): HTMLInputElement => {
+      const input = document.createElement('input');
+      input.type = type;
+      if (role) input.setAttribute('role', role);
+      q('[data-testid="body"]').appendChild(input);
+      return input;
+    };
+
+    it('should save on Enter in a text field when the host opts in and the form is valid', () => {
+      // arrange
+      host.submitOnEnter.set(true);
+      fixture.detectChanges();
+
+      // act
+      pressEnter(addInput());
+
+      // assert & verify
+      expect(host.saved).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not save on Enter when the host has not opted in', () => {
+      // act
+      pressEnter(addInput());
+
+      // assert & verify
+      expect(host.saved).not.toHaveBeenCalled();
+    });
+
+    it('should not save on Enter while invalid, in a checkbox or in a combobox', () => {
+      // arrange
+      host.submitOnEnter.set(true);
+      fixture.detectChanges();
+
+      // act
+      pressEnter(addInput('checkbox'));
+      pressEnter(addInput('text', 'combobox'));
+      host.valid.set(false);
+      fixture.detectChanges();
+      pressEnter(addInput());
+
+      // assert & verify
+      expect(host.saved).not.toHaveBeenCalled();
+    });
   });
 
   it('should hide the Save and Delete footer when showFooter is false', () => {

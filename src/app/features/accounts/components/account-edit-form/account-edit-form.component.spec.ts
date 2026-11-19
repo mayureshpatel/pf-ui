@@ -511,4 +511,61 @@ describe('AccountEditFormComponent', () => {
       expect(component.accountTypes().map((t) => t.code)).toContain('LOAN');
     });
   });
+
+  describe('accessibility', () => {
+    it('should link the name error to its field and focus the field on a failed submit', () => {
+      // arrange
+      document.body.appendChild(fixture.nativeElement);
+
+      // act
+      component.onSubmit();
+      fixture.detectChanges();
+
+      // assert & verify
+      const input: HTMLInputElement = fixture.nativeElement.querySelector('#name');
+      const error: HTMLElement = fixture.nativeElement.querySelector('#name-error');
+      expect(input.getAttribute('aria-invalid')).toBe('true');
+      expect(input.getAttribute('aria-describedby')).toBe('name-error');
+      expect(error.getAttribute('role')).toBe('alert');
+      expect(document.activeElement).toBe(input);
+      fixture.nativeElement.remove();
+    });
+
+    it('should explain the locked Currency in both modes', () => {
+      // assert (add mode)
+      expect(fixture.nativeElement.querySelector('#currency-hint')?.textContent).toContain(
+        'cannot change',
+      );
+
+      // act
+      fixture.componentRef.setInput('account', mockAccount);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(fixture.nativeElement.querySelector('#currency-hint')).toBeTruthy();
+    });
+
+    it('should link an unchosen type to its alert once touched', () => {
+      // act
+      component.form.controls.type.markAsTouched();
+      fixture.detectChanges();
+
+      // assert & verify
+      const select: HTMLElement = fixture.nativeElement.querySelector('p-select');
+      expect(select.getAttribute('aria-invalid')).toBe('true');
+      expect(select.getAttribute('aria-describedby')).toBe('type-error');
+    });
+
+    it('should give the inputs and the toggle row a 44px phone size', () => {
+      // assert & verify
+      expect(fixture.nativeElement.querySelector('#name').className).toContain('max-lg:min-h-11');
+      expect(fixture.nativeElement.querySelector('#currency').className).toContain(
+        'max-lg:min-h-11',
+      );
+      expect(
+        fixture.nativeElement.querySelector('[data-testid="manual-toggle"]').closest('label')
+          .className,
+      ).toContain('max-lg:min-h-11');
+    });
+  });
 });

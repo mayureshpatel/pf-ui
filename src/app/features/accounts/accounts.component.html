@@ -60,6 +60,8 @@
         [showClose]="showClose()"
         [sheet]="panelMode() !== 'overview' && !onlyAddMode()"
         [moveFocus]="false"
+        [submitOnEnter]="true"
+        [invalidSaveFocusable]="true"
         [showFooter]="
           panelMode() === 'edit' ||
           panelMode() === 'reconcile' ||

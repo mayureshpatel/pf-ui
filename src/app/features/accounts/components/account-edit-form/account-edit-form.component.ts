@@ -3,6 +3,8 @@ import {
   Component,
   computed,
   effect,
+  ElementRef,
+  inject,
   OnInit,
   input,
   InputSignal,
@@ -28,6 +30,7 @@ import {
   AccountUpdateRequest,
   BankName,
 } from '@models/account.model';
+import { focusFirstInvalid } from '@shared/utils/focus-first-invalid';
 import { BankOption } from '@models/transaction.model';
 
 @Component({
@@ -119,6 +122,8 @@ export class AccountEditFormComponent implements OnInit {
     manualBalance: new FormControl(false, { nonNullable: true }),
   });
 
+  private readonly host: ElementRef<HTMLElement> = inject(ElementRef<HTMLElement>);
+
   private readonly status: Signal<string> = toSignal(this.form.statusChanges, {
     initialValue: this.form.status,
   });
@@ -193,6 +198,7 @@ export class AccountEditFormComponent implements OnInit {
   onSubmit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      focusFirstInvalid(this.host.nativeElement);
       return;
     }
 
