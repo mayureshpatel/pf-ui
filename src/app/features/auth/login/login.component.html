@@ -27,14 +27,17 @@
           pInputText
           id="username"
           formControlName="username"
-          class="w-full"
+          class="w-full min-h-11"
           autocomplete="username"
           [invalid]="usernameInvalid()"
           [attr.aria-invalid]="usernameInvalid() ? 'true' : null"
           [attr.aria-describedby]="usernameInvalid() ? 'username-error' : null"
         />
         @if (usernameInvalid()) {
-          <small id="username-error" class="text-rose-700 dark:text-rose-400 font-medium flex items-center gap-1 animate-fade-in">
+          <small
+            id="username-error"
+            class="text-rose-700 dark:text-rose-400 font-medium flex items-center gap-1 animate-fade-in"
+          >
             <i class="pi pi-times-circle text-xs" aria-hidden="true"></i> Username is required
           </small>
         }
@@ -51,7 +54,7 @@
             id="password"
             formControlName="password"
             [type]="showPassword() ? 'text' : 'password'"
-            class="w-full pr-12"
+            class="w-full min-h-11 pr-12"
             autocomplete="current-password"
             [invalid]="passwordInvalid()"
             [attr.aria-invalid]="passwordInvalid() ? 'true' : null"
@@ -59,16 +62,24 @@
           />
           <button
             type="button"
-            class="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-md text-muted-color hover:text-surface-900 dark:hover:text-surface-0 cursor-pointer"
+            class="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-md text-muted-color hover:text-surface-900 dark:hover:text-surface-0 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 dark:focus-visible:outline-primary-400"
             [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
             [attr.aria-pressed]="showPassword()"
             (click)="togglePasswordVisibility()"
           >
-            <i class="pi" [class.pi-eye]="!showPassword()" [class.pi-eye-slash]="showPassword()" aria-hidden="true"></i>
+            <i
+              class="pi"
+              [class.pi-eye]="!showPassword()"
+              [class.pi-eye-slash]="showPassword()"
+              aria-hidden="true"
+            ></i>
           </button>
         </div>
         @if (passwordInvalid()) {
-          <small id="password-error" class="text-rose-700 dark:text-rose-400 font-medium flex items-center gap-1 animate-fade-in">
+          <small
+            id="password-error"
+            class="text-rose-700 dark:text-rose-400 font-medium flex items-center gap-1 animate-fade-in"
+          >
             <i class="pi pi-times-circle text-xs" aria-hidden="true"></i> Password is required
           </small>
         }
@@ -76,12 +87,11 @@
 
       <!-- Remember Me -->
       <div class="flex items-center gap-2 min-h-11">
-        <p-checkbox
-          formControlName="rememberMe"
-          [binary]="true"
-          inputId="rememberMe"
-        />
-        <label for="rememberMe" class="text-sm font-medium text-surface-600 dark:text-surface-300 cursor-pointer py-3">
+        <p-checkbox formControlName="rememberMe" [binary]="true" inputId="rememberMe" />
+        <label
+          for="rememberMe"
+          class="text-sm font-medium text-surface-600 dark:text-surface-300 cursor-pointer py-3"
+        >
           Keep me signed in
         </label>
       </div>
