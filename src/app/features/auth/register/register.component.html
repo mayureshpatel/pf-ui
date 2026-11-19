@@ -3,16 +3,17 @@
     <ng-template pTemplate="header">
       <div class="flex flex-col items-center pt-8 pb-4">
         <div class="bg-primary/10 rounded-xl p-4 mb-4">
-          <i class="pi pi-wallet text-5xl text-primary"></i>
+          <i class="pi pi-wallet text-5xl text-primary" aria-hidden="true"></i>
         </div>
         <h1 class="heading-page">Create Account</h1>
-        <p class="text-muted-color mt-1 text-lg">Join us and take control of your finances.</p>
+        <p class="text-muted-color mt-1 text-lg">Create the owner account for this server.</p>
+        <p class="text-muted-color mt-1 text-sm">Self-hosted. Your data stays on your server.</p>
       </div>
     </ng-template>
 
-    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-5 py-2">
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-6 py-2">
       @if (errorMessage()) {
-        <p-message severity="error" variant="simple" class="w-full animate-fade-in">
+        <p-message severity="error" variant="simple" class="w-full animate-fade-in" role="alert">
           {{ errorMessage() }}
         </p-message>
       }
@@ -34,101 +35,183 @@
 
       <!-- Username -->
       <div class="flex flex-col gap-2">
-        <label for="username" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
+        <label for="username" class="text-sm font-medium text-surface-700 dark:text-surface-200">
           Username
         </label>
         <input
           pInputText
           id="username"
           formControlName="username"
-          placeholder="Choose a username"
-          class="w-full py-2"
+          class="w-full min-h-11"
           autocomplete="username"
+          [invalid]="fieldInvalid('username')"
+          [attr.aria-invalid]="fieldInvalid('username') ? 'true' : null"
+          [attr.aria-describedby]="
+            fieldInvalid('username') ? 'username-hint username-error' : 'username-hint'
+          "
         />
-        @if (form.controls.username.invalid && form.controls.username.touched) {
-          <div class="flex flex-col gap-1 mt-1 animate-fade-in">
+        <small id="username-hint" class="text-muted-color">
+          3 to 50 letters, numbers or underscores.
+        </small>
+        @if (fieldInvalid('username')) {
+          <small
+            id="username-error"
+            class="text-rose-700 dark:text-rose-400 font-medium flex items-center gap-1 animate-fade-in"
+          >
+            <i class="pi pi-times-circle text-xs" aria-hidden="true"></i>
             @if (form.controls.username.errors?.['required']) {
-              <small class="text-rose-700 dark:text-rose-400 font-medium flex items-center gap-1">
-                <i class="pi pi-times-circle text-xs"></i> Username is required
-              </small>
+              Username is required
             } @else {
-              <small class="text-rose-700 dark:text-rose-400 font-medium flex items-center gap-1">
-                <i class="pi pi-times-circle text-xs"></i> 3-50 chars, alphanumeric/underscores only
-              </small>
+              Use 3 to 50 letters, numbers or underscores
             }
-          </div>
+          </small>
         }
       </div>
 
       <!-- Email -->
       <div class="flex flex-col gap-2">
-        <label for="email" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
-          Email Address
+        <label for="email" class="text-sm font-medium text-surface-700 dark:text-surface-200">
+          Email address
         </label>
         <input
           pInputText
           id="email"
           formControlName="email"
           type="email"
-          placeholder="your@email.com"
-          class="w-full py-2"
+          class="w-full min-h-11"
           autocomplete="email"
+          [invalid]="fieldInvalid('email')"
+          [attr.aria-invalid]="fieldInvalid('email') ? 'true' : null"
+          [attr.aria-describedby]="fieldInvalid('email') ? 'email-error' : null"
         />
-        @if (form.controls.email.invalid && form.controls.email.touched) {
-          <small class="text-rose-700 dark:text-rose-400 font-medium flex items-center gap-1 mt-1 animate-fade-in">
-            <i class="pi pi-times-circle text-xs"></i> Valid email is required
+        @if (fieldInvalid('email')) {
+          <small
+            id="email-error"
+            class="text-rose-700 dark:text-rose-400 font-medium flex items-center gap-1 animate-fade-in"
+          >
+            <i class="pi pi-times-circle text-xs" aria-hidden="true"></i> Enter a valid email
+            address
           </small>
         }
       </div>
 
       <!-- Password -->
       <div class="flex flex-col gap-2">
-        <label for="password" class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
+        <label for="password" class="text-sm font-medium text-surface-700 dark:text-surface-200">
           Password
         </label>
-        <p-password
-          id="password"
-          formControlName="password"
-          placeholder="Create a strong password"
-          [feedback]="true"
-          [toggleMask]="true"
-          styleClass="w-full"
-          inputStyleClass="w-full py-2"
-          autocomplete="new-password"
-        />
-        @if (form.controls.password.invalid && form.controls.password.touched) {
-          <small class="text-rose-700 dark:text-rose-400 font-medium flex items-center gap-1 mt-1 animate-fade-in">
-            <i class="pi pi-times-circle text-xs"></i> Password must meet security requirements
+        <div class="relative">
+          <input
+            pInputText
+            id="password"
+            formControlName="password"
+            [type]="showPassword() ? 'text' : 'password'"
+            class="w-full min-h-11 pr-12"
+            autocomplete="new-password"
+            [invalid]="fieldInvalid('password')"
+            [attr.aria-invalid]="fieldInvalid('password') ? 'true' : null"
+            [attr.aria-describedby]="
+              fieldInvalid('password') ? 'password-rules password-error' : 'password-rules'
+            "
+          />
+          <button
+            type="button"
+            class="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-md text-muted-color hover:text-surface-900 dark:hover:text-surface-0 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 dark:focus-visible:outline-primary-400"
+            [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
+            [attr.aria-pressed]="showPassword()"
+            (click)="togglePassword()"
+          >
+            <i
+              class="pi"
+              [class.pi-eye]="!showPassword()"
+              [class.pi-eye-slash]="showPassword()"
+              aria-hidden="true"
+            ></i>
+          </button>
+        </div>
+        <ul
+          id="password-rules"
+          class="m-0 flex list-none flex-col gap-1 p-0 text-sm"
+          aria-label="Password rules"
+        >
+          @for (rule of rules(); track rule.label) {
+            <li
+              class="flex items-center gap-2"
+              [class]="rule.met ? 'text-emerald-700 dark:text-emerald-400' : 'text-muted-color'"
+            >
+              <i
+                class="pi text-xs"
+                [class.pi-check-circle]="rule.met"
+                [class.pi-circle]="!rule.met"
+                aria-hidden="true"
+              ></i>
+              {{ rule.label }}
+              <span class="sr-only">{{ rule.met ? '(met)' : '(not met yet)' }}</span>
+            </li>
+          }
+        </ul>
+        @if (fieldInvalid('password')) {
+          <small
+            id="password-error"
+            class="text-rose-700 dark:text-rose-400 font-medium flex items-center gap-1 animate-fade-in"
+          >
+            <i class="pi pi-times-circle text-xs" aria-hidden="true"></i>
+            @if (form.controls.password.errors?.['required']) {
+              Password is required
+            } @else {
+              Still needed: {{ unmetLabels() }}
+            }
           </small>
         }
       </div>
 
       <!-- Confirm Password -->
       <div class="flex flex-col gap-2">
-        <label for="confirmPassword"
-               class="text-sm font-bold uppercase tracking-wide text-surface-700 dark:text-surface-200">
-          Confirm Password
+        <label
+          for="confirmPassword"
+          class="text-sm font-medium text-surface-700 dark:text-surface-200"
+        >
+          Confirm password
         </label>
-        <p-password
-          id="confirmPassword"
-          formControlName="confirmPassword"
-          placeholder="Re-enter your password"
-          [feedback]="false"
-          [toggleMask]="true"
-          styleClass="w-full"
-          inputStyleClass="w-full py-2"
-          autocomplete="new-password"
-        />
-        @if (form.controls.confirmPassword.touched) {
-          @if (form.controls.confirmPassword.errors?.['required']) {
-            <small class="text-rose-700 dark:text-rose-400 font-medium flex items-center gap-1 mt-1 animate-fade-in">
-              <i class="pi pi-times-circle text-xs"></i> Please confirm your password
-            </small>
-          } @else if (form.errors?.['passwordMismatch']) {
-            <small class="text-rose-700 dark:text-rose-400 font-medium flex items-center gap-1 mt-1 animate-fade-in">
-              <i class="pi pi-exclamation-triangle text-xs"></i> Passwords do not match
-            </small>
-          }
+        <div class="relative">
+          <input
+            pInputText
+            id="confirmPassword"
+            formControlName="confirmPassword"
+            [type]="showConfirm() ? 'text' : 'password'"
+            class="w-full min-h-11 pr-12"
+            autocomplete="new-password"
+            [invalid]="fieldInvalid('confirmPassword')"
+            [attr.aria-invalid]="fieldInvalid('confirmPassword') ? 'true' : null"
+            [attr.aria-describedby]="fieldInvalid('confirmPassword') ? 'confirm-error' : null"
+          />
+          <button
+            type="button"
+            class="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-md text-muted-color hover:text-surface-900 dark:hover:text-surface-0 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 dark:focus-visible:outline-primary-400"
+            [attr.aria-label]="showConfirm() ? 'Hide confirmation' : 'Show confirmation'"
+            [attr.aria-pressed]="showConfirm()"
+            (click)="toggleConfirm()"
+          >
+            <i
+              class="pi"
+              [class.pi-eye]="!showConfirm()"
+              [class.pi-eye-slash]="showConfirm()"
+              aria-hidden="true"
+            ></i>
+          </button>
+        </div>
+        @if (fieldInvalid('confirmPassword')) {
+          <small
+            id="confirm-error"
+            class="text-rose-700 dark:text-rose-400 font-medium flex items-center gap-1 animate-fade-in"
+          >
+            <i class="pi pi-times-circle text-xs" aria-hidden="true"></i>
+            @if (form.controls.confirmPassword.errors?.['required']) {
+              Please confirm your password
+            } @else {
+              Passwords do not match
+            }
+          </small>
         }
       </div>
 
@@ -139,13 +222,16 @@
         [loading]="isSubmitting()"
         [disabled]="isSubmitting()"
         size="large"
-        [raised]="true"
-        class="w-full mt-2"
+        styleClass="w-full"
+        class="w-full"
       />
 
       <div class="text-center text-muted-color text-sm">
         Already have an account?
-        <a routerLink="/login" class="text-primary-700 dark:text-primary-400 font-bold hover:underline ml-1">
+        <a
+          routerLink="/login"
+          class="inline-flex min-h-11 items-center px-2 text-primary-700 dark:text-primary-400 font-bold hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 dark:focus-visible:outline-primary-400"
+        >
           Sign in
         </a>
       </div>

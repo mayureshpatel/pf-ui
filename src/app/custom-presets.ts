@@ -26,6 +26,23 @@ export const FinancePreset: Preset = definePreset(Aura, {
         text: {
           mutedColor: '#6b655f',
         },
+        // PF-951: Aura's field border is surface.300, 1.49:1 on white (needs 3:1 to show where a
+        // control is), and focus is only a 1px border tint. surface.500 gives 4.8:1; the focus
+        // ring is a real 2px primary.700 line.
+        focusRing: { width: '2px', style: 'solid', color: '{primary.700}', offset: '2px' },
+        formField: {
+          borderColor: '{surface.500}',
+          hoverBorderColor: '{surface.600}',
+          invalidBorderColor: '{rose.700}',
+          placeholderColor: '{text.muted.color}',
+          focusRing: {
+            width: '2px',
+            style: 'solid',
+            color: '{primary.700}',
+            offset: '1px',
+            shadow: 'none',
+          },
+        },
         surface: {
           0: '#ffffff',
           50: '#fafaf9',
@@ -42,6 +59,22 @@ export const FinancePreset: Preset = definePreset(Aura, {
         },
       },
       dark: {
+        // PF-951: Aura's dark field border (surface.700) is 1.2 to 1.5:1 on the card and its
+        // placeholder (surface.500) is 2.5:1. surface.500 border and surface.400 placeholder give
+        // about 3.9:1 and 7.7:1.
+        focusRing: { width: '2px', style: 'solid', color: '{primary.400}', offset: '2px' },
+        formField: {
+          borderColor: '{surface.500}',
+          hoverBorderColor: '{surface.400}',
+          placeholderColor: '{surface.400}',
+          focusRing: {
+            width: '2px',
+            style: 'solid',
+            color: '{primary.400}',
+            offset: '1px',
+            shadow: 'none',
+          },
+        },
         surface: {
           0: '#ffffff',
           50: '#fafaf9',
@@ -95,6 +128,8 @@ export const FinancePreset: Preset = definePreset(Aura, {
         light: {
           root: {
             primary: {
+              // PF-951: Aura rings the primary button in primary.500, about 2.4:1 on white.
+              focusRing: { color: '{primary.700}' },
               background: '{primary.700}',
               hoverBackground: '{primary.800}',
               activeBackground: '{primary.900}',
