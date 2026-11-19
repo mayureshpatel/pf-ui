@@ -955,7 +955,7 @@ describe('AccountsComponent', () => {
       expect(aside().hasAttribute('aria-modal')).toBe(false);
     });
 
-    it('should keep Save disabled on the empty add form until it is valid', () => {
+    it('should mark Save aria-disabled on the empty add form, keep it focusable and explain on click', () => {
       // arrange
       loadWith([acct(1, 'A', 1, true)]);
       component.startCreate();
@@ -963,7 +963,15 @@ describe('AccountsComponent', () => {
       const save = (): HTMLButtonElement => panelButton('Add account') as HTMLButtonElement;
 
       // assert & verify
-      expect(save().disabled).toBe(true);
+      expect(save().disabled).toBe(false);
+      expect(save().getAttribute('aria-disabled')).toBe('true');
+
+      // act
+      save().click();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(fixture.nativeElement.querySelector('[data-testid="name-error"]')).toBeTruthy();
 
       // act
       const form = component['editForm']()!.form;
@@ -972,7 +980,7 @@ describe('AccountsComponent', () => {
       fixture.detectChanges();
 
       // assert & verify
-      expect(save().disabled).toBe(false);
+      expect(save().getAttribute('aria-disabled')).toBeNull();
     });
 
     it('should show the full skeleton on first load with no panel yet', () => {

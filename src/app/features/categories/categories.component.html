@@ -103,6 +103,7 @@
         [showClose]="panelMode() !== 'overview' && !onlyAddMode()"
         [sheet]="panelMode() !== 'overview' && panelMode() !== 'selection' && !onlyAddMode()"
         [moveFocus]="false"
+        [submitOnEnter]="true"
         [showFooter]="
           panelMode() === 'category' ||
           panelMode() === 'add' ||
@@ -148,7 +149,7 @@
               @if (!category.parent) {
                 <button
                   type="button"
-                  class="mt-3 cursor-pointer text-sm underline"
+                  class="mt-3 inline-flex cursor-pointer items-center text-sm underline max-lg:min-h-11"
                   (click)="startAdd(category.id)"
                 >
                   Add a subcategory to {{ category.name }}

@@ -134,7 +134,7 @@ describe('TagEditFormComponent', () => {
 
     // assert & verify
     expect(short).toBe(false);
-    expect(message).toContain('Enter a 6-digit hex colour');
+    expect(message).toContain('Enter a 6-digit hex color');
     expect(component.form.controls.color.valid).toBe(true);
   });
 
@@ -247,5 +247,56 @@ describe('TagEditFormComponent', () => {
 
     // assert & verify
     expect(buttonByText('Delete tag')?.disabled).toBe(true);
+  });
+
+  describe('accessibility', () => {
+    it('should link an invalid name to its alert and focus it on a failed submit', () => {
+      // arrange
+      render();
+      document.body.appendChild(fixture.nativeElement);
+
+      // act
+      component.submit();
+      fixture.detectChanges();
+
+      // assert & verify
+      const input: HTMLInputElement = fixture.nativeElement.querySelector('#tag-name');
+      const error: HTMLElement = fixture.nativeElement.querySelector('#tag-name-error');
+      expect(input.getAttribute('aria-invalid')).toBe('true');
+      expect(input.getAttribute('aria-describedby')).toBe('tag-name-error');
+      expect(error.getAttribute('role')).toBe('alert');
+      expect(document.activeElement).toBe(input);
+      fixture.nativeElement.remove();
+    });
+
+    it('should focus the hex field and link its alert when only the color is invalid', () => {
+      // arrange
+      render({ ...trip, color: '#10B981' });
+      document.body.appendChild(fixture.nativeElement);
+      component.form.controls.color.setValue('zz');
+
+      // act
+      component.submit();
+      fixture.detectChanges();
+
+      // assert & verify
+      const hex: HTMLInputElement = fixture.nativeElement.querySelector('#tag-color');
+      expect(hex.getAttribute('aria-invalid')).toBe('true');
+      expect(hex.getAttribute('aria-describedby')).toBe('tag-color-error');
+      expect(document.activeElement).toBe(hex);
+      fixture.nativeElement.remove();
+    });
+
+    it('should make the swatches one tab stop and mark the selected one with a check', () => {
+      // act
+      render(trip);
+      const swatches: HTMLElement[] = Array.from(
+        fixture.nativeElement.querySelectorAll('[data-swatch]'),
+      );
+
+      // assert & verify
+      expect(swatches.filter((b) => b.getAttribute('tabindex') === '0').length).toBe(1);
+      expect(swatches.filter((b) => b.querySelector('.pi-check')).length).toBe(1);
+    });
   });
 });

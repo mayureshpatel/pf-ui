@@ -3,6 +3,8 @@ import {
   Component,
   computed,
   effect,
+  ElementRef,
+  inject,
   input,
   InputSignal,
   OnInit,
@@ -24,6 +26,8 @@ import {
 } from '@angular/forms';
 import { InputTextModule } from 'primeng/inputtext';
 import { Tag } from '@models/tag.model';
+import { RovingFocusDirective } from '@shared/directives/roving-focus.directive';
+import { focusFirstInvalid } from '@shared/utils/focus-first-invalid';
 import { CATEGORY_COLORS } from '@shared/utils/category.utils';
 import {
   DEFAULT_TAG_COLOR,
@@ -60,7 +64,7 @@ function nameValidator(control: AbstractControl<string>): ValidationErrors | nul
 @Component({
   selector: 'app-tag-edit-form',
   standalone: true,
-  imports: [ReactiveFormsModule, InputTextModule],
+  imports: [ReactiveFormsModule, InputTextModule, RovingFocusDirective],
   templateUrl: './tag-edit-form.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -114,6 +118,8 @@ export class TagEditFormComponent implements OnInit {
   private filledFor: string | null = null;
   private filledContent: string | null = null;
 
+  private readonly host: ElementRef<HTMLElement> = inject(ElementRef<HTMLElement>);
+
   private readonly formEvents = toSignal(this.form.events);
 
   readonly nameError: Signal<string | null> = computed((): string | null => {
@@ -128,9 +134,7 @@ export class TagEditFormComponent implements OnInit {
   readonly colorError: Signal<string | null> = computed((): string | null => {
     this.formEvents();
     const control = this.form.controls.color;
-    return control.invalid && control.touched
-      ? 'Enter a 6-digit hex colour, such as 3B82F6.'
-      : null;
+    return control.invalid && control.touched ? 'Enter a 6-digit hex color, such as 3B82F6.' : null;
   });
 
   /** The colour as a CSS value for the preview, falling back to the default while it is invalid. */
@@ -195,6 +199,15 @@ export class TagEditFormComponent implements OnInit {
     return `#${this.form.controls.color.value}`.toUpperCase() === swatch.toUpperCase();
   }
 
+  /** The swatches are one tab stop: the selected one, or the first when none is selected. */
+  swatchTabStop(index: number): boolean {
+    this.formEvents();
+    const selected: number = this.swatches.findIndex((swatch: string): boolean =>
+      this.isSwatchSelected(swatch),
+    );
+    return index === (selected === -1 ? 0 : selected);
+  }
+
   selectSwatch(swatch: string): void {
     this.form.controls.color.setValue(swatch.replace('#', ''));
     this.form.controls.color.markAsDirty();
@@ -204,7 +217,16 @@ export class TagEditFormComponent implements OnInit {
   submit(): void {
     this.errorMessage.set(null);
     this.form.markAllAsTouched();
-    if (this.form.invalid || this.saving()) return;
+    if (this.form.invalid) {
+      // the hex field is not a form control, so it is focused by id when only the colour is wrong
+      if (this.form.controls.name.valid) {
+        this.host.nativeElement.querySelector<HTMLElement>('#tag-color')?.focus();
+      } else {
+        focusFirstInvalid(this.host.nativeElement);
+      }
+      return;
+    }
+    if (this.saving()) return;
     const raw = this.form.getRawValue();
     const common: TagCreateValue = {
       name: raw.name.trim(),

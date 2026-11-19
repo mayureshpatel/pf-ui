@@ -26,7 +26,7 @@ test.describe('Tag Management', () => {
     // add
     await page.getByRole('button', {name: 'Add tag'}).first().click();
     await panel.locator('#tag-name').fill(tagName);
-    await panel.getByRole('button', {name: 'Add tag'}).click();
+    await panel.getByRole('button', {name: 'Save tag'}).click();
     await expect(page.getByText('Tag added')).toBeVisible();
     const row = page.locator('[data-tag-row]', {hasText: tagName});
     await expect(row).toBeVisible();

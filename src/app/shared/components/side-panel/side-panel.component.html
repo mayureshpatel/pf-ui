@@ -10,6 +10,7 @@
       : 'rounded-xl border border-surface-200 dark:border-surface-800'
   "
   (keydown.escape)="onEscape($event)"
+  (keydown.enter)="onEnter($event)"
 >
   <div class="mb-3 flex items-center justify-between gap-2">
     <h2 class="heading-card min-w-0 break-words">{{ title() }}</h2>
@@ -29,7 +30,7 @@
 
   @if (showFooter()) {
     <div
-      class="mt-4 flex items-center justify-end gap-2 border-t border-surface-200 pt-3 dark:border-surface-800"
+      class="mt-4 flex items-center justify-end gap-2 border-t border-surface-200 bg-surface-0 pt-3 dark:border-surface-800 dark:bg-surface-900 max-lg:sticky max-lg:bottom-0 max-lg:-mx-4 max-lg:-mb-4 max-lg:px-4 max-lg:pb-4"
     >
       @if (showDelete()) {
         <button
@@ -42,9 +43,10 @@
       }
       <button
         type="button"
-        class="cursor-pointer rounded-lg border border-primary-700 bg-primary-700 px-3 py-2 text-sm max-lg:min-h-11 font-medium text-white hover:bg-primary-800 disabled:opacity-50"
-        [disabled]="saving() || !valid()"
-        (click)="save.emit()"
+        class="cursor-pointer rounded-lg border border-primary-700 bg-primary-700 px-3 py-2 text-sm max-lg:min-h-11 font-medium text-white hover:bg-primary-800 disabled:opacity-50 aria-disabled:opacity-50"
+        [disabled]="!valid() && !invalidSaveFocusable()"
+        [attr.aria-disabled]="saving() || (!valid() && invalidSaveFocusable()) ? 'true' : null"
+        (click)="onSave()"
       >
         {{ saving() ? 'Saving...' : saveLabel() }}
       </button>

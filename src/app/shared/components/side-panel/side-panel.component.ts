@@ -52,6 +52,15 @@ export class SidePanelComponent {
   /** When false the panel never takes focus on creation or gives it back on destroy. */
   readonly moveFocus: InputSignal<boolean> = input<boolean>(true);
 
+  /** Whether Enter in a text field saves (opt-in: a form with its own Enter handling leaves it off). */
+  readonly submitOnEnter: InputSignal<boolean> = input<boolean>(false);
+
+  /**
+   * When true an invalid form keeps Save focusable (`aria-disabled`) instead of disabling it, and a
+   * click still emits `save`, so the form can show its errors and move focus to the first one.
+   */
+  readonly invalidSaveFocusable: InputSignal<boolean> = input<boolean>(false);
+
   /** True from the `lg` breakpoint up, where the panel docks beside the list instead of covering it. */
   private readonly wide: WritableSignal<boolean> = signal(false);
 
@@ -70,6 +79,32 @@ export class SidePanelComponent {
     if (!event.defaultPrevented) {
       this.closePanel.emit();
     }
+  }
+
+  /**
+   * Save ignores clicks while a save is running. The button stays enabled (it is only
+   * `aria-disabled`), because a disabled button drops keyboard focus to the page body.
+   */
+  onSave(): void {
+    if (!this.saving()) this.save.emit();
+  }
+
+  /** Enter in a plain text field saves, when the host opted in and the form is valid. */
+  onEnter(event: Event): void {
+    const target: EventTarget | null = event.target;
+    if (
+      !this.submitOnEnter() ||
+      event.defaultPrevented ||
+      !this.showFooter() ||
+      (!this.valid() && !this.invalidSaveFocusable()) ||
+      !(target instanceof HTMLInputElement) ||
+      target.type === 'checkbox' ||
+      target.getAttribute('role') === 'combobox'
+    ) {
+      return;
+    }
+    event.preventDefault();
+    this.onSave();
   }
 
   /** Moves focus to the panel (a host that keeps the panel mounted calls this on mode changes). */

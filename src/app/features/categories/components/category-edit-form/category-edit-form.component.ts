@@ -3,6 +3,8 @@ import {
   Component,
   computed,
   effect,
+  ElementRef,
+  inject,
   input,
   InputSignal,
   output,
@@ -31,6 +33,8 @@ import {
   CategoryUpdateRequest,
 } from '@models/category.model';
 import { CATEGORY_COLORS, getCategoryColor } from '@shared/utils/category.utils';
+import { RovingFocusDirective } from '@shared/directives/roving-focus.directive';
+import { focusFirstInvalid } from '@shared/utils/focus-first-invalid';
 import { parentOptions } from '../../utils/category-helpers';
 
 export const COLOR_NAMES: string[] = [
@@ -90,7 +94,7 @@ const trimmedMaxLength =
 @Component({
   selector: 'app-category-edit-form',
   standalone: true,
-  imports: [ReactiveFormsModule, InputTextModule, SelectModule],
+  imports: [ReactiveFormsModule, InputTextModule, SelectModule, RovingFocusDirective],
   templateUrl: './category-edit-form.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -192,9 +196,24 @@ export class CategoryEditFormComponent implements OnInit {
     this.form.controls.icon.markAsDirty();
   }
 
+  /** The picker is one tab stop: the selected icon, or the first when none is selected. */
+  iconTabStop(index: number): boolean {
+    this.formEvents();
+    const selected: number = this.icons.indexOf(this.form.controls.icon.value ?? '');
+    return index === (selected === -1 ? 0 : selected);
+  }
+
+  colorTabStop(index: number): boolean {
+    this.formEvents();
+    const selected: number = this.colors.indexOf(this.form.controls.color.value ?? '');
+    return index === (selected === -1 ? 0 : selected);
+  }
+
   iconLabel(icon: string): string {
     return icon.replace(/^pi-/, '').replace(/-/g, ' ');
   }
+
+  private readonly host: ElementRef<HTMLElement> = inject(ElementRef<HTMLElement>);
 
   /** Re-evaluates the form-derived signals below whenever the form's value or state changes. */
   private readonly formEvents = toSignal(this.form.events);
@@ -212,6 +231,7 @@ export class CategoryEditFormComponent implements OnInit {
     this.errorMessage.set(null);
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      focusFirstInvalid(this.host.nativeElement);
       return;
     }
     const raw = this.form.getRawValue();
