@@ -202,6 +202,52 @@ describe('TransactionFilterBarComponent', () => {
     expect(fixture.nativeElement.querySelectorAll('p-datepicker').length).toBe(2);
   });
 
+  it('should move focus to the search box when Clear all removes itself', () => {
+    // arrange
+    render({ accountId: 3 });
+    const search = fixture.nativeElement.querySelector('input[type="search"]') as HTMLInputElement;
+    fixture.nativeElement.append(search);
+    document.body.append(fixture.nativeElement);
+
+    // act
+    (fixture.nativeElement.querySelector('[data-testid="clear-all"]') as HTMLButtonElement).click();
+
+    // assert & verify
+    expect(document.activeElement).toBe(search);
+  });
+
+  it('should show a removable Search chip and clear only the search text', () => {
+    // arrange
+    render({ description: 'shell', accountId: 3 });
+    const chip = fixture.nativeElement.querySelector('[data-testid="search-chip"]') as HTMLElement;
+
+    // assert & verify
+    expect(chip.textContent).toContain('Search: shell');
+
+    // act
+    (chip.querySelector('button') as HTMLButtonElement).click();
+
+    // assert & verify
+    expect(emitted).toHaveBeenCalledWith(
+      expect.objectContaining({ description: undefined, accountId: 3 }),
+    );
+  });
+
+  it('should apply a popover change straight away without closing the popover', () => {
+    // arrange
+    render({});
+
+    // act
+    fixture.componentInstance.onDraftChange('accountId', 3);
+    fixture.componentInstance.onDraftChange('merchant', null);
+
+    // assert & verify
+    const sent = emitted.mock.calls.at(-1)![0];
+    expect(emitted.mock.calls.at(-2)![0].accountId).toBe(3);
+    expect(sent.accountId).toBe(3);
+    expect(sent.merchant).toBeUndefined();
+  });
+
   it('should drop cleared (null) amounts instead of sending them as filters', () => {
     // arrange
     render({});

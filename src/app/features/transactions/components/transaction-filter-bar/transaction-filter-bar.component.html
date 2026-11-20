@@ -7,7 +7,7 @@
       optionLabel="label"
       optionValue="value"
       [allowEmpty]="false"
-      class="custom-selectbutton max-w-full overflow-x-auto"
+      class="custom-selectbutton max-w-full overflow-x-auto max-sm:w-full max-lg:[&_.p-togglebutton]:min-h-11 max-lg:[&_.p-togglebutton]:shrink-0 max-lg:[&_.p-togglebutton]:whitespace-nowrap"
     />
     @if (preset() === 'CUSTOM') {
       <div class="flex items-center gap-2">
@@ -29,10 +29,10 @@
     }
   </div>
 
-  <div class="flex flex-wrap items-center gap-2">
+  <div class="flex items-center gap-2">
     <input
       type="search"
-      class="min-w-64 flex-1 rounded-xl border border-surface-300 bg-surface-0 px-3 py-2 dark:border-surface-700 dark:bg-surface-900"
+      class="min-w-0 flex-1 basis-40 rounded-xl border border-surface-300 bg-surface-0 px-3 py-2 max-lg:min-h-11 dark:border-surface-700 dark:bg-surface-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 dark:focus-visible:outline-primary-400"
       placeholder="Search description or merchant"
       aria-label="Search description or merchant"
       [value]="filter().description ?? ''"
@@ -49,16 +49,18 @@
       (onClick)="filtersPopover.toggle($event)"
     />
     <p-popover #filtersPopover (onShow)="onPopoverShow()">
-      <div class="flex w-72 flex-col gap-3">
+      <div class="flex max-h-[70vh] w-72 flex-col gap-3 overflow-y-auto">
         <div class="flex flex-col gap-1 text-sm">
           <label id="fb-account-label" for="fb-account">Account</label>
           <p-select
+            styleClass="max-lg:min-h-11"
             inputId="fb-account"
             ariaLabelledBy="fb-account-label"
             [options]="accounts()"
             optionLabel="name"
             optionValue="id"
-            [(ngModel)]="draft.accountId"
+            [ngModel]="draft.accountId"
+            (ngModelChange)="onDraftChange('accountId', $event)"
             placeholder="Any account"
             [showClear]="true"
             appendTo="body"
@@ -67,11 +69,13 @@
         <div class="flex flex-col gap-1 text-sm">
           <label id="fb-category-label" for="fb-category">Category</label>
           <p-select
+            styleClass="max-lg:min-h-11"
             inputId="fb-category"
             ariaLabelledBy="fb-category-label"
             [options]="groupedCategories()"
             [group]="true"
-            [(ngModel)]="draft.categoryName"
+            [ngModel]="draft.categoryName"
+            (ngModelChange)="onDraftChange('categoryName', $event)"
             placeholder="Any category"
             [showClear]="true"
             [filter]="true"
@@ -81,12 +85,14 @@
         <div class="flex flex-col gap-1 text-sm">
           <label id="fb-type-label" for="fb-type">Type</label>
           <p-select
+            styleClass="max-lg:min-h-11"
             inputId="fb-type"
             ariaLabelledBy="fb-type-label"
             [options]="typeOptions"
             optionLabel="label"
             optionValue="value"
-            [(ngModel)]="draft.type"
+            [ngModel]="draft.type"
+            (ngModelChange)="onDraftChange('type', $event)"
             placeholder="Any type"
             [showClear]="true"
             appendTo="body"
@@ -100,6 +106,7 @@
               styleClass="w-full min-w-0"
               inputStyleClass="w-full min-w-0"
               [(ngModel)]="draft.minAmount"
+              (onBlur)="applyDraft()"
               mode="currency"
               currency="USD"
               locale="en-US"
@@ -112,6 +119,7 @@
               styleClass="w-full min-w-0"
               inputStyleClass="w-full min-w-0"
               [(ngModel)]="draft.maxAmount"
+              (onBlur)="applyDraft()"
               mode="currency"
               currency="USD"
               locale="en-US"
@@ -121,10 +129,12 @@
         <div class="flex flex-col gap-1 text-sm">
           <label id="fb-merchant-label" for="fb-merchant">Merchant</label>
           <p-select
+            styleClass="max-lg:min-h-11"
             inputId="fb-merchant"
             ariaLabelledBy="fb-merchant-label"
             [options]="merchantNames()"
-            [(ngModel)]="draft.merchant"
+            [ngModel]="draft.merchant"
+            (ngModelChange)="onDraftChange('merchant', $event)"
             placeholder="Any merchant"
             [showClear]="true"
             [filter]="true"
@@ -134,55 +144,76 @@
         <div class="flex flex-col gap-1 text-sm">
           <label id="fb-tag-label" for="fb-tag">Tag</label>
           <p-select
+            styleClass="max-lg:min-h-11"
             inputId="fb-tag"
             ariaLabelledBy="fb-tag-label"
             [options]="tags()"
             optionLabel="name"
             optionValue="id"
-            [(ngModel)]="draft.tagId"
+            [ngModel]="draft.tagId"
+            (ngModelChange)="onDraftChange('tagId', $event)"
             placeholder="Any tag"
             [showClear]="true"
             appendTo="body"
           />
         </div>
-        <p-button label="Apply filters" (onClick)="onApplyPopover(filtersPopover, draft)" />
+        <p-button
+          label="Done"
+          styleClass="max-lg:min-h-11"
+          (onClick)="onApplyPopover(filtersPopover, draft)"
+        />
       </div>
     </p-popover>
   </div>
 
-  @if (chips().length > 0 || filter().description) {
-    <div class="flex flex-wrap items-center gap-2">
-      @for (chip of chips(); track chip.key) {
-        <span
-          data-testid="filter-chip"
-          class="inline-flex items-center gap-1 rounded-full border border-primary-200 bg-primary-50 px-3 py-1 text-sm text-primary-700 dark:border-primary-800 dark:bg-primary-950/30 dark:text-primary-300"
+  <div class="flex min-h-8 flex-wrap items-center gap-2">
+    @if (filter().description) {
+      <span
+        data-testid="search-chip"
+        class="inline-flex items-center gap-1 rounded-full border border-primary-200 bg-primary-50 px-3 py-1 text-sm text-primary-700 dark:border-primary-800 dark:bg-primary-950/30 dark:text-primary-300"
+      >
+        Search: {{ filter().description }}
+        <button
+          type="button"
+          class="inline-flex cursor-pointer items-center justify-center max-lg:-my-2.5 max-lg:min-h-11 max-lg:min-w-11 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 dark:focus-visible:outline-primary-400"
+          aria-label="Remove search"
+          (click)="onClearSearch()"
         >
-          {{ chip.label }}
-          <button
-            type="button"
-            class="cursor-pointer"
-            [attr.aria-label]="'Remove filter: ' + chip.label"
-            (click)="onRemoveChip(chip)"
-          >
-            <i class="pi pi-times text-xs"></i>
-          </button>
-        </span>
-      }
+          <i class="pi pi-times text-xs"></i>
+        </button>
+      </span>
+    }
+    @for (chip of chips(); track chip.key) {
+      <span
+        data-testid="filter-chip"
+        class="inline-flex items-center gap-1 rounded-full border border-primary-200 bg-primary-50 px-3 py-1 text-sm text-primary-700 dark:border-primary-800 dark:bg-primary-950/30 dark:text-primary-300"
+      >
+        {{ chip.label }}
+        <button
+          type="button"
+          class="inline-flex cursor-pointer items-center justify-center max-lg:-my-2.5 max-lg:min-h-11 max-lg:min-w-11 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 dark:focus-visible:outline-primary-400"
+          [attr.aria-label]="'Remove filter: ' + chip.label"
+          (click)="onRemoveChip(chip)"
+        >
+          <i class="pi pi-times text-xs"></i>
+        </button>
+      </span>
+    }
+    @if (chips().length > 0 || filter().description) {
       <button
         type="button"
         data-testid="clear-all"
-        class="cursor-pointer text-sm text-muted-color underline max-lg:min-h-11 max-lg:px-2"
+        class="cursor-pointer text-sm text-muted-color underline max-lg:min-h-11 max-lg:px-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 dark:focus-visible:outline-primary-400"
         (click)="onClearAll()"
       >
         Clear all
       </button>
-    </div>
-  }
-
-  @if (resultCount() !== null) {
-    <p data-testid="result-line" class="text-sm text-muted-color">
-      {{ resultCount() | number }}
-      {{ resultCount() === 1 ? 'transaction matches' : 'transactions match' }}
-    </p>
-  }
+    }
+    @if (resultCount() !== null) {
+      <p data-testid="result-line" class="text-sm text-muted-color sm:ml-auto">
+        {{ resultCount() | number }}
+        {{ resultCount() === 1 ? 'transaction matches' : 'transactions match' }}
+      </p>
+    }
+  </div>
 </div>

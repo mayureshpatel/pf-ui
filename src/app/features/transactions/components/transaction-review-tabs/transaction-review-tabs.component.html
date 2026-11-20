@@ -12,7 +12,7 @@
       [attr.aria-controls]="tabPanelId"
       [attr.tabindex]="activeTab() === 'ALL' ? 0 : -1"
       [attr.aria-selected]="activeTab() === 'ALL'"
-      class="cursor-pointer rounded-lg px-3 py-1.5 text-sm max-md:min-h-11 font-medium"
+      class="cursor-pointer rounded-lg px-3 py-1.5 text-sm max-md:min-h-11 max-md:min-w-11 font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 dark:focus-visible:outline-primary-400"
       [class]="
         activeTab() === 'ALL'
           ? 'bg-surface-0 text-surface-900 shadow-sm dark:bg-surface-900 dark:text-surface-0'
@@ -32,7 +32,7 @@
         [attr.aria-controls]="tabPanelId"
         [attr.tabindex]="activeTab() === 'NEEDS_CATEGORY' ? 0 : -1"
         [attr.aria-selected]="activeTab() === 'NEEDS_CATEGORY'"
-        class="cursor-pointer rounded-lg px-3 py-1.5 text-sm max-md:min-h-11 font-medium"
+        class="cursor-pointer rounded-lg px-3 py-1.5 text-sm max-md:min-h-11 max-md:min-w-11 font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 dark:focus-visible:outline-primary-400"
         [class]="
           activeTab() === 'NEEDS_CATEGORY'
             ? 'bg-surface-0 text-surface-900 shadow-sm dark:bg-surface-900 dark:text-surface-0'

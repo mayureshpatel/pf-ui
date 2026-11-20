@@ -571,7 +571,10 @@ describe('TransactionListComponent', () => {
       all('th').find((th) => th.textContent?.trim() === label)!;
     for (const hidden of ['Description', 'Account', 'Tags']) {
       expect(header(hidden).className).toContain('hidden');
-      expect(header(hidden).className).toContain('sm:table-cell');
+      // Description returns at sm; Account and Tags wait for lg so the table never clips Amount
+      expect(header(hidden).className).toContain(
+        hidden === 'Description' ? 'sm:table-cell' : 'lg:table-cell',
+      );
     }
     for (const shown of ['Merchant', 'Category', 'Amount']) {
       expect(header(shown).className).not.toContain('hidden');
@@ -580,6 +583,21 @@ describe('TransactionListComponent', () => {
     const row = all('tbody tr').find((tr) => tr.textContent?.includes('Whole Foods'))!;
     const cells = Array.from(row.querySelectorAll('td'));
     expect(cells.filter((c) => c.className.includes('hidden')).length).toBe(3);
+  });
+
+  it('should give every row and header checkbox a 44px target on phone and title truncated descriptions', () => {
+    // act
+    render([txn({ id: 1 })]);
+
+    // assert & verify
+    const box = fixture.nativeElement.querySelector('[data-testid="row-checkbox"]') as HTMLElement;
+    expect(box.parentElement?.className).toContain('size-11');
+    const header = fixture.nativeElement.querySelector(
+      '[data-testid="header-checkbox"]',
+    ) as HTMLElement;
+    expect(header.parentElement?.className).toContain('size-11');
+    const description = all('tbody td').find((td) => td.hasAttribute('title'));
+    expect(description?.getAttribute('title')).toBeTruthy();
   });
 
   it('should dim the old rows and mark the table busy while new results load', () => {
