@@ -9,7 +9,9 @@
           data-testid="history-row"
           class="flex items-baseline justify-between border-t border-surface-100 py-2 first:border-t-0 dark:border-surface-800"
         >
-          <span class="text-sm text-muted-color">{{ entry.snapshotDate }}</span>
+          <time class="text-sm text-muted-color" [attr.datetime]="entry.snapshotDate">{{
+            entry.snapshotDate | date: 'mediumDate'
+          }}</time>
           <span class="font-medium tabular-nums">
             {{ entry.balance < 0 ? '-' : ''
             }}{{

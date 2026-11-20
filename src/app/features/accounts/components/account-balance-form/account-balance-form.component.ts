@@ -30,6 +30,15 @@ import { toCents } from '../../utils/account-totals';
  * The panel's balance step for a hand-entered account: the user types the balance and the day it
  * applies to. It emits the request and leaves the saving to its host.
  */
+/**
+ * Today at local midnight. The date picker drops a value later than its newest allowed day, so the
+ * default and the cap must be the same instant, not two `new Date()` calls a few milliseconds apart.
+ */
+function startOfToday(): Date {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}
+
 @Component({
   selector: 'app-account-balance-form',
   standalone: true,
@@ -47,7 +56,7 @@ export class AccountBalanceFormComponent implements OnInit {
   readonly recorded: OutputEmitterRef<BalanceEntryRequest> = output<BalanceEntryRequest>();
 
   /** The newest day that can be chosen: today (no future dates). */
-  readonly maxDate: Date = new Date();
+  readonly maxDate: Date = startOfToday();
 
   readonly isLoan: Signal<boolean> = computed(
     (): boolean => this.account().type.code === LOAN_TYPE_CODE,
@@ -55,21 +64,28 @@ export class AccountBalanceFormComponent implements OnInit {
 
   form = new FormGroup({
     balance: new FormControl<number | null>(null, { validators: [Validators.required] }),
-    asOfDate: new FormControl<Date | null>(new Date(), { validators: [Validators.required] }),
+    asOfDate: new FormControl<Date | null>(startOfToday(), { validators: [Validators.required] }),
   });
 
   private readonly formValue = toSignal(this.form.valueChanges, {
     initialValue: this.form.getRawValue(),
   });
 
+  /** The balance on screen: a loan shows what is owed as a positive amount, the way it is entered. */
+  readonly shownBalance: Signal<number> = computed((): number =>
+    this.isLoan() ? Math.abs(this.account().currentBalance) : this.account().currentBalance,
+  );
+
+  /** The balance field has an error the user can see (read on every render, as touched is not a signal). */
+  balanceInvalid(): boolean {
+    const control = this.form.controls.balance;
+    return control.invalid && (control.touched || !!control.errors?.['min']);
+  }
+
   /** The typed balance equals the one on screen, compared in whole cents. */
   readonly unchanged: Signal<boolean> = computed((): boolean => {
     const typed: number | null | undefined = this.formValue().balance;
-    return (
-      typed !== null &&
-      typed !== undefined &&
-      toCents(typed) === toCents(this.account().currentBalance)
-    );
+    return typed !== null && typed !== undefined && toCents(typed) === toCents(this.shownBalance());
   });
 
   private filledFor: number | null = null;
@@ -92,7 +108,7 @@ export class AccountBalanceFormComponent implements OnInit {
     this.form.controls.balance.setValidators(validators);
     if (id !== this.filledFor) {
       this.filledFor = id;
-      this.form.reset({ balance: null, asOfDate: new Date() });
+      this.form.reset({ balance: null, asOfDate: startOfToday() });
     }
     this.form.controls.balance.updateValueAndValidity({ emitEvent: false });
   }

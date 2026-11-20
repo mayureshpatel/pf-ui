@@ -5,7 +5,9 @@ import {
   InputSignal,
   output,
   OutputEmitterRef,
+  signal,
   viewChild,
+  WritableSignal,
 } from '@angular/core';
 import { MenuItem } from 'primeng/api';
 import { Menu, MenuModule } from 'primeng/menu';
@@ -64,6 +66,10 @@ export class AccountListComponent {
     ];
   }
 
+  /** The account whose menu is open, for the trigger's expanded state. */
+  readonly menuOpenId: WritableSignal<number | null> = signal<number | null>(null);
+  menuAccountId: number | null = null;
+
   /** The menu button last used, so a host can hand focus back to it after a menu action. */
   lastMenuTrigger: HTMLElement | null = null;
 
@@ -71,6 +77,7 @@ export class AccountListComponent {
   toggleMenu(event: Event, account: Account): void {
     event.stopPropagation();
     this.lastMenuTrigger = event.currentTarget as HTMLElement | null;
+    this.menuAccountId = account.id;
     this.menuModel = this.menuItemsFor(account);
     this.menu()?.toggle(event);
   }

@@ -45,10 +45,10 @@ describe('AccountBalanceHistoryComponent', () => {
     // assert & verify
     const list = rows();
     expect(list.length).toBe(3);
-    expect(list[0]).toContain('2026-11-11');
+    expect(list[0]).toContain('Nov 11, 2026');
     expect(list[0]).toContain('$12,500.50');
-    expect(list[1]).toContain('2026-11-01');
-    expect(list[2]).toContain('2026-10-01');
+    expect(list[1]).toContain('Nov 1, 2026');
+    expect(list[2]).toContain('Oct 1, 2026');
     expect(fixture.nativeElement.textContent).not.toContain('No balance entries yet');
   });
 });

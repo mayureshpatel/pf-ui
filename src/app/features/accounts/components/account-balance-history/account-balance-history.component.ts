@@ -7,13 +7,14 @@ import {
   Signal,
 } from '@angular/core';
 import { AccountSnapshot } from '@models/account.model';
+import { DatePipe } from '@angular/common';
 import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
 
 /** The recorded balances of a hand-entered account, newest first. It owns no data. */
 @Component({
   selector: 'app-account-balance-history',
   standalone: true,
-  imports: [FormatCurrencyPipe],
+  imports: [DatePipe, FormatCurrencyPipe],
   templateUrl: './account-balance-history.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
