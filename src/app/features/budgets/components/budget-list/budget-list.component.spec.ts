@@ -75,10 +75,10 @@ describe('BudgetListComponent', () => {
 
     // assert & verify
     const bars = all('[data-testid="budget-bar"]');
-    expect(bars[0].className).toContain('bg-rose-500');
+    expect(bars[0].className).toContain('bg-rose-700');
     expect(bars[0].style.width).toBe('100%');
-    expect(bars[1].className).toContain('bg-amber-500');
-    expect(bars[2].className).toContain('bg-emerald-500');
+    expect(bars[1].className).toContain('bg-amber-700');
+    expect(bars[2].className).toContain('bg-emerald-700');
     expect(bars[2].style.width).toBe('38.4%');
   });
 

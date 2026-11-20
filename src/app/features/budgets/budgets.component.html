@@ -14,7 +14,12 @@
           >
             <i class="pi pi-chevron-left" aria-hidden="true"></i>
           </button>
-          <span data-testid="month-label" class="min-w-36 text-center font-medium">
+          <span
+            data-testid="month-label"
+            class="min-w-36 text-center font-medium"
+            role="status"
+            aria-live="polite"
+          >
             {{ monthLabel() }}
           </span>
           <button
@@ -61,6 +66,7 @@
         [showFooter]="showPanelFooter()"
         [saveLabel]="panelMode() === 'add' ? 'Add budget' : 'Save limit'"
         [showDelete]="false"
+        [invalidSaveFocusable]="true"
         (save)="onPanelSave()"
         (closePanel)="onPanelClose()"
       >
@@ -70,8 +76,8 @@
               [totals]="totals()"
               [monthLabel]="monthLabel()"
               [canCopy]="canCopy()"
+              [loading]="loading()"
               (copyLimits)="openCopyDialog()"
-              (add)="startAdd()"
             />
           }
           @case ('category') {
@@ -90,13 +96,6 @@
             }
           }
           @case ('add') {
-            <button
-              type="button"
-              class="mb-3 inline-flex cursor-pointer items-center rounded-md text-sm underline max-lg:min-h-11"
-              (click)="back()"
-            >
-              Back
-            </button>
             <app-budget-add-form
               #addForm
               [categories]="availableCategories()"
@@ -112,8 +111,8 @@
             class="rounded-xl border border-surface-200 p-10 text-center dark:border-surface-800"
           >
             <p class="font-medium">No budgets for {{ monthName() }}</p>
-            <p class="text-muted-color">
-              Set a limit for each category you want to track, or copy last month's.
+            <p class="text-muted-color" data-testid="empty-hint">
+              {{ emptyHint() }}
             </p>
           </div>
         }
@@ -124,6 +123,10 @@
             [loading]="loading()"
             (openCategory)="openCategory($event)"
           />
+          <p class="px-1 text-sm text-muted-color" data-testid="budget-help">
+            Spent counts expenses only; transfers are left out. Close to the limit means 85% or more
+            used. A subcategory without a limit of its own counts toward its parent's.
+          </p>
         }
       </div>
     </div>
@@ -131,8 +134,9 @@
 
   <app-budget-copy-dialog
     [(visible)]="copyDialogVisible"
-    [fromName]="previousMonthName()"
-    [toName]="monthName()"
+    [fromName]="previousMonthLabel()"
+    [toName]="monthLabel()"
+    [preview]="copyPreview()"
     [addCount]="copyCounts().add"
     [overwriteCount]="copyCounts().overwrite"
     (fill)="runCopy('fill')"

@@ -28,6 +28,14 @@ export interface BudgetTotals {
   left: number;
   /** Spending in categories with no budget this month (kept out of the other totals). */
   unbudgeted: number;
+  /** How many categories have a limit. */
+  limitCount: number;
+  /** How many of those are over their limit. */
+  overCount: number;
+  /** The sum, in dollars, by which the over-limit categories are over. */
+  overAmount: number;
+  /** The sum, in dollars, still left in the categories that are not over (never netted against an overspend). */
+  remaining: number;
 }
 
 const cents = (value: number): number => Math.round(value * 100);
@@ -153,7 +161,33 @@ export function budgetTotals(rows: BudgetRow[]): BudgetTotals {
       .filter(isUnbudgeted)
       .reduce((sum: number, r: BudgetRow): number => sum + r.status.spentAmount, 0),
   );
-  return { budgeted, spent, left: toCents(budgeted - spent), unbudgeted };
+  const overRows: BudgetRow[] = budgetedRows.filter(
+    (r: BudgetRow): boolean => cents(r.status.spentAmount) > cents(r.status.budgetedAmount),
+  );
+  const overAmount: number = toCents(
+    overRows.reduce(
+      (sum: number, r: BudgetRow): number => sum + r.status.spentAmount - r.status.budgetedAmount,
+      0,
+    ),
+  );
+  const remaining: number = toCents(
+    budgetedRows
+      .filter((r: BudgetRow): boolean => !overRows.includes(r))
+      .reduce(
+        (sum: number, r: BudgetRow): number => sum + r.status.budgetedAmount - r.status.spentAmount,
+        0,
+      ),
+  );
+  return {
+    budgeted,
+    spent,
+    left: toCents(budgeted - spent),
+    unbudgeted,
+    limitCount: budgetedRows.length,
+    overCount: overRows.length,
+    overAmount,
+    remaining,
+  };
 }
 
 /**
@@ -232,3 +266,36 @@ export function shiftMonth(
 export function isSameMonth(month: number, year: number, now: Date = new Date()): boolean {
   return month === now.getMonth() + 1 && year === now.getFullYear();
 }
+
+/**
+ * Reads a month from the URL: a whole number from 1 to 12, or undefined for anything else (so a
+ * hand-edited `?month=13` is ignored rather than shown as "13 2026").
+ */
+export function parseMonthParam(value: unknown): number | undefined {
+  const n = Number(value);
+  return Number.isInteger(n) && n >= 1 && n <= 12 ? n : undefined;
+}
+
+/** Reads a year from the URL: a whole number from 2000 to 9999, or undefined for anything else. */
+export function parseYearParam(value: unknown): number | undefined {
+  const n = Number(value);
+  return Number.isInteger(n) && n >= 2000 && n <= 9999 ? n : undefined;
+}
+
+/** One line of the copy dialog's preview: a category, its limit now (when it has one) and the limit it would get. */
+export interface CopyPreviewRow {
+  name: string;
+  from?: number;
+  to: number;
+}
+
+/** What copying last month's limits would do, by category. */
+export interface CopyPreview {
+  adds: CopyPreviewRow[];
+  overwrites: CopyPreviewRow[];
+}
+
+/**
+ * The Budgets page: a month's categories in three groups beside an always-present panel. The panel
+ * shows the month overview by default, and a category's limit editor or the add form on request.
+ */

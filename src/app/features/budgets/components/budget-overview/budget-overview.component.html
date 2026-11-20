@@ -1,55 +1,80 @@
-<div class="flex flex-col gap-4">
-  <div>
-    <p class="text-sm text-muted-color">Left to spend in {{ monthLabel() }}</p>
-    <p
-      data-testid="left-to-spend"
-      class="mt-1 stat-figure-lg"
-      [class]="
-        totals().left < 0
-          ? 'text-rose-700 dark:text-rose-400'
-          : 'text-emerald-700 dark:text-emerald-400'
-      "
-    >
-      {{ totals().left < 0 ? '-' : ''
-      }}{{ (totals().left < 0 ? -totals().left : totals().left) | formatCurrency }}
-    </p>
-    <div
-      role="img"
-      [attr.aria-label]="barLabel()"
-      class="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-surface-200 dark:bg-surface-700"
-    >
-      <span
-        class="block h-full rounded-full"
-        [class]="totals().left < 0 ? 'bg-rose-500' : 'bg-emerald-500'"
-        [style.width.%]="spentWidth()"
-      ></span>
+<div class="flex flex-col gap-4" [attr.aria-busy]="loading() ? 'true' : null">
+  @if (loading()) {
+    <div class="flex flex-col gap-2" role="status">
+      <span class="sr-only">Loading {{ monthLabel() }}</span>
+      <p-skeleton width="60%" height="1rem" />
+      <p-skeleton width="80%" height="2.25rem" />
+      <p-skeleton height="0.625rem" borderRadius="9999px" />
+      <p-skeleton width="50%" height="1rem" />
     </div>
-    <p class="mt-2 text-sm text-muted-color tabular-nums">
-      Spent {{ totals().spent | formatCurrency }} of {{ totals().budgeted | formatCurrency }}
-    </p>
-    @if (totals().unbudgeted > 0) {
-      <p data-testid="unbudgeted" class="mt-1 text-sm text-muted-color tabular-nums">
-        {{ totals().unbudgeted | formatCurrency }} spent in categories with no limit
+  } @else if (totals().limitCount === 0) {
+    <div>
+      <p data-testid="no-limits" class="text-sm text-muted-color">
+        No limits to total up in {{ monthLabel() }} yet.
       </p>
-    }
-  </div>
-
-  <div class="flex flex-col gap-2">
-    @if (canCopy()) {
-      <button
-        type="button"
-        class="cursor-pointer rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium dark:border-surface-700"
-        (click)="copyLimits.emit()"
+      @if (totals().unbudgeted > 0) {
+        <p data-testid="unbudgeted" class="mt-1 text-sm text-muted-color tabular-nums">
+          {{ totals().unbudgeted | formatCurrency }} spent in categories with no limit
+        </p>
+      }
+    </div>
+  } @else {
+    <div>
+      @if (totals().overCount > 0) {
+        <p class="text-sm text-muted-color">Over their limits in {{ monthLabel() }}</p>
+        <p data-testid="over-amount" class="mt-1 stat-figure-lg text-rose-700 dark:text-rose-400">
+          {{ totals().overAmount | formatCurrency }} over
+        </p>
+        <p data-testid="over-count" class="text-sm text-muted-color">
+          in {{ totals().overCount }} {{ totals().overCount === 1 ? 'category' : 'categories' }}
+        </p>
+      } @else {
+        <p class="text-sm text-muted-color">Left to spend in {{ monthLabel() }}</p>
+        <p
+          data-testid="left-to-spend"
+          class="mt-1 stat-figure-lg text-emerald-700 dark:text-emerald-400"
+        >
+          {{ totals().left | formatCurrency }}
+        </p>
+      }
+      <div
+        role="img"
+        [attr.aria-label]="barLabel()"
+        class="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-surface-200 dark:bg-surface-700"
       >
-        Copy last month's limits
-      </button>
-    }
+        <span
+          class="block h-full rounded-full"
+          [class]="
+            totals().overCount > 0
+              ? 'bg-rose-700 dark:bg-rose-400'
+              : 'bg-emerald-700 dark:bg-emerald-400'
+          "
+          [style.width.%]="spentWidth()"
+        ></span>
+      </div>
+      <p class="mt-2 text-sm text-muted-color tabular-nums">
+        Spent {{ totals().spent | formatCurrency }} of {{ totals().budgeted | formatCurrency }}
+      </p>
+      @if (totals().overCount > 0) {
+        <p data-testid="remaining" class="mt-1 text-sm text-muted-color tabular-nums">
+          {{ totals().remaining | formatCurrency }} left in the other categories
+        </p>
+      }
+      @if (totals().unbudgeted > 0) {
+        <p data-testid="unbudgeted" class="mt-1 text-sm text-muted-color tabular-nums">
+          {{ totals().unbudgeted | formatCurrency }} spent in categories with no limit
+        </p>
+      }
+    </div>
+  }
+
+  @if (canCopy()) {
     <button
       type="button"
-      class="cursor-pointer rounded-lg bg-primary-700 px-3 py-2 text-sm font-medium text-white hover:bg-primary-800"
-      (click)="add.emit()"
+      class="cursor-pointer rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium max-lg:min-h-11 dark:border-surface-700"
+      (click)="copyLimits.emit()"
     >
-      Add budget
+      Copy last month's limits
     </button>
-  </div>
+  }
 </div>

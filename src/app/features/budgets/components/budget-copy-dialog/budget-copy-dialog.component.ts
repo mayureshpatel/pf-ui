@@ -12,6 +12,8 @@ import {
 } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
+import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
+import { CopyPreview } from '../../utils/budget-helpers';
 import { RestoreFocusOnHideDirective } from '@shared/directives/restore-focus-on-hide.directive';
 
 /**
@@ -21,7 +23,7 @@ import { RestoreFocusOnHideDirective } from '@shared/directives/restore-focus-on
 @Component({
   selector: 'app-budget-copy-dialog',
   standalone: true,
-  imports: [ButtonModule, DialogModule, RestoreFocusOnHideDirective],
+  imports: [ButtonModule, DialogModule, FormatCurrencyPipe, RestoreFocusOnHideDirective],
   templateUrl: './budget-copy-dialog.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -33,6 +35,8 @@ export class BudgetCopyDialogComponent {
   readonly addCount: InputSignal<number> = input.required<number>();
   /** Categories whose existing limit would change. */
   readonly overwriteCount: InputSignal<number> = input.required<number>();
+  /** The limits it would add and change, by category, so nothing is overwritten unseen. */
+  readonly preview: InputSignal<CopyPreview> = input<CopyPreview>({ adds: [], overwrites: [] });
 
   readonly fill: OutputEmitterRef<void> = output<void>();
   readonly replace: OutputEmitterRef<void> = output<void>();

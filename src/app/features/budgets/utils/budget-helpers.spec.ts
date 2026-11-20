@@ -3,6 +3,8 @@ import { Category } from '@models/category.model';
 import {
   budgetRows,
   budgetTotals,
+  parseMonthParam,
+  parseYearParam,
   copyPlan,
   groupBudgetRows,
   groupKeyOf,
@@ -128,8 +130,26 @@ describe('budget-helpers', () => {
         [status(1, 'A', 450, 512), status(2, 'B', 200, 184)],
         [budget(1, 1, 450), budget(2, 2, 200)],
       );
-      expect(budgetTotals(rows)).toEqual({ budgeted: 650, spent: 696, left: -46, unbudgeted: 0 });
-      expect(budgetTotals([])).toEqual({ budgeted: 0, spent: 0, left: 0, unbudgeted: 0 });
+      expect(budgetTotals(rows)).toEqual({
+        budgeted: 650,
+        spent: 696,
+        left: -46,
+        unbudgeted: 0,
+        limitCount: 2,
+        overCount: 1,
+        overAmount: 62,
+        remaining: 16,
+      });
+      expect(budgetTotals([])).toEqual({
+        budgeted: 0,
+        spent: 0,
+        left: 0,
+        unbudgeted: 0,
+        limitCount: 0,
+        overCount: 0,
+        overAmount: 0,
+        remaining: 0,
+      });
     });
   });
 
@@ -166,7 +186,16 @@ describe('budget-helpers', () => {
       );
 
       // assert & verify
-      expect(budgetTotals(rows)).toEqual({ budgeted: 450, spent: 100, left: 350, unbudgeted: 30 });
+      expect(budgetTotals(rows)).toEqual({
+        budgeted: 450,
+        spent: 100,
+        left: 350,
+        unbudgeted: 30,
+        limitCount: 1,
+        overCount: 0,
+        overAmount: 0,
+        remaining: 350,
+      });
     });
   });
 
@@ -207,6 +236,21 @@ describe('budget-helpers', () => {
       expect(shiftMonth(1, 2026, -1)).toEqual({ month: 12, year: 2025 });
       expect(isSameMonth(10, 2026, new Date(2026, 9, 24))).toBe(true);
       expect(isSameMonth(9, 2026, new Date(2026, 9, 24))).toBe(false);
+    });
+  });
+
+  describe('month and year params', () => {
+    it('should accept a month from 1 to 12 and a plausible year, and ignore anything else', () => {
+      // assert & verify
+      expect(parseMonthParam('1')).toBe(1);
+      expect(parseMonthParam('12')).toBe(12);
+      expect(parseMonthParam('13')).toBeUndefined();
+      expect(parseMonthParam('0')).toBeUndefined();
+      expect(parseMonthParam('abc')).toBeUndefined();
+      expect(parseMonthParam('3.5')).toBeUndefined();
+      expect(parseYearParam('2026')).toBe(2026);
+      expect(parseYearParam('1')).toBeUndefined();
+      expect(parseYearParam('20260')).toBeUndefined();
     });
   });
 });

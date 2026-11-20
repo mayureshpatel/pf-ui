@@ -186,7 +186,7 @@ describe('BudgetsComponent', () => {
       expect(component.panelTitle()).toBe('Groceries');
 
       // act
-      component.back();
+      component.onPanelClose();
 
       // assert & verify
       expect(component.panelMode()).toBe('overview');
@@ -217,7 +217,7 @@ describe('BudgetsComponent', () => {
       expect(component.panelTitle()).toBe('Add budget');
 
       // act
-      component.back();
+      component.onPanelClose();
 
       // assert & verify
       expect(component.panelMode()).toBe('overview');
@@ -291,6 +291,19 @@ describe('BudgetsComponent', () => {
       // assert & verify
       expect(mockBudgetApi.getBudgetStatus).toHaveBeenCalledTimes(1);
       expect(mockBudgetApi.getBudgetStatus).toHaveBeenCalledWith(3, 2025);
+    });
+
+    it('should ignore a month outside 1 to 12 in the URL instead of showing it', () => {
+      // arrange
+      mockBudgetApi.getBudgetStatus.mockClear();
+
+      // act
+      mockActivatedRoute.queryParams.next({ month: '13', year: '2026' });
+
+      // assert & verify
+      expect(component.selectedMonth()).toBe(10);
+      expect(component.monthLabel()).toBe('October 2026');
+      expect(mockBudgetApi.getBudgetStatus).not.toHaveBeenCalled();
     });
   });
 
@@ -554,7 +567,7 @@ describe('BudgetsComponent', () => {
 
       // act and assert & verify -- every route asks and stays put
       component.openCategory(component.rows()[0]);
-      component.back();
+      component.onPanelClose();
       component.onPanelClose();
       component.nextMonth();
       component.startAdd();
@@ -609,7 +622,11 @@ describe('BudgetsComponent', () => {
       // assert & verify
       expect(component.copyDialogVisible()).toBe(true);
       expect(component.copyCounts()).toEqual({ add: 1, overwrite: 1 });
-      expect(component.previousMonthName()).toBe('September');
+      expect(component.copyPreview().adds.map((r) => r.name)).toEqual(['Travel']);
+      expect(component.copyPreview().overwrites).toEqual([
+        expect.objectContaining({ name: 'Dining out', from: 200, to: 180 }),
+      ]);
+      expect(component.previousMonthLabel()).toBe('September 2026');
     });
 
     it('should hide Copy when last month has no budgets', () => {
@@ -769,9 +786,13 @@ describe('BudgetsComponent', () => {
     it('should always render the panel, showing the overview with what is left to spend', () => {
       // assert & verify
       expect(aside().getAttribute('aria-label')).toBe('Overview');
+      // groceries is $62 over; the $170 left elsewhere is not netted against it
       expect(
-        fixture.nativeElement.querySelector('[data-testid="left-to-spend"]').textContent,
-      ).toContain('$108.00');
+        fixture.nativeElement.querySelector('[data-testid="over-amount"]').textContent,
+      ).toContain('$62.00 over');
+      expect(
+        fixture.nativeElement.querySelector('[data-testid="remaining"]').textContent,
+      ).toContain('$170.00 left in the other');
     });
 
     it('should show the full skeleton on the first load only, with no panel yet', () => {
@@ -814,6 +835,35 @@ describe('BudgetsComponent', () => {
       expect(fixture.nativeElement.querySelector('app-side-panel p-skeleton')).toBeTruthy();
     });
 
+    it('should offer copying in the empty month message only when last month has limits', () => {
+      // arrange
+      mockBudgetApi.getBudgetStatus.mockReturnValue(of([]));
+      mockBudgetApi.getBudgets.mockImplementation(() => of([]));
+
+      // act
+      component.loadMonth();
+      fixture.detectChanges();
+
+      // assert & verify -- no previous limits, so the message promises no Copy button
+      expect(
+        fixture.nativeElement.querySelector('[data-testid="empty-hint"]').textContent.trim(),
+      ).toBe('Set a limit for each category you want to track.');
+
+      // arrange
+      mockBudgetApi.getBudgets.mockImplementation((month: number) =>
+        of(month === 9 ? lastMonth : []),
+      );
+
+      // act
+      component.loadMonth();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(
+        fixture.nativeElement.querySelector('[data-testid="empty-hint"]').textContent.trim(),
+      ).toBe("Set a limit for each category you want to track, or copy last month's limits.");
+    });
+
     it('should show the empty month message and keep Add budget available', () => {
       // arrange
       mockBudgetApi.getBudgetStatus.mockReturnValue(of([]));
@@ -841,7 +891,7 @@ describe('BudgetsComponent', () => {
       // assert & verify
       expect(fixture.nativeElement.textContent).toContain('No budgets for October');
       expect(fixture.nativeElement.querySelector('app-budget-list')).toBeTruthy();
-      expect(component.totals()).toEqual({ budgeted: 0, spent: 0, left: 0, unbudgeted: 120 });
+      expect(component.totals()).toMatchObject({ budgeted: 0, spent: 0, left: 0, unbudgeted: 120 });
     });
 
     it('should show the error state with retry when nothing could be loaded', () => {

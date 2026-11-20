@@ -18,6 +18,32 @@
       Fill gaps only adds limits for categories that have none yet. Replace all also changes the
       limits that differ from last month.
     </p>
+    <div class="max-h-60 overflow-y-auto" data-testid="copy-preview">
+      @if (preview().adds.length > 0) {
+        <h3 class="heading-panel mb-1">New limits</h3>
+        <ul class="m-0 mb-3 list-none p-0 text-sm">
+          @for (row of preview().adds; track row.name) {
+            <li class="flex justify-between gap-3 py-1">
+              <span class="min-w-0 truncate">{{ row.name }}</span>
+              <span class="tabular-nums">{{ row.to | formatCurrency }}</span>
+            </li>
+          }
+        </ul>
+      }
+      @if (preview().overwrites.length > 0) {
+        <h3 class="heading-panel mb-1">Limits that would change</h3>
+        <ul class="m-0 list-none p-0 text-sm">
+          @for (row of preview().overwrites; track row.name) {
+            <li class="flex justify-between gap-3 py-1">
+              <span class="min-w-0 truncate">{{ row.name }}</span>
+              <span class="tabular-nums">
+                {{ row.from ?? 0 | formatCurrency }} to {{ row.to | formatCurrency }}
+              </span>
+            </li>
+          }
+        </ul>
+      }
+    </div>
   </div>
   <!-- PF-877: Fill gaps first, so it (or Replace all when there is nothing to add) takes default focus, never Cancel. -->
   <ng-template #footer>
