@@ -65,16 +65,11 @@ describe('CategoryOverviewComponent', () => {
     expect(reviewed).toHaveBeenCalledTimes(1);
   });
 
-  it('should emit add', () => {
+  it('should not offer a second Add category button (the toolbar has it)', () => {
     // arrange
     render({ categories: 1, groups: 1, transactions: 0, unused: 0 });
-    const added = vi.fn();
-    component.add.subscribe(added);
-
-    // act
-    button('Add category')?.click();
 
     // assert & verify
-    expect(added).toHaveBeenCalledTimes(1);
+    expect(button('Add category')).toBeUndefined();
   });
 });

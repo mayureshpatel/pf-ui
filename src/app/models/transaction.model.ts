@@ -68,6 +68,8 @@ export interface TransactionFilter {
   type?: TransactionType;
   description?: string;
   categoryName?: string;
+  /** An exact category (and its subcategories); `categoryName` then only labels the chip (PF-961). */
+  categoryId?: number;
   merchant?: string;
   minAmount?: number;
   maxAmount?: number;

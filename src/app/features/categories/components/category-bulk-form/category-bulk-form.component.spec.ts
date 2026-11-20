@@ -39,6 +39,48 @@ describe('CategoryBulkFormComponent', () => {
     fixture.detectChanges();
   });
 
+  it('should say Create is off until the parent is named, then stop saying it (PF-961)', () => {
+    // assert & verify
+    expect(byTestId('bulk-unnamed')?.textContent).toContain('Name the parent to turn on Create');
+
+    // act
+    type('#bulk-name-0', 'Pets');
+
+    // assert & verify
+    expect(byTestId('bulk-unnamed')).toBeNull();
+  });
+
+  it('should link and announce the parent-name error once the field is left empty (PF-961)', () => {
+    // act
+    const name = el().querySelector<HTMLInputElement>('#bulk-name-0')!;
+    name.dispatchEvent(new Event('blur'));
+    fixture.detectChanges();
+
+    // assert & verify
+    const error = byTestId('name-error')!;
+    expect(error.getAttribute('role')).toBe('alert');
+    expect(error.id).toBe('bulk-name-error-0');
+    expect(name.getAttribute('aria-describedby')).toBe('bulk-name-error-0');
+    expect(name.getAttribute('aria-invalid')).toBe('true');
+  });
+
+  it('should make each picker one tab stop and mark the chosen colour with a check (PF-961)', () => {
+    // act
+    click('[data-testid="color-0-2"]');
+
+    // assert & verify
+    const stops = Array.from(
+      el().querySelectorAll<HTMLElement>('[data-testid^="color-0-"]'),
+    ).filter((b) => b.getAttribute('tabindex') === '0');
+    expect(stops.length).toBe(1);
+    expect(stops[0].getAttribute('data-testid')).toBe('color-0-2');
+    expect(stops[0].querySelector('.pi-check')).not.toBeNull();
+    const iconStops = Array.from(
+      el().querySelectorAll<HTMLElement>('[data-testid^="icon-0-"]'),
+    ).filter((b) => b.getAttribute('tabindex') === '0');
+    expect(iconStops.length).toBe(1);
+  });
+
   it('should start with one card, labelled fields, and focus on the parent name', async () => {
     await fixture.whenStable();
 

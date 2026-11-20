@@ -63,7 +63,10 @@ export class TransactionApiService {
     if (filter.accountId) params = params.set('accountId', filter.accountId.toString());
     if (filter.type) params = params.set('type', filter.type);
     if (filter.description) params = params.set('description', filter.description);
-    if (filter.categoryName) {
+    if (filter.categoryId) {
+      // an exact id, so the name (which only labels the chip) is not also searched as text
+      params = params.set('categoryId', filter.categoryId.toString());
+    } else if (filter.categoryName) {
       const categoryVal: string =
         filter.categoryName === '__UNDEFINED__' ? '' : filter.categoryName;
       params = params.set('categoryName', categoryVal);

@@ -163,7 +163,7 @@ describe('CategoriesComponent', () => {
       expect(component.panelMode()).toBe('overview');
       expect(component.panelTitle()).toBe('Overview');
       expect(component.selectedCategoryId()).toBeNull();
-      expect(component.stats()).toEqual({ categories: 8, groups: 4, transactions: 435, unused: 4 });
+      expect(component.stats()).toEqual({ categories: 8, groups: 4, transactions: 435, unused: 2 });
     });
 
     it('should open a category with its name as the title, and Back or Close return to overview', () => {
@@ -930,7 +930,7 @@ describe('CategoriesComponent', () => {
 
       // assert & verify
       expect(mockRouter.navigate).toHaveBeenCalledWith(['/transactions'], {
-        queryParams: { categoryName: 'Groceries', period: 'all' },
+        queryParams: { categoryId: 2, categoryName: 'Groceries', period: 'all' },
       });
     });
   });
@@ -980,6 +980,16 @@ describe('CategoriesComponent', () => {
   });
 
   describe('selection and bulk delete', () => {
+    it('should give a parent its reason from the whole tree, even while a filter hides the cause (PF-961)', () => {
+      // act: the Unused filter hides Food's used subcategories (Groceries, Dining out)
+      component.setFilter({ ...NO_FILTER, unusedOnly: true });
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.tickReasons().get(1)).toBe('a subcategory has transactions');
+      expect(component.tickReasons().get(4)).toBeUndefined();
+    });
+
     /** Food (unused) with two unused subcategories, plus Travel: everything can be ticked. */
     const unusedTree = (): void => {
       loadWith([food, coffee, dining, travel], []);
@@ -1293,14 +1303,14 @@ describe('CategoriesComponent', () => {
       );
     });
 
-    it('should name the filters, not a search, when only a type filter found nothing', () => {
+    it('should name the filters, not a search, when only filters found nothing', () => {
       // act
       component.setFilter({ ...NO_FILTER, unusedOnly: true, search: 'zzzz' });
       component.setFilter({ ...NO_FILTER, search: ' ', unusedOnly: true });
       fixture.detectChanges();
 
       // assert & verify
-      expect(component.noMatchTitle()).toBe('No categories match these filters');
+      expect(component.noMatchTitle()).toBe('No unused categories match these filters');
     });
 
     it('should hand focus to the search box once Clear filters has removed its own button', async () => {
@@ -1413,7 +1423,7 @@ describe('CategoriesComponent', () => {
       expect(document.activeElement).toBe(search);
     });
 
-    it('should move focus into the panel when add opens', async () => {
+    it('should move focus to the name field when add opens', async () => {
       // arrange
       (document.activeElement as HTMLElement | null)?.blur();
 
@@ -1423,7 +1433,7 @@ describe('CategoriesComponent', () => {
       await fixture.whenStable();
 
       // assert & verify
-      expect(document.activeElement).toBe(aside());
+      expect((document.activeElement as HTMLElement | null)?.id).toBe('category-name');
     });
   });
 

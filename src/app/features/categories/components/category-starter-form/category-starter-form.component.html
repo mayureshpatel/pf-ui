@@ -8,7 +8,7 @@
     <button
       type="button"
       data-testid="starter-select-all"
-      class="cursor-pointer underline"
+      class="cursor-pointer px-1 py-1 underline max-lg:min-h-11"
       (click)="selectAll()"
     >
       Select all
@@ -16,7 +16,7 @@
     <button
       type="button"
       data-testid="starter-select-none"
-      class="cursor-pointer underline"
+      class="cursor-pointer px-1 py-1 underline max-lg:min-h-11"
       (click)="selectNone()"
     >
       Select none
@@ -29,10 +29,10 @@
       [attr.data-testid]="'starter-group-' + p"
     >
       <legend class="px-1">
-        <label class="flex cursor-pointer items-center gap-2 text-sm font-semibold">
+        <label class="flex cursor-pointer items-center gap-2 text-sm font-semibold max-lg:min-h-11">
           <input
             type="checkbox"
-            class="size-4 shrink-0 cursor-pointer accent-primary-700"
+            class="size-4 shrink-0 cursor-pointer accent-primary-700 max-lg:size-6"
             [attr.data-testid]="'starter-parent-' + p"
             [checked]="row.ticked"
             [indeterminate]="row.indeterminate"
@@ -47,10 +47,10 @@
       <ul class="m-0 flex list-none flex-col gap-1 p-0 pl-6">
         @for (name of row.parent.subcategories; track name; let c = $index) {
           <li>
-            <label class="flex min-h-8 cursor-pointer items-center gap-2 text-sm">
+            <label class="flex min-h-8 cursor-pointer items-center gap-2 text-sm max-lg:min-h-11">
               <input
                 type="checkbox"
-                class="size-4 shrink-0 cursor-pointer accent-primary-700"
+                class="size-4 shrink-0 cursor-pointer accent-primary-700 max-lg:size-6"
                 [attr.data-testid]="'starter-child-' + p + '-' + c"
                 [checked]="row.tickedChildren[c]"
                 (change)="toggleChild(p, c)"

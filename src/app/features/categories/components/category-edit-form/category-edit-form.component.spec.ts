@@ -361,4 +361,18 @@ describe('CategoryEditFormComponent', () => {
       expect(button('Delete category')?.className).toContain('max-lg:min-h-11');
     });
   });
+
+  it('should offer Transfer as a type only when editing a transfer category (PF-961)', () => {
+    // act
+    render({ ...travel, type: CategoryType.TRANSFER } as Category);
+
+    // assert & verify
+    expect(component.typeOptions().map((o) => o.value)).toContain(CategoryType.TRANSFER);
+
+    // act
+    render(travel);
+
+    // assert & verify
+    expect(component.typeOptions().map((o) => o.value)).not.toContain(CategoryType.TRANSFER);
+  });
 });
