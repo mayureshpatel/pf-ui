@@ -165,7 +165,7 @@ describe('YtdSummaryComponent', () => {
     setInputs(2026, 20000, 1000, 150);
 
     // assert & verify
-    const bar = fixture.nativeElement.querySelector('.bg-primary.h-full');
+    const bar = fixture.nativeElement.querySelector('.bg-primary-700.h-full');
     expect(bar.style.width).toBe('100%');
   });
 
@@ -174,7 +174,7 @@ describe('YtdSummaryComponent', () => {
     setInputs(2026, 5000, 9000, -80);
 
     // assert & verify
-    const bar = fixture.nativeElement.querySelector('.bg-primary.h-full');
+    const bar = fixture.nativeElement.querySelector('.bg-primary-700.h-full');
     expect(bar.style.width).toBe('0%');
   });
   it('should title the card with a heading so it can be jumped to', () => {

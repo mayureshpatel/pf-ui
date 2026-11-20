@@ -30,8 +30,11 @@ const SHORT_DATE_WITH_YEAR = new Intl.DateTimeFormat('en-US', {
  * The window a date range is compared against. Mirrors how `DashboardService.getPulse` picks its
  * comparison period: a range that starts on January 1 and ends in the same year (This Year, Last
  * Year) is compared against the same dates one year earlier, with Feb 29 clamped to Feb 28; any
+ * range that starts on the 1st of a month and stays in it (a whole month, or month to date) is
+ * compared against the previous calendar month (the whole month for a whole month, otherwise the same
+ * days, clamped to its length); any
  * other range is compared against the window of the same inclusive length immediately before it.
- * Whole January is left on the same-length rule, which already lands on the prior December.
+ * Whole January takes the month rule, which lands on the prior December.
  *
  * @param range - The current period.
  * @returns The period it is compared against.
@@ -52,11 +55,38 @@ export function previousRange(range: DateRange): DateRange {
     };
   }
 
+  if (startsMonthAndStaysInIt(start, end)) {
+    const first: Date = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() - 1, 1));
+    const lastDay: number = new Date(
+      Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 0),
+    ).getUTCDate();
+    // a whole month takes the whole prior month, even a longer one; month to date takes the same
+    // days, clamped to the prior month's length
+    const endDay: number = isWholeMonth(range) ? lastDay : Math.min(end.getUTCDate(), lastDay);
+    return {
+      start: toIso(first),
+      end: toIso(new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth(), endDay))),
+    };
+  }
+
   const days: number = Math.round((end.getTime() - start.getTime()) / DAY_MS) + 1;
   return {
     start: toIso(new Date(start.getTime() - days * DAY_MS)),
     end: toIso(new Date(start.getTime() - DAY_MS)),
   };
+}
+
+/**
+ * Whether a range of more than one day starts on the 1st of a month and ends in that same month:
+ * a whole month or month to date, which is compared with the month before, not a sliding window.
+ */
+function startsMonthAndStaysInIt(start: Date, end: Date): boolean {
+  return (
+    start.getUTCDate() === 1 &&
+    end.getTime() > start.getTime() &&
+    start.getUTCFullYear() === end.getUTCFullYear() &&
+    start.getUTCMonth() === end.getUTCMonth()
+  );
 }
 
 /**
@@ -127,7 +157,11 @@ function isWholeMonth(range: DateRange): boolean {
  * @param previous - The period the backend compares it against.
  */
 export function describePeriod(current: DateRange, previous: DateRange): string {
-  if (isWholeMonth(previous) || isSameDatesPriorYear(current, previous)) {
+  if (
+    isWholeMonth(previous) ||
+    isSameDatesPriorYear(current, previous) ||
+    isPriorMonthSpan(current, previous)
+  ) {
     return `${formatRange(current)} compared with ${formatRange(previous)}`;
   }
 
@@ -145,5 +179,17 @@ function isSameDatesPriorYear(current: DateRange, previous: DateRange): boolean 
     current.start.slice(5) === previous.start.slice(5) &&
     Number(current.start.slice(0, 4)) - 1 === Number(previous.start.slice(0, 4)) &&
     Number(current.end.slice(0, 4)) - 1 === Number(previous.end.slice(0, 4))
+  );
+}
+
+/** Whether `previous` is the same opening days of the calendar month before `current`'s month. */
+function isPriorMonthSpan(current: DateRange, previous: DateRange): boolean {
+  const start: Date = parse(current.start);
+  const prior: Date = parse(previous.start);
+  return (
+    startsMonthAndStaysInIt(start, parse(current.end)) &&
+    prior.getUTCDate() === 1 &&
+    prior.getUTCFullYear() * 12 + prior.getUTCMonth() ===
+      start.getUTCFullYear() * 12 + start.getUTCMonth() - 1
   );
 }

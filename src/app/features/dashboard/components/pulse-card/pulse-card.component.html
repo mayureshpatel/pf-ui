@@ -17,8 +17,11 @@
             <i [class]="trendIcon() + ' text-xs ' + trendStyles()" aria-hidden="true"></i>
             <span class="font-medium tabular-nums" [class]="trendStyles()"
               ><span class="sr-only">{{ trend() > 0 ? 'Up' : 'Down' }}&#32;</span
-              >{{ trendLabel() }}%</span
-            >
+              >{{ trendLabel() }}%
+              @if (changeLabel()) {
+                <span data-testid="pulse-change">&#32;({{ changeLabel() }})</span>
+              }
+            </span>
             <span class="text-muted-color">&#32;vs {{ previousLabel() }} last period</span>
           } @else {
             <span class="text-muted-color">No change vs {{ previousLabel() }} last period</span>
@@ -35,7 +38,6 @@
   <a
     routerLink="/transactions"
     [queryParams]="query"
-    [attr.aria-label]="title() + ': view transactions'"
     class="group relative block h-full rounded-xl text-inherit no-underline outline-none ring-1 ring-transparent transition-shadow hover:ring-surface-300 focus-visible:ring-2 focus-visible:ring-primary-600 dark:hover:ring-surface-600"
   >
     <ng-container *ngTemplateOutlet="card" />
@@ -43,6 +45,7 @@
       class="pi pi-angle-right absolute right-4 top-4 text-muted-color opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
       aria-hidden="true"
     ></i>
+    <span class="sr-only">, view transactions</span>
   </a>
 } @else {
   <ng-container *ngTemplateOutlet="card" />

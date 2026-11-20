@@ -290,25 +290,26 @@ export class DashboardComponent implements OnInit {
   /**
    * Plain-language description of the selected period and what it is compared with. Mirrors the
    * backend: a custom month is compared with the previous calendar month, a preset range with
-   * the immediately preceding window of the same number of days.
+   * the immediately preceding window of the same number of days. An empty period is named alone.
    */
   readonly periodSubtitle: Signal<string> = computed((): string => {
     const range = this.periodRange();
-    if (range) {
-      return describePeriod(range, previousRange(range));
-    }
-
     const month: number = this.selectedMonth();
     const year: number = this.selectedYear();
-    return describePeriod(monthRange(month, year), previousMonthRange(month, year));
+    const current = range ?? monthRange(month, year);
+    // nothing to compare in an empty period, so name the period alone
+    if (this.isEmptyPeriod()) {
+      return formatRange(current);
+    }
+    return describePeriod(current, range ? previousRange(range) : previousMonthRange(month, year));
   });
 
   readonly presetOptions = [
-    { label: 'This Month', value: 'THIS_MONTH' },
-    { label: 'Last Month', value: 'LAST_MONTH' },
-    { label: 'This Year', value: 'THIS_YEAR' },
-    { label: 'Last Year', value: 'LAST_YEAR' },
-    { label: 'Custom Range', value: 'CUSTOM' },
+    { label: 'This month', value: 'THIS_MONTH' },
+    { label: 'Last month', value: 'LAST_MONTH' },
+    { label: 'This year', value: 'THIS_YEAR' },
+    { label: 'Last year', value: 'LAST_YEAR' },
+    { label: 'Custom range', value: 'CUSTOM' },
   ];
 
   readonly monthOptions: MonthOption[] = [

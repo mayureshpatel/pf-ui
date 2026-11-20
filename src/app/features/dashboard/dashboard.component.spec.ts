@@ -101,8 +101,8 @@ describe('DashboardComponent', () => {
       // act
       fixture.detectChanges();
 
-      // assert & verify -- value 2 in 1-indexed monthOptions terms is February, the real
-      // previous month relative to March
+      // assert & verify
+      expect(component.selectedPreset()).toBe('LAST_MONTH');
       expect(component.selectedMonth()).toBe(2);
       expect(component.selectedYear()).toBe(2026);
     });
@@ -117,6 +117,20 @@ describe('DashboardComponent', () => {
       // assert & verify
       expect(component.selectedMonth()).toBe(12);
       expect(component.selectedYear()).toBe(2025);
+    });
+
+    it('should label the presets as Transactions does (PF-953)', () => {
+      // arrange
+      setUp(new Date(2026, 2, 15));
+
+      // assert & verify
+      expect(component.presetOptions.map((option) => option.label)).toEqual([
+        'This month',
+        'Last month',
+        'This year',
+        'Last year',
+        'Custom range',
+      ]);
     });
   });
 
@@ -452,6 +466,14 @@ describe('DashboardComponent', () => {
       expect(fixture.nativeElement.textContent).not.toContain('100%');
     });
 
+    it('should name the period alone in the subtitle, with nothing to compare (PF-953)', () => {
+      // act
+      arrangeEmpty('2026-08-31');
+
+      // assert & verify
+      expect(component.periodSubtitle()).toBe('October 2026');
+    });
+
     it('should offer a jump to the latest month that has data', () => {
       // act
       arrangeEmpty('2026-08-31');
@@ -704,7 +726,10 @@ describe('DashboardComponent', () => {
       expect(anchor.getAttribute('href')).toBe(
         '/transactions?type=EXPENSE&startDate=2026-05-01&endDate=2026-05-31&merchant=Merchant%207',
       );
-      expect(anchor.getAttribute('aria-label')).toBe('Merchant 7: view transactions');
+      // no aria-label override, so the link is named by its text: name, count, amount
+      expect(anchor.getAttribute('aria-label')).toBeNull();
+      expect(anchor.textContent).toContain('Merchant 7');
+      expect(anchor.textContent).toContain(', view transactions');
     });
   });
 
@@ -837,25 +862,24 @@ describe('DashboardComponent', () => {
     const subtitleOnPage = (): string | undefined =>
       fixture.nativeElement.querySelector('[data-testid="period-subtitle"]')?.textContent?.trim();
 
-    it('should read THIS_MONTH against the 17 days before it', () => {
+    it('should read THIS_MONTH against the same days of the month before it', () => {
       // act
       component.selectedPreset.set('THIS_MONTH');
       fixture.detectChanges();
 
       // assert & verify
-      const expected =
-        'Oct 1 to Oct 17, 2026 compared with the 17 days before (Sep 14 to Sep 30, 2026)';
+      const expected = 'Oct 1 to Oct 17, 2026 compared with Sep 1 to Sep 17, 2026';
       expect(component.periodSubtitle()).toBe(expected);
       expect(subtitleOnPage()).toBe(expected);
     });
 
-    it('should read LAST_MONTH as the month name against the 30 days before it', () => {
+    it('should read LAST_MONTH as the month name against the whole month before it', () => {
       // act
       component.selectedPreset.set('LAST_MONTH');
       fixture.detectChanges();
 
       // assert & verify
-      const expected = 'September 2026 compared with the 30 days before (Aug 2 to Aug 31, 2026)';
+      const expected = 'September 2026 compared with August 2026';
       expect(component.periodSubtitle()).toBe(expected);
       expect(subtitleOnPage()).toBe(expected);
     });

@@ -157,7 +157,7 @@ describe('PulseCardComponent', () => {
 
       // assert & verify
       expect(delta().textContent?.replace(/\s+/g, ' ').trim()).toBe(
-        'Up 20% vs $1,000.00 last period',
+        'Up 20% ($200.00) vs $1,000.00 last period',
       );
     });
 
@@ -186,7 +186,7 @@ describe('PulseCardComponent', () => {
 
       // assert & verify
       expect(delta().textContent?.replace(/\s+/g, ' ').trim()).toBe(
-        'Up 0.2% vs $6,299.82 last period',
+        'Up 0.2% ($13.77) vs $6,299.82 last period',
       );
     });
 
@@ -196,7 +196,7 @@ describe('PulseCardComponent', () => {
 
       // assert & verify
       expect(delta().textContent?.replace(/\s+/g, ' ').trim()).toBe(
-        'Down 0.5% vs $1,000.00 last period',
+        'Down 0.5% ($5.00) vs $1,000.00 last period',
       );
     });
 
@@ -215,7 +215,27 @@ describe('PulseCardComponent', () => {
 
       // assert & verify
       expect(delta().textContent?.replace(/\s+/g, ' ').trim()).toBe(
-        'Up 2% vs $1,000.00 last period',
+        'Up 2% ($15.00) vs $1,000.00 last period',
+      );
+    });
+
+    it('should never read 100% for a fall to a few dollars, and say how much moved (PF-953)', () => {
+      // act -- $3,157.92 down to $12.47 is a 99.6% fall
+      setInputs({ value: 12.47, previousValue: 3157.92 });
+
+      // assert & verify
+      expect(delta().textContent?.replace(/\s+/g, ' ').trim()).toBe(
+        'Down 99% ($3,145.45) vs $3,157.92 last period',
+      );
+    });
+
+    it('should read 100% only when the figure fell to exactly zero (PF-953)', () => {
+      // act
+      setInputs({ value: 0, previousValue: 500 });
+
+      // assert & verify
+      expect(delta().textContent?.replace(/\s+/g, ' ').trim()).toBe(
+        'Down 100% ($500.00) vs $500.00 last period',
       );
     });
 
@@ -260,7 +280,10 @@ describe('PulseCardComponent', () => {
       expect(anchor.getAttribute('href')).toBe(
         '/transactions?type=INCOME&startDate=2026-05-01&endDate=2026-05-31',
       );
-      expect(anchor.getAttribute('aria-label')).toBe('Income: view transactions');
+      // the link is named by its text, so the amount and change are read out with the action
+      expect(anchor.getAttribute('aria-label')).toBeNull();
+      expect(anchor.textContent).toContain('Income');
+      expect(anchor.textContent).toContain(', view transactions');
       expect(anchor.textContent).toContain('$100.00');
     });
   });

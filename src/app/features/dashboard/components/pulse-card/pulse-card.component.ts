@@ -79,7 +79,22 @@ export class PulseCardComponent {
    */
   readonly trendLabel: Signal<string> = computed((): string => {
     const size: number = Math.abs(this.trend());
-    return size < 1 ? size.toFixed(1) : size.toFixed(0);
+    if (size < 1) {
+      return size.toFixed(1);
+    }
+    // a fall to a few dollars is not a fall to nothing: only an exact 100% fall may read 100
+    return size < 100 ? Math.min(Math.round(size), 99).toString() : size.toFixed(0);
+  });
+
+  /**
+   * The size of the change in the metric's own unit (dollars), so a percentage that is huge only
+   * because the earlier figure was tiny still says what actually moved. Empty for a percent metric.
+   */
+  readonly changeLabel: Signal<string> = computed((): string => {
+    if (this.type() === 'percent') {
+      return '';
+    }
+    return formatCurrency(Math.abs(this.value() - this.previousValue()), 'en-US', '$', '1.2-2');
   });
 
   /** Whether the previous period has a non-zero value to compare against. */
