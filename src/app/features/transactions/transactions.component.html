@@ -185,6 +185,8 @@
                   : 'Save changes'
           "
           [showDelete]="panelMode() === 'single'"
+          [submitOnEnter]="true"
+          [invalidSaveFocusable]="true"
           (save)="onPanelSave()"
           (closePanel)="onPanelClose()"
           (delete)="deleteTransaction(selectedTransaction()!)"
@@ -209,6 +211,7 @@
               @if (allSelectedAreTransfers()) {
                 <p-button
                   label="Unmark as transfer"
+                  styleClass="max-lg:min-h-11"
                   severity="secondary"
                   [outlined]="true"
                   [loading]="unmarkingAsTransfer()"
@@ -217,6 +220,7 @@
               } @else {
                 <p-button
                   label="Mark as transfer"
+                  styleClass="max-lg:min-h-11"
                   severity="secondary"
                   [outlined]="true"
                   [loading]="markingAsTransfer()"
@@ -225,6 +229,7 @@
               }
               <p-button
                 label="Clear selection"
+                styleClass="max-lg:min-h-11"
                 severity="secondary"
                 [text]="true"
                 (onClick)="onSelectionChange([])"

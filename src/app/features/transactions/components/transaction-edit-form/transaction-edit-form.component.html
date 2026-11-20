@@ -5,16 +5,24 @@
   <form id="transaction-edit-form" [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-8 py-4">
     <!-- Transaction Type -->
     <div class="flex flex-col gap-3">
-      <label for="type-options" class="text-sm font-medium text-surface-700 dark:text-surface-200">
+      <span id="type-label" class="text-sm font-medium text-surface-700 dark:text-surface-200">
         Type
-      </label>
-      <div id="type-options" class="flex flex-row flex-wrap justify-center gap-3">
-        @for (option of visibleTypeOptions(); track option.value) {
+      </span>
+      <div
+        id="type-options"
+        appRovingFocus
+        role="group"
+        aria-labelledby="type-label"
+        class="flex flex-row flex-wrap justify-center gap-3"
+      >
+        @for (option of visibleTypeOptions(); track option.value; let i = $index) {
           <button
             type="button"
+            [attr.aria-pressed]="form.value.type === option.value"
+            [attr.tabindex]="typeTabStop(i) ? 0 : -1"
             id="type-option-{{ option.value }}"
             (click)="form.patchValue({type: option.value})"
-            class="flex flex-col items-center justify-center p-4 rounded-xl border transition-colors duration-150"
+            class="flex min-h-11 flex-row items-center justify-center gap-2 rounded-xl border px-4 py-2 transition-colors duration-150"
             [class.bg-primary]="form.value.type === option.value"
             [class.bg-primary-50]="form.value.type === option.value"
             [class.border-primary]="form.value.type === option.value"
@@ -29,7 +37,7 @@
             [class.dark:hover:bg-surface-800]="form.value.type !== option.value"
           >
             <i
-              [class]="'pi ' + option.icon + ' text-2xl mb-2 ' + (form.value.type === option.value ? 'text-primary' : option.color)"></i>
+              [class]="'pi ' + option.icon + ' text-xl ' + (form.value.type === option.value ? 'text-primary' : option.color)"></i>
             <span
               [class]="'text-xs font-semibold ' + (form.value.type === option.value ? 'text-primary-700 dark:text-primary-400' : 'text-surface-700 dark:text-surface-300')">
               {{ option.label }}
@@ -43,24 +51,39 @@
     <div class="flex flex-col gap-2">
       <label for="amount" class="text-sm font-medium text-surface-700 dark:text-surface-200">Amount</label>
       <p-inputNumber
-        id="amount"
+        inputId="amount"
+        [ariaDescribedBy]="showError('amount') ? 'amount-error' : undefined"
         formControlName="amount"
         mode="currency"
         currency="USD"
         placeholder="$0.00"
         [autofocus]="!isEditMode()"
-        inputStyleClass="font-mono font-black"
+        inputStyleClass="font-mono font-black max-lg:min-h-11"
+        [attr.aria-invalid]="showError('amount') ? 'true' : null"
       />
+      @if (showError('amount')) {
+        <small id="amount-error" role="alert" data-testid="amount-error" class="text-rose-700 dark:text-rose-400">
+          Enter an amount greater than zero.
+        </small>
+      }
     </div>
 
     <!-- Date -->
     <div class="flex flex-col gap-2">
       <label for="date" class="text-sm font-medium text-surface-700 dark:text-surface-200">Date</label>
       <p-datePicker
-        id="date"
+        inputId="date"
         formControlName="transactionDate"
         dateFormat="yy-mm-dd"
+        inputStyleClass="max-lg:min-h-11"
+        [attr.aria-invalid]="showError('transactionDate') ? 'true' : null"
+        [attr.aria-describedby]="showError('transactionDate') ? 'date-error' : null"
       />
+      @if (showError('transactionDate')) {
+        <small id="date-error" role="alert" data-testid="date-error" class="text-rose-700 dark:text-rose-400">
+          Choose a date.
+        </small>
+      }
     </div>
 
     <!-- Merchant -->
@@ -69,7 +92,7 @@
         Merchant
       </label>
       <p-autoComplete
-        id="merchant"
+        inputId="merchant"
         formControlName="merchant"
         [suggestions]="filteredMerchants()"
         (completeMethod)="filterMerchants($event)"
@@ -79,7 +102,7 @@
         dataKey="id"
         optionLabel="name"
         panelStyleClass="max-w-2xs"
-        inputStyleClass="w-full"
+        inputStyleClass="w-full max-lg:min-h-11"
       >
         <ng-template #item let-merchant>
           @if (isCreateSuggestion(merchant)) {
@@ -88,15 +111,9 @@
               <span class="text-sm truncate">{{ merchant.name }}</span>
             </div>
           } @else {
-            <div class="flex items-center gap-2" [pTooltip]="tooltipContent" tooltipPosition="top">
+            <div class="flex items-center gap-2">
               <span class="text-sm truncate">{{ merchant.name }}</span>
             </div>
-            <ng-template #tooltipContent>
-              <div class="flex flex-col gap-1">
-                <span class="text-xs">ID: {{ merchant.id }}</span>
-                <span class="text-sm">{{ merchant.name }}</span>
-              </div>
-            </ng-template>
           }
         </ng-template>
       </p-autoComplete>
@@ -111,11 +128,15 @@
 
     <!-- Category -->
     <div class="flex flex-col gap-2">
-      <label for="category" class="text-sm font-medium text-surface-700 dark:text-surface-200">
+      <label id="category-label" for="category" class="text-sm font-medium text-surface-700 dark:text-surface-200">
         Category
       </label>
       <p-select
-        id="category"
+        inputId="category"
+        ariaLabelledBy="category-label"
+        styleClass="max-lg:min-h-11 max-lg:[&_[role=combobox]]:min-h-11"
+        [attr.aria-invalid]="showError('category') ? 'true' : null"
+        [attr.aria-describedby]="showError('category') ? 'category-error' : null"
         [options]="groupedCategories()"
         formControlName="category"
         [group]="true"
@@ -143,8 +164,8 @@
           </div>
         </ng-template>
       </p-select>
-      @if (form.controls.category.touched && form.controls.category.invalid) {
-        <small data-testid="category-error" class="text-rose-700 dark:text-rose-400">
+      @if (showError('category')) {
+        <small id="category-error" role="alert" data-testid="category-error" class="text-rose-700 dark:text-rose-400">
           Choose a category.
         </small>
       }
@@ -152,11 +173,13 @@
 
     <!-- Tags -->
     <div class="flex flex-col gap-2">
-      <label for="tags" class="text-sm font-medium text-surface-700 dark:text-surface-200">
+      <label id="tags-label" for="tags" class="text-sm font-medium text-surface-700 dark:text-surface-200">
         Tags
       </label>
       <p-multiSelect
-        id="tags"
+        inputId="tags"
+        ariaLabelledBy="tags-label"
+        styleClass="max-lg:min-h-11 max-lg:[&_[role=combobox]]:min-h-11"
         formControlName="tags"
         [options]="tags()"
         optionLabel="name"
@@ -177,11 +200,15 @@
 
     <!-- Account -->
     <div class="flex flex-col gap-2">
-      <label for="account" class="text-sm font-medium text-surface-700 dark:text-surface-200">
+      <label id="account-label" for="account" class="text-sm font-medium text-surface-700 dark:text-surface-200">
         Account
       </label>
       <p-select
-        id="account"
+        inputId="account"
+        ariaLabelledBy="account-label"
+        styleClass="max-lg:min-h-11 max-lg:[&_[role=combobox]]:min-h-11"
+        [attr.aria-invalid]="showError('accountId') ? 'true' : null"
+        [attr.aria-describedby]="showError('accountId') ? 'account-error' : null"
         formControlName="accountId"
         [options]="accounts()"
         optionLabel="name"
@@ -189,6 +216,11 @@
         placeholder="Select the account..."
         class="w-full"
       />
+      @if (showError('accountId')) {
+        <small id="account-error" role="alert" data-testid="account-error" class="text-rose-700 dark:text-rose-400">
+          Choose an account.
+        </small>
+      }
     </div>
 
     <!-- Description -->
@@ -211,7 +243,7 @@
     <div class="border-t border-surface-200 pt-3 dark:border-surface-800">
       <button
         type="button"
-        class="cursor-pointer rounded-lg border border-surface-300 px-3 py-1.5 text-sm max-md:min-h-11 hover:bg-surface-100 dark:border-surface-700 dark:hover:bg-surface-800"
+        class="cursor-pointer rounded-lg border border-surface-300 px-3 py-1.5 text-sm max-lg:min-h-11 hover:bg-surface-100 dark:border-surface-700 dark:hover:bg-surface-800"
         (click)="createRule.emit()"
       >
         <i class="pi pi-bolt mr-1" aria-hidden="true"></i>Create rule from this transaction

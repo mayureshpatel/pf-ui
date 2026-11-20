@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
   computed,
   inject,
   input,
@@ -15,7 +16,13 @@ import {
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
-import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  AbstractControl,
+  FormControl,
+  FormGroup,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
 import { AutoCompleteModule, type AutoCompleteCompleteEvent } from 'primeng/autocomplete';
 import { ButtonModule } from 'primeng/button';
 import { InputNumberModule } from 'primeng/inputnumber';
@@ -45,7 +52,8 @@ import { MerchantApiService } from '@features/merchants/services/merchant-api.se
 import { MerchantFormDialogComponent } from '@features/merchants/components/merchant-form-dialog/merchant-form-dialog.component';
 import { TagApiService } from '@features/tags/services/tag-api.service';
 import { ProgressSpinner } from 'primeng/progressspinner';
-import { Tooltip } from 'primeng/tooltip';
+import { RovingFocusDirective } from '@shared/directives/roving-focus.directive';
+import { focusFirstInvalid } from '@shared/utils/focus-first-invalid';
 import { SelectItemGroup } from 'primeng/api';
 
 /** Sentinel id marking the synthetic "+ Create '<query>'" autocomplete suggestion -- always
@@ -73,13 +81,14 @@ const CREATE_MERCHANT_SENTINEL_ID = -1;
     DatePicker,
     MessageModule,
     ProgressSpinner,
-    Tooltip,
+    RovingFocusDirective,
     MerchantFormDialogComponent,
   ],
   templateUrl: './transaction-edit-form.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TransactionEditFormComponent {
+  private readonly host: ElementRef<HTMLElement> = inject(ElementRef<HTMLElement>);
   private readonly categoryApi: CategoryApiService = inject(CategoryApiService);
   private readonly accountApi: AccountApiService = inject(AccountApiService);
   private readonly merchantApi: MerchantApiService = inject(MerchantApiService);
@@ -431,6 +440,19 @@ export class TransactionEditFormComponent {
   /**
    * Searches merchants server-side based on user input (PF-320).
    */
+  /** Whether a required field should show its error: it was touched (or a save was tried) and is invalid. */
+  showError(name: 'amount' | 'transactionDate' | 'category' | 'accountId'): boolean {
+    const control: AbstractControl = this.form.controls[name];
+    return control.touched && control.invalid;
+  }
+
+  /** The selected type tile (or the first, when none is selected) is the one tab stop of the group. */
+  typeTabStop(index: number): boolean {
+    const options: { value: TransactionType }[] = this.visibleTypeOptions();
+    const selected: number = options.findIndex((o): boolean => o.value === this.form.value.type);
+    return index === (selected === -1 ? 0 : selected);
+  }
+
   /** Submits the form from outside (the side panel's Save button). */
   submit(): void {
     this.onSubmit();
@@ -477,6 +499,7 @@ export class TransactionEditFormComponent {
   onSubmit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      focusFirstInvalid(this.host.nativeElement);
       return;
     }
 

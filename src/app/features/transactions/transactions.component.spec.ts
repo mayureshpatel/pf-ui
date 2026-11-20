@@ -1,3 +1,4 @@
+import { SidePanelComponent } from '@shared/components/side-panel/side-panel.component';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { TransactionEditFormComponent } from './components/transaction-edit-form/transaction-edit-form.component';
@@ -520,6 +521,22 @@ describe('TransactionsComponent', () => {
       // assert & verify
       expect(mockTagApi.assignToTransaction).not.toHaveBeenCalled();
       expect(mockTagApi.removeFromTransaction).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('PF-955: the panel follows the R-06 rules', () => {
+    it('should let Enter save and keep an invalid Save focusable in the panel', () => {
+      // arrange
+      component.openCreateDialog();
+      fixture.detectChanges();
+
+      // act
+      const panel = fixture.debugElement.query(By.directive(SidePanelComponent))
+        .componentInstance as SidePanelComponent;
+
+      // assert & verify
+      expect(panel.submitOnEnter()).toBe(true);
+      expect(panel.invalidSaveFocusable()).toBe(true);
     });
   });
 

@@ -713,4 +713,71 @@ describe('TransactionEditFormComponent', () => {
       expect(component.form.value.type).toBe(TransactionType.CONTRIBUTION);
     });
   });
+
+  describe('PF-955: R-06 form rules', () => {
+    it('should move focus to the first invalid field after saving an incomplete form', () => {
+      // arrange
+      document.body.appendChild(fixture.nativeElement);
+      fixture.detectChanges();
+
+      // act
+      component.submit();
+      fixture.detectChanges();
+
+      // assert & verify
+      const focused = document.activeElement as HTMLElement;
+      expect(fixture.nativeElement.contains(focused)).toBe(true);
+      expect(focused.closest('#amount, p-inputnumber')).not.toBeNull();
+      fixture.nativeElement.remove();
+    });
+
+    it('should announce every missing required field and link it to its input', () => {
+      // arrange
+      fixture.detectChanges();
+
+      // act
+      component.submit();
+      fixture.detectChanges();
+
+      // assert & verify
+      for (const id of ['amount', 'category']) {
+        const error = fixture.nativeElement.querySelector(`#${id}-error`) as HTMLElement | null;
+        expect(error, `${id} error`).not.toBeNull();
+        expect(error!.getAttribute('role')).toBe('alert');
+      }
+      expect(fixture.nativeElement.querySelector('#amount-error').textContent).toContain('amount');
+    });
+
+    it('should show which type is selected and keep the type tiles one tab stop', () => {
+      // arrange
+      fixture.detectChanges();
+
+      // act
+      const tiles = Array.from(
+        fixture.nativeElement.querySelectorAll('#type-options button'),
+      ) as HTMLElement[];
+
+      // assert & verify
+      expect(tiles.map((t) => t.getAttribute('aria-pressed'))).toEqual(['true', 'false']);
+      expect(tiles.map((t) => t.getAttribute('tabindex'))).toEqual(['0', '-1']);
+    });
+
+    it('should give inputs and pickers a 44px phone height', () => {
+      // arrange
+      fixture.detectChanges();
+
+      // act
+      const targets = Array.from(
+        fixture.nativeElement.querySelectorAll(
+          'p-inputnumber, p-datepicker, p-autocomplete, p-select, p-multiselect',
+        ),
+      ) as HTMLElement[];
+
+      // assert & verify
+      expect(targets.length).toBeGreaterThanOrEqual(5);
+      for (const target of targets) {
+        expect(target.outerHTML, target.tagName).toContain('max-lg:min-h-11');
+      }
+    });
+  });
 });

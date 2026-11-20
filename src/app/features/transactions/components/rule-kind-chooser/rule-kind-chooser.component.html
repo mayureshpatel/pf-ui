@@ -1,7 +1,7 @@
 <div role="radiogroup" aria-label="Kind of rule" class="flex flex-wrap gap-2">
   @for (option of options(); track option) {
     <label
-      class="inline-flex min-h-8 cursor-pointer items-center gap-2 rounded-full border px-3 text-sm has-focus-visible:outline-2 has-focus-visible:outline-offset-1 has-focus-visible:outline-primary-700 dark:has-focus-visible:outline-primary-400"
+      class="inline-flex min-h-8 max-lg:min-h-11 cursor-pointer items-center gap-2 rounded-full border px-3 text-sm has-focus-visible:outline-2 has-focus-visible:outline-offset-1 has-focus-visible:outline-primary-700 dark:has-focus-visible:outline-primary-400"
       [class]="
         kind() === option
           ? 'border-primary-600 bg-primary-50 font-medium text-primary-900 dark:bg-primary-950/40 dark:text-primary-100'

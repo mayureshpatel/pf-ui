@@ -130,7 +130,7 @@
                     <input
                       type="checkbox"
                       data-testid="group-checkbox"
-                      class="size-4 shrink-0 cursor-pointer"
+                      class="size-4 shrink-0 cursor-pointer max-lg:size-6"
                       [checked]="allTicked(group)"
                       [indeterminate]="someTicked(group)"
                       [attr.aria-label]="'Select all: ' + group.title"
@@ -177,7 +177,7 @@
     @if (pick) {
       <input
         type="checkbox"
-        class="mt-1 size-4 shrink-0 cursor-pointer"
+        class="mt-1 size-4 shrink-0 cursor-pointer max-lg:size-6"
         [checked]="isTicked(item.row.transactionId)"
         [attr.aria-label]="'Update ' + item.row.description"
         (change)="toggleRow(item.row.transactionId)"
