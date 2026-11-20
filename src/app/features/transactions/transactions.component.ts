@@ -452,6 +452,15 @@ export class TransactionsComponent implements OnInit {
     Math.max(1, Math.ceil(this.totalRecords() / this.state().size)),
   );
 
+  /** "Showing 3,351 to 3,360 of 3,360", every figure grouped so a long ledger reads at a glance. */
+  readonly pageReport: Signal<string> = computed((): string => {
+    const total: number = this.totalRecords();
+    const { page, size } = this.state();
+    const fmt = (n: number): string => n.toLocaleString('en-US');
+    if (total === 0) return '';
+    return `Showing ${fmt(page * size + 1)} to ${fmt(Math.min((page + 1) * size, total))} of ${fmt(total)}`;
+  });
+
   /** Whether any filter other than an All time period is applied (drives the empty state). */
   readonly hasAnyActiveFilter: Signal<boolean> = computed((): boolean =>
     hasAnyFilter(this.state().filter),

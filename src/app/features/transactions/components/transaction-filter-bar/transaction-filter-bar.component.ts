@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
   computed,
   DestroyRef,
   inject,
@@ -54,6 +55,7 @@ const SEARCH_DEBOUNCE_MS = 300;
 })
 export class TransactionFilterBarComponent {
   private readonly destroyRef: DestroyRef = inject(DestroyRef);
+  private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
   private searchTimer: ReturnType<typeof setTimeout> | null = null;
 
   /** The current filter, including the period (start and end date) and the search text. */
@@ -149,9 +151,31 @@ export class TransactionFilterBarComponent {
   onClearAll(): void {
     const { startDate, endDate } = this.filter();
     this.filterChange.emit({ startDate, endDate });
+    // the button that was pressed is about to leave the page; keep a keyboard user in the controls
+    this.host.nativeElement.querySelector<HTMLInputElement>('input[type="search"]')?.focus();
   }
 
-  /** Applies the popover's values as one change. */
+  /** Clears only the search text. */
+  onClearSearch(): void {
+    this.filterChange.emit({ ...this.filter(), description: undefined });
+  }
+
+  /** Records one popover field and applies it straight away, so the list never lags the control. */
+  onDraftChange<K extends keyof PopoverDraft>(key: K, value: PopoverDraft[K] | null): void {
+    this.draft = { ...this.draft, [key]: value ?? undefined };
+    this.applyDraft();
+  }
+
+  /** Emits the popover's current values without closing it. */
+  applyDraft(): void {
+    // a cleared number input reports null; send undefined so it is simply not a filter
+    const cleaned: PopoverDraft = Object.fromEntries(
+      Object.entries(this.draft).map(([key, value]) => [key, value ?? undefined]),
+    );
+    this.filterChange.emit({ ...this.filter(), ...cleaned });
+  }
+
+  /** Applies the popover's values as one change and closes it (the Done button). */
   onApplyPopover(popover: Popover, draft: PopoverDraft): void {
     // a cleared number input reports null; send undefined so it is simply not a filter
     const cleaned: PopoverDraft = Object.fromEntries(
@@ -159,6 +183,11 @@ export class TransactionFilterBarComponent {
     );
     this.filterChange.emit({ ...this.filter(), ...cleaned });
     popover.hide();
+    this.host.nativeElement
+      .querySelector<HTMLElement>(
+        '[data-testid="filters-button"] button, button[data-testid="filters-button"]',
+      )
+      ?.focus();
   }
 
   /** The popover's working values; copied from the filter each time the popover opens. */

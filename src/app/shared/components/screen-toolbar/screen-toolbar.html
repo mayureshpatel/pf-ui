@@ -2,17 +2,17 @@
   class="screen-toolbar flex flex-col lg:flex-row lg:flex-wrap lg:items-center justify-between gap-4 mb-6"
 >
   <!-- Title Section -->
-  <div class="toolbar-title shrink-0">
+  <div class="toolbar-title shrink-0 empty:hidden">
     <ng-content select="[toolbarTitle]"></ng-content>
   </div>
 
   <!-- Filters Section -->
-  <div class="toolbar-filters flex flex-wrap items-center gap-3">
+  <div class="toolbar-filters flex flex-wrap items-center gap-3 empty:hidden">
     <ng-content select="[toolbarFilters]"></ng-content>
   </div>
 
   <!-- Actions Section -->
-  <div class="toolbar-actions flex flex-wrap items-center gap-3">
+  <div class="toolbar-actions flex flex-wrap items-center gap-3 empty:hidden">
     <ng-content select="[toolbarActions]"></ng-content>
   </div>
 </div>

@@ -46,6 +46,22 @@ describe('groupByDay', () => {
     expect(group.net).toBe(3137.6);
   });
 
+  it('should count contributions, employer contributions and earnings as inflows in the day net', () => {
+    // arrange
+    const rows = [
+      txn(1, '2026-10-30', TransactionType.CONTRIBUTION, 787.25),
+      txn(2, '2026-10-30', TransactionType.EMPLOYER_CONTRIBUTION, 0.82),
+      txn(3, '2026-10-30', TransactionType.EARNINGS, 10),
+      txn(4, '2026-10-30', TransactionType.EXPENSE, 5),
+    ];
+
+    // act
+    const [group] = groupByDay(rows, OPTIONS);
+
+    // assert & verify
+    expect(group.net).toBe(793.07);
+  });
+
   it('should label today, yesterday, this year and other years', () => {
     // arrange
     const rows = [

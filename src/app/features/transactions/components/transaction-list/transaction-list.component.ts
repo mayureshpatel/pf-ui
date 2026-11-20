@@ -23,6 +23,8 @@ interface SortColumn {
   label: string;
   /** Hidden below the `sm` breakpoint so Merchant, Category and Amount fit a phone. */
   hideOnPhone?: boolean;
+  /** Hides the column until the lg breakpoint, so the table never outgrows a tablet. */
+  hideBelowLg?: boolean;
 }
 
 /**
@@ -75,7 +77,7 @@ export class TransactionListComponent {
     { field: 'description', label: 'Description', hideOnPhone: true },
     { field: 'merchant.name', label: 'Merchant' },
     { field: 'category.name', label: 'Category' },
-    { field: 'account.name', label: 'Account', hideOnPhone: true },
+    { field: 'account.name', label: 'Account', hideOnPhone: true, hideBelowLg: true },
     { field: 'amount', label: 'Amount' },
   ];
 

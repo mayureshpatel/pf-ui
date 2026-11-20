@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { Transaction, TransactionType } from '@models/transaction.model';
 import { GridHighlights, NO_HIGHLIGHTS } from '../../utils/grid-highlights';
 import { TransactionGridToolbarComponent } from './transaction-grid-toolbar.component';
 
@@ -14,7 +15,7 @@ describe('TransactionGridToolbarComponent', () => {
   };
   const switchNamed = (name: string): HTMLButtonElement | undefined =>
     Array.from<HTMLButtonElement>(fixture.nativeElement.querySelectorAll('[role="switch"]')).find(
-      (b) => b.textContent?.trim() === name,
+      (b) => b.textContent?.trim().startsWith(name),
     );
   const createRule = (): HTMLButtonElement | null =>
     fixture.nativeElement.querySelector('[data-testid="toolbar-create-rule"]');
@@ -166,6 +167,53 @@ describe('TransactionGridToolbarComponent', () => {
 
       // assert & verify
       expect(switchNamed('No category')?.disabled).toBe(false);
+    });
+  });
+  describe('active highlight cues', () => {
+    const rows = [
+      { id: 1, type: TransactionType.EXPENSE, category: null, merchant: null },
+      { id: 2, type: TransactionType.EXPENSE, category: 'Food', merchant: 'Shop' },
+      { id: 3, type: TransactionType.TRANSFER, category: null, merchant: null },
+    ] as unknown as Transaction[];
+
+    it('should show a check and the page count on an active switch, not only a colour', () => {
+      // arrange
+      fixture.componentRef.setInput('transactions', rows);
+
+      // act
+      render(0, { noCategory: true, noMerchant: false, ruleCovers: false });
+
+      // assert & verify -- the transfer has no category by design, so it is not counted
+      const active = switchNamed('No category') as HTMLButtonElement;
+      expect(active.querySelector('.pi-check')).not.toBeNull();
+      expect(active.textContent).toContain('(1)');
+      expect(
+        (switchNamed('No merchant') as HTMLButtonElement).querySelector('.pi-check'),
+      ).toBeNull();
+    });
+  });
+
+  describe('phone disclosure', () => {
+    it('should keep the tools behind one 44px control until it is opened', () => {
+      // arrange
+      render(0);
+      const toggle = fixture.nativeElement.querySelector(
+        '[data-testid="toolbar-toggle"]',
+      ) as HTMLButtonElement;
+      const tools = fixture.nativeElement.querySelector('#grid-tools') as HTMLElement;
+
+      // assert & verify
+      expect(toggle.className).toContain('min-h-11');
+      expect(toggle.getAttribute('aria-expanded')).toBe('false');
+      expect(tools.classList).toContain('hidden');
+
+      // act
+      toggle.click();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(toggle.getAttribute('aria-expanded')).toBe('true');
+      expect(tools.classList).not.toContain('hidden');
     });
   });
 });

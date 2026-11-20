@@ -37,10 +37,23 @@ function labelFor(key: string, today: Date): string {
   return (sameYear ? WEEKDAY_MONTH_DAY : WEEKDAY_MONTH_DAY_YEAR).format(date);
 }
 
+/**
+ * The one rule for the day net, matching the signs the rows show: income, contributions, employer
+ * contributions and earnings add; expenses subtract; transfers and adjustments move money between
+ * the owner's own accounts or fix a balance, so they stay out of the net.
+ */
 function signedAmount(txn: Transaction): number {
-  if (txn.type === TransactionType.INCOME) return txn.amount;
-  if (txn.type === TransactionType.EXPENSE) return -txn.amount;
-  return 0;
+  switch (txn.type) {
+    case TransactionType.INCOME:
+    case TransactionType.CONTRIBUTION:
+    case TransactionType.EMPLOYER_CONTRIBUTION:
+    case TransactionType.EARNINGS:
+      return txn.amount;
+    case TransactionType.EXPENSE:
+      return -txn.amount;
+    default:
+      return 0;
+  }
 }
 
 /**

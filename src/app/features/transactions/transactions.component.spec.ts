@@ -581,7 +581,7 @@ describe('TransactionsComponent', () => {
     const switchNamed = (name: string): HTMLButtonElement | undefined =>
       Array.from<HTMLButtonElement>(
         fixture.nativeElement.querySelectorAll('app-transaction-grid-toolbar [role="switch"]'),
-      ).find((b) => b.textContent?.trim() === name);
+      ).find((b) => b.textContent?.trim().startsWith(name));
     const marks = (kind: string): number =>
       fixture.nativeElement.querySelectorAll(`table [data-highlight="${kind}"]`).length;
 
@@ -3598,6 +3598,24 @@ describe('TransactionsComponent', () => {
       expect(component.transactions().map((t) => t.id)).toEqual([9]);
       expect(component.totalRecords()).toBe(1);
       expect(component.loading()).toBe(false);
+    });
+  });
+  describe('page report', () => {
+    it('should group every figure so a long ledger reads at a glance', () => {
+      // act
+      component.totalRecords.set(3360);
+      component.state.update((st) => ({ ...st, page: 167, size: 20 }));
+
+      // assert & verify
+      expect(component.pageReport()).toBe('Showing 3,341 to 3,360 of 3,360');
+    });
+
+    it('should say nothing when there are no results', () => {
+      // act
+      component.totalRecords.set(0);
+
+      // assert & verify
+      expect(component.pageReport()).toBe('');
     });
   });
 });

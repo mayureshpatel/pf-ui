@@ -23,17 +23,22 @@
                 ? 'account'
                 : sortField()
       }}, so days are not grouped.
-      <button type="button" class="cursor-pointer underline" (click)="onShowByDate()">
+      <button
+        type="button"
+        class="cursor-pointer underline max-lg:min-h-11 max-lg:px-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 dark:focus-visible:outline-primary-400"
+        (click)="onShowByDate()"
+      >
         Show newest first
       </button>
     </p>
   } @else {
+    <!-- below sm the card sort bar already carries the direction, so this link would be a second sort control -->
     <div
-      class="flex justify-end border-b border-surface-200 px-4 py-2 text-sm dark:border-surface-800"
+      class="flex justify-end border-b border-surface-200 px-4 py-2 text-sm max-sm:hidden dark:border-surface-800"
     >
       <button
         type="button"
-        class="cursor-pointer text-muted-color underline"
+        class="cursor-pointer text-muted-color underline max-lg:min-h-11 max-lg:px-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 dark:focus-visible:outline-primary-400"
         (click)="onToggleDateOrder()"
       >
         {{ sortDirection() === 'desc' ? 'Newest first' : 'Oldest first' }}
@@ -46,20 +51,22 @@
     data-testid="card-sort-bar"
     class="flex items-center gap-3 border-b border-surface-200 px-3 py-2 text-sm sm:hidden dark:border-surface-800"
   >
-    <input
-      type="checkbox"
-      class="size-4 max-md:size-6"
-      data-testid="card-header-checkbox"
-      aria-label="Select all transactions on this page"
-      [checked]="allSelected()"
-      [indeterminate]="someSelected()"
-      (click)="onHeaderCheckbox()"
-    />
+    <label class="-m-2.5 inline-flex size-11 items-center justify-center">
+      <input
+        type="checkbox"
+        class="size-4 max-md:size-6 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 dark:focus-visible:outline-primary-400"
+        data-testid="card-header-checkbox"
+        aria-label="Select all transactions on this page"
+        [checked]="allSelected()"
+        [indeterminate]="someSelected()"
+        (click)="onHeaderCheckbox()"
+      />
+    </label>
     <label class="flex min-w-0 flex-1 items-center gap-2 text-muted-color">
       Sort by
       <select
         data-testid="card-sort-field"
-        class="min-w-0 flex-1 rounded-lg border border-surface-300 bg-surface-0 px-2 py-1 text-surface-900 dark:border-surface-700 dark:bg-surface-900 dark:text-surface-0"
+        class="min-h-11 min-w-0 flex-1 rounded-lg border border-surface-300 bg-surface-0 px-2 py-1 text-surface-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 dark:focus-visible:outline-primary-400 dark:border-surface-700 dark:bg-surface-900 dark:text-surface-0"
         (change)="onCardSortField($any($event.target).value)"
       >
         <option value="date" [selected]="sortField() === 'date'">Date</option>
@@ -73,7 +80,7 @@
     <button
       type="button"
       data-testid="card-sort-direction"
-      class="inline-flex min-h-8 min-w-8 cursor-pointer items-center justify-center rounded-md text-muted-color hover:bg-surface-100 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary-700 dark:hover:bg-surface-800 dark:focus-visible:outline-primary-400"
+      class="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-md text-muted-color hover:bg-surface-100 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary-700 dark:hover:bg-surface-800 dark:focus-visible:outline-primary-400"
       [attr.aria-label]="
         sortDirection() === 'asc'
           ? 'Sorted ascending. Switch to descending'
@@ -93,15 +100,17 @@
     <thead>
       <tr class="text-left text-muted-color">
         <th scope="col" class="w-10 px-2 py-2 sm:px-3">
-          <input
-            type="checkbox"
-            class="size-4 max-md:size-6"
-            data-testid="header-checkbox"
-            aria-label="Select all transactions on this page"
-            [checked]="allSelected()"
-            [indeterminate]="someSelected()"
-            (click)="onHeaderCheckbox()"
-          />
+          <label class="-m-2.5 inline-flex size-11 items-center justify-center lg:m-0 lg:size-auto">
+            <input
+              type="checkbox"
+              class="size-4 max-md:size-6 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 dark:focus-visible:outline-primary-400"
+              data-testid="header-checkbox"
+              aria-label="Select all transactions on this page"
+              [checked]="allSelected()"
+              [indeterminate]="someSelected()"
+              (click)="onHeaderCheckbox()"
+            />
+          </label>
         </th>
         @if (!grouped()) {
           <th scope="col" class="px-2 py-2 sm:px-3 font-medium">
@@ -113,7 +122,13 @@
             scope="col"
             class="px-2 py-2 sm:px-3 font-medium"
             [class.text-right]="column.field === 'amount'"
-            [class]="column.hideOnPhone ? 'hidden sm:table-cell' : ''"
+            [class]="
+              column.hideBelowLg
+                ? 'hidden lg:table-cell'
+                : column.hideOnPhone
+                  ? 'hidden sm:table-cell'
+                  : ''
+            "
             [attr.aria-sort]="
               sortField() === column.field
                 ? sortDirection() === 'asc'
@@ -134,7 +149,7 @@
           </th>
         }
         @if (!compact()) {
-          <th scope="col" class="hidden px-2 py-2 sm:px-3 font-medium sm:table-cell">Tags</th>
+          <th scope="col" class="hidden px-2 py-2 sm:px-3 font-medium lg:table-cell">Tags</th>
         }
       </tr>
     </thead>
@@ -183,7 +198,10 @@
               </td>
             }
             @if (!compact()) {
-              <td class="hidden max-w-64 truncate px-2 py-2 sm:px-3 text-muted-color sm:table-cell">
+              <td
+                class="hidden max-w-44 truncate lg:max-w-64 px-2 py-2 sm:px-3 text-muted-color sm:table-cell"
+                [attr.title]="txn.description"
+              >
                 @if (txn.merchant) {
                   {{ txn.description }}
                 } @else {
@@ -242,14 +260,14 @@
                 </span>
               }
             </td>
-            <td class="hidden px-2 py-2 sm:px-3 text-muted-color sm:table-cell">
+            <td class="hidden px-2 py-2 sm:px-3 text-muted-color lg:table-cell">
               {{ txn.account.name }}
             </td>
             <td class="px-2 py-2 sm:px-3 text-right row-amount">
               <ng-container *ngTemplateOutlet="amountText; context: { $implicit: txn }" />
             </td>
             @if (!compact()) {
-              <td class="hidden px-2 py-2 sm:px-3 sm:table-cell">
+              <td class="hidden px-2 py-2 sm:px-3 lg:table-cell">
                 <ng-container *ngTemplateOutlet="tagChips; context: { $implicit: txn }" />
               </td>
             }
@@ -354,14 +372,16 @@
 <!-- Cell content shared by the table row and the card, so the two layouts cannot drift apart. The
      card variants carry a card- test id prefix because both layouts are in the DOM at once. -->
 <ng-template #rowCheckbox let-txn let-card="card">
-  <input
-    type="checkbox"
-    class="size-4 max-md:size-6"
-    [attr.data-testid]="card ? 'card-row-checkbox' : 'row-checkbox'"
-    [attr.aria-label]="rowLabel(txn)"
-    [checked]="isSelected(txn.id)"
-    (click)="onRowCheckbox(indexOf(txn), $event)"
-  />
+  <label class="-m-2.5 inline-flex size-11 items-center justify-center lg:m-0 lg:size-auto">
+    <input
+      type="checkbox"
+      class="size-4 max-md:size-6 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 dark:focus-visible:outline-primary-400"
+      [attr.data-testid]="card ? 'card-row-checkbox' : 'row-checkbox'"
+      [attr.aria-label]="rowLabel(txn)"
+      [checked]="isSelected(txn.id)"
+      (click)="onRowCheckbox(indexOf(txn), $event)"
+    />
+  </label>
 </ng-template>
 
 <ng-template #nameCell let-txn let-card="card">
@@ -415,7 +435,7 @@
     <button
       type="button"
       [attr.data-testid]="card ? 'card-choose-category' : 'choose-category'"
-      class="cursor-pointer rounded-full border border-dashed border-amber-500 sm:whitespace-nowrap bg-amber-50 px-2.5 py-0.5 text-xs max-md:min-h-10 text-amber-900 dark:bg-amber-950/30 dark:text-amber-100"
+      class="cursor-pointer rounded-full border border-dashed border-amber-500 sm:whitespace-nowrap bg-amber-50 px-2.5 py-0.5 text-xs max-md:min-h-11 text-amber-900 dark:bg-amber-950/30 dark:text-amber-100"
       (click)="onPickCategory(txn, $event)"
     >
       Choose category
