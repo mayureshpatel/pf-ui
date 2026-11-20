@@ -24,8 +24,10 @@ export interface CategoryBarRow {
   color: string;
   /** True for spending with no category yet, which the owner can sort out from here. */
   uncategorized: boolean;
-  /** Bar width as a percentage of the largest shown amount (0 to 100). */
+  /** The category's share of all the period's ranked spending, 0 to 100; it is also the bar width. */
   widthPct: number;
+  /** The share as printed beside the amount: a whole percent, or "<1%" for a sliver. */
+  shareLabel: string;
 }
 
 /**
@@ -72,25 +74,32 @@ export class CategoryChartComponent {
 
   /** The top categories by absolute spend, largest first, with each bar's relative width. */
   readonly rows: Signal<CategoryBarRow[]> = computed((): CategoryBarRow[] => {
-    const topItems: CategoryBreakdown[] = this.categories()
+    const ranked: CategoryBreakdown[] = this.categories()
       .filter((item: CategoryBreakdown): boolean => !CategoryChartComponent.isTransfer(item))
       .sort(
         (a: CategoryBreakdown, b: CategoryBreakdown): number =>
           Math.abs(b.total) - Math.abs(a.total),
-      )
-      .slice(0, this.topX());
-    const largest: number = topItems.length > 0 ? Math.abs(topItems[0].total) : 0;
+      );
+    const topItems: CategoryBreakdown[] = ranked.slice(0, this.topX());
+    // a bar is a share of all the period's spending, not of the largest row, so a 29% category
+    // does not read as full
+    const total: number = ranked.reduce(
+      (sum: number, item: CategoryBreakdown): number => sum + Math.abs(item.total),
+      0,
+    );
 
     return topItems.map((item: CategoryBreakdown): CategoryBarRow => {
       const name: string = item.category?.name || 'Uncategorized';
       const amount: number = Math.abs(item.total);
+      const share: number = total > 0 ? (amount / total) * 100 : 0;
       return {
         name,
         filterName: item.category?.name || 'null',
         amount,
         uncategorized: !item.category,
         color: item.category?.color || getCategoryColor(item.category?.name || ''),
-        widthPct: largest > 0 ? (amount / largest) * 100 : 0,
+        widthPct: share,
+        shareLabel: share > 0 && share < 1 ? '<1%' : `${Math.round(share)}%`,
       };
     });
   });

@@ -173,7 +173,7 @@ describe('CashFlowTrendComponent', () => {
 
       // assert & verify
       expect(caption()).toContain('Last 12 months');
-      expect(caption()).toContain('whatever period is selected');
+      expect(caption()).toContain('unaffected by the period above');
     });
 
     it('should name the months shown when there are fewer than 12', () => {
@@ -184,7 +184,7 @@ describe('CashFlowTrendComponent', () => {
       // assert & verify
       expect(caption()).toContain('Dec 2025 to Mar 2026');
       expect(caption()).not.toContain('Last 12 months');
-      expect(caption()).toContain('whatever period is selected');
+      expect(caption()).toContain('unaffected by the period above');
     });
 
     it('should name a single month on its own', () => {

@@ -125,13 +125,38 @@ describe('CategoryChartComponent', () => {
       expect(component.rows()[2].color).toBe(getCategoryColor('Dining Out'));
     });
 
-    it('should size each bar relative to the largest shown amount', () => {
+    it("should size each bar as its share of all the period's spending, not of the largest row", () => {
       // arrange & act
       setCategories(mockBreakdown);
 
+      // assert & verify -- 1595.75 in total, counting Coffee, which is not in the top five
+      expect(component.rows()[0].widthPct).toBeCloseTo((900 / 1595.75) * 100, 5);
+      expect(component.rows()[1].widthPct).toBeCloseTo((450.75 / 1595.75) * 100, 5);
+      expect(component.rows()[0].shareLabel).toBe('56%');
+    });
+
+    it('should count categories beyond the top rows in the total, and label a sliver "<1%"', () => {
+      // arrange & act
+      setCategories([
+        { category: category('Rent', '#3B82F6'), total: -990 },
+        { category: category('Gum', '#10B981'), total: -5 },
+        { category: category('Mints', '#10B981'), total: -5 },
+      ]);
+      fixture.componentRef.setInput('topX', 2);
+      fixture.detectChanges();
+
+      // assert & verify -- 1000 in total, so Gum is 0.5%
+      expect(component.rows()[0].widthPct).toBeCloseTo(99, 5);
+      expect(component.rows()[1].shareLabel).toBe('<1%');
+    });
+
+    it('should print the share beside each amount as text', () => {
+      // arrange & act
+      setCategories(mockBreakdown);
+      const share = fixture.nativeElement.querySelector('[data-testid="category-share"]');
+
       // assert & verify
-      expect(component.rows()[0].widthPct).toBe(100);
-      expect(component.rows()[1].widthPct).toBeCloseTo((450.75 / 900) * 100, 5);
+      expect(share.textContent.trim()).toBe('56%');
     });
 
     it('should give every bar a zero width, not NaN, when all amounts are zero', () => {
@@ -214,7 +239,10 @@ describe('CategoryChartComponent', () => {
       expect(anchor.getAttribute('href')).toBe(
         '/transactions?type=EXPENSE&startDate=2026-05-01&endDate=2026-05-31&categoryName=Rent',
       );
-      expect(anchor.getAttribute('aria-label')).toBe('Rent: view transactions');
+      expect(anchor.getAttribute('aria-label')).toBeNull();
+      expect(anchor.textContent).toContain('Rent');
+      expect(anchor.textContent).toContain('$900.00');
+      expect(anchor.textContent).toContain(', view transactions');
     });
 
     it('should send uncategorized spending to the Uncategorized filter', () => {
@@ -229,7 +257,8 @@ describe('CategoryChartComponent', () => {
         '[data-testid="category-row"] a',
       );
       expect(anchor.getAttribute('href')).toContain('categoryName=null');
-      expect(anchor.getAttribute('aria-label')).toBe('Uncategorized: view transactions');
+      expect(anchor.getAttribute('aria-label')).toBeNull();
+      expect(anchor.textContent).toContain('Uncategorized');
     });
   });
   describe('transfers and uncategorized', () => {

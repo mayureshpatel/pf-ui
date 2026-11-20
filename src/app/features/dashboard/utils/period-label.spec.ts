@@ -10,18 +10,42 @@ describe('period-label', () => {
   describe('previousRange', () => {
     it('should return the same number of days immediately before the start', () => {
       // act
-      const result = previousRange({ start: '2026-10-01', end: '2026-10-13' });
+      const result = previousRange({ start: '2026-10-05', end: '2026-10-17' });
 
-      // assert & verify -- 13 days, ending the day before Oct 1
-      expect(result).toEqual({ start: '2026-09-18', end: '2026-09-30' });
+      // assert & verify -- 13 days, ending the day before Oct 5
+      expect(result).toEqual({ start: '2026-09-22', end: '2026-10-04' });
     });
 
-    it('should treat a full 30-day month as a 30-day window, not the prior calendar month', () => {
+    it('should compare a whole month with the whole prior calendar month (PF-953)', () => {
+      // act
+      const result = previousRange({ start: '2026-10-01', end: '2026-10-31' });
+
+      // assert & verify -- not the 31 days before, which would reach back to Aug 31
+      expect(result).toEqual({ start: '2026-09-01', end: '2026-09-30' });
+    });
+
+    it('should compare month to date with the same days of the prior month (PF-953)', () => {
+      // act
+      const result = previousRange({ start: '2026-11-01', end: '2026-11-18' });
+
+      // assert & verify
+      expect(result).toEqual({ start: '2026-10-01', end: '2026-10-18' });
+    });
+
+    it('should compare a 30-day month with the whole of a 31-day prior month (PF-953)', () => {
       // act
       const result = previousRange({ start: '2026-09-01', end: '2026-09-30' });
 
+      // assert & verify -- all of August, not Aug 1 to Aug 30
+      expect(result).toEqual({ start: '2026-08-01', end: '2026-08-31' });
+    });
+
+    it('should clamp the prior month end to its length (PF-953)', () => {
+      // act
+      const result = previousRange({ start: '2026-03-01', end: '2026-03-31' });
+
       // assert & verify
-      expect(result).toEqual({ start: '2026-08-02', end: '2026-08-31' });
+      expect(result).toEqual({ start: '2026-02-01', end: '2026-02-28' });
     });
 
     it('should compare a year-to-date range against the same dates the prior year', () => {
@@ -48,7 +72,7 @@ describe('period-label', () => {
       expect(result).toEqual({ start: '2027-01-01', end: '2027-02-28' });
     });
 
-    it('should keep the same-length window for whole January, which lands on December', () => {
+    it('should compare whole January with the prior December', () => {
       // act
       const result = previousRange({ start: '2026-01-01', end: '2026-01-31' });
 
@@ -122,12 +146,25 @@ describe('period-label', () => {
     it('should explain a same-length comparison window instead of printing it like a month', () => {
       // act
       const text = describePeriod(
-        { start: '2026-09-01', end: '2026-09-30' },
-        { start: '2026-08-02', end: '2026-08-31' },
+        { start: '2026-09-05', end: '2026-09-30' },
+        { start: '2026-08-10', end: '2026-09-04' },
       );
 
       // assert & verify
-      expect(text).toBe('September 2026 compared with the 30 days before (Aug 2 to Aug 31, 2026)');
+      expect(text).toBe(
+        'Sep 5 to Sep 30, 2026 compared with the 26 days before (Aug 10 to Sep 4, 2026)',
+      );
+    });
+
+    it('should name the same days of the prior month for month to date (PF-953)', () => {
+      // act
+      const text = describePeriod(
+        { start: '2026-11-01', end: '2026-11-18' },
+        { start: '2026-10-01', end: '2026-10-18' },
+      );
+
+      // assert & verify
+      expect(text).toBe('Nov 1 to Nov 18, 2026 compared with Oct 1 to Oct 18, 2026');
     });
 
     it('should say "the day before" for a one-day comparison window', () => {

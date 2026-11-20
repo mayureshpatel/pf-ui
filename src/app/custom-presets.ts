@@ -35,6 +35,9 @@ export const FinancePreset: Preset = definePreset(Aura, {
           hoverBorderColor: '{surface.600}',
           invalidBorderColor: '{rose.700}',
           placeholderColor: '{text.muted.color}',
+          // PF-953: Aura's light select chevron is surface.400, 2.52:1 on white; surface.500
+          // gives 4.8:1 and applies to every select, date picker and multiselect trigger
+          iconColor: '{surface.500}',
           focusRing: {
             width: '2px',
             style: 'solid',
