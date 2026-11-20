@@ -534,7 +534,7 @@ describe('AccountEditFormComponent', () => {
     it('should explain the locked Currency in both modes', () => {
       // assert (add mode)
       expect(fixture.nativeElement.querySelector('#currency-hint')?.textContent).toContain(
-        'cannot change',
+        'US dollars',
       );
 
       // act
@@ -542,7 +542,27 @@ describe('AccountEditFormComponent', () => {
       fixture.detectChanges();
 
       // assert & verify
-      expect(fixture.nativeElement.querySelector('#currency-hint')).toBeTruthy();
+      expect(fixture.nativeElement.querySelector('#currency-hint')?.textContent).toContain(
+        'cannot change',
+      );
+    });
+
+    it('should point a hand-entered account at Update balance, and others at reconciling', () => {
+      // act
+      fixture.componentRef.setInput('account', { ...mockAccount, balanceMode: 'MANUAL' });
+      fixture.detectChanges();
+
+      // assert
+      const hint = (): string =>
+        fixture.nativeElement.querySelector('[data-testid="balance-hint"]')?.textContent ?? '';
+      expect(hint()).toContain('Update balance');
+
+      // act
+      component.form.controls.manualBalance.setValue(false);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(hint()).toContain('reconciling');
     });
 
     it('should link an unchosen type to its alert once touched', () => {

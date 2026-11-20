@@ -67,17 +67,28 @@ export class AccountReconcileFormComponent implements OnInit {
     initialValue: this.form.getRawValue(),
   });
 
-  /** What would be posted: the typed statement balance minus the app's balance, in cents. */
+  /** A card or loan: the statement shows what is owed, but the app keeps that as a negative balance. */
+  readonly liability: Signal<boolean> = computed(
+    (): boolean => this.account().type?.isAsset === false,
+  );
+
+  /** The balance the app should hold: the typed figure, or minus it when the statement shows an amount owed. */
+  private readonly target: Signal<number | null> = computed((): number | null => {
+    const typed: number | null | undefined = this.formValue().targetBalance;
+    if (typed === null || typed === undefined) return null;
+    return this.liability() ? -typed : typed;
+  });
+
+  /** What would be posted: the balance the app should hold minus the app's balance, in cents. */
   difference: Signal<number> = computed((): number => {
-    const target: number | null | undefined = this.formValue().targetBalance;
-    if (target === null || target === undefined) return 0;
+    const target: number | null = this.target();
+    if (target === null) return 0;
     return toCents(target - this.account().currentBalance);
   });
 
   /** A balance was typed and it already matches. */
   balanced: Signal<boolean> = computed((): boolean => {
-    const target: number | null | undefined = this.formValue().targetBalance;
-    return target !== null && target !== undefined && this.difference() === 0;
+    return this.target() !== null && this.difference() === 0;
   });
 
   /** Which account is shown; the form resets only when this changes, not on a background refresh. */
@@ -129,7 +140,7 @@ export class AccountReconcileFormComponent implements OnInit {
     }
     if (this.balanced()) return;
 
-    const target: number = this.form.value.targetBalance!;
+    const target: number = this.target()!;
     const adjustment: number = this.difference();
     this.saving.set(true);
     this.errorMessage.set(null);

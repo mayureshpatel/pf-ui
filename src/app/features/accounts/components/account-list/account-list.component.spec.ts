@@ -96,6 +96,21 @@ describe('AccountListComponent', () => {
     expect(menus.length).toBe(2);
     expect(menus[0].getAttribute('aria-label')).toBe('Actions for Checking');
     expect(menus[0].getAttribute('aria-haspopup')).toBe('menu');
+    expect(menus[0].getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('should mark only the open row menu as expanded', () => {
+    // arrange
+    render();
+    const menus = all<HTMLButtonElement>('[data-testid="account-menu"]');
+
+    // act
+    component.menuOpenId.set(accounts[0].id);
+    fixture.detectChanges();
+
+    // assert & verify
+    expect(menus[0].getAttribute('aria-expanded')).toBe('true');
+    expect(menus[1].getAttribute('aria-expanded')).toBe('false');
   });
 
   it('should offer View transactions, Reconcile, Edit and Delete, each emitting its output', () => {

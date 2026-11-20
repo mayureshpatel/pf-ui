@@ -1,9 +1,12 @@
 <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-4">
   <div class="flex flex-col gap-1">
-    <label for="name" class="text-sm font-medium">Name</label>
+    <label for="name" class="text-sm font-medium"
+      >Name <span class="text-rose-700 dark:text-rose-400" aria-hidden="true">*</span></label
+    >
     <input
       pInputText
       id="name"
+      aria-required="true"
       formControlName="name"
       placeholder="For example, Personal checking"
       class="w-full max-lg:min-h-11"
@@ -59,7 +62,7 @@
         type="checkbox"
         data-testid="manual-toggle"
         formControlName="manualBalance"
-        class="size-4 cursor-pointer max-lg:size-5"
+        class="size-4 cursor-pointer accent-emerald-700 max-lg:size-5 dark:accent-emerald-500"
       />
       Balance is entered by hand
     </label>
@@ -99,7 +102,11 @@
       aria-describedby="currency-hint"
     />
     <small id="currency-hint" class="text-muted-color">
-      Set when the account is created; it cannot change.
+      {{
+        isEditMode()
+          ? 'Set when the account was created; it cannot change.'
+          : 'New accounts use US dollars.'
+      }}
     </small>
   </div>
 
@@ -117,7 +124,13 @@
       inputStyleClass="max-lg:min-h-11"
     />
     @if (isEditMode()) {
-      <small class="text-muted-color">Change the balance by reconciling.</small>
+      <small data-testid="balance-hint" class="text-muted-color">
+        {{
+          form.controls.manualBalance.value
+            ? 'Change the balance with Update balance.'
+            : 'Change the balance by reconciling.'
+        }}
+      </small>
     }
   </div>
 

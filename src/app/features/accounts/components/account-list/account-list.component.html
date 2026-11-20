@@ -31,7 +31,7 @@
             <button
               type="button"
               data-testid="open-account"
-              class="flex min-h-17 min-w-0 flex-1 cursor-pointer items-center gap-3 py-3 pl-3 pr-4 text-left"
+              class="flex min-h-17 min-w-0 flex-1 cursor-pointer items-center gap-3 py-3 pl-3 pr-4 text-left outline-none focus-visible:ring-2 focus-visible:ring-primary-600 focus-visible:ring-inset"
               [attr.aria-current]="selectedId() === account.id ? 'true' : null"
               (click)="openAccount.emit(account)"
             >
@@ -63,8 +63,9 @@
             <button
               type="button"
               data-testid="account-menu"
-              class="mr-2 cursor-pointer rounded-lg px-2 py-2 text-muted-color max-lg:min-h-11 max-lg:min-w-11"
+              class="mr-2 cursor-pointer rounded-lg px-2 py-2 text-muted-color max-lg:min-h-11 max-lg:min-w-11 outline-none focus-visible:ring-2 focus-visible:ring-primary-600"
               aria-haspopup="menu"
+              [attr.aria-expanded]="menuOpenId() === account.id ? 'true' : 'false'"
               [attr.aria-label]="'Actions for ' + account.name"
               (click)="toggleMenu($event, account)"
             >
@@ -76,5 +77,13 @@
     </section>
   }
 
-  <p-menu #menu [model]="menuModel" [popup]="true" appendTo="body" />
+  <p-menu
+    #menu
+    [model]="menuModel"
+    [popup]="true"
+    appendTo="body"
+    ariaLabel="Account actions"
+    (onShow)="menuOpenId.set(menuAccountId)"
+    (onHide)="menuOpenId.set(null)"
+  />
 </div>

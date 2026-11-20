@@ -7,7 +7,7 @@
         isLoan() ? 'Remaining balance' : 'Market value'
       }}</span>
       <span data-testid="app-balance" class="row-amount">
-        {{ account().currentBalance | formatCurrency: true : account().currency.code }}
+        {{ shownBalance() | formatCurrency: true : account().currency.code }}
       </span>
     </div>
   </div>
@@ -26,18 +26,30 @@
         [minFractionDigits]="2"
         [maxFractionDigits]="2"
         [autofocus]="true"
+        [ariaRequired]="true"
+        [ariaDescribedBy]="balanceInvalid() ? 'balance-error' : undefined"
         class="w-full"
         inputStyleClass="w-full py-3 text-2xl font-semibold"
         placeholder="0.00"
         (onKeyDown)="onKeyDown($event)"
       />
       @if (form.controls.balance.touched && form.controls.balance.errors?.['required']) {
-        <small data-testid="balance-error" class="text-rose-700 dark:text-rose-400">
+        <small
+          id="balance-error"
+          role="alert"
+          data-testid="balance-error"
+          class="text-rose-700 dark:text-rose-400"
+        >
           Enter the balance.
         </small>
       }
       @if (form.controls.balance.errors?.['min']) {
-        <small data-testid="balance-error" class="text-rose-700 dark:text-rose-400">
+        <small
+          id="balance-error"
+          role="alert"
+          data-testid="balance-error"
+          class="text-rose-700 dark:text-rose-400"
+        >
           Enter the amount you still owe (0 or more).
         </small>
       }

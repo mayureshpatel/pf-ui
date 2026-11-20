@@ -28,7 +28,9 @@
   </div>
 
   <form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-2">
-    <label for="targetBalance" class="text-sm font-medium">Balance on your statement</label>
+    <label for="targetBalance" class="text-sm font-medium">{{
+      liability() ? 'Amount owed on your statement' : 'Balance on your statement'
+    }}</label>
     <p-inputNumber
       inputId="targetBalance"
       formControlName="targetBalance"
@@ -38,16 +40,29 @@
       [minFractionDigits]="2"
       [maxFractionDigits]="2"
       [autofocus]="true"
+      [ariaRequired]="true"
+      [ariaDescribedBy]="
+        form.controls.targetBalance.invalid && form.controls.targetBalance.touched
+          ? 'target-error target-hint'
+          : 'target-hint'
+      "
       class="w-full"
       inputStyleClass="w-full py-3 text-2xl font-semibold"
       placeholder="0.00"
       (onKeyDown)="onBalanceKeyDown($event)"
     />
-    <small class="text-muted-color"
-      >Enter the balance exactly as it appears on your statement.</small
-    >
+    <small id="target-hint" class="text-muted-color">{{
+      liability()
+        ? 'Enter what you owe, as your statement shows it. A credit goes in as a negative number.'
+        : 'Enter the balance exactly as it appears on your statement.'
+    }}</small>
     @if (form.controls.targetBalance.invalid && form.controls.targetBalance.touched) {
-      <small class="text-rose-700 dark:text-rose-400">
+      <small
+        id="target-error"
+        role="alert"
+        data-testid="target-error"
+        class="text-rose-700 dark:text-rose-400"
+      >
         Enter your statement balance to reconcile.
       </small>
     }

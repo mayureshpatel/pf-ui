@@ -42,6 +42,8 @@ describe('AccountBalanceFormComponent', () => {
       toLocalDateString(new Date()),
     );
     expect(toLocalDateString(component.maxDate)).toBe(toLocalDateString(new Date()));
+    // the picker clears a default later than its cap, so they must be the same instant
+    expect(component.form.controls.asOfDate.value!.getTime()).toBe(component.maxDate.getTime());
   });
 
   it('should be invalid, and emit nothing, for an empty balance', () => {
@@ -127,5 +129,35 @@ describe('AccountBalanceFormComponent', () => {
     expect(component.unchanged()).toBe(true);
     component.form.patchValue({ balance: 12000.01 });
     expect(component.unchanged()).toBe(false);
+  });
+
+  it('should show a loan as what is owed and compare the typed amount with that', () => {
+    // arrange
+    setup({ ...account('LOAN'), currentBalance: -25358 });
+    component.form.patchValue({ balance: 25358 });
+    fixture.detectChanges();
+
+    // assert & verify
+    expect(component.unchanged()).toBe(true);
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="app-balance"]').textContent,
+    ).toContain('25,358');
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="app-balance"]').textContent,
+    ).not.toContain('-');
+  });
+
+  it('should link the balance error to its field once the field is touched', () => {
+    // arrange
+    setup(account());
+    component.form.controls.balance.markAsTouched();
+    fixture.detectChanges();
+
+    // assert & verify
+    const error: HTMLElement = fixture.nativeElement.querySelector('#balance-error');
+    expect(error.getAttribute('role')).toBe('alert');
+    expect(
+      fixture.nativeElement.querySelector('input#balanceAmount')?.getAttribute('aria-describedby'),
+    ).toBe('balance-error');
   });
 });

@@ -43,6 +43,66 @@ describe('AccountReconcileFormComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('should link the statement balance error to its field once touched', () => {
+    // arrange
+    fixture.detectChanges();
+    component.form.controls.targetBalance.markAsTouched();
+    fixture.detectChanges();
+
+    // assert & verify
+    const error: HTMLElement = fixture.nativeElement.querySelector('#target-error');
+    expect(error.getAttribute('role')).toBe('alert');
+    expect(
+      fixture.nativeElement.querySelector('input#targetBalance')?.getAttribute('aria-describedby'),
+    ).toContain('target-error');
+  });
+
+  describe('for a card or loan (stored negative)', () => {
+    const card = {
+      ...mockAccount,
+      name: 'Discover It',
+      currentBalance: -1750.76,
+      type: { code: 'CREDIT_CARD', isAsset: false },
+    } as Account;
+
+    beforeEach(() => {
+      fixture.componentRef.setInput('account', card);
+      fixture.detectChanges();
+    });
+
+    it('should read the typed statement figure as an amount owed, so the same figure balances', () => {
+      // act
+      component.form.controls.targetBalance.setValue(1750.76);
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.difference()).toBe(0);
+      expect(component.balanced()).toBe(true);
+    });
+
+    it('should post the negative balance and a payment-sized adjustment', () => {
+      // arrange
+      mockAccountApiService.reconcile.mockReturnValue(of(5));
+      component.form.controls.targetBalance.setValue(1500);
+      fixture.detectChanges();
+
+      // act
+      component.submit();
+
+      // assert & verify: owing 1500 instead of 1750.76 is an income of 250.76
+      expect(component.difference()).toBe(250.76);
+      expect(mockAccountApiService.reconcile).toHaveBeenCalledWith(
+        expect.objectContaining({ newBalance: -1500 }),
+      );
+    });
+
+    it('should word the field as an amount owed', () => {
+      expect(
+        fixture.nativeElement.querySelector('label[for="targetBalance"]').textContent,
+      ).toContain('owed');
+    });
+  });
+
   it('should calculate difference correctly', () => {
     fixture.detectChanges();
 
