@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  ElementRef,
   inject,
   input,
   InputSignal,
@@ -89,6 +90,8 @@ export class TransactionBulkFormComponent {
   });
 
   /** Hierarchical category groups for the dropdown. */
+  private readonly host: ElementRef<HTMLElement> = inject(ElementRef<HTMLElement>);
+
   readonly categoryGroups: WritableSignal<SelectItemGroup[]> = signal([]);
 
   /** Merchant options for the reassignment dropdown. */
@@ -137,6 +140,16 @@ export class TransactionBulkFormComponent {
 
   constructor() {
     this.loadCategories();
+
+    // [disabled] next to formControlName is ignored by reactive forms, so the description control
+    // is disabled here: a field that looks off must not take text that Apply would then discard
+    this.form.controls.description.disable({ emitEvent: false });
+    this.form.controls.updateDescription.valueChanges
+      .pipe(takeUntilDestroyed())
+      .subscribe((on: boolean): void => {
+        if (on) this.form.controls.description.enable();
+        else this.form.controls.description.disable();
+      });
 
     this.merchantSearch$
       .pipe(
@@ -207,8 +220,29 @@ export class TransactionBulkFormComponent {
     this.form.patchValue({ updateCategory: true, category });
   }
 
+  /** True once Apply was tried without anything to apply, so the hint can say why it did nothing. */
+  readonly triedApply: WritableSignal<boolean> = signal(false);
+
+  /** Whether any of the three fields is switched on. */
+  readonly anyToggle: Signal<boolean> = computed((): boolean => {
+    const v = this.formValue();
+    return !!(v.updateCategory || v.updateMerchant || v.updateDescription);
+  });
+
   /** Applies the form from outside (the side panel's Apply button). */
   submit(): void {
+    if (!this.isValid()) {
+      this.triedApply.set(true);
+      // land on what needs fixing: the first switched-on field that is empty, else the first switch
+      const root: HTMLElement = this.host.nativeElement;
+      const target: HTMLElement | null = this.anyToggle()
+        ? root.querySelector<HTMLElement>(
+            '.ng-invalid:not(form) input, .ng-invalid:not(form) [role="combobox"]',
+          )
+        : root.querySelector<HTMLElement>('input[type="checkbox"]');
+      target?.focus();
+      return;
+    }
     this.onSave();
   }
 

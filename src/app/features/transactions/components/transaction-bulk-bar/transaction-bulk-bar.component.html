@@ -7,7 +7,7 @@
     <span aria-live="polite" class="row-amount">{{ selectionCount() }} selected</span>
     <button
       type="button"
-      class="cursor-pointer text-sm underline disabled:opacity-50"
+      class="inline-flex min-h-8 cursor-pointer items-center px-1 text-sm underline max-lg:min-h-11 disabled:opacity-50"
       [disabled]="busy()"
       (click)="setCategory.emit()"
     >
@@ -16,7 +16,7 @@
     @if (allTransfers()) {
       <button
         type="button"
-        class="cursor-pointer text-sm underline disabled:opacity-50"
+        class="inline-flex min-h-8 cursor-pointer items-center px-1 text-sm underline max-lg:min-h-11 disabled:opacity-50"
         [disabled]="busy()"
         (click)="unmarkTransfer.emit()"
       >
@@ -25,17 +25,25 @@
     } @else {
       <button
         type="button"
-        class="cursor-pointer text-sm underline disabled:opacity-50"
+        class="inline-flex min-h-8 cursor-pointer items-center px-1 text-sm underline max-lg:min-h-11 disabled:opacity-50"
         [disabled]="busy()"
         (click)="markTransfer.emit()"
       >
         Mark as transfer
       </button>
     }
-    <button type="button" class="cursor-pointer text-sm underline" (click)="editMore.emit()">
+    <button
+      type="button"
+      class="inline-flex min-h-8 cursor-pointer items-center px-1 text-sm underline max-lg:min-h-11 max-lg:min-w-11 justify-center"
+      (click)="editMore.emit()"
+    >
       Edit more
     </button>
-    <button type="button" class="ml-auto cursor-pointer text-sm underline" (click)="clear.emit()">
+    <button
+      type="button"
+      class="ml-auto inline-flex min-h-8 cursor-pointer items-center px-1 text-sm underline max-lg:min-h-11 max-lg:min-w-11 justify-center"
+      (click)="clear.emit()"
+    >
       Clear
     </button>
   </div>

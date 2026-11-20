@@ -5,7 +5,7 @@
     #keywordsField
     id="rule-keywords"
     formControlName="keywordsInput"
-    class="w-full"
+    class="w-full max-lg:min-h-11"
     placeholder="netflix, spotify"
     aria-describedby="rule-keywords-help rule-keywords-error"
   />
@@ -31,6 +31,7 @@
     optionLabel="label"
     optionValue="value"
     appendTo="body"
+    styleClass="max-lg:min-h-11 max-lg:[&_[role=combobox]]:min-h-11"
   />
   <small class="text-muted-color">With one keyword, both choices behave the same.</small>
 </div>
@@ -40,6 +41,7 @@
 <div class="flex flex-col gap-1">
   <label for="rule-priority" class="text-sm font-medium">Priority</label>
   <p-inputnumber
+    inputStyleClass="max-lg:min-h-11"
     inputId="rule-priority"
     formControlName="priority"
     [min]="0"
@@ -60,6 +62,7 @@
   <div class="flex min-w-0 flex-col gap-1">
     <label for="rule-min" class="text-sm font-medium">Minimum amount</label>
     <p-inputnumber
+      inputStyleClass="max-lg:min-h-11"
       inputId="rule-min"
       formControlName="minAmount"
       mode="currency"
@@ -72,6 +75,7 @@
   <div class="flex min-w-0 flex-col gap-1">
     <label for="rule-max" class="text-sm font-medium">Maximum amount</label>
     <p-inputnumber
+      inputStyleClass="max-lg:min-h-11"
       inputId="rule-max"
       formControlName="maxAmount"
       mode="currency"

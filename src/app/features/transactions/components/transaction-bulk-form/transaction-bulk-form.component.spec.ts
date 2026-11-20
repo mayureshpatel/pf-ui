@@ -335,26 +335,15 @@ describe('TransactionBulkFormComponent', () => {
   });
 
   describe('rendering', () => {
-    it(
-      'bug found, not fixed here: [disabled]="!form.value.x" on a native formControlName ' +
-        'input never actually disables it, despite that clearly being the intent (label text and ' +
-        "ring-highlight styling both treat this field as gated by its toggle) -- Angular's own " +
-        "reactive-forms directive manages a native element's disabled state and overrides a plain " +
-        "property binding attempting the same thing (confirmed via Angular's own runtime warning: " +
-        '"It looks like you\'re using the disabled attribute with a reactive form directive"). ' +
-        'Fixing this properly means enabling/disabling the FormControl itself, a real design ' +
-        'decision -- left to a dedicated bug ticket, not fixed as part of PF-395 (scoped only to ' +
-        'the merchant-mapping gap).',
-      () => {
-        // arrange & act
-        const descriptionInput = fixture.nativeElement.querySelector(
-          'input[formcontrolname="description"]',
-        );
+    it('should render the description field disabled until its switch is on (PF-955)', () => {
+      // arrange & act
+      const descriptionInput = fixture.nativeElement.querySelector(
+        'input[formcontrolname="description"]',
+      );
 
-        // assert & verify -- documents current (broken) behavior, unchanged by PF-395
-        expect(descriptionInput.disabled).toBe(false);
-      },
-    );
+      // assert & verify
+      expect(descriptionInput.disabled).toBe(true);
+    });
 
     // PF-320: migrated off p-select (a preloaded, client-filtered dropdown) to p-autoComplete
     // (a server-search-driven picker) once the backend endpoint stopped returning every merchant
@@ -493,6 +482,68 @@ describe('TransactionBulkFormComponent', () => {
           updateMerchant: false,
           updateDescription: false,
         }),
+      );
+    });
+  });
+
+  describe('PF-955: Apply without a field switched on', () => {
+    it('should say what to do instead of failing silently', () => {
+      // arrange
+      fixture.detectChanges();
+      const applied = vi.fn();
+      component.apply.subscribe(applied);
+
+      // act
+      component.submit();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(applied).not.toHaveBeenCalled();
+      const hint = fixture.nativeElement.querySelector('[data-testid="apply-hint"]');
+      expect(hint.textContent).toContain('Switch on');
+    });
+
+    it('should really disable the description field until its switch is on', () => {
+      // arrange
+      fixture.detectChanges();
+      const input = fixture.nativeElement.querySelector(
+        '#bulk-edit-description',
+      ) as HTMLInputElement;
+      expect(input.disabled).toBe(true);
+
+      // act
+      component.form.patchValue({ updateDescription: true });
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(input.disabled).toBe(false);
+    });
+
+    it('should keep a switched-off merchant field out of the tab order', () => {
+      // arrange
+      fixture.detectChanges();
+
+      // act
+      const input = fixture.nativeElement.querySelector('#bulk-edit-merchant') as HTMLElement;
+
+      // assert & verify
+      expect(input.getAttribute('tabindex')).toBe('-1');
+    });
+
+    it('should give the change checkboxes and fields a 44px phone target', () => {
+      // arrange
+      fixture.detectChanges();
+
+      // act
+      const labels = fixture.nativeElement.querySelectorAll('[data-testid="change-toggle"]');
+
+      // assert & verify
+      expect(labels.length).toBe(3);
+      for (const label of Array.from(labels) as HTMLElement[]) {
+        expect(label.className).toContain('max-lg:size-11');
+      }
+      expect(fixture.nativeElement.querySelector('#bulk-edit-description').className).toContain(
+        'max-lg:min-h-11',
       );
     });
   });

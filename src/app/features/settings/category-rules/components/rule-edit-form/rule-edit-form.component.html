@@ -22,6 +22,7 @@
         optionGroupChildren="items"
         placeholder="Choose a category"
         appendTo="body"
+        styleClass="max-lg:min-h-11 max-lg:[&_[role=combobox]]:min-h-11"
       />
       @if (categoryError(); as error) {
         <small class="text-rose-700 dark:text-rose-400">{{ error }}</small>

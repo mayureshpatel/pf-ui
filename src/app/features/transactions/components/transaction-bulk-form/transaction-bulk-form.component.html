@@ -22,12 +22,18 @@
       [class.ring-1]="form.value.updateCategory"
       [class.ring-primary/30]="form.value.updateCategory"
     >
-      <p-checkbox
-        formControlName="updateCategory"
-        [binary]="true"
-        class="mt-1"
-        ariaLabel="Change category"
-      />
+      <label
+        for="bulk-change-category"
+        data-testid="change-toggle"
+        class="flex shrink-0 cursor-pointer items-center justify-center max-lg:-m-3 max-lg:size-11"
+      >
+        <p-checkbox
+          inputId="bulk-change-category"
+          formControlName="updateCategory"
+          [binary]="true"
+          ariaLabel="Change category"
+        />
+      </label>
       <div class="flex flex-1 flex-col gap-1">
         <!-- PF-805: p-select renders its combobox as a <span role="combobox">, not a native
              labelable element, so `for`/`inputId` alone doesn't create a real association --
@@ -49,6 +55,7 @@
           optionLabel="label"
           optionValue="value"
           [disabled]="!form.value.updateCategory"
+          styleClass="max-lg:min-h-11 max-lg:[&_[role=combobox]]:min-h-11"
           placeholder="Search categories..."
           [filter]="true"
           appendTo="body"
@@ -63,12 +70,18 @@
       [class.ring-1]="form.value.updateMerchant"
       [class.ring-primary/30]="form.value.updateMerchant"
     >
-      <p-checkbox
-        formControlName="updateMerchant"
-        [binary]="true"
-        class="mt-1"
-        ariaLabel="Change merchant"
-      />
+      <label
+        for="bulk-change-merchant"
+        data-testid="change-toggle"
+        class="flex shrink-0 cursor-pointer items-center justify-center max-lg:-m-3 max-lg:size-11"
+      >
+        <p-checkbox
+          inputId="bulk-change-merchant"
+          formControlName="updateMerchant"
+          [binary]="true"
+          ariaLabel="Change merchant"
+        />
+      </label>
       <div class="flex flex-1 flex-col gap-1">
         <label for="bulk-edit-merchant" class="text-sm font-medium">Merchant</label>
         <span data-testid="merchant-summary" class="text-xs text-muted-color">{{
@@ -83,13 +96,14 @@
           optionLabel="label"
           optionValue="value"
           [readonly]="!form.value.updateMerchant"
+          [tabindex]="form.value.updateMerchant ? 0 : -1"
           [class.opacity-50]="!form.value.updateMerchant"
           [class.pointer-events-none]="!form.value.updateMerchant"
           placeholder="Search for a merchant..."
           appendTo="body"
           [dropdown]="false"
           styleClass="w-full"
-          inputStyleClass="w-full"
+          inputStyleClass="w-full max-lg:min-h-11"
         />
       </div>
     </div>
@@ -100,12 +114,18 @@
       [class.ring-1]="form.value.updateDescription"
       [class.ring-primary/30]="form.value.updateDescription"
     >
-      <p-checkbox
-        formControlName="updateDescription"
-        [binary]="true"
-        class="mt-1"
-        ariaLabel="Change description"
-      />
+      <label
+        for="bulk-change-description"
+        data-testid="change-toggle"
+        class="flex shrink-0 cursor-pointer items-center justify-center max-lg:-m-3 max-lg:size-11"
+      >
+        <p-checkbox
+          inputId="bulk-change-description"
+          formControlName="updateDescription"
+          [binary]="true"
+          ariaLabel="Change description"
+        />
+      </label>
       <div class="flex flex-1 flex-col gap-1">
         <label for="bulk-edit-description" class="text-sm font-medium">Description</label>
         <span data-testid="description-summary" class="text-xs text-muted-color">{{
@@ -115,18 +135,18 @@
           id="bulk-edit-description"
           pInputText
           formControlName="description"
-          [disabled]="!form.value.updateDescription"
           placeholder="Add one description for all of them..."
-          class="w-full"
+          class="w-full max-lg:min-h-11"
         />
       </div>
     </div>
 
-    @if (
-      !isValid() &&
-      (form.value.updateCategory || form.value.updateMerchant || form.value.updateDescription)
-    ) {
-      <p-message severity="error" variant="simple">
+    @if (!anyToggle() && triedApply()) {
+      <p-message data-testid="apply-hint" severity="error" variant="simple">
+        Switch on a field to change it, then apply.
+      </p-message>
+    } @else if (!isValid() && (anyToggle() || triedApply())) {
+      <p-message data-testid="apply-hint" severity="error" variant="simple">
         Fill in every field you switched on before applying.
       </p-message>
     }

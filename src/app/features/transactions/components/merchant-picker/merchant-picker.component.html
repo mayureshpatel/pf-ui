@@ -15,6 +15,7 @@
     emptyMessage="No merchants"
     emptyFilterMessage="No merchants found"
     appendTo="body"
+    styleClass="max-lg:min-h-11 max-lg:[&_[role=combobox]]:min-h-11"
   >
     <ng-template #item let-merchant>
       @if (isCreateOption(merchant)) {
