@@ -8,6 +8,7 @@ import {
   OutputEmitterRef,
   Signal,
 } from '@angular/core';
+import { SkeletonModule } from 'primeng/skeleton';
 import { FormatCurrencyPipe } from '@shared/pipes/format-currency.pipe';
 import { BudgetTotals } from '../../utils/budget-helpers';
 
@@ -15,7 +16,7 @@ import { BudgetTotals } from '../../utils/budget-helpers';
 @Component({
   selector: 'app-budget-overview',
   standalone: true,
-  imports: [FormatCurrencyPipe],
+  imports: [FormatCurrencyPipe, SkeletonModule],
   templateUrl: './budget-overview.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -23,9 +24,10 @@ export class BudgetOverviewComponent {
   readonly totals: InputSignal<BudgetTotals> = input.required<BudgetTotals>();
   readonly monthLabel: InputSignal<string> = input.required<string>();
   readonly canCopy: InputSignal<boolean> = input.required<boolean>();
+  /** True while a month is loading, so the figures are never shown under another month's label. */
+  readonly loading: InputSignal<boolean> = input<boolean>(false);
 
   readonly copyLimits: OutputEmitterRef<void> = output<void>();
-  readonly add: OutputEmitterRef<void> = output<void>();
 
   /** Width of the spent bar against what is budgeted, 0 to 100. */
   readonly spentWidth: Signal<number> = computed((): number => {

@@ -38,6 +38,8 @@ import {
   BudgetRow,
   BudgetRowGroup,
   BudgetTotals,
+  CopyPreview,
+  CopyPreviewRow,
   budgetRows,
   budgetTotals,
   copyPlan,
@@ -45,6 +47,8 @@ import {
   isSameMonth,
   monthLabel,
   monthName,
+  parseMonthParam,
+  parseYearParam,
   shiftMonth,
   unbudgetedCategories,
 } from './utils/budget-helpers';
@@ -52,10 +56,6 @@ import {
 /** What the docked panel is showing. */
 type BudgetPanelMode = 'overview' | 'category' | 'add';
 
-/**
- * The Budgets page: a month's categories in three groups beside an always-present panel. The panel
- * shows the month overview by default, and a category's limit editor or the add form on request.
- */
 @Component({
   selector: 'app-budgets',
   standalone: true,
@@ -141,9 +141,31 @@ export class BudgetsComponent implements OnInit {
       return { add: plan.add.length, overwrite: plan.overwrite.length };
     },
   );
-  readonly previousMonthName: Signal<string> = computed((): string =>
-    monthName(shiftMonth(this.selectedMonth(), this.selectedYear(), -1).month),
+  /** The limits the copy would add and the ones it would change, by name, for the dialog's preview. */
+  readonly copyPreview: Signal<CopyPreview> = computed((): CopyPreview => {
+    const plan = copyPlan(this.previousBudgets(), this.budgets());
+    const current = new Map<number, number>(
+      this.budgets().map((b: Budget): [number, number] => [b.category.id, b.amount]),
+    );
+    return {
+      adds: plan.add.map((b: Budget): CopyPreviewRow => ({ name: b.category.name, to: b.amount })),
+      overwrites: plan.overwrite.map((b: Budget): CopyPreviewRow => ({
+        name: b.category.name,
+        from: current.get(b.category.id),
+        to: b.amount,
+      })),
+    };
+  });
+  /** The empty month's hint; it mentions copying only when last month has limits to copy. */
+  readonly emptyHint: Signal<string> = computed((): string =>
+    this.canCopy()
+      ? "Set a limit for each category you want to track, or copy last month's limits."
+      : 'Set a limit for each category you want to track.',
   );
+  readonly previousMonthLabel: Signal<string> = computed((): string => {
+    const previous = shiftMonth(this.selectedMonth(), this.selectedYear(), -1);
+    return monthLabel(previous.month, previous.year);
+  });
   readonly canCopy: Signal<boolean> = computed((): boolean => this.previousBudgets().length > 0);
 
   readonly panelTitle: Signal<string> = computed((): string => {
@@ -342,12 +364,6 @@ export class BudgetsComponent implements OnInit {
       this.selectedCategoryId.set(null);
       this.go('add');
     });
-  }
-
-  /** Back from category or add to the overview. */
-  back(): void {
-    if (this.panelMode() === 'overview') return;
-    this.confirmDiscardIfDirty((): void => this.closePanel());
   }
 
   /**
@@ -560,8 +576,8 @@ export class BudgetsComponent implements OnInit {
    * @return whether either signal was written (a genuine change).
    */
   private hydrateFromParams(params: Params): boolean {
-    const month: number | undefined = params['month'] ? Number(params['month']) : undefined;
-    const year: number | undefined = params['year'] ? Number(params['year']) : undefined;
+    const month: number | undefined = parseMonthParam(params['month']);
+    const year: number | undefined = parseYearParam(params['year']);
     let changed = false;
     if (month !== undefined && month !== this.selectedMonth()) {
       this.selectedMonth.set(month);

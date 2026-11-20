@@ -47,6 +47,11 @@ export class BudgetListComponent {
 
   /** Tailwind background class for a bar in the given group. */
   barClass(key: BudgetGroupKey): string {
-    return key === 'OVER' ? 'bg-rose-500' : key === 'CLOSE' ? 'bg-amber-500' : 'bg-emerald-500';
+    // -700 on the light track and -400 on the dark one keep each fill at 3:1 or more against it
+    return key === 'OVER'
+      ? 'bg-rose-700 dark:bg-rose-400'
+      : key === 'CLOSE'
+        ? 'bg-amber-700 dark:bg-amber-400'
+        : 'bg-emerald-700 dark:bg-emerald-400';
   }
 }

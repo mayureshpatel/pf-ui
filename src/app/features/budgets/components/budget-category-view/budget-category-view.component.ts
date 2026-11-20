@@ -83,10 +83,19 @@ export class BudgetCategoryViewComponent implements OnInit {
     });
   }
 
-  /** Submits from outside (the panel's Save button). */
+  /** Whether the limit shows its error, so the field can point at it. */
+  amountInvalid(): boolean {
+    return this.form.controls.amount.invalid && this.form.controls.amount.touched;
+  }
+
+  /** Submits from outside (the panel's Save button); an invalid limit takes focus so the error is heard. */
   submit(): void {
     this.form.markAllAsTouched();
-    if (this.form.invalid || this.saving()) return;
+    if (this.form.invalid) {
+      document.getElementById('limit')?.focus();
+      return;
+    }
+    if (this.saving()) return;
     this.save.emit(this.form.getRawValue().amount!);
   }
 }

@@ -63,10 +63,20 @@ export class BudgetAddFormComponent {
     return groups;
   });
 
-  /** Submits from outside (the panel's Add budget button). */
+  /** Whether the limit shows its error, so the field can point at it. */
+  amountInvalid(): boolean {
+    return this.form.controls.amount.invalid && this.form.controls.amount.touched;
+  }
+
+  /** Submits from outside (the panel's Add budget button); the first invalid field takes focus so its error is heard. */
   submit(): void {
     this.form.markAllAsTouched();
-    if (this.categories().length === 0 || this.form.invalid) return;
+    if (this.categories().length === 0) return;
+    if (this.form.invalid) {
+      const firstInvalid: string = this.form.controls.categoryId.invalid ? 'category' : 'amount';
+      document.getElementById(firstInvalid)?.focus();
+      return;
+    }
     const { categoryId, amount } = this.form.getRawValue();
     this.save.emit({ categoryId: categoryId!, amount: amount! });
   }

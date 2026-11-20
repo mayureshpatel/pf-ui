@@ -14,6 +14,7 @@ import { BudgetCopyDialogComponent } from './budget-copy-dialog.component';
       toName="October"
       [addCount]="addCount()"
       [overwriteCount]="overwriteCount()"
+      [preview]="preview()"
       (fill)="filled()"
       (replace)="replaced()"
     />
@@ -23,6 +24,13 @@ class HostComponent {
   visible = signal(true);
   addCount = signal(2);
   overwriteCount = signal(1);
+  preview = signal({
+    adds: [
+      { name: 'Travel', to: 100 },
+      { name: 'Coffee Shops', to: 60 },
+    ],
+    overwrites: [{ name: 'Dining Out', from: 200, to: 180 }],
+  });
   filled = vi.fn();
   replaced = vi.fn();
 }
@@ -122,5 +130,17 @@ describe('BudgetCopyDialogComponent', () => {
       // assert & verify
       expect(firstEnabled()).toBe('Replace all');
     });
+  });
+
+  it('should list each limit it would add and each it would change, with both amounts', () => {
+    // act
+    const text = document.body.querySelector('[data-testid="copy-preview"]')?.textContent ?? '';
+
+    // assert & verify
+    expect(text).toContain('Travel');
+    expect(text).toContain('$100.00');
+    expect(text).toContain('Coffee Shops');
+    expect(text).toContain('Dining Out');
+    expect(text).toContain('$200.00 to $180.00');
   });
 });

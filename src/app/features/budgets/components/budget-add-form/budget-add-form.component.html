@@ -13,12 +13,18 @@
         optionLabel="label"
         optionValue="value"
         placeholder="Select a category"
+        styleClass="max-lg:min-h-11"
         [filter]="true"
         filterPlaceholder="Search categories"
         appendTo="body"
       />
       @if (form.controls.categoryId.invalid && form.controls.categoryId.touched) {
-        <small data-testid="category-error" class="text-rose-700 dark:text-rose-400">
+        <small
+          id="category-error"
+          role="alert"
+          data-testid="category-error"
+          class="text-rose-700 dark:text-rose-400"
+        >
           Choose a category.
         </small>
       }
@@ -33,11 +39,18 @@
         currency="USD"
         locale="en-US"
         [min]="0"
+        [ariaRequired]="true"
+        [ariaDescribedBy]="amountInvalid() ? 'amount-error' : undefined"
         class="w-full"
         inputStyleClass="w-full text-xl font-semibold"
       />
       @if (form.controls.amount.invalid && form.controls.amount.touched) {
-        <small data-testid="amount-error" class="text-rose-700 dark:text-rose-400">
+        <small
+          id="amount-error"
+          role="alert"
+          data-testid="amount-error"
+          class="text-rose-700 dark:text-rose-400"
+        >
           Enter an amount of $0 or more.
         </small>
       }

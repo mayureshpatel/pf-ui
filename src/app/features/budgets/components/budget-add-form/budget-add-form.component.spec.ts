@@ -65,6 +65,25 @@ describe('BudgetAddFormComponent', () => {
     ).toContain('Choose a category.');
   });
 
+  it('should announce an error, link it to its field, and move focus to the first invalid field', () => {
+    // arrange
+    component.form.patchValue({ categoryId: 2, amount: -5 });
+    document.body.appendChild(fixture.nativeElement);
+
+    // act
+    component.submit();
+    fixture.detectChanges();
+
+    // assert & verify
+    const error = fixture.nativeElement.querySelector('[data-testid="amount-error"]');
+    expect(error.getAttribute('role')).toBe('alert');
+    expect(error.id).toBe('amount-error');
+    expect(fixture.nativeElement.querySelector('#amount').getAttribute('aria-describedby')).toBe(
+      'amount-error',
+    );
+    expect(document.activeElement?.id).toBe('amount');
+  });
+
   it('should explain when every category already has a budget and send nothing', () => {
     // arrange
     fixture.componentRef.setInput('categories', []);

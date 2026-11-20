@@ -31,12 +31,19 @@
         currency="USD"
         locale="en-US"
         [min]="0"
+        [ariaRequired]="true"
+        [ariaDescribedBy]="amountInvalid() ? 'limit-error' : undefined"
         class="w-full"
         inputStyleClass="w-full text-xl font-semibold"
       />
     </form>
     @if (form.controls.amount.invalid && form.controls.amount.touched) {
-      <small data-testid="amount-error" class="text-rose-700 dark:text-rose-400">
+      <small
+        id="limit-error"
+        role="alert"
+        data-testid="amount-error"
+        class="text-rose-700 dark:text-rose-400"
+      >
         Enter a limit of $0 or more.
       </small>
     }
@@ -45,7 +52,7 @@
   <div class="flex flex-col gap-2">
     <button
       type="button"
-      class="cursor-pointer rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium dark:border-surface-700"
+      class="cursor-pointer rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium max-lg:min-h-11 dark:border-surface-700"
       (click)="viewTransactions.emit()"
     >
       View transactions
@@ -53,7 +60,7 @@
     @if (row().budgetId !== null) {
       <button
         type="button"
-        class="cursor-pointer rounded-lg border border-rose-300 px-3 py-2 text-sm font-medium text-rose-700 dark:border-rose-800 dark:text-rose-400"
+        class="cursor-pointer rounded-lg border border-rose-300 px-3 py-2 text-sm font-medium text-rose-700 max-lg:min-h-11 dark:border-rose-800 dark:text-rose-400"
         (click)="remove.emit()"
       >
         Remove budget
