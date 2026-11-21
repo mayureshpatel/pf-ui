@@ -121,7 +121,13 @@ export class CategoryEditFormComponent implements OnInit {
   readonly colors: string[] = CATEGORY_COLORS;
   readonly colorNames: string[] = COLOR_NAMES;
   readonly icons: string[] = CATEGORY_ICONS;
-  readonly typeOptions = CATEGORY_TYPE_OPTIONS;
+  /** Expense, Income and Both; Transfer too when the category being edited is one (the starter set makes it). */
+  readonly typeOptions: Signal<{ label: string; value: CategoryType }[]> = computed(
+    (): { label: string; value: CategoryType }[] =>
+      this.category()?.type === CategoryType.TRANSFER
+        ? [...CATEGORY_TYPE_OPTIONS, { label: 'Transfer', value: CategoryType.TRANSFER }]
+        : CATEGORY_TYPE_OPTIONS,
+  );
 
   readonly form = new FormGroup({
     name: new FormControl<string>('', {

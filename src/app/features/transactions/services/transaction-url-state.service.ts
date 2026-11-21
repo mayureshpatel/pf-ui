@@ -31,6 +31,7 @@ export class TransactionUrlStateService {
       description: params['description'] || undefined,
       merchant: params['merchant'] || undefined,
       categoryName: params['categoryName'] || undefined,
+      categoryId: params['categoryId'] ? Number(params['categoryId']) : undefined,
       minAmount: params['minAmount'] === undefined ? undefined : Number(params['minAmount']),
       maxAmount: params['maxAmount'] === undefined ? undefined : Number(params['maxAmount']),
       startDate: params['startDate'] ? parseUrlDate(params['startDate']) : undefined,
@@ -59,6 +60,7 @@ export class TransactionUrlStateService {
     if (filter.description) queryParams['description'] = filter.description;
     if (filter.merchant) queryParams['merchant'] = filter.merchant;
     if (filter.categoryName) queryParams['categoryName'] = filter.categoryName;
+    if (filter.categoryId) queryParams['categoryId'] = filter.categoryId;
     if (filter.minAmount !== undefined) queryParams['minAmount'] = filter.minAmount;
     if (filter.maxAmount !== undefined) queryParams['maxAmount'] = filter.maxAmount;
     if (filter.startDate) queryParams['startDate'] = toLocalDateString(filter.startDate);

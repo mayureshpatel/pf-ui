@@ -36,6 +36,7 @@ describe('CategoryTreeComponent', () => {
       showChecks: boolean;
       loading: boolean;
       filtering: boolean;
+      reasons: [number, string][];
     }> = {},
   ): void {
     fixture.componentRef.setInput('nodes', over.nodes ?? nodes());
@@ -46,6 +47,7 @@ describe('CategoryTreeComponent', () => {
     fixture.componentRef.setInput('showChecks', over.showChecks ?? false);
     fixture.componentRef.setInput('loading', over.loading ?? false);
     fixture.componentRef.setInput('filtering', over.filtering ?? false);
+    fixture.componentRef.setInput('reasons', new Map(over.reasons ?? []));
     fixture.detectChanges();
   }
   const all = <T extends HTMLElement>(s: string): T[] =>
@@ -237,6 +239,81 @@ describe('CategoryTreeComponent', () => {
 
       // assert & verify
       expect(text(all('[data-testid="tree-row"]')[0])).toContain('2 subcategories');
+    });
+  });
+
+  describe('selection, counts and checkboxes (PF-961)', () => {
+    it('should mark the selected row with aria-current, and only that row', () => {
+      // act
+      render({ selected: 1 });
+
+      // assert & verify
+      const current = all<HTMLButtonElement>('[data-testid="open-category"]').filter(
+        (b) => b.getAttribute('aria-current') === 'true',
+      );
+      expect(current.length).toBe(1);
+      expect(text(current[0])).toContain('Food');
+    });
+
+    it('should format counts with separators and name their unit for a screen reader', () => {
+      // arrange
+      const big = buildNodes([food, groceries], [{ ...groceries, transactionCount: 1721 }]);
+
+      // act
+      render({ nodes: big });
+
+      // assert & verify
+      expect(text(all('[data-testid="tree-row"]')[0])).toContain('1,721 transactions');
+    });
+
+    it('should say why a checkbox is disabled, in its name and title', () => {
+      // act
+      render({
+        showChecks: true,
+        expanded: [1],
+        tickable: [3],
+        reasons: [[1, 'a subcategory has transactions']],
+      });
+
+      // assert & verify
+      const boxes = all<HTMLInputElement>('input[type="checkbox"]');
+      expect(boxes[0].getAttribute('aria-label')).toBe(
+        'Select Food (not available: a subcategory has transactions)',
+      );
+      expect(boxes[0].getAttribute('title')).toBe('a subcategory has transactions');
+      expect(boxes[1].getAttribute('aria-label')).toBe('Select Coffee');
+    });
+
+    it('should show a parent with subcategories as its group total, never as Unused', () => {
+      // arrange -- a group whose subcategories all have no transactions
+      const empty = buildNodes([food, coffee], []);
+
+      // act
+      render({ nodes: empty });
+
+      // assert & verify
+      expect(text(all('[data-testid="tree-row"]')[0])).not.toContain('Unused');
+      expect(text(all('[data-testid="tree-row"]')[0])).toContain('0 transactions');
+    });
+
+    it('should use the singular unit for a count of one', () => {
+      // arrange
+      const one = buildNodes([food, groceries], [{ ...groceries, transactionCount: 1 }]);
+
+      // act
+      render({ nodes: one, expanded: [1] });
+
+      // assert & verify
+      expect(text(all('[data-testid="tree-row"]')[0])).toContain('1 transaction');
+      expect(text(all('[data-testid="tree-row"]')[0])).not.toContain('1 transactions');
+    });
+
+    it('should show the icon of each category', () => {
+      // act
+      render({ expanded: [1] });
+
+      // assert & verify
+      expect(all('[data-testid="tree-row"] i.pi-tag').length).toBeGreaterThan(0);
     });
   });
 });

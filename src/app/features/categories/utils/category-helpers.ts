@@ -61,16 +61,24 @@ export function isUnused(category: Category): boolean {
   return (category.transactionCount ?? 0) === 0;
 }
 
+/**
+ * A category with no transactions that has nothing under it (PF-961). A parent with subcategories
+ * is never unused itself: its transactions live on the subcategories, and its own count is always 0.
+ */
+export function isUnusedLeaf(category: Category, hasChildren: boolean): boolean {
+  return !hasChildren && isUnused(category);
+}
+
 /** Whether any filter or search narrows the tree. */
 export function isFiltering(filter: CategoryFilter): boolean {
   return filter.type !== 'ALL' || filter.unusedOnly || filter.search.trim() !== '';
 }
 
-const matches = (category: Category, filter: CategoryFilter): boolean => {
+const matches = (category: Category, filter: CategoryFilter, hasChildren: boolean): boolean => {
   const search: string = filter.search.trim().toLowerCase();
   return (
     (filter.type === 'ALL' || category.type === filter.type) &&
-    (!filter.unusedOnly || isUnused(category)) &&
+    (!filter.unusedOnly || isUnusedLeaf(category, hasChildren)) &&
     (search === '' || category.name.toLowerCase().includes(search))
   );
 };
@@ -86,9 +94,12 @@ export function filterNodes(nodes: CategoryNode[], filter: CategoryFilter): Cate
   return nodes
     .map((node: CategoryNode) => ({
       node,
-      children: node.children.filter((c: Category): boolean => matches(c, filter)),
+      children: node.children.filter((c: Category): boolean => matches(c, filter, false)),
     }))
-    .filter(({ node, children }) => matches(node.parent, filter) || children.length > 0)
+    .filter(
+      ({ node, children }) =>
+        matches(node.parent, filter, node.children.length > 0) || children.length > 0,
+    )
     .map(({ node, children }): CategoryNode => ({ ...node, children }));
 }
 
@@ -108,6 +119,9 @@ export function availableTypes(categories: Category[]): CategoryType[] {
 
 /** Totals for the overview. */
 export function categoryStats(categories: Category[]): CategoryStats {
+  const parentIds = new Set<number>(
+    categories.filter((c: Category) => c.parent).map((c: Category): number => c.parent!.id),
+  );
   return {
     categories: categories.length,
     groups: categories.filter((c: Category): boolean => !c.parent).length,
@@ -115,7 +129,8 @@ export function categoryStats(categories: Category[]): CategoryStats {
       (sum: number, c: Category): number => sum + (c.transactionCount ?? 0),
       0,
     ),
-    unused: categories.filter(isUnused).length,
+    unused: categories.filter((c: Category): boolean => isUnusedLeaf(c, parentIds.has(c.id)))
+      .length,
   };
 }
 
@@ -152,4 +167,22 @@ export function parentOptions(categories: Category[], editing: Category | null):
     return [];
   }
   return categories.filter((c: Category): boolean => !c.parent && c.id !== editing?.id);
+}
+
+/**
+ * Why a checkbox is disabled, or null when it can be ticked: the category has transactions, or a
+ * parent still has subcategories that are used or not yet ticked.
+ */
+export function tickReason(
+  category: Category,
+  nodes: CategoryNode[],
+  ticked: ReadonlySet<number>,
+): string | null {
+  if (isTickable(category, nodes, ticked)) return null;
+  if (!isUnused(category)) return 'it has transactions';
+  const node: CategoryNode | undefined = nodes.find(
+    (n: CategoryNode) => n.parent.id === category.id,
+  );
+  const used = !!node?.children.some((c: Category): boolean => !isUnused(c));
+  return used ? 'a subcategory has transactions' : 'tick all its subcategories first';
 }

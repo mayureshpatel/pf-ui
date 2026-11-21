@@ -172,7 +172,15 @@ export class TransactionFilterBarComponent {
     const cleaned: PopoverDraft = Object.fromEntries(
       Object.entries(this.draft).map(([key, value]) => [key, value ?? undefined]),
     );
-    this.filterChange.emit({ ...this.filter(), ...cleaned });
+    this.filterChange.emit(this.merged(cleaned));
+  }
+
+  /** The applied filter with the popover's values on top; a changed category name drops the exact category id. */
+  private merged(cleaned: PopoverDraft): TransactionFilter {
+    const current: TransactionFilter = this.filter();
+    const nameChanged: boolean =
+      'categoryName' in cleaned && cleaned.categoryName !== current.categoryName;
+    return { ...current, ...cleaned, ...(nameChanged ? { categoryId: undefined } : {}) };
   }
 
   /** Applies the popover's values as one change and closes it (the Done button). */
@@ -181,7 +189,7 @@ export class TransactionFilterBarComponent {
     const cleaned: PopoverDraft = Object.fromEntries(
       Object.entries(draft).map(([key, value]) => [key, value ?? undefined]),
     );
-    this.filterChange.emit({ ...this.filter(), ...cleaned });
+    this.filterChange.emit(this.merged(cleaned));
     popover.hide();
     this.host.nativeElement
       .querySelector<HTMLElement>(

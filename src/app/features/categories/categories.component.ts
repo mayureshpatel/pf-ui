@@ -68,6 +68,7 @@ import {
   filterNodes,
   isFiltering,
   isTickable,
+  tickReason,
   isUnused,
   NO_FILTER,
 } from './utils/category-helpers';
@@ -158,6 +159,21 @@ export class CategoriesComponent implements OnInit {
 
   /** Checkboxes show while the Unused pill is on. */
   readonly showChecks: Signal<boolean> = computed((): boolean => this.filter().unusedOnly);
+  /** Why each disabled checkbox is disabled, worked out on the whole tree so a filter cannot hide the cause. */
+  readonly tickReasons: Signal<ReadonlyMap<number, string>> = computed(
+    (): ReadonlyMap<number, string> => {
+      const ticked: ReadonlySet<number> = this.tickedIds();
+      const reasons = new Map<number, string>();
+      for (const node of this.nodes()) {
+        for (const category of [node.parent, ...node.children]) {
+          const why: string | null = tickReason(category, this.nodes(), ticked);
+          if (why) reasons.set(category.id, why);
+        }
+      }
+      return reasons;
+    },
+  );
+
   readonly tickableIds: Signal<ReadonlySet<number>> = computed((): ReadonlySet<number> => {
     const ticked: ReadonlySet<number> = this.tickedIds();
     const ids = new Set<number>();
@@ -294,8 +310,9 @@ export class CategoriesComponent implements OnInit {
 
   /** Names what found nothing: the search text when there is one, otherwise the filters. */
   readonly noMatchTitle: Signal<string> = computed((): string => {
-    const search: string = this.filter().search.trim();
-    return search ? `No categories match "${search}"` : 'No categories match these filters';
+    const { search, type, unusedOnly } = this.filter();
+    const what = `${unusedOnly ? 'unused ' : ''}${type === 'ALL' ? '' : `${type.toLowerCase()} `}categories`;
+    return search.trim() ? `No ${what} match "${search.trim()}"` : `No ${what} match these filters`;
   });
 
   /** Clears every filter and hands focus to the search box, since the button that was used goes. */
@@ -558,10 +575,12 @@ export class CategoriesComponent implements OnInit {
   deleteSelected(): void {
     const selected: Category[] = this.selectedCategories();
     if (selected.length === 0 || this.saving() || this.loading()) return;
-    const names: string = selected.map((c: Category): string => c.name).join(', ');
+    const shown: string[] = selected.slice(0, 8).map((c: Category): string => c.name);
+    const more: number = selected.length - shown.length;
+    const names: string = more > 0 ? `${shown.join(', ')} and ${more} more` : shown.join(', ');
     this.confirmationService.confirm({
-      header: 'Delete categories?',
-      message: `Delete these ${selected.length} categories? ${names}`,
+      header: selected.length === 1 ? 'Delete category?' : 'Delete categories?',
+      message: `Delete ${selected.length === 1 ? '1 category' : `${selected.length} categories`}: ${names}?`,
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Delete',
       rejectLabel: 'Cancel',
@@ -631,7 +650,7 @@ export class CategoriesComponent implements OnInit {
     if (!category) return;
     this.confirmDiscardIfDirty((): void => {
       void this.router.navigate(['/transactions'], {
-        queryParams: { categoryName: category.name, period: 'all' },
+        queryParams: { categoryId: category.id, categoryName: category.name, period: 'all' },
       });
     });
   }
@@ -654,6 +673,11 @@ export class CategoriesComponent implements OnInit {
         const target: HTMLElement | null = this.focusReturn;
         if (mode === 'overview' && target?.isConnected) {
           target.focus();
+        } else if (mode === 'add') {
+          // adding starts at the name, like the bulk and starter forms start at theirs
+          document.getElementById('category-name')?.focus();
+        } else if (mode === 'selection' && this.ticking()) {
+          // a tick in the tree keeps focus on its checkbox, so a keyboard user does not lose their place
         } else if (mode !== 'bulk' && mode !== 'starter') {
           // the bulk and starter forms put focus on their own first field
           this.panel()?.focus();
@@ -662,6 +686,12 @@ export class CategoriesComponent implements OnInit {
       },
       { injector: this.injector },
     );
+  }
+
+  /** Whether focus is on a tree checkbox (a tick opened or kept the selection panel). */
+  private ticking(): boolean {
+    const active: Element | null = document.activeElement;
+    return active instanceof HTMLInputElement && active.type === 'checkbox';
   }
 
   /** Why a category cannot be deleted (it has transactions or subcategories), or null when it can. */

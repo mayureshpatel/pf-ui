@@ -26,7 +26,7 @@
       inputId="category-type"
       ariaLabelledBy="category-type-label"
       formControlName="type"
-      [options]="typeOptions"
+      [options]="typeOptions()"
       optionLabel="label"
       optionValue="value"
       styleClass="max-lg:min-h-11"
@@ -93,7 +93,7 @@
           [class]="
             form.controls.color.value === color
               ? 'border-surface-900 dark:border-surface-0'
-              : 'border-transparent'
+              : 'border-surface-500 dark:border-surface-400'
           "
           (click)="selectColor(color)"
         >

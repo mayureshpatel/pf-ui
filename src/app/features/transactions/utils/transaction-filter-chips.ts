@@ -83,5 +83,9 @@ export function removeFilterChip(filter: TransactionFilter, key: FilterChipKey):
   if (key === 'amount') {
     return { ...filter, minAmount: undefined, maxAmount: undefined };
   }
+  if (key === 'categoryName') {
+    // the id goes with the name: it is the same filter, the name only labels it
+    return { ...filter, categoryName: undefined, categoryId: undefined };
+  }
   return { ...filter, [key]: undefined };
 }

@@ -1,3 +1,4 @@
+import { RovingFocusDirective } from '@shared/directives/roving-focus.directive';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
@@ -61,7 +62,13 @@ interface GroupSummary {
 @Component({
   selector: 'app-category-bulk-form',
   standalone: true,
-  imports: [ReactiveFormsModule, InputTextModule, SelectModule, TextareaModule],
+  imports: [
+    ReactiveFormsModule,
+    InputTextModule,
+    SelectModule,
+    TextareaModule,
+    RovingFocusDirective,
+  ],
   templateUrl: './category-bulk-form.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -164,6 +171,11 @@ export class CategoryBulkFormComponent {
       !this.saving(),
   );
 
+  /** How many parents still have no name; Create stays disabled until it is 0, and the form says so. */
+  readonly unnamedCount: Signal<number> = computed(
+    (): number => this.summaries().filter((s: GroupSummary): boolean => s.nameMissing).length,
+  );
+
   readonly summaryText: Signal<string> = computed((): string => {
     const parents = `${this.parentCount()} ${this.parentCount() === 1 ? 'parent' : 'parents'}`;
     const subs = `${this.subcategoryTotal()} ${this.subcategoryTotal() === 1 ? 'subcategory' : 'subcategories'}`;
@@ -215,6 +227,17 @@ export class CategoryBulkFormComponent {
   selectIcon(card: GroupForm, icon: string): void {
     card.controls.icon.setValue(card.controls.icon.value === icon ? '' : icon);
     card.controls.icon.markAsDirty();
+  }
+
+  /** Each picker is one tab stop: the selected icon, or the first when none is selected. */
+  iconTabStop(card: GroupForm, index: number): boolean {
+    const selected: number = this.icons.indexOf(card.controls.icon.value ?? '');
+    return index === (selected === -1 ? 0 : selected);
+  }
+
+  colorTabStop(card: GroupForm, index: number): boolean {
+    const selected: number = this.colors.indexOf(card.controls.color.value ?? '');
+    return index === (selected === -1 ? 0 : selected);
   }
 
   iconLabel(icon: string): string {

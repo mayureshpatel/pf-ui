@@ -814,6 +814,7 @@ export class TransactionsComponent implements OnInit {
     if (tab === 'ALL' && this.activeTab() === 'ALL') return;
     const filter: TransactionFilter = { ...this.state().filter };
     filter.categoryName = tab === 'NEEDS_CATEGORY' ? UNCATEGORIZED : undefined;
+    filter.categoryId = undefined;
     this.onFilterChange(filter);
   }
 

@@ -83,6 +83,7 @@
               [selectedCategoryId]="selectedCategoryId()"
               [tickable]="tickableIds()"
               [ticked]="tickedIds()"
+              [reasons]="tickReasons()"
               [showChecks]="showChecks()"
               [loading]="loading()"
               [filtering]="filtering()"
@@ -97,7 +98,8 @@
       </div>
 
       <app-side-panel
-        class="order-first block lg:order-none"
+        class="block lg:order-none"
+        [class.order-first]="panelMode() !== 'overview'"
         [title]="panelTitle()"
         [saving]="saving()"
         [showClose]="panelMode() !== 'overview' && !onlyAddMode()"
@@ -130,7 +132,6 @@
           @case ('overview') {
             <app-category-overview
               [stats]="stats()"
-              (add)="startAdd()"
               (reviewUnused)="setFilter({ type: 'ALL', unusedOnly: true, search: '' })"
             />
           }
@@ -195,7 +196,13 @@
             />
           }
           @case ('selection') {
-            <ul class="m-0 mb-4 list-none p-0 text-sm" data-testid="ticked-names">
+            <p class="sr-only" role="status" data-testid="selection-status">
+              {{ selectedCategories().length }} selected
+            </p>
+            <ul
+              class="m-0 mb-4 max-h-48 list-none overflow-y-auto p-0 text-sm"
+              data-testid="ticked-names"
+            >
               @for (category of selectedCategories(); track category.id) {
                 <li class="py-0.5">{{ category.name }}</li>
               }
@@ -203,7 +210,7 @@
             <div class="flex flex-col gap-2">
               <button
                 type="button"
-                class="cursor-pointer rounded-lg border border-rose-300 px-3 py-2 text-sm font-medium text-rose-700 disabled:opacity-50 dark:text-rose-400"
+                class="cursor-pointer rounded-lg border border-rose-300 px-3 py-2 text-sm font-medium text-rose-700 disabled:opacity-50 max-lg:min-h-11 dark:text-rose-400"
                 [disabled]="saving()"
                 (click)="deleteSelected()"
               >
@@ -212,7 +219,7 @@
               </button>
               <button
                 type="button"
-                class="cursor-pointer rounded-lg px-3 py-2 text-sm font-medium underline"
+                class="cursor-pointer rounded-lg px-3 py-2 text-sm font-medium underline max-lg:min-h-11"
                 (click)="clearSelection()"
               >
                 Clear selection

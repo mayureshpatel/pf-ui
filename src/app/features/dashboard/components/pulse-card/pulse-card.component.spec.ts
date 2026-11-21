@@ -320,11 +320,13 @@ describe('PulseCardComponent', () => {
       [174, 1234567.89],
       [174, 53873.14],
       [230, 1234567.89],
-    ])('should keep a figure inside a %ipx-wide card: %f', (width: number, value: number) => {
+    ])('should keep a figure inside a %ipx-wide card: %f', async (width: number, value: number) => {
       // arrange
       if (!hasLayout()) {
         return;
       }
+      // the figure's width depends on the web font, which a busy full run may not have loaded yet
+      await document.fonts.ready;
 
       // act
       const past: number = overflow(width, value);

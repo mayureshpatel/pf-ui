@@ -18,7 +18,6 @@ import { CategoryStats } from '../../utils/category-helpers';
 export class CategoryOverviewComponent {
   readonly stats: InputSignal<CategoryStats> = input.required<CategoryStats>();
 
-  readonly add: OutputEmitterRef<void> = output<void>();
   readonly reviewUnused: OutputEmitterRef<void> = output<void>();
 
   plural(count: number, one: string, many: string): string {

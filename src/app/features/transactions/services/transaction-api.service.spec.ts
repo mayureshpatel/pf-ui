@@ -87,6 +87,22 @@ describe('TransactionApiService', () => {
     });
   });
 
+  describe('getTransactions by category id (PF-961)', () => {
+    it('should send the exact category id and not also search its name as text', () => {
+      // Arrange -- the name only labels the chip; two categories can share it
+      const filter: TransactionFilter = { categoryId: 9, categoryName: 'Cash Deposit' };
+
+      // Act
+      service.getTransactions(filter, { page: 0, size: 20 }).subscribe();
+
+      // Assert
+      const req = httpMock.expectOne((r) => r.url === apiUrl);
+      expect(req.request.params.get('categoryId')).toBe('9');
+      expect(req.request.params.get('categoryName')).toBeNull();
+      req.flush({ content: [], totalElements: 0 } as unknown as PageResponse<Transaction>);
+    });
+  });
+
   describe('getCountsByCategory', () => {
     it("should flatten the backend's { category, transactionCount } rows into categories carrying their own count", () => {
       // arrange

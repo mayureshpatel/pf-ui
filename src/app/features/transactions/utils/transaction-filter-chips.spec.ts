@@ -98,4 +98,16 @@ describe('transaction-filter-chips', () => {
         .label,
     ).toBe('Over $20');
   });
+
+  it('should clear the category id together with the category name chip (PF-961)', () => {
+    // act
+    const result = removeFilterChip(
+      { categoryId: 9, categoryName: 'Cash Deposit' },
+      'categoryName',
+    );
+
+    // assert & verify
+    expect(result.categoryId).toBeUndefined();
+    expect(result.categoryName).toBeUndefined();
+  });
 });

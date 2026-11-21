@@ -50,10 +50,22 @@
             [id]="'bulk-name-' + i"
             formControlName="name"
             class="w-full"
-            [attr.aria-invalid]="card.controls.name.touched && summaries()[i]?.nameMissing"
+            [attr.aria-invalid]="
+              card.controls.name.touched && summaries()[i]?.nameMissing ? 'true' : null
+            "
+            [attr.aria-describedby]="
+              card.controls.name.touched && summaries()[i]?.nameMissing
+                ? 'bulk-name-error-' + i
+                : null
+            "
           />
           @if (card.controls.name.touched && summaries()[i]?.nameMissing) {
-            <small data-testid="name-error" class="text-rose-700 dark:text-rose-400">
+            <small
+              [id]="'bulk-name-error-' + i"
+              role="alert"
+              data-testid="name-error"
+              class="text-rose-700 dark:text-rose-400"
+            >
               Parent name is required.
             </small>
           }
@@ -76,11 +88,17 @@
 
         <fieldset class="m-0 flex flex-col gap-2 border-0 p-0">
           <legend class="mb-1 text-sm font-medium">Icon</legend>
-          <div class="flex flex-wrap gap-1">
+          <div appRovingFocus class="flex flex-wrap gap-1">
             @for (icon of icons; track icon; let k = $index) {
               <button
                 type="button"
-                class="flex size-9 cursor-pointer items-center justify-center rounded-lg border border-surface-300 dark:border-surface-700"
+                class="flex size-9 cursor-pointer items-center justify-center rounded-lg border max-lg:size-11"
+                [class]="
+                  card.controls.icon.value === icon
+                    ? 'border-2 border-surface-900 dark:border-surface-0'
+                    : 'border-surface-300 dark:border-surface-700'
+                "
+                [attr.tabindex]="iconTabStop(card, k) ? 0 : -1"
                 [attr.data-testid]="'icon-' + i + '-' + k"
                 [attr.aria-label]="iconLabel(icon)"
                 [attr.aria-pressed]="card.controls.icon.value === icon"
@@ -96,11 +114,12 @@
 
         <fieldset class="m-0 flex flex-col gap-2 border-0 p-0">
           <legend class="mb-1 text-sm font-medium">Color</legend>
-          <div class="flex flex-wrap gap-2">
+          <div appRovingFocus class="flex flex-wrap gap-2">
             @for (color of colors; track color; let k = $index) {
               <button
                 type="button"
-                class="size-8 cursor-pointer rounded-full border-2"
+                class="inline-flex size-8 cursor-pointer items-center justify-center rounded-full border-2 max-lg:size-11"
+                [attr.tabindex]="colorTabStop(card, k) ? 0 : -1"
                 [attr.data-testid]="'color-' + i + '-' + k"
                 [attr.aria-label]="colorNames[k]"
                 [attr.aria-pressed]="card.controls.color.value === color"
@@ -108,10 +127,14 @@
                 [class]="
                   card.controls.color.value === color
                     ? 'border-surface-900 dark:border-surface-0'
-                    : 'border-transparent'
+                    : 'border-surface-500 dark:border-surface-400'
                 "
                 (click)="selectColor(card, color)"
-              ></button>
+              >
+                @if (card.controls.color.value === color) {
+                  <i class="pi pi-check text-xs text-white drop-shadow" aria-hidden="true"></i>
+                }
+              </button>
             }
           </div>
         </fieldset>
@@ -138,7 +161,7 @@
           <button
             type="button"
             data-testid="remove-group"
-            class="cursor-pointer self-end text-sm underline"
+            class="cursor-pointer self-end text-sm underline max-lg:min-h-11"
             (click)="removeGroup(i)"
           >
             Remove parent {{ i + 1 }}
@@ -150,7 +173,7 @@
     <button
       type="button"
       data-testid="add-group"
-      class="cursor-pointer rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium dark:border-surface-700"
+      class="cursor-pointer rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium max-lg:min-h-11 dark:border-surface-700"
       (click)="addGroup()"
     >
       Add another parent
@@ -158,6 +181,11 @@
 
     <div class="flex flex-col gap-1 text-sm" aria-live="polite">
       <p data-testid="bulk-summary" class="m-0 font-medium">{{ summaryText() }}</p>
+      @if (unnamedCount() > 0) {
+        <p data-testid="bulk-unnamed" class="m-0 text-muted-color">
+          Name {{ unnamedCount() === 1 ? 'the parent' : 'every parent' }} to turn on Create.
+        </p>
+      }
       @for (problem of problems(); track $index) {
         <p data-testid="bulk-problem" class="m-0 text-rose-700 dark:text-rose-400">
           {{ problem }}

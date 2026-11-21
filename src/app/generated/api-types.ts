@@ -2124,6 +2124,8 @@ export interface components {
             endDate?: string;
             /** Format: int64 */
             tagId?: number;
+            /** Format: int64 */
+            categoryId?: number;
         };
         PageMetadata: {
             /** Format: int64 */

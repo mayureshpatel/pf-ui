@@ -9,6 +9,8 @@ import {
   isFiltering,
   isTickable,
   isUnused,
+  isUnusedLeaf,
+  tickReason,
   parentOptions,
 } from './category-helpers';
 
@@ -114,14 +116,14 @@ describe('category-helpers', () => {
       expect(names(result)).toEqual([['Income', ['Paycheck']]]);
     });
 
-    it('should show only unused categories, keeping a used parent that has an unused child', () => {
+    it('should show only unused leaves, keeping a parent only as the container of an unused child', () => {
       // act
       const result = filterNodes(nodes(), { ...NO_FILTER, unusedOnly: true });
 
       // assert & verify
+      // Income is not unused: its only subcategory has transactions, and a parent is never unused itself
       expect(names(result)).toEqual([
         ['Food', ['Coffee']],
-        ['Income', []],
         ['Travel', []],
       ]);
     });
@@ -156,8 +158,46 @@ describe('category-helpers', () => {
         categories: 8,
         groups: 4,
         transactions: 435,
-        unused: 4,
+        unused: 2,
       });
+    });
+
+    it('should never count a parent with subcategories as unused (PF-961)', () => {
+      // assert & verify: Food has an unused own count but is a group; only Coffee and Travel are unused leaves
+      const all = nodes().flatMap((n) => [n.parent, ...n.children]);
+      expect(categoryStats(all).unused).toBe(2);
+      expect(isUnusedLeaf(nodes()[0].parent, true)).toBe(false);
+      expect(isUnusedLeaf(nodes()[3].parent, false)).toBe(true);
+      expect(isUnusedLeaf(nodes()[1].parent, false)).toBe(false);
+    });
+  });
+
+  describe('tickReason', () => {
+    it('should say why a checkbox is disabled, and nothing when it can be ticked', () => {
+      // arrange
+      const n = nodes();
+      const [food, housing, income, travel] = n;
+
+      // assert & verify
+      expect(tickReason(travel.parent, n, new Set())).toBeNull();
+      expect(tickReason(housing.parent, n, new Set())).toBe('it has transactions');
+      expect(tickReason(food.parent, n, new Set())).toBe('a subcategory has transactions');
+      expect(tickReason(income.parent, n, new Set())).toBe('a subcategory has transactions');
+      expect(tickReason(food.children[0], n, new Set())).toBeNull();
+    });
+
+    it('should ask for every subcategory to be ticked first when they are all unused', () => {
+      // arrange
+      const unusedGroup = buildNodes(
+        [cat(20, 'Empty group'), cat(21, 'A', cat(20, 'Empty group'))],
+        [],
+      );
+
+      // assert & verify
+      expect(tickReason(unusedGroup[0].parent, unusedGroup, new Set())).toBe(
+        'tick all its subcategories first',
+      );
+      expect(tickReason(unusedGroup[0].parent, unusedGroup, new Set([21]))).toBeNull();
     });
   });
 

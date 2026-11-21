@@ -11,6 +11,28 @@ describe('TransactionUrlStateService', () => {
     service = TestBed.inject(TransactionUrlStateService);
   });
 
+  describe('category id (PF-961)', () => {
+    it('should round-trip a category id beside its name', () => {
+      // Arrange
+      const state: TransactionState = {
+        filter: { categoryId: 9, categoryName: 'Cash Deposit' },
+        page: 0,
+        size: 20,
+        sort: 'date,desc',
+      };
+
+      // Act
+      const params: Params = service.buildQueryParams(state);
+
+      // Assert & verify
+      expect(params['categoryId']).toBe(9);
+      expect(service.hydrateFromParams(params).filter.categoryId).toBe(9);
+      expect(
+        service.hydrateFromParams({ categoryName: 'Cash Deposit' }).filter.categoryId,
+      ).toBeUndefined();
+    });
+  });
+
   describe('hydrateFromParams / buildQueryParams round-trip', () => {
     it('should round-trip a full filter covering all 10 TransactionFilter fields', () => {
       // Arrange
