@@ -188,8 +188,36 @@ describe('MerchantListComponent', () => {
     button('Clear search')?.click();
 
     // assert & verify
-    expect(text(fixture.nativeElement)).toContain('No merchants match your search');
+    expect(text(fixture.nativeElement)).toContain('No merchants match');
     expect(cleared).toBe(1);
+  });
+
+  // PF-963: the empty search names the term, is announced, and offers to add it
+  it('should echo the search term, announce the empty state and offer to add it', () => {
+    // arrange
+    const added: string[] = [];
+    component.addMerchant.subscribe((name: string) => added.push(name));
+    fixture.componentRef.setInput('term', 'zzqq');
+    render({ merchants: [], totalRecords: 0, searching: true });
+
+    // act
+    fixture.nativeElement.querySelector('[data-testid="add-from-search"]')?.click();
+
+    // assert & verify
+    const empty: HTMLElement = fixture.nativeElement.querySelector('[data-testid="no-match"]');
+    expect(empty.getAttribute('role')).toBe('status');
+    expect(text(empty)).toContain('No merchants match "zzqq"');
+    expect(added).toEqual(['zzqq']);
+  });
+
+  it('should announce the range text', () => {
+    // act
+    render({ merchants: [merchant(1, 'Amazon')], totalRecords: 1 });
+
+    // assert & verify
+    expect(fixture.nativeElement.querySelector('[data-testid="range"]')?.getAttribute('role')).toBe(
+      'status',
+    );
   });
 
   it('should hide the pager when there are no merchants', () => {

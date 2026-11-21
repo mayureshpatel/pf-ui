@@ -476,6 +476,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/merchants/{id}/description-links/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Link many descriptions to a merchant
+         * @description Creates or overwrites the links from up to 500 raw descriptions to a merchant owned by the authenticated user, in one transaction
+         */
+        post: operations["addDescriptionLinks"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/merchant-rules/match-preview": {
         parameters: {
             query?: never;
@@ -1887,6 +1907,9 @@ export interface components {
         };
         MerchantDescriptionLinkCreateRequest: {
             description: string;
+        };
+        MerchantDescriptionLinkBulkCreateRequest: {
+            descriptions: string[];
         };
         MerchantRuleCreateRequest: {
             /** Format: int64 */
@@ -3704,6 +3727,44 @@ export interface operations {
         responses: {
             /** @description Description link recorded */
             204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden -- the authenticated user does not own this merchant */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    addDescriptionLinks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MerchantDescriptionLinkBulkCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Description links recorded */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No descriptions, more than 500, or a blank or too-long description */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };

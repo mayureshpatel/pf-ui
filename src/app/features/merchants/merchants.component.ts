@@ -5,6 +5,7 @@ import {
   computed,
   DestroyRef,
   effect,
+  ElementRef,
   inject,
   Injector,
   OnInit,
@@ -54,11 +55,17 @@ import {
   MerchantFormValue,
 } from './components/merchant-edit-form/merchant-edit-form.component';
 import { DescriptionPickerComponent } from './components/description-picker/description-picker.component';
+import { BULK_LINK_LIMIT, chunk } from './utils/merchant-helpers';
+
+/** Whether the selected merchant's linked descriptions are loading, loaded or failed to load. */
+export type LinksState = 'loading' | 'loaded' | 'failed';
 
 /** What the docked panel is showing. */
 export type MerchantPanelMode = 'overview' | 'merchant' | 'add' | 'picker';
 
 const PAGE_SIZE = 20;
+/** The picker works through a long backlog, so it pages in bigger steps than the list. */
+const PICKER_PAGE_SIZE = 50;
 const DEBOUNCE_MS = 300;
 
 /**
@@ -106,6 +113,10 @@ export class MerchantsComponent implements OnInit {
   readonly dataSearch: WritableSignal<string> = signal('');
   readonly loading: WritableSignal<boolean> = signal(false);
   readonly loadError: WritableSignal<boolean> = signal(false);
+  /** The name the add form opens with, when it was opened from a search that found nothing. */
+  readonly addPrefill: WritableSignal<string> = signal('');
+  /** Where the selected merchant's linked descriptions are: loading, loaded or failed to load. */
+  readonly linksState: WritableSignal<LinksState> = signal<LinksState>('loading');
   /** True once a load has succeeded; later reloads dim the list instead of replacing the page. */
   readonly loadedOnce: WritableSignal<boolean> = signal(false);
   /** A save, add or delete is in flight. */
@@ -131,6 +142,7 @@ export class MerchantsComponent implements OnInit {
   readonly pickerSearch: WritableSignal<string> = signal('');
   readonly pickerUnlinkedOnly: WritableSignal<boolean> = signal(true);
   readonly pickerLoading: WritableSignal<boolean> = signal(false);
+  readonly pickerLoadFailed: WritableSignal<boolean> = signal(false);
   readonly pickerFailed: WritableSignal<string[]> = signal([]);
   readonly linking: WritableSignal<boolean> = signal(false);
   /** Merchants offered by the "Link to" choice when the picker opens from the overview. */
@@ -154,7 +166,7 @@ export class MerchantsComponent implements OnInit {
   readonly panelTitle: Signal<string> = computed((): string => {
     switch (this.mode()) {
       case 'add':
-        return 'Add merchant';
+        return 'New merchant';
       case 'merchant':
         return this.selected()?.name ?? 'Merchant';
       case 'picker':
@@ -166,6 +178,8 @@ export class MerchantsComponent implements OnInit {
 
   private readonly panel = viewChild(SidePanelComponent);
   private readonly editForm = viewChild<MerchantEditFormComponent>('editForm');
+  private readonly picker = viewChild(DescriptionPickerComponent);
+  private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
 
   /** The element that had focus when the panel left the overview, to hand focus back to. */
   private focusReturn: HTMLElement | null = null;
@@ -238,7 +252,6 @@ export class MerchantsComponent implements OnInit {
         },
         error: (err: unknown): void => {
           console.error('Failed to load merchants:', err);
-          this.toast.error('Failed to load merchants');
           this.merchants.set([]);
           this.totalRecords.set(0);
           this.dataSearch.set(term);
@@ -296,14 +309,19 @@ export class MerchantsComponent implements OnInit {
     this.confirmDiscardIfDirty((): void => {
       this.selected.set(merchant);
       this.links.set([]);
+      this.linksState.set('loading');
       this.go('merchant');
       this.loadLinks(merchant.id);
     });
   }
 
-  /** Opens the add form. */
-  startAdd(): void {
-    if (this.mode() === 'add') return;
+  /** Opens the add form, optionally with the name already typed (from a search that found nothing). */
+  startAdd(prefill = ''): void {
+    this.addPrefill.set(prefill);
+    if (this.mode() === 'add') {
+      if (prefill !== '') this.editForm()?.form.controls.name.setValue(prefill);
+      return;
+    }
     this.confirmDiscardIfDirty((): void => {
       this.selected.set(null);
       this.go('add');
@@ -502,14 +520,20 @@ export class MerchantsComponent implements OnInit {
     this.loadPickerRows(true);
   }
 
+  /** Retries whatever picker load failed: the first page, or the page "Show more" asked for. */
+  retryPicker(): void {
+    this.loadPickerRows(this.pickerRows().length === 0);
+  }
+
   onPickerShowMore(): void {
     if (this.pickerLoading() || this.pickerRows().length >= this.pickerTotal()) return;
     this.loadPickerRows(false);
   }
 
   /**
-   * Links the ticked descriptions to the target one at a time. One failure never stops the rest;
-   * failed ones stay ticked in the picker and the toast names the counts and the first message.
+   * Links the ticked descriptions to the target in bulk requests of at most 500 (one request for
+   * almost every selection). A failed request leaves its descriptions ticked in the picker and the
+   * toast names the counts and the first message.
    */
   onLink(descriptions: string[]): void {
     const target: Merchant | null = this.pickerTarget();
@@ -517,32 +541,34 @@ export class MerchantsComponent implements OnInit {
     this.linking.set(true);
     this.pickerFailed.set([]);
 
-    const linkOne = (
-      description: string,
-    ): Observable<{ description: string; ok: boolean; message: string }> =>
-      this.merchantApi.addDescriptionLink(target.id, description).pipe(
-        map(() => ({ description, ok: true, message: '' })),
+    const linkGroup = (
+      items: string[],
+    ): Observable<{ items: string[]; ok: boolean; message: string }> =>
+      this.merchantApi.addDescriptionLinks(target.id, items).pipe(
+        map(() => ({ items, ok: true, message: '' })),
         catchError((error: HttpErrorResponse) =>
           of({
-            description,
+            items,
             ok: false,
-            message: error.error?.detail || 'Failed to link description',
+            message: error.error?.detail || 'Failed to link descriptions',
           }),
         ),
       );
 
-    concat(...descriptions.map(linkOne))
+    concat(...chunk(descriptions, BULK_LINK_LIMIT).map(linkGroup))
       .pipe(
         toArray(),
         takeUntilDestroyed(this.destroyRef),
         finalize((): void => this.linking.set(false)),
       )
       .subscribe((results): void => {
-        const linked: number = results.filter((r): boolean => r.ok).length;
+        const linked: number = results
+          .filter((r): boolean => r.ok)
+          .reduce((total: number, r): number => total + r.items.length, 0);
         const failed = results.filter((r): boolean => !r.ok);
+        const failedDescriptions: string[] = failed.flatMap((r): string[] => r.items);
         this.loadMerchants();
         this.loadStats();
-        // the batch can finish after the user has left this picker (it runs one request at a time)
         const stillHere: boolean =
           this.mode() === 'picker' && this.pickerTarget()?.id === target.id;
         if (failed.length === 0) {
@@ -556,9 +582,11 @@ export class MerchantsComponent implements OnInit {
           }
           return;
         }
-        this.toast.error(`Linked ${linked}, ${failed.length} failed: ${failed[0].message}`);
+        this.toast.error(
+          `Linked ${linked}, ${failedDescriptions.length} failed: ${failed[0].message}`,
+        );
         if (stillHere) {
-          this.pickerFailed.set(failed.map((r): string => r.description));
+          this.pickerFailed.set(failedDescriptions);
           this.loadPickerRows(true);
         }
         if (this.selected()?.id === target.id) this.loadLinks(target.id);
@@ -571,6 +599,7 @@ export class MerchantsComponent implements OnInit {
     this.pickerSearch.set('');
     this.pickerFailed.set([]);
     this.pickerRows.set([]);
+    this.pickerLoadFailed.set(false);
     this.pickerTotal.set(0);
     this.pickerPage.set(0);
     this.targetOptions.set(this.merchants());
@@ -583,12 +612,13 @@ export class MerchantsComponent implements OnInit {
     const run: number = ++this.pickerRun;
     const page: number = reset ? 0 : this.pickerPage() + 1;
     this.pickerLoading.set(true);
+    this.pickerLoadFailed.set(false);
     this.pickerSubscription = this.transactionApi
       .getDescriptions({
         search: this.pickerSearch(),
         unlinkedOnly: this.pickerUnlinkedOnly(),
         page,
-        size: PAGE_SIZE,
+        size: PICKER_PAGE_SIZE,
       })
       .pipe(
         takeUntilDestroyed(this.destroyRef),
@@ -604,9 +634,23 @@ export class MerchantsComponent implements OnInit {
         },
         error: (err: unknown): void => {
           console.error('Failed to load descriptions:', err);
-          this.toast.error('Failed to load descriptions');
+          if (run === this.pickerRun) this.pickerLoadFailed.set(true);
         },
       });
+  }
+
+  /** Retries loading the selected merchant's linked descriptions after a failure. */
+  retryLinks(): void {
+    const merchant: Merchant | null = this.selected();
+    if (!merchant) return;
+    this.linksState.set('loading');
+    this.loadLinks(merchant.id);
+  }
+
+  /** Reloads the list after a failure and keeps focus in the search box, since Retry leaves the page. */
+  retryList(): void {
+    this.loadMerchants();
+    this.searchInput()?.nativeElement.focus();
   }
 
   /** Loads a merchant's linked descriptions; a merchant that is gone sends the panel to the overview. */
@@ -616,7 +660,10 @@ export class MerchantsComponent implements OnInit {
       .getDescriptionLinks(merchantId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (links: MerchantDescriptionLink[]): void => this.links.set(links),
+        next: (links: MerchantDescriptionLink[]): void => {
+          this.links.set(links);
+          this.linksState.set('loaded');
+        },
         error: (error: HttpErrorResponse): void => {
           if (error.status === 404 && this.selected()?.id === merchantId) {
             this.closePanel();
@@ -624,7 +671,7 @@ export class MerchantsComponent implements OnInit {
             this.loadMerchants();
             return;
           }
-          this.toast.error('Failed to load linked descriptions');
+          this.linksState.set('failed');
         },
       });
   }
@@ -681,14 +728,19 @@ export class MerchantsComponent implements OnInit {
   /** Runs an action that would replace a form, after asking when that form has unsaved changes. */
   private confirmDiscardIfDirty(proceed: () => void): void {
     const mode: MerchantPanelMode = this.mode();
-    const dirty: boolean = (mode === 'merchant' || mode === 'add') && !!this.editForm()?.form.dirty;
+    const tickedCount: number = mode === 'picker' ? (this.picker()?.tickedCount() ?? 0) : 0;
+    const dirty: boolean =
+      ((mode === 'merchant' || mode === 'add') && !!this.editForm()?.form.dirty) || tickedCount > 0;
     if (!dirty) {
       proceed();
       return;
     }
+    const ticks: boolean = tickedCount > 0;
     this.confirmationService.confirm({
-      header: 'Discard changes?',
-      message: 'You have unsaved changes. Discard them?',
+      header: ticks ? 'Discard selection?' : 'Discard changes?',
+      message: ticks
+        ? `You have ${tickedCount} ${tickedCount === 1 ? 'description' : 'descriptions'} ticked that are not linked yet. Discard the selection?`
+        : 'You have unsaved changes. Discard them?',
       acceptLabel: 'Discard',
       rejectLabel: 'Keep editing',
       acceptButtonStyleClass: 'p-button-danger',

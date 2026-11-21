@@ -4,11 +4,13 @@
       <h1 class="heading-page">Merchants</h1>
     </div>
     <div toolbarFilters>
-      <p-button label="Add merchant" icon="pi pi-plus" (onClick)="startAdd()" />
+      @if (!onlyAddMode()) {
+        <p-button label="Add merchant" icon="pi pi-plus" (onClick)="startAdd()" />
+      }
     </div>
   </app-screen-toolbar>
 
-  @if (loadError() && merchants().length === 0) {
+  @if (loadError() && !loadedOnce()) {
     <app-page-error-state message="Failed to load merchants." (retry)="loadMerchants()" />
   } @else if (loading() && !loadedOnce()) {
     <div class="flex flex-col gap-4" aria-busy="true" role="status">
@@ -19,7 +21,7 @@
   } @else {
     <div class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_26rem]">
       <div class="flex min-w-0 flex-col gap-4">
-        @if (totalRecords() === 0 && !dataSearching()) {
+        @if (totalRecords() === 0 && !dataSearching() && !loadError()) {
           <div
             class="rounded-xl border border-surface-200 p-10 text-center dark:border-surface-800"
           >
@@ -30,6 +32,7 @@
           </div>
         } @else {
           <input
+            #searchInput
             type="search"
             class="w-full rounded-lg border border-surface-300 bg-surface-0 px-3 py-2 text-sm max-lg:min-h-11 dark:border-surface-700 dark:bg-surface-900"
             aria-label="Search merchants"
@@ -37,28 +40,50 @@
             [value]="searchTerm()"
             (input)="onSearchInput($any($event.target).value)"
           />
-          <app-merchant-list
-            [merchants]="merchants()"
-            [selectedId]="selected()?.id ?? null"
-            [loading]="loading()"
-            [totalRecords]="totalRecords()"
-            [page]="page()"
-            [pageSize]="pageSize"
-            [searching]="dataSearching()"
-            (openMerchant)="openMerchant($event)"
-            (pageChange)="setPage($event)"
-            (clearSearch)="clearSearch()"
-          />
+          @if (loadError()) {
+            <div
+              role="alert"
+              data-testid="list-error"
+              class="flex flex-col items-center gap-3 rounded-xl border border-surface-200 bg-surface-0 p-8 text-center dark:border-surface-800 dark:bg-surface-900"
+            >
+              <p class="m-0 font-medium">Couldn't load merchants.</p>
+              <button
+                type="button"
+                data-testid="list-retry"
+                class="cursor-pointer rounded-lg border border-surface-300 px-3 py-1.5 text-sm max-lg:min-h-11 dark:border-surface-700"
+                (click)="retryList()"
+              >
+                Retry
+              </button>
+            </div>
+          } @else {
+            <app-merchant-list
+              [merchants]="merchants()"
+              [selectedId]="selected()?.id ?? null"
+              [loading]="loading()"
+              [totalRecords]="totalRecords()"
+              [page]="page()"
+              [pageSize]="pageSize"
+              [searching]="dataSearching()"
+              [term]="dataSearch()"
+              (openMerchant)="openMerchant($event)"
+              (pageChange)="setPage($event)"
+              (clearSearch)="clearSearch()"
+              (addMerchant)="startAdd($event)"
+            />
+          }
         }
       </div>
 
       <app-side-panel
-        class="order-first block lg:order-none"
+        class="order-first block lg:sticky lg:top-4 lg:order-none lg:self-start"
         [title]="panelTitle()"
         [saving]="saving()"
         [showClose]="mode() !== 'overview' && !onlyAddMode()"
         [sheet]="mode() !== 'overview' && !onlyAddMode()"
+        [capHeight]="true"
         [moveFocus]="false"
+        [submitOnEnter]="true"
         [showFooter]="mode() === 'merchant' || mode() === 'add'"
         [saveLabel]="mode() === 'add' ? 'Add merchant' : 'Save changes'"
         [showDelete]="false"
@@ -82,6 +107,8 @@
                 #editForm
                 [merchant]="merchant"
                 [links]="links()"
+                [linksState]="linksState()"
+                (retryLinks)="retryLinks()"
                 (save)="saveMerchant($event)"
                 (removeLink)="removeLink($event)"
                 (openPicker)="openPicker(merchant, false)"
@@ -102,7 +129,12 @@
                 Back
               </button>
             }
-            <app-merchant-edit-form #editForm [merchant]="null" (save)="saveMerchant($event)" />
+            <app-merchant-edit-form
+              #editForm
+              [merchant]="null"
+              [prefillName]="addPrefill()"
+              (save)="saveMerchant($event)"
+            />
           }
           @case ('picker') {
             @if (pickerTarget(); as target) {
@@ -115,11 +147,15 @@
                 [linking]="linking()"
                 [failed]="pickerFailed()"
                 [initialUnlinkedOnly]="pickerUnlinkedOnly()"
+                [unlinkedLeft]="unlinkedCount()"
+                [loadFailed]="pickerLoadFailed()"
+                [backToTarget]="selected()?.id === target.id"
                 (searchChange)="onPickerSearch($event)"
                 (unlinkedOnlyChange)="onPickerToggle($event)"
                 (showMore)="onPickerShowMore()"
                 (link)="onLink($event)"
                 (back)="back()"
+                (retryLoad)="retryPicker()"
               />
             } @else {
               <div class="flex flex-col gap-1">

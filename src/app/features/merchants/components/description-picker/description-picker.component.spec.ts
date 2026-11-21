@@ -29,6 +29,8 @@ describe('DescriptionPickerComponent', () => {
       targetId: number | null;
       loading: boolean;
       unlinkedOnly: boolean;
+      loadFailed: boolean;
+      backToTarget: boolean;
     }> = {},
   ): void {
     fixture.componentRef.setInput('targetName', 'Chick-fil-A');
@@ -39,6 +41,8 @@ describe('DescriptionPickerComponent', () => {
     fixture.componentRef.setInput('linking', over.linking ?? false);
     fixture.componentRef.setInput('failed', over.failed ?? []);
     fixture.componentRef.setInput('initialUnlinkedOnly', over.unlinkedOnly ?? false);
+    fixture.componentRef.setInput('loadFailed', over.loadFailed ?? false);
+    fixture.componentRef.setInput('backToTarget', over.backToTarget ?? true);
     fixture.detectChanges();
   }
   const all = <T extends HTMLElement>(s: string): T[] =>
@@ -237,5 +241,100 @@ describe('DescriptionPickerComponent', () => {
 
     // assert & verify
     expect(fixture.nativeElement.querySelector('[data-testid="picker-loading"]')).toBeNull();
+  });
+
+  // PF-963: select all, progress and whole-row targets
+  it('should tick every shown description that can be linked, then clear them', () => {
+    // arrange
+    render();
+
+    // act
+    button('Select all 3 shown')?.click();
+    fixture.detectChanges();
+
+    // assert & verify
+    expect(component.tickedCount()).toBe(3);
+    expect(button('Clear selection')).toBeTruthy();
+
+    // act
+    button('Clear selection')?.click();
+    fixture.detectChanges();
+
+    // assert & verify
+    expect(component.tickedCount()).toBe(0);
+  });
+
+  it('should show how many are shown and how many are still unlinked', () => {
+    // arrange
+    fixture.componentRef.setInput('unlinkedLeft', 661);
+
+    // act
+    render({ totalRecords: 40 });
+
+    // assert & verify
+    const progress = fixture.nativeElement.querySelector('[data-testid="picker-progress"]');
+    expect(progress.getAttribute('role')).toBe('status');
+    expect(text(progress)).toBe('4 of 40 shown · 661 not linked yet');
+  });
+
+  it('should make the whole row the click target for its checkbox', () => {
+    // arrange
+    render();
+
+    // act
+    all<HTMLElement>('[data-testid="description-row"] label')[0].click();
+    fixture.detectChanges();
+
+    // assert & verify
+    expect(component.ticked().has('CHICK-FIL-A #01234')).toBe(true);
+  });
+
+  it('should say a load failed, with Retry, instead of claiming every description is linked', () => {
+    // arrange
+    const retry = vi.fn();
+    component.retryLoad.subscribe(retry);
+
+    // act
+    render({ rows: [], unlinkedOnly: true, loadFailed: true });
+    const failed = fixture.nativeElement.querySelector('[data-testid="picker-failed"]');
+    fixture.nativeElement.querySelector('[data-testid="picker-retry"]').click();
+
+    // assert & verify
+    expect(failed.getAttribute('role')).toBe('alert');
+    expect(text(fixture.nativeElement)).not.toContain('Every description is linked');
+    expect(retry).toHaveBeenCalledTimes(1);
+  });
+
+  it('should show a failed Show more under the rows it kept', () => {
+    // act
+    render({ totalRecords: 40, loadFailed: true });
+
+    // assert & verify
+    expect(all('[data-testid="description-row"]').length).toBe(rows.length);
+    expect(fixture.nativeElement.querySelector('[data-testid="picker-failed"]')).not.toBeNull();
+  });
+
+  it('should keep Show more focusable while loading and ignore its clicks', () => {
+    // arrange
+    const more = vi.fn();
+    component.showMore.subscribe(more);
+    render({ totalRecords: 40, loading: true });
+
+    // act
+    button('Show more')?.click();
+
+    // assert & verify
+    expect(button('Show more')?.disabled).toBe(false);
+    expect(button('Show more')?.getAttribute('aria-disabled')).toBe('true');
+    expect(more).not.toHaveBeenCalled();
+  });
+
+  it('should label Back as the overview when no merchant is open', () => {
+    // act
+    render({ backToTarget: false });
+
+    // assert & verify
+    expect(button('Back to overview')).toBeDefined();
+    expect(button('Back to Chick-fil-A')).toBeUndefined();
   });
 });

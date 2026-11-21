@@ -31,11 +31,15 @@ export class MerchantListComponent {
   readonly pageSize: InputSignal<number> = input.required<number>();
   /** Whether a search is active, which changes what an empty list says. */
   readonly searching: InputSignal<boolean> = input.required<boolean>();
+  /** The search the empty list was loaded for, echoed back so the user sees what found nothing. */
+  readonly term: InputSignal<string> = input<string>('');
 
   readonly openMerchant: OutputEmitterRef<Merchant> = output<Merchant>();
   /** Emits the zero-based page to show. */
   readonly pageChange: OutputEmitterRef<number> = output<number>();
   readonly clearSearch: OutputEmitterRef<void> = output<void>();
+  /** Emits the searched name so the host can open the add form with it filled in. */
+  readonly addMerchant: OutputEmitterRef<string> = output<string>();
 
   readonly location: (merchant: Merchant) => string = locationLabel;
 
@@ -57,9 +61,5 @@ export class MerchantListComponent {
 
   links(merchant: Merchant): string {
     return linksLabel(merchant.linkCount ?? 0);
-  }
-
-  hasLinks(merchant: Merchant): boolean {
-    return (merchant.linkCount ?? 0) > 0;
   }
 }

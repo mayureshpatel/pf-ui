@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -25,6 +26,7 @@ import { isMovingLink } from '../../utils/merchant-helpers';
 @Component({
   selector: 'app-description-picker',
   standalone: true,
+  imports: [NgTemplateOutlet],
   templateUrl: './description-picker.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -38,6 +40,12 @@ export class DescriptionPickerComponent {
   /** Descriptions whose link just failed: they stay ticked and every other tick is cleared. */
   readonly failed: InputSignal<string[]> = input<string[]>([]);
   readonly initialUnlinkedOnly: InputSignal<boolean> = input<boolean>(false);
+  /** How many descriptions in all are still not linked to any merchant, when known. */
+  readonly unlinkedLeft: InputSignal<number | null> = input<number | null>(null);
+  /** True when the last load of rows failed, so an empty list is not read as "nothing left". */
+  readonly loadFailed: InputSignal<boolean> = input<boolean>(false);
+  /** False when Back lands on the overview (no merchant was open), so the label says so. */
+  readonly backToTarget: InputSignal<boolean> = input<boolean>(true);
 
   readonly searchChange: OutputEmitterRef<string> = output<string>();
   readonly unlinkedOnlyChange: OutputEmitterRef<boolean> = output<boolean>();
@@ -45,6 +53,7 @@ export class DescriptionPickerComponent {
   readonly link: OutputEmitterRef<string[]> = output<string[]>();
   /** Emits when the user goes back to the merchant (named so it is not a DOM event like cancel). */
   readonly back: OutputEmitterRef<void> = output<void>();
+  readonly retryLoad: OutputEmitterRef<void> = output<void>();
 
   readonly unlinkedOnly: WritableSignal<boolean> = linkedSignal((): boolean =>
     this.initialUnlinkedOnly(),
@@ -61,6 +70,31 @@ export class DescriptionPickerComponent {
     const count: number = this.tickedCount();
     if (count === 0) return 'Link descriptions';
     return count === 1 ? 'Link 1 description' : `Link ${count} descriptions`;
+  });
+  /** The rows that can be ticked: one already linked to this merchant has nothing left to do. */
+  readonly selectableRows: Signal<TransactionDescription[]> = computed(
+    (): TransactionDescription[] =>
+      this.rows().filter((row: TransactionDescription): boolean => !this.alreadyLinkedHere(row)),
+  );
+  readonly allSelected: Signal<boolean> = computed(
+    (): boolean =>
+      this.selectableRows().length > 0 &&
+      this.selectableRows().every((row: TransactionDescription): boolean =>
+        this.ticked().has(row.description),
+      ),
+  );
+  readonly selectAllLabel: Signal<string> = computed((): string => {
+    const count: number = this.selectableRows().length;
+    if (this.allSelected()) return 'Clear selection';
+    return count === 1 ? 'Select the 1 shown' : `Select all ${count} shown`;
+  });
+  /** Where the user is in the backlog: how many are shown, and how many are still unlinked. */
+  readonly progressText: Signal<string> = computed((): string => {
+    const parts: string[] = [];
+    if (this.rows().length > 0) parts.push(`${this.rows().length} of ${this.totalRecords()} shown`);
+    const left: number | null = this.unlinkedLeft();
+    if (left !== null) parts.push(`${left} not linked yet`);
+    return parts.join(' · ');
   });
   readonly emptyMessage: Signal<string> = computed((): string =>
     this.unlinkedOnly() && this.search().trim() === ''
@@ -92,6 +126,21 @@ export class DescriptionPickerComponent {
     const next: Set<string> = new Set<string>(this.ticked());
     if (next.has(description)) next.delete(description);
     else next.add(description);
+    this.ticked.set(next);
+  }
+
+  /** Ticks every shown description that can be linked, or clears them all when they already are. */
+  toggleSelectAll(): void {
+    const next: Set<string> = new Set<string>(this.ticked());
+    if (this.allSelected()) {
+      this.selectableRows().forEach((row: TransactionDescription): void => {
+        next.delete(row.description);
+      });
+    } else {
+      this.selectableRows().forEach((row: TransactionDescription): void => {
+        next.add(row.description);
+      });
+    }
     this.ticked.set(next);
   }
 
