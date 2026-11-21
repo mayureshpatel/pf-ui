@@ -3,6 +3,8 @@ import {
   Component,
   computed,
   effect,
+  ElementRef,
+  inject,
   input,
   InputSignal,
   OnInit,
@@ -22,6 +24,7 @@ import {
 } from '@angular/forms';
 import { InputTextModule } from 'primeng/inputtext';
 import { Merchant, MerchantDescriptionLink } from '@models/merchant.model';
+import { focusFirstInvalid } from '@shared/utils/focus-first-invalid';
 
 /** What the form hands the host to save; the host adds the user id. `id` is set when editing. */
 export interface MerchantFormValue {
@@ -57,10 +60,17 @@ export class MerchantEditFormComponent implements OnInit {
   /** The merchant being edited (null when adding one). */
   readonly merchant: InputSignal<Merchant | null> = input<Merchant | null>(null);
   readonly links: InputSignal<MerchantDescriptionLink[]> = input<MerchantDescriptionLink[]>([]);
+  /** The name an add form opens with (from a search that found nothing). */
+  readonly prefillName: InputSignal<string> = input<string>('');
+  /** Whether the linked descriptions are still loading or failed to load, so an empty list is only shown when it is real. */
+  readonly linksState: InputSignal<'loading' | 'loaded' | 'failed'> = input<
+    'loading' | 'loaded' | 'failed'
+  >('loaded');
 
   readonly save: OutputEmitterRef<MerchantFormValue> = output<MerchantFormValue>();
   readonly removeLink: OutputEmitterRef<MerchantDescriptionLink> =
     output<MerchantDescriptionLink>();
+  readonly retryLinks: OutputEmitterRef<void> = output<void>();
   readonly openPicker: OutputEmitterRef<void> = output<void>();
   readonly viewTransactions: OutputEmitterRef<void> = output<void>();
   readonly deleteMerchant: OutputEmitterRef<void> = output<void>();
@@ -77,6 +87,8 @@ export class MerchantEditFormComponent implements OnInit {
   });
 
   readonly isEditMode: Signal<boolean> = computed((): boolean => this.merchant() !== null);
+
+  private readonly host: ElementRef<HTMLElement> = inject(ElementRef<HTMLElement>);
 
   /** The merchant id the form was last filled for; it only refills when this changes. */
   private filledFor: number | 'new' | null = null;
@@ -109,7 +121,7 @@ export class MerchantEditFormComponent implements OnInit {
     this.filledFor = key;
     const merchant: Merchant | null = this.merchant();
     this.form.reset({
-      name: merchant?.name ?? '',
+      name: merchant?.name ?? this.prefillName(),
       city: merchant?.city ?? '',
       state: merchant?.state ?? '',
       postalCode: merchant?.postalCode ?? '',
@@ -121,6 +133,7 @@ export class MerchantEditFormComponent implements OnInit {
   submit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      focusFirstInvalid(this.host.nativeElement);
       return;
     }
     const raw = this.form.getRawValue();

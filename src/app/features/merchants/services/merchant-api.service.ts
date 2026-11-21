@@ -112,6 +112,20 @@ export class MerchantApiService {
   }
 
   /**
+   * Links many raw descriptions to a merchant in one request (all or nothing). A description
+   * already linked to another merchant is moved. The API accepts at most 500 at a time.
+   * @param merchantId the merchant id to link the descriptions to.
+   * @param descriptions the raw descriptions to link (1 to 500).
+   */
+  addDescriptionLinks(merchantId: number, descriptions: string[]): Observable<void> {
+    return this.http.post<void>(
+      `${this.apiUrl}/${merchantId}/description-links/bulk`,
+      { descriptions },
+      { context: SKIP_TOAST_CONTEXT },
+    );
+  }
+
+  /**
    * Removes a single description link. Never touches transactions already assigned that
    * merchant -- only affects future matching.
    * @param merchantId the merchant id the link belongs to.

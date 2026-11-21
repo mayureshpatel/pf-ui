@@ -48,6 +48,8 @@ export class SidePanelComponent {
 
   /** When false the panel is a normal block on narrow screens instead of a full-screen sheet. */
   readonly sheet: InputSignal<boolean> = input<boolean>(true);
+  /** On wide screens, caps the panel at the viewport height so a long body scrolls inside it. */
+  readonly capHeight: InputSignal<boolean> = input<boolean>(false);
 
   /** When false the panel never takes focus on creation or gives it back on destroy. */
   readonly moveFocus: InputSignal<boolean> = input<boolean>(true);

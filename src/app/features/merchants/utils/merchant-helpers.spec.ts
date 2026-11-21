@@ -1,5 +1,7 @@
 import { Merchant, TransactionDescription } from '@models/merchant.model';
 import {
+  BULK_LINK_LIMIT,
+  chunk,
   isMovingLink,
   linksLabel,
   locationLabel,
@@ -84,6 +86,25 @@ describe('merchant helpers', () => {
 
     it('should be true for a linked description when no target is chosen yet', () => {
       expect(isMovingLink(row(7), null)).toBe(true);
+    });
+  });
+
+  describe('chunk', () => {
+    it('should split a list into groups of at most the size, in order', () => {
+      expect(chunk([1, 2, 3, 4, 5], 2)).toEqual([[1, 2], [3, 4], [5]]);
+    });
+
+    it('should give no groups for an empty list', () => {
+      expect(chunk([], 500)).toEqual([]);
+    });
+
+    it('should keep a list at the limit in one group', () => {
+      expect(
+        chunk(
+          Array.from({ length: BULK_LINK_LIMIT }, (_, i) => i),
+          BULK_LINK_LIMIT,
+        ),
+      ).toHaveLength(1);
     });
   });
 });

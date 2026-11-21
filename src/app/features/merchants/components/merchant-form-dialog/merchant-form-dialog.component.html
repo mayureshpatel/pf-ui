@@ -11,7 +11,7 @@
   [breakpoints]="{ '960px': '95vw' }"
   class="p-fluid"
 >
-  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-6 py-4">
+  <form #dialogForm [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-6 py-4">
     @if (errorMessage()) {
       <p-message severity="error" variant="simple" class="w-full animate-fade-in">
         {{ errorMessage() }}
@@ -26,9 +26,19 @@
         formControlName="name"
         placeholder="e.g. Whole Foods"
         class="w-full"
+        [attr.aria-invalid]="
+          form.controls.name.invalid && form.controls.name.touched ? 'true' : null
+        "
+        [attr.aria-describedby]="
+          form.controls.name.invalid && form.controls.name.touched
+            ? 'merchant-dialog-name-error'
+            : null
+        "
       />
       @if (form.controls.name.invalid && form.controls.name.touched) {
         <small
+          id="merchant-dialog-name-error"
+          role="alert"
           class="text-rose-700 dark:text-rose-400 font-medium flex items-center gap-1 animate-fade-in"
         >
           <i class="pi pi-times-circle text-xs"></i> A name is required
@@ -97,7 +107,7 @@
         icon="pi pi-check"
         (onClick)="onSubmit()"
         [loading]="saving()"
-        [disabled]="form.invalid || saving()"
+        [disabled]="saving()"
         styleClass="min-h-11"
       />
     </div>

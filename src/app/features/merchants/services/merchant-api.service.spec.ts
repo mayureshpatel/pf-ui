@@ -34,6 +34,7 @@ describe('MerchantApiService', () => {
     ['deleteMerchant', () => service.deleteMerchant(1).subscribe()],
     ['getDescriptionLinks', () => service.getDescriptionLinks(1).subscribe()],
     ['addDescriptionLink', () => service.addDescriptionLink(1, 'AMZN').subscribe()],
+    ['addDescriptionLinks', () => service.addDescriptionLinks(1, ['AMZN', 'COSTCO']).subscribe()],
     ['deleteDescriptionLink', () => service.deleteDescriptionLink(1, 10).subscribe()],
   ];
 

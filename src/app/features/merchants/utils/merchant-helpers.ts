@@ -59,3 +59,20 @@ export function unlinkedLabel(count: number): string {
 export function isMovingLink(row: TransactionDescription, targetId: number | null): boolean {
   return row.merchantId !== null && row.merchantId !== targetId;
 }
+
+/** The most descriptions one bulk-link request may carry (the API's limit). */
+export const BULK_LINK_LIMIT = 500;
+
+/**
+ * Splits a list into consecutive groups of at most `size`.
+ * @param items the list to split.
+ * @param size the largest group size.
+ * @returns the groups, in order; an empty list gives no groups.
+ */
+export function chunk<T>(items: readonly T[], size: number): T[][] {
+  const groups: T[][] = [];
+  for (let start = 0; start < items.length; start += size) {
+    groups.push(items.slice(start, start + size));
+  }
+  return groups;
+}

@@ -3,6 +3,7 @@ import {
   Component,
   computed,
   effect,
+  ElementRef,
   inject,
   input,
   InputSignal,
@@ -12,6 +13,7 @@ import {
   OutputEmitterRef,
   signal,
   Signal,
+  viewChild,
   WritableSignal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -28,6 +30,7 @@ import { MerchantApiService } from '../../services/merchant-api.service';
 import { ToastService } from '@core/services/toast.service';
 import { AuthService } from '@core/auth/auth.service';
 import { RestoreFocusOnHideDirective } from '@shared/directives/restore-focus-on-hide.directive';
+import { focusFirstInvalid } from '@shared/utils/focus-first-invalid';
 
 /**
  * Dialog for creating a merchant or editing an existing one's name and location. A `merchant`
@@ -50,6 +53,9 @@ import { RestoreFocusOnHideDirective } from '@shared/directives/restore-focus-on
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MerchantFormDialogComponent {
+  /** The dialog's form, searched for the first invalid control after a failed submit. */
+  private readonly dialogForm: Signal<ElementRef<HTMLElement> | undefined> =
+    viewChild<ElementRef<HTMLElement>>('dialogForm');
   private readonly merchantApi: MerchantApiService = inject(MerchantApiService);
   private readonly toast: ToastService = inject(ToastService);
   private readonly authService: AuthService = inject(AuthService);
@@ -127,7 +133,12 @@ export class MerchantFormDialogComponent {
   onSubmit(): void {
     this.form.markAllAsTouched();
 
-    if (this.form.invalid || this.saving()) {
+    if (this.form.invalid) {
+      const formElement: HTMLElement | undefined = this.dialogForm()?.nativeElement;
+      if (formElement) focusFirstInvalid(formElement);
+      return;
+    }
+    if (this.saving()) {
       return;
     }
 

@@ -56,6 +56,7 @@ describe('MerchantsComponent', () => {
       | 'deleteMerchant'
       | 'getDescriptionLinks'
       | 'addDescriptionLink'
+      | 'addDescriptionLinks'
       | 'deleteDescriptionLink'
     >
   >;
@@ -82,6 +83,7 @@ describe('MerchantsComponent', () => {
       deleteMerchant: vi.fn().mockReturnValue(of(undefined)),
       getDescriptionLinks: vi.fn().mockReturnValue(of(links)),
       addDescriptionLink: vi.fn().mockReturnValue(of(undefined)),
+      addDescriptionLinks: vi.fn().mockReturnValue(of(undefined)),
       deleteDescriptionLink: vi.fn().mockReturnValue(of(undefined)),
     };
     mockTransactions = {
@@ -125,8 +127,9 @@ describe('MerchantsComponent', () => {
       expect(fixture.nativeElement.textContent).toContain('312 merchants');
     });
 
-    it('should clear the rows and show the error page when loading fails', () => {
+    it('should show the error page when the very first load fails', () => {
       // arrange
+      component.loadedOnce.set(false);
       mockApi.getMerchants.mockReturnValue(throwError(() => new Error('down')));
 
       // act
@@ -134,9 +137,50 @@ describe('MerchantsComponent', () => {
       fixture.detectChanges();
 
       // assert & verify
-      expect(mockToast.error).toHaveBeenCalledWith('Failed to load merchants');
       expect(component.merchants()).toEqual([]);
       expect(fixture.nativeElement.querySelector('app-page-error-state')).toBeTruthy();
+    });
+
+    // PF-963: a failed search or page keeps the screen, the search box and the overview
+    it('should keep the search box and show an inline retry when a later load fails', () => {
+      // arrange
+      mockApi.getMerchants.mockReturnValue(throwError(() => new Error('down')));
+
+      // act
+      component.onSearchInput('amz');
+      vi.useFakeTimers();
+      vi.advanceTimersByTime(300);
+      vi.useRealTimers();
+      component.loadMerchants();
+      fixture.detectChanges();
+
+      // assert & verify
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.querySelector('app-page-error-state')).toBeNull();
+      expect(el.querySelector('input[aria-label="Search merchants"]')).not.toBeNull();
+      expect(el.querySelector('[data-testid="list-error"]')?.getAttribute('role')).toBe('alert');
+      expect(el.querySelector('app-merchant-overview')).not.toBeNull();
+    });
+
+    it('should reload and focus the search box when Retry is pressed', () => {
+      // arrange
+      mockApi.getMerchants.mockReturnValue(throwError(() => new Error('down')));
+      component.loadMerchants();
+      fixture.detectChanges();
+      mockApi.getMerchants.mockClear();
+      mockApi.getMerchants.mockReturnValue(of(page([amazon], 1)));
+
+      // act
+      (fixture.nativeElement as HTMLElement)
+        .querySelector<HTMLButtonElement>('[data-testid="list-retry"]')
+        ?.click();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(mockApi.getMerchants).toHaveBeenCalledTimes(1);
+      expect(document.activeElement).toBe(
+        fixture.nativeElement.querySelector('input[aria-label="Search merchants"]'),
+      );
     });
 
     it('should drop a slower response from an earlier load', () => {
@@ -244,7 +288,7 @@ describe('MerchantsComponent', () => {
     it('should leave the panel alone when a link batch finishes after the user has moved on', () => {
       // arrange
       const pending = new Subject<void>();
-      mockApi.addDescriptionLink.mockReturnValue(pending);
+      mockApi.addDescriptionLinks.mockReturnValue(pending);
       component.openMerchant(amazon);
       component.openPicker(amazon, false);
       component.onLink(['A']);
@@ -346,7 +390,7 @@ describe('MerchantsComponent', () => {
       expect(component.mode()).toBe('picker');
       expect(component.pickerTarget()?.id).toBe(99);
       expect(mockTransactions.getDescriptions).toHaveBeenCalledWith(
-        expect.objectContaining({ unlinkedOnly: true, page: 0, size: 20 }),
+        expect.objectContaining({ unlinkedOnly: true, page: 0, size: 50 }),
       );
     });
 
@@ -656,7 +700,7 @@ describe('MerchantsComponent', () => {
         search: '',
         unlinkedOnly: true,
         page: 0,
-        size: 20,
+        size: 50,
       });
       expect(component.pickerRows().map((r) => r.description)).toEqual(['AMZN MKTP', 'COSTCO #12']);
     });
@@ -677,9 +721,9 @@ describe('MerchantsComponent', () => {
 
       // assert & verify
       const calls = mockTransactions.getDescriptions.mock.calls.map((c) => c[0]);
-      expect(calls[0]).toEqual({ search: 'chick', unlinkedOnly: false, page: 0, size: 20 });
-      expect(calls[1]).toEqual({ search: 'chick', unlinkedOnly: true, page: 0, size: 20 });
-      expect(calls[2]).toEqual({ search: 'chick', unlinkedOnly: true, page: 1, size: 20 });
+      expect(calls[0]).toEqual({ search: 'chick', unlinkedOnly: false, page: 0, size: 50 });
+      expect(calls[1]).toEqual({ search: 'chick', unlinkedOnly: true, page: 0, size: 50 });
+      expect(calls[2]).toEqual({ search: 'chick', unlinkedOnly: true, page: 1, size: 50 });
       expect(component.pickerRows().length).toBe(2);
       vi.useRealTimers();
     });
@@ -696,10 +740,7 @@ describe('MerchantsComponent', () => {
       component.onLink(['AMZN MKTP', 'AMAZON.COM']);
 
       // assert & verify
-      expect(mockApi.addDescriptionLink.mock.calls).toEqual([
-        [1, 'AMZN MKTP'],
-        [1, 'AMAZON.COM'],
-      ]);
+      expect(mockApi.addDescriptionLinks.mock.calls).toEqual([[1, ['AMZN MKTP', 'AMAZON.COM']]]);
       expect(mockToast.success).toHaveBeenCalledWith('Linked 2 descriptions');
       expect(component.mode()).toBe('merchant');
       expect(mockApi.getDescriptionLinks).toHaveBeenCalledWith(1);
@@ -713,19 +754,22 @@ describe('MerchantsComponent', () => {
       // arrange
       component.openMerchant(amazon);
       component.openPicker(amazon, false);
-      mockApi.addDescriptionLink.mockImplementation((_id: number, description: string) =>
-        description === 'BAD'
+      mockApi.addDescriptionLinks.mockImplementation((_id: number, descriptions: string[]) =>
+        descriptions.includes('BAD')
           ? throwError(() => ({ error: { detail: 'Too long.' } }))
           : of(undefined),
       );
 
-      // act
-      component.onLink(['GOOD', 'BAD']);
+      // act -- 501 descriptions go in two requests; the one holding BAD fails
+      const ticked: string[] = ['BAD', ...Array.from({ length: 500 }, (_, i) => `D${i}`)];
+      component.onLink(ticked);
 
       // assert & verify
-      expect(mockToast.error).toHaveBeenCalledWith('Linked 1, 1 failed: Too long.');
+      expect(mockApi.addDescriptionLinks).toHaveBeenCalledTimes(2);
+      expect(mockToast.error).toHaveBeenCalledWith('Linked 1, 500 failed: Too long.');
       expect(component.mode()).toBe('picker');
-      expect(component.pickerFailed()).toEqual(['BAD']);
+      expect(component.pickerFailed().length).toBe(500);
+      expect(component.pickerFailed()).toContain('BAD');
     });
 
     // PF-883
@@ -744,6 +788,54 @@ describe('MerchantsComponent', () => {
 
       // assert & verify -- not dropped onto <body> when the "Link to" select goes away
       expect(aside().contains(document.activeElement)).toBe(true);
+    });
+
+    it('should show a retry, not an empty message, when the descriptions fail to load, and retry it', () => {
+      // arrange
+      mockTransactions.getDescriptions.mockReturnValue(throwError(() => new Error('boom')));
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      component.openMerchant(amazon);
+      component.openPicker(amazon, true);
+      expect(component.pickerLoadFailed()).toBe(true);
+      mockTransactions.getDescriptions.mockReturnValue(of(page([row('AMZN MKTP')], 1)));
+
+      // act
+      component.retryPicker();
+
+      // assert & verify
+      expect(component.pickerLoadFailed()).toBe(false);
+      expect(component.pickerRows().map((r) => r.description)).toEqual(['AMZN MKTP']);
+    });
+
+    it('should ask before leaving the picker with descriptions ticked', () => {
+      // arrange
+      component.openMerchant(amazon);
+      component.openPicker(amazon, true);
+      fixture.detectChanges();
+      aside().querySelector<HTMLInputElement>('input[type="checkbox"]')?.click();
+      fixture.detectChanges();
+
+      // act
+      aside().dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+      // assert & verify
+      expect(component.mode()).toBe('picker');
+      expect(mockConfirmation.confirm).toHaveBeenCalledTimes(1);
+      expect(mockConfirmation.confirm.mock.calls[0][0].header).toBe('Discard selection?');
+    });
+
+    it('should leave the picker without asking when nothing is ticked', () => {
+      // arrange
+      component.openMerchant(amazon);
+      component.openPicker(amazon, true);
+      fixture.detectChanges();
+
+      // act
+      aside().dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+      // assert & verify
+      expect(mockConfirmation.confirm).not.toHaveBeenCalled();
+      expect(component.mode()).toBe('overview');
     });
 
     describe('the "Link to" search', () => {
@@ -793,7 +885,7 @@ describe('MerchantsComponent', () => {
 
     it('should block a second link while one is in flight', () => {
       // arrange
-      mockApi.addDescriptionLink.mockReturnValue(new Subject<void>());
+      mockApi.addDescriptionLinks.mockReturnValue(new Subject<void>());
       component.openMerchant(amazon);
       component.openPicker(amazon, false);
 
@@ -802,7 +894,7 @@ describe('MerchantsComponent', () => {
       component.onLink(['B']);
 
       // assert & verify
-      expect(mockApi.addDescriptionLink).toHaveBeenCalledTimes(1);
+      expect(mockApi.addDescriptionLinks).toHaveBeenCalledTimes(1);
     });
 
     it('should go back to the merchant, or to the overview when there is none', () => {

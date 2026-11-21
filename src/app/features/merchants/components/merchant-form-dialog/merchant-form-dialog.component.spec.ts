@@ -312,4 +312,27 @@ describe('MerchantFormDialogComponent', () => {
     expect(mockMerchantApi.updateMerchant).not.toHaveBeenCalled();
     expect(mockMerchantApi.createMerchant).not.toHaveBeenCalled();
   });
+
+  // PF-963: a refused save says why, announces it, and puts focus on the field
+  describe('a refused save', () => {
+    it('should announce the name error, link it to the field and focus the field', () => {
+      // arrange
+      fixture.componentRef.setInput('merchant', null);
+      component.visible.set(true);
+      fixture.detectChanges();
+
+      // act
+      component.onSubmit();
+      fixture.detectChanges();
+
+      // assert & verify
+      const input = document.getElementById('merchant-name') as HTMLInputElement;
+      const error = document.getElementById('merchant-dialog-name-error') as HTMLElement;
+      expect(mockMerchantApi.createMerchant).not.toHaveBeenCalled();
+      expect(error.getAttribute('role')).toBe('alert');
+      expect(input.getAttribute('aria-invalid')).toBe('true');
+      expect(input.getAttribute('aria-describedby')).toBe('merchant-dialog-name-error');
+      expect(document.activeElement).toBe(input);
+    });
+  });
 });

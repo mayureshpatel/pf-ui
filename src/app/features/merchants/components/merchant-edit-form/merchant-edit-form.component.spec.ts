@@ -211,4 +211,73 @@ describe('MerchantEditFormComponent', () => {
     // assert & verify
     expect(el<HTMLInputElement>('#merchant-city')?.value).toBe('Tacoma');
   });
+
+  // PF-963: the name error is announced and tied to its field, and a failed save lands on it
+  it('should announce the name error and link it to the field', () => {
+    // arrange
+    render(null);
+
+    // act
+    component.submit();
+    fixture.detectChanges();
+
+    // assert & verify
+    const input = el<HTMLInputElement>('#merchant-name') as HTMLInputElement;
+    const error = el('[data-testid="name-error"]') as HTMLElement;
+    expect(error.getAttribute('role')).toBe('alert');
+    expect(error.id).toBe('merchant-name-error');
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    expect(input.getAttribute('aria-describedby')).toBe('merchant-name-error');
+  });
+
+  it('should move focus to the first invalid field when a save is refused', () => {
+    // arrange
+    render(null);
+    document.body.appendChild(fixture.nativeElement);
+
+    // act
+    component.submit();
+
+    // assert & verify
+    expect(document.activeElement).toBe(el('#merchant-name'));
+    fixture.nativeElement.remove();
+  });
+
+  it('should fill the name from a search that found nothing', () => {
+    // arrange
+    fixture.componentRef.setInput('prefillName', 'zzqq');
+
+    // act
+    render(null);
+
+    // assert & verify
+    expect((el('#merchant-name') as HTMLInputElement).value).toBe('zzqq');
+  });
+
+  it('should show a loading line, not "No descriptions linked yet", while links load', () => {
+    // arrange
+    fixture.componentRef.setInput('linksState', 'loading');
+
+    // act
+    render(amazon, []);
+
+    // assert & verify
+    expect(el('[data-testid="links-loading"]')?.getAttribute('role')).toBe('status');
+    expect(text(fixture.nativeElement)).not.toContain('No descriptions linked yet');
+  });
+
+  it('should offer a retry when the links failed to load', () => {
+    // arrange
+    let retries = 0;
+    component.retryLinks.subscribe(() => retries++);
+    fixture.componentRef.setInput('linksState', 'failed');
+    render(amazon, []);
+
+    // act
+    el<HTMLElement>('[data-testid="links-failed"] button')?.click();
+
+    // assert & verify
+    expect(text(fixture.nativeElement)).not.toContain('No descriptions linked yet');
+    expect(retries).toBe(1);
+  });
 });
