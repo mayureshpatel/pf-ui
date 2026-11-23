@@ -3,6 +3,8 @@ import {
   Component,
   computed,
   effect,
+  ElementRef,
+  inject,
   input,
   InputSignal,
   OnInit,
@@ -20,6 +22,7 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { DatePicker } from 'primeng/datepicker';
+import { focusFirstInvalid } from '@shared/utils/focus-first-invalid';
 import { Account } from '@models/account.model';
 import { Merchant } from '@models/merchant.model';
 import { DismissedPattern, RecurringFrequency, RecurringSuggestion } from '@models/recurring.model';
@@ -81,6 +84,8 @@ export class PatternReviewComponent implements OnInit {
   readonly selected: InputSignal<RecurringSuggestion | null> =
     input.required<RecurringSuggestion | null>();
   readonly saving: InputSignal<boolean> = input<boolean>(false);
+  /** Patterns are still being detected, so an empty list is not yet "none found". */
+  readonly loading: InputSignal<boolean> = input<boolean>(false);
 
   readonly choose: OutputEmitterRef<RecurringSuggestion> = output<RecurringSuggestion>();
   readonly backToList: OutputEmitterRef<void> = output<void>();
@@ -89,6 +94,8 @@ export class PatternReviewComponent implements OnInit {
   readonly restore: OutputEmitterRef<DismissedPattern> = output<DismissedPattern>();
   /** The text typed into the merchant search, for the host to narrow the list. */
   readonly merchantFilter: OutputEmitterRef<string> = output<string>();
+
+  private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
 
   readonly showDismissed: WritableSignal<boolean> = signal(false);
 
@@ -203,6 +210,27 @@ export class PatternReviewComponent implements OnInit {
     });
   }
 
+  /** Whether a field's error should show: it was touched and is invalid. */
+  showError(name: 'merchantId' | 'accountId' | 'amount' | 'nextDate'): boolean {
+    this.formEvents();
+    const control = this.form.controls[name];
+    return control.invalid && control.touched;
+  }
+
+  /** The new merchant's name is required once "Create ..." is chosen and the form was submitted. */
+  showNameError(): boolean {
+    this.formEvents();
+    return (
+      this.creating() &&
+      this.form.controls.newMerchantName.touched &&
+      this.form.controls.newMerchantName.value.trim().length === 0
+    );
+  }
+
+  timesSeen(pattern: RecurringSuggestion): string {
+    return pattern.occurrenceCount === 1 ? 'once' : `${pattern.occurrenceCount} times`;
+  }
+
   confidence(pattern: RecurringSuggestion): string {
     return confidenceLabel(pattern.confidenceScore);
   }
@@ -225,6 +253,11 @@ export class PatternReviewComponent implements OnInit {
     if (!pattern || this.saving()) return;
     if (!this.canSubmit()) {
       this.form.markAllAsTouched();
+      if (this.form.valid) {
+        this.host.nativeElement.querySelector<HTMLElement>('#pattern-new-merchant')?.focus();
+      } else {
+        focusFirstInvalid(this.host.nativeElement);
+      }
       return;
     }
     const raw = this.form.getRawValue();

@@ -2,7 +2,7 @@
   <div class="flex flex-col gap-4">
     <button
       type="button"
-      class="cursor-pointer self-start text-sm text-primary-700 underline dark:text-primary-400"
+      class="inline-flex cursor-pointer items-center self-start text-sm text-primary-700 underline max-lg:min-h-11 dark:text-primary-400"
       (click)="backToList.emit()"
     >
       Back to patterns
@@ -25,8 +25,15 @@
           filterBy="name"
           filterPlaceholder="Search merchants"
           appendTo="body"
+          [attr.aria-invalid]="showError('merchantId') ? 'true' : null"
+          [attr.aria-describedby]="showError('merchantId') ? 'pattern-merchant-error' : null"
           (onFilter)="onMerchantFilter($event.filter)"
         />
+        @if (showError('merchantId')) {
+          <small id="pattern-merchant-error" role="alert" class="text-rose-700 dark:text-rose-400">
+            Choose a merchant.
+          </small>
+        }
       </div>
 
       @if (creating()) {
@@ -37,7 +44,18 @@
             id="pattern-new-merchant"
             formControlName="newMerchantName"
             class="w-full"
+            [attr.aria-invalid]="showNameError() ? 'true' : null"
+            [attr.aria-describedby]="showNameError() ? 'pattern-new-merchant-error' : null"
           />
+          @if (showNameError()) {
+            <small
+              id="pattern-new-merchant-error"
+              role="alert"
+              class="text-rose-700 dark:text-rose-400"
+            >
+              Enter a name for the new merchant.
+            </small>
+          }
           <small class="text-muted-color">
             Created as a merchant, and "{{ pattern.merchant.name }}" is linked to it.
           </small>
@@ -61,9 +79,19 @@
           optionValue="id"
           placeholder="Choose an account"
           appendTo="body"
+          [attr.aria-invalid]="showError('accountId') ? 'true' : null"
+          [attr.aria-describedby]="accountHint() ? 'pattern-account-hint' : null"
         />
         @if (accountHint(); as hint) {
-          <small id="pattern-account-hint" class="text-muted-color">{{ hint }}</small>
+          <small
+            id="pattern-account-hint"
+            [attr.role]="showError('accountId') ? 'alert' : null"
+            [class]="
+              showError('accountId') ? 'text-rose-700 dark:text-rose-400' : 'text-muted-color'
+            "
+          >
+            {{ hint }}
+          </small>
         }
       </div>
 
@@ -75,7 +103,14 @@
             formControlName="amount"
             mode="currency"
             currency="USD"
+            [ariaDescribedBy]="showError('amount') ? 'pattern-amount-error' : undefined"
+            [attr.aria-invalid]="showError('amount') ? 'true' : null"
           />
+          @if (showError('amount')) {
+            <small id="pattern-amount-error" role="alert" class="text-rose-700 dark:text-rose-400">
+              Enter an amount above $0.00.
+            </small>
+          }
         </div>
         <div class="flex flex-col gap-1">
           <label id="pattern-frequency-label" for="pattern-frequency" class="text-sm font-medium">
@@ -109,23 +144,31 @@
           dateFormat="yy-mm-dd"
           placeholder="YYYY-MM-DD"
           appendTo="body"
+          [attr.aria-invalid]="showError('nextDate') ? 'true' : null"
         />
+        @if (showError('nextDate')) {
+          <small id="pattern-next-date-error" role="alert" class="text-rose-700 dark:text-rose-400">
+            Choose a date.
+          </small>
+        }
       </div>
 
-      <div class="flex flex-col gap-2">
+      <div
+        class="flex flex-col gap-2 max-lg:sticky max-lg:bottom-0 max-lg:-mx-4 max-lg:border-t max-lg:border-surface-200 max-lg:bg-surface-0 max-lg:px-4 max-lg:py-3 dark:max-lg:border-surface-700 dark:max-lg:bg-surface-900"
+      >
         <button
           type="submit"
-          class="cursor-pointer rounded-lg bg-primary-700 px-3 py-2 text-sm font-medium text-white hover:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-50"
-          [disabled]="!canSubmit() || saving()"
+          class="cursor-pointer rounded-lg bg-primary-700 px-3 py-2 text-sm font-medium text-white hover:bg-primary-800 aria-disabled:cursor-not-allowed aria-disabled:opacity-70 max-lg:min-h-11"
+          [attr.aria-disabled]="saving() ? 'true' : null"
           [attr.aria-describedby]="accountHint() ? 'pattern-account-hint' : null"
         >
-          Add to recurring
+          {{ saving() ? 'Adding…' : 'Add to recurring' }}
         </button>
         <button
           type="button"
-          class="cursor-pointer rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium dark:border-surface-700"
-          [disabled]="saving()"
-          (click)="dismiss.emit(pattern)"
+          class="cursor-pointer rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium aria-disabled:opacity-70 max-lg:min-h-11 dark:border-surface-700"
+          [attr.aria-disabled]="saving() ? 'true' : null"
+          (click)="!saving() && dismiss.emit(pattern)"
         >
           Dismiss
         </button>
@@ -134,7 +177,9 @@
   </div>
 } @else {
   <div class="flex flex-col gap-3">
-    @if (patterns().length === 0) {
+    @if (loading()) {
+      <p role="status" class="m-0 text-sm text-muted-color">Looking for patterns…</p>
+    } @else if (patterns().length === 0) {
       <p class="m-0 text-sm text-muted-color">No patterns found.</p>
     } @else {
       <ul class="m-0 flex list-none flex-col gap-1 p-0">
@@ -150,10 +195,12 @@
                 <span class="block truncate font-medium">{{ pattern.merchant.name }}</span>
                 <span class="block text-sm text-muted-color">
                   {{ frequencyLabel(pattern) }} · last {{ pattern.amount | currency }} · seen
-                  {{ pattern.occurrenceCount }} times
+                  {{ timesSeen(pattern) }}
                 </span>
               </span>
-              <span class="shrink-0 text-sm text-muted-color">{{ confidence(pattern) }}</span>
+              <span class="shrink-0 text-sm text-muted-color"
+                >{{ confidence(pattern) }} confidence</span
+              >
             </button>
           </li>
         }
@@ -163,7 +210,7 @@
     @if (dismissed().length > 0) {
       <button
         type="button"
-        class="cursor-pointer self-start text-sm underline"
+        class="inline-flex cursor-pointer items-center self-start text-sm underline max-lg:min-h-11"
         [attr.aria-expanded]="showDismissed()"
         (click)="showDismissed.set(!showDismissed())"
       >
@@ -178,9 +225,10 @@
               <span class="min-w-0 truncate text-sm">{{ entry.name }}</span>
               <button
                 type="button"
-                class="cursor-pointer text-sm underline"
+                class="inline-flex cursor-pointer items-center text-sm underline max-lg:min-h-11"
                 [attr.aria-label]="'Restore ' + entry.name"
-                (click)="restore.emit(entry)"
+                [attr.aria-disabled]="saving() ? 'true' : null"
+                (click)="!saving() && restore.emit(entry)"
               >
                 Restore
               </button>

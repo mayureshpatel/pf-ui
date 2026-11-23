@@ -109,6 +109,45 @@ describe('RecurringEditFormComponent', () => {
     expect(component.form.controls.nextDate.errors?.['required']).toBe(true);
   });
 
+  it('should announce each error, link it to its field and focus the first invalid one', () => {
+    // arrange
+    render(null);
+
+    // act
+    component.submit();
+    fixture.detectChanges();
+
+    // assert & verify
+    const error: HTMLElement = fixture.nativeElement.querySelector(
+      '[data-testid="merchant-error"]',
+    );
+    expect(error.getAttribute('role')).toBe('alert');
+    expect(error.id).toBe('recurring-merchant-error');
+    const select: HTMLElement = fixture.nativeElement.querySelector('p-select');
+    expect(select.getAttribute('aria-describedby')).toBe('recurring-merchant-error');
+    expect(fixture.nativeElement.contains(document.activeElement)).toBe(true);
+  });
+
+  it('should ignore Pause, Update price and Delete while busy', () => {
+    // arrange
+    render(netflix);
+    fixture.componentRef.setInput('busy', true);
+    fixture.detectChanges();
+    const events: string[] = [];
+    component.togglePaused.subscribe(() => events.push('pause'));
+    component.deleteItem.subscribe(() => events.push('delete'));
+
+    // act
+    for (const b of Array.from(
+      fixture.nativeElement.querySelectorAll('button'),
+    ) as HTMLButtonElement[]) {
+      b.click();
+    }
+
+    // assert & verify
+    expect(events).toEqual([]);
+  });
+
   it('should reject zero and negative amounts', () => {
     // arrange
     render(null);

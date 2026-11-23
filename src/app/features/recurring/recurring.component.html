@@ -17,11 +17,50 @@
       <p-skeleton height="16rem" borderRadius="1rem" />
     </div>
   } @else {
+    @if (loadError()) {
+      <div
+        role="alert"
+        data-testid="stale-banner"
+        class="flex items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm dark:border-rose-900 dark:bg-rose-950/40"
+      >
+        <span>Couldn't refresh. Showing what was loaded before.</span>
+        <button
+          type="button"
+          class="cursor-pointer rounded-lg border border-surface-300 bg-surface-0 px-3 py-1 text-sm font-medium max-lg:min-h-11 dark:border-surface-700 dark:bg-surface-900"
+          (click)="loadItems()"
+        >
+          Retry
+        </button>
+      </div>
+    }
     @if (!patternsLoaded()) {
-      <div data-testid="patterns-strip-placeholder" aria-hidden="true" class="h-11"></div>
+      <div
+        data-testid="patterns-strip-placeholder"
+        role="status"
+        class="flex h-11 items-center px-4 text-sm text-muted-color"
+      >
+        Looking for patterns…
+      </div>
+    }
+    @if (patternsLoaded() && patternsError()) {
+      <div
+        role="alert"
+        data-testid="patterns-error"
+        class="flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm dark:border-amber-900 dark:bg-amber-950/40"
+      >
+        <span>Couldn't look for patterns.</span>
+        <button
+          type="button"
+          class="cursor-pointer rounded-lg border border-surface-300 bg-surface-0 px-3 py-1 text-sm font-medium max-lg:min-h-11 dark:border-surface-700 dark:bg-surface-900"
+          (click)="loadPatterns()"
+        >
+          Retry
+        </button>
+      </div>
     }
     @if (patternsLoaded() && patterns().length > 0) {
       <div
+        role="status"
         data-testid="patterns-strip"
         class="flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm dark:border-amber-900 dark:bg-amber-950/40"
       >
@@ -35,7 +74,7 @@
         </span>
         <button
           type="button"
-          class="cursor-pointer rounded-lg border border-surface-300 bg-surface-0 px-3 py-1 text-sm font-medium dark:border-surface-700 dark:bg-surface-900"
+          class="cursor-pointer rounded-lg border border-surface-300 bg-surface-0 px-3 py-1 text-sm font-medium max-lg:min-h-11 dark:border-surface-700 dark:bg-surface-900"
           (click)="openReview()"
         >
           Review
@@ -56,7 +95,7 @@
             @if (patterns().length > 0) {
               <button
                 type="button"
-                class="cursor-pointer rounded-lg border border-surface-300 px-3 py-1.5 text-sm max-md:min-h-11 font-medium dark:border-surface-700"
+                class="cursor-pointer rounded-lg border border-surface-300 px-3 py-1.5 text-sm font-medium max-lg:min-h-11 dark:border-surface-700"
                 (click)="openReview()"
               >
                 Review patterns
@@ -74,11 +113,12 @@
       </div>
 
       <app-side-panel
-        class="order-first block lg:order-none"
+        class="block"
         [title]="panelTitle()"
         [saving]="saving()"
         [showClose]="mode() !== 'overview' && !onlyAddMode()"
-        [sheet]="mode() !== 'overview'"
+        [sheet]="mode() !== 'overview' && !onlyAddMode()"
+        [submitOnEnter]="true"
         [moveFocus]="false"
         [showFooter]="mode() === 'item' || mode() === 'add'"
         [saveLabel]="mode() === 'add' ? 'Add recurring' : 'Save changes'"
@@ -93,7 +133,7 @@
               [comingUp]="comingUp()"
               [priceChanges]="priceChanges()"
               [patternCount]="patterns().length"
-              (add)="startAdd()"
+              (openItem)="openItem($event)"
               (reviewPatterns)="openReview()"
             />
           }
@@ -102,6 +142,7 @@
               <app-recurring-edit-form
                 #editForm
                 [item]="item"
+                [busy]="saving()"
                 [accounts]="accounts()"
                 [merchants]="merchants()"
                 (save)="saveItem($event)"
@@ -138,7 +179,7 @@
               <p class="m-0 mb-2 text-sm">Couldn't load patterns.</p>
               <button
                 type="button"
-                class="cursor-pointer rounded-lg border border-surface-300 px-3 py-1.5 text-sm max-md:min-h-11 font-medium dark:border-surface-700"
+                class="cursor-pointer rounded-lg border border-surface-300 px-3 py-1.5 text-sm font-medium max-lg:min-h-11 dark:border-surface-700"
                 (click)="loadPatterns()"
               >
                 Retry
@@ -152,6 +193,7 @@
                 [accounts]="accounts()"
                 [selected]="null"
                 [saving]="saving()"
+                [loading]="!patternsLoaded()"
                 (choose)="choosePattern($event)"
                 (restore)="restorePattern($event)"
               />

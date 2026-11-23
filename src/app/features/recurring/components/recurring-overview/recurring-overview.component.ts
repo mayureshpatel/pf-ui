@@ -26,7 +26,7 @@ export class RecurringOverviewComponent {
     input.required<RecurringTransaction[]>();
   readonly patternCount: InputSignal<number> = input.required<number>();
 
-  readonly add: OutputEmitterRef<void> = output<void>();
+  readonly openItem: OutputEmitterRef<RecurringTransaction> = output<RecurringTransaction>();
   readonly reviewPatterns: OutputEmitterRef<void> = output<void>();
 
   /** The day a price change took effect, such as "Sep 3". */

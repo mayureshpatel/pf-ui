@@ -211,8 +211,9 @@ describe('RecurringComponent', () => {
       expect(fixture.nativeElement.querySelector('[data-testid="patterns-strip"]')).toBeNull();
     });
 
-    it('should show the error page and clear stale rows when the list fails', () => {
+    it('should show the error page when the first load fails with nothing to show', () => {
       // arrange
+      component.items.set([]);
       mockApi.getAll.mockReturnValue(throwError(() => new Error('down')));
 
       // act
@@ -221,8 +222,24 @@ describe('RecurringComponent', () => {
 
       // assert & verify
       expect(mockToast.error).toHaveBeenCalledWith('Failed to load recurring items');
-      expect(component.items()).toEqual([]);
       expect(fixture.nativeElement.querySelector('app-page-error-state')).toBeTruthy();
+    });
+
+    it('should keep the rows and show a banner when a reload fails', () => {
+      // arrange
+      const before: number = component.items().length;
+      expect(before).toBeGreaterThan(0);
+      mockApi.getAll.mockReturnValue(throwError(() => new Error('down')));
+
+      // act
+      component.loadItems();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.items().length).toBe(before);
+      expect(fixture.nativeElement.querySelector('[data-testid="stale-banner"]')).toBeTruthy();
+      expect(fixture.nativeElement.querySelector('app-page-error-state')).toBeNull();
+      expect(mockToast.error).not.toHaveBeenCalled();
     });
 
     it('should drop a slower response from an earlier load', () => {
@@ -829,6 +846,26 @@ describe('RecurringComponent', () => {
       expect(mockApi.restore).toHaveBeenCalledWith(5);
       expect(component.dismissed()).toEqual([]);
       expect(mockApi.getSuggestions).toHaveBeenCalled();
+    });
+
+    it('should say a pattern was restored', () => {
+      // act
+      component.restorePattern(dismissedRow);
+
+      // assert & verify
+      expect(mockToast.success).toHaveBeenCalledWith(`Restored ${dismissedRow.name}`);
+    });
+
+    it('should step back to the pattern list on Escape in the pattern form', () => {
+      // arrange
+      component.openReview();
+      component.choosePattern(hulu);
+
+      // act
+      component.onPanelClose();
+
+      // assert & verify
+      expect(component.mode()).toBe('review');
     });
 
     it('should go back from the form to the list and from the list to the overview', () => {

@@ -3,6 +3,8 @@ import {
   Component,
   computed,
   effect,
+  ElementRef,
+  inject,
   input,
   InputSignal,
   OnInit,
@@ -16,6 +18,7 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { InputNumberModule } from 'primeng/inputnumber';
 import { SelectModule } from 'primeng/select';
 import { DatePicker } from 'primeng/datepicker';
+import { focusFirstInvalid } from '@shared/utils/focus-first-invalid';
 import { Account } from '@models/account.model';
 import { Merchant } from '@models/merchant.model';
 import { RecurringFrequency, RecurringTransaction } from '@models/recurring.model';
@@ -55,6 +58,8 @@ export class RecurringEditFormComponent implements OnInit {
   readonly item: InputSignal<RecurringTransaction | null> = input<RecurringTransaction | null>(
     null,
   );
+  /** A save or other change is in flight; the item actions stay focusable but do nothing. */
+  readonly busy: InputSignal<boolean> = input<boolean>(false);
   readonly accounts: InputSignal<Account[]> = input.required<Account[]>();
   /** The merchants matching the search so far; the item's own merchant is always offered too. */
   readonly merchants: InputSignal<Merchant[]> = input.required<Merchant[]>();
@@ -81,6 +86,14 @@ export class RecurringEditFormComponent implements OnInit {
     frequency: new FormControl<RecurringFrequency | null>('MONTHLY', [Validators.required]),
     nextDate: new FormControl<Date | null>(null, [Validators.required]),
   });
+
+  private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
+
+  /** Whether a field's error should show: it was touched and is invalid. */
+  showError(name: 'merchantId' | 'accountId' | 'amount' | 'nextDate'): boolean {
+    const control = this.form.controls[name];
+    return control.invalid && control.touched;
+  }
 
   readonly isEditMode: Signal<boolean> = computed((): boolean => this.item() !== null);
 
@@ -154,6 +167,7 @@ export class RecurringEditFormComponent implements OnInit {
   submit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      focusFirstInvalid(this.host.nativeElement);
       return;
     }
     const raw = this.form.getRawValue();

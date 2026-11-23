@@ -216,8 +216,8 @@ export class RecurringComponent implements OnInit {
         },
         error: (err: unknown): void => {
           console.error('Failed to load recurring data:', err);
-          this.toast.error('Failed to load recurring items');
-          this.items.set([]);
+          // a failed reload keeps what is already shown, with a banner; only a first load gets a toast
+          if (this.items().length === 0) this.toast.error('Failed to load recurring items');
           this.loadError.set(true);
           this.pendingSelectId = null;
         },
@@ -360,6 +360,11 @@ export class RecurringComponent implements OnInit {
   /** Close button and Escape: asks first when there are unsaved edits; the overview ignores them. */
   onPanelClose(): void {
     if (this.mode() === 'overview' || this.onlyAddMode()) return;
+    // Escape in the pattern form steps back to the pattern list, like Back to patterns
+    if (this.mode() === 'review-form') {
+      this.back();
+      return;
+    }
     this.confirmDiscardIfDirty((): void => this.closePanel());
   }
 
@@ -422,14 +427,23 @@ export class RecurringComponent implements OnInit {
     const item: RecurringTransaction | null = this.selected();
     const change = item?.priceChange;
     if (!item || !change) return;
-    this.sendUpdate(item, { amount: change.newAmount }, 'Price updated');
+    this.confirmDiscardIfDirty((): void => {
+      this.editForm()?.form.markAsPristine();
+      this.sendUpdate(item, { amount: change.newAmount }, 'Price updated');
+    }, 'Updating the price saves the stored item, so your unsaved edits would be lost. Continue?');
   }
 
   /** Pauses an active item or resumes a paused one. */
   togglePaused(): void {
     const item: RecurringTransaction | null = this.selected();
     if (!item) return;
-    this.sendUpdate(item, { active: !item.active }, item.active ? 'Paused' : 'Resumed');
+    this.confirmDiscardIfDirty(
+      (): void => {
+        this.editForm()?.form.markAsPristine();
+        this.sendUpdate(item, { active: !item.active }, item.active ? 'Paused' : 'Resumed');
+      },
+      `${item.active ? 'Pausing' : 'Resuming'} saves the stored item, so your unsaved edits would be lost. Continue?`,
+    );
   }
 
   private sendUpdate(
@@ -636,12 +650,16 @@ export class RecurringComponent implements OnInit {
       .subscribe({
         next: (): void => {
           this.dismissed.update((list) => list.filter((d) => d.id !== entry.id));
+          this.toast.success(`Restored ${entry.name}`);
           this.recurringApi
             .getSuggestions()
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
               next: (patterns: RecurringSuggestion[]): void => this.patterns.set(patterns),
-              error: (err: unknown): void => console.error('Failed to reload patterns:', err),
+              error: (err: unknown): void => {
+                console.error('Failed to reload patterns:', err);
+                this.toast.error('Restored, but could not look for patterns again');
+              },
             });
         },
         error: (error: HttpErrorResponse): void => this.failed(error, 'Failed to restore pattern'),
@@ -711,7 +729,10 @@ export class RecurringComponent implements OnInit {
   }
 
   /** Runs an action that would replace a form, after asking when that form has unsaved changes. */
-  private confirmDiscardIfDirty(proceed: () => void): void {
+  private confirmDiscardIfDirty(
+    proceed: () => void,
+    message = 'You have unsaved changes. Discard them?',
+  ): void {
     const mode: RecurringPanelMode = this.mode();
     const dirty: boolean =
       ((mode === 'item' || mode === 'add') && !!this.editForm()?.form.dirty) ||
@@ -722,7 +743,7 @@ export class RecurringComponent implements OnInit {
     }
     this.confirmationService.confirm({
       header: 'Discard changes?',
-      message: 'You have unsaved changes. Discard them?',
+      message,
       acceptLabel: 'Discard',
       rejectLabel: 'Keep editing',
       acceptButtonStyleClass: 'p-button-danger',
