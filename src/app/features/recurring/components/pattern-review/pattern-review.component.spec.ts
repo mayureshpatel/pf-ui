@@ -313,25 +313,45 @@ describe('PatternReviewComponent', () => {
       expect(button('Add to recurring')?.getAttribute('aria-describedby')).toBeNull();
     });
 
-    it('should disable Add to recurring while the form is invalid or a save is running', () => {
-      // act
+    it('should keep Add to recurring focusable, show the errors and move focus when submitted invalid', () => {
+      // arrange
+      const added: unknown[] = [];
+      component.add.subscribe((v) => added.push(v));
       render({ selected: pattern('Netflix', { accountId: 99 }) });
 
-      // assert & verify
-      expect(button('Add to recurring')?.disabled).toBe(true);
-
       // act
-      component.form.controls.accountId.setValue(1);
+      button('Add to recurring')?.click();
       fixture.detectChanges();
 
       // assert & verify
       expect(button('Add to recurring')?.disabled).toBe(false);
+      expect(added).toEqual([]);
+      const hint = fixture.nativeElement.querySelector('#pattern-account-hint');
+      expect(hint.getAttribute('role')).toBe('alert');
+    });
+
+    it('should mark Add to recurring aria-disabled and ignore clicks while saving', () => {
+      // arrange
+      const added: unknown[] = [];
+      component.add.subscribe((v) => added.push(v));
+      component.dismiss.subscribe((v) => added.push(v));
 
       // act
       render({ selected: pattern('Netflix'), saving: true });
+      button('Adding…')?.click();
+      button('Dismiss')?.click();
 
       // assert & verify
-      expect(button('Add to recurring')?.disabled).toBe(true);
+      expect(button('Adding…')?.getAttribute('aria-disabled')).toBe('true');
+      expect(added).toEqual([]);
+    });
+
+    it('should pluralise how often a pattern was seen', () => {
+      // act
+      render({ patterns: [pattern('Netflix', { occurrenceCount: 1 })] });
+
+      // assert & verify
+      expect(text(fixture.nativeElement)).toContain('seen once');
     });
 
     it('should emit dismiss and backToList', () => {

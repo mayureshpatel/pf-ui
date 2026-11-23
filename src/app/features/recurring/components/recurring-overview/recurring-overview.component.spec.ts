@@ -123,18 +123,33 @@ describe('RecurringOverviewComponent', () => {
     expect(text()).not.toContain('You pay about');
   });
 
-  it('should emit add and reviewPatterns', () => {
+  it('should emit reviewPatterns from the Review patterns button', () => {
     // arrange
     const events: string[] = [];
-    component.add.subscribe(() => events.push('add'));
     component.reviewPatterns.subscribe(() => events.push('review'));
     render({ patternCount: 2 });
 
     // act
-    button('Add recurring')?.click();
     button('Review patterns')?.click();
 
     // assert & verify
-    expect(events).toEqual(['add', 'review']);
+    expect(events).toEqual(['review']);
+  });
+
+  it('should open the item when a coming-up or price-change line is clicked', () => {
+    // arrange
+    const opened: number[] = [];
+    component.openItem.subscribe((i: RecurringTransaction) => opened.push(i.id));
+    const netflix = item(7, 'Netflix', `${YEAR}-09-03`, {
+      priceChange: { previousAmount: 10, newAmount: 12, since: `${YEAR}-09-03` },
+    } as Partial<RecurringTransaction>);
+    render({ comingUp: [netflix], priceChanges: [netflix] });
+
+    // act
+    fixture.nativeElement.querySelector('[data-testid="open-upcoming"]').click();
+    fixture.nativeElement.querySelector('[data-testid="open-price-change"]').click();
+
+    // assert & verify
+    expect(opened).toEqual([7, 7]);
   });
 });
