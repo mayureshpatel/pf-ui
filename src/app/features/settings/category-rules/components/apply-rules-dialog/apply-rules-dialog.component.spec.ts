@@ -115,7 +115,7 @@ describe('ApplyRulesDialogComponent', () => {
 
       // assert & verify
       const text: string = fixture.nativeElement.textContent;
-      expect(text).toContain('0 Transactions Identified');
+      expect(text).toContain('0 transactions to update');
       expect(text).not.toContain('This is a large batch');
       expect(fixture.nativeElement.querySelectorAll('tbody tr')).toHaveLength(0);
     });
@@ -123,13 +123,13 @@ describe('ApplyRulesDialogComponent', () => {
     it('should singularize the summary label for exactly one match', () => {
       setPreviewItems([preview('AMZN', '', 'Shopping')]);
 
-      expect(fixture.nativeElement.textContent).toContain('1 Transaction Identified');
+      expect(fixture.nativeElement.textContent).toContain('1 transaction to update');
     });
 
     it('should pluralize the summary label for more than one match', () => {
       setPreviewItems([preview('AMZN', '', 'Shopping'), preview('WALMART', '', 'Groceries')]);
 
-      expect(fixture.nativeElement.textContent).toContain('2 Transactions Identified');
+      expect(fixture.nativeElement.textContent).toContain('2 transactions to update');
     });
 
     it('should show the large-batch warning once over 50 matches', () => {
@@ -143,14 +143,14 @@ describe('ApplyRulesDialogComponent', () => {
       setPreviewItems([]);
 
       const text: string = fixture.nativeElement.textContent;
-      expect(text).toContain('Apply Merchant Rules');
-      expect(text).toContain('Merchant values will be assigned');
+      expect(text).toContain('Apply merchant rules');
+      expect(text).toContain('Each one gets the merchant your rules choose');
     });
 
     it("should default the field label to 'Value' when not provided", () => {
       setPreviewItems([]);
 
-      expect(fixture.nativeElement.textContent).toContain('Apply Value Rules');
+      expect(fixture.nativeElement.textContent).toContain('Apply value rules');
     });
 
     it("should render 'Unset' in place of a blank old value", () => {
@@ -186,7 +186,10 @@ describe('ApplyRulesDialogComponent', () => {
   });
 
   describe('decided by', () => {
-    const column = (): HTMLElement | null => fixture.nativeElement.querySelector('th#rule');
+    const column = (): HTMLElement | null =>
+      Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('th')).find((th) =>
+        th.textContent?.includes('Decided by'),
+      ) ?? null;
 
     it('should show no rule column for changes that do not name a rule', () => {
       setPreviewItems([preview('AMZN', 'Uncategorized', 'Shopping')]);
@@ -207,7 +210,7 @@ describe('ApplyRulesDialogComponent', () => {
       expect(component.showsRule()).toBe(true);
       expect(column()!.textContent).toContain('Decided by');
       expect(fixture.nativeElement.textContent).toContain('a rule with keyword "kroger"');
-      expect(fixture.nativeElement.textContent).toContain('Apply Merchant Rules');
+      expect(fixture.nativeElement.textContent).toContain('Apply merchant rules');
     });
   });
 });

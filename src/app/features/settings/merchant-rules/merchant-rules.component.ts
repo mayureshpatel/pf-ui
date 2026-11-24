@@ -1,4 +1,3 @@
-import { ButtonModule } from 'primeng/button';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
@@ -31,16 +30,10 @@ import {
   MerchantRuleUpdateRequest,
   MerchantRuleNewMerchantRequest,
 } from '@models/merchant-rule.model';
-import { PageErrorStateComponent } from '@shared/components/page-error-state/page-error-state.component';
-import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen-toolbar';
-import { SidePanelComponent } from '@shared/components/side-panel/side-panel.component';
+import { RulePanelMode, RulesPageShellComponent } from '../rules-shell/rules-page-shell.component';
+import { RuleRowComponent } from '../rules-shell/rule-row.component';
 import { SettingsGuard } from '../settings.guard';
-import {
-  amountLimitText,
-  filterMerchantRules,
-  ruleKeywordsText,
-  sortRules,
-} from '../utils/settings-helpers';
+import { filterMerchantRules, ruleKeywordsText, sortRules } from '../utils/settings-helpers';
 import { ApplyRulesDialogComponent } from '../category-rules/components/apply-rules-dialog/apply-rules-dialog.component';
 import {
   merchantMatchConfig,
@@ -53,8 +46,6 @@ import { MerchantRuleApiService } from './merchant-rule-api.service';
 /** One request, at Spring's default maximum page size; the CSV import review step loads the same way. */
 const MERCHANT_PAGE_SIZE = 2000;
 
-type RulePanelMode = 'overview' | 'rule' | 'add';
-
 /**
  * The Merchant rules section: the rules sorted by priority beside an always-present panel (overview, the
  * selected rule, add). Rules give a merchant to transactions whose description contains a keyword.
@@ -65,14 +56,12 @@ type RulePanelMode = 'overview' | 'rule' | 'add';
   selector: 'app-merchant-rules',
   standalone: true,
   imports: [
-    ButtonModule,
     SkeletonModule,
-    ScreenToolbarComponent,
-    SidePanelComponent,
+    RulesPageShellComponent,
+    RuleRowComponent,
     MerchantRuleEditFormComponent,
     RuleMatchListComponent,
     ApplyRulesDialogComponent,
-    PageErrorStateComponent,
   ],
   templateUrl: './merchant-rules.component.html',
   providers: [
@@ -135,7 +124,7 @@ export class MerchantRulesComponent implements OnInit {
     }
   });
 
-  private readonly panel = viewChild(SidePanelComponent);
+  private readonly shell = viewChild(RulesPageShellComponent);
   protected readonly ruleForm = viewChild<MerchantRuleEditFormComponent>('ruleForm');
   private loadSubscription: Subscription | null = null;
   private loadRun = 0;
@@ -220,8 +209,6 @@ export class MerchantRulesComponent implements OnInit {
 
   // ---- panel ----
 
-  readonly limitText = amountLimitText;
-
   openRule(rule: MerchantRule): void {
     if (this.panelMode() === 'rule' && this.selectedRuleId() === rule.id) return;
     this.confirmDiscardIfDirty((): void => {
@@ -231,7 +218,10 @@ export class MerchantRulesComponent implements OnInit {
   }
 
   startAdd(): void {
-    if (this.panelMode() === 'add') return;
+    if (this.panelMode() === 'add') {
+      this.shell()?.focusPanel();
+      return;
+    }
     this.confirmDiscardIfDirty((): void => {
       this.selectedRuleId.set(null);
       this.go('add');
@@ -258,10 +248,6 @@ export class MerchantRulesComponent implements OnInit {
   /** The panel's Save button: submits the form that is showing. */
   onPanelSave(): void {
     this.ruleForm()?.submit();
-  }
-
-  clearSearch(): void {
-    this.search.set('');
   }
 
   // ---- saving and deleting ----
@@ -454,7 +440,7 @@ export class MerchantRulesComponent implements OnInit {
         if (mode === 'overview' && target?.isConnected) {
           target.focus();
         } else {
-          this.panel()?.focus();
+          this.shell()?.focusPanel();
         }
         if (mode === 'overview') this.focusReturn = null;
       },

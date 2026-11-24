@@ -1,4 +1,3 @@
-import { ButtonModule } from 'primeng/button';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
@@ -28,12 +27,11 @@ import {
   RuleChangePreview,
   RuleDraft,
 } from '@models/category-rule.model';
-import { PageErrorStateComponent } from '@shared/components/page-error-state/page-error-state.component';
-import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen-toolbar';
-import { SidePanelComponent } from '@shared/components/side-panel/side-panel.component';
+import { RulePanelMode, RulesPageShellComponent } from '../rules-shell/rules-page-shell.component';
+import { RuleRowComponent } from '../rules-shell/rule-row.component';
 import { getCategoryColor } from '@shared/utils/category.utils';
 import { SettingsGuard } from '../settings.guard';
-import { amountLimitText, filterRules, sortRules } from '../utils/settings-helpers';
+import { filterRules, sortRules } from '../utils/settings-helpers';
 import { ApplyRulesDialogComponent } from './components/apply-rules-dialog/apply-rules-dialog.component';
 import {
   RuleCreateValue,
@@ -41,8 +39,6 @@ import {
 } from './components/rule-edit-form/rule-edit-form.component';
 import { RuleMatchListComponent } from './components/rule-match-list/rule-match-list.component';
 import { CategoryRuleApiService } from './services/category-rule-api.service';
-
-type RulePanelMode = 'overview' | 'rule' | 'add';
 
 /**
  * The Category rules section: the rules sorted by priority beside an always-present panel (overview, the
@@ -53,14 +49,12 @@ type RulePanelMode = 'overview' | 'rule' | 'add';
   selector: 'app-category-rules',
   standalone: true,
   imports: [
-    ButtonModule,
     SkeletonModule,
-    ScreenToolbarComponent,
-    SidePanelComponent,
+    RulesPageShellComponent,
+    RuleRowComponent,
     RuleEditFormComponent,
     RuleMatchListComponent,
     ApplyRulesDialogComponent,
-    PageErrorStateComponent,
   ],
   templateUrl: './category-rules.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -117,7 +111,7 @@ export class CategoryRulesComponent implements OnInit {
     }
   });
 
-  private readonly panel = viewChild(SidePanelComponent);
+  private readonly shell = viewChild(RulesPageShellComponent);
   protected readonly ruleForm = viewChild<RuleEditFormComponent>('ruleForm');
   private loadSubscription: Subscription | null = null;
   private loadRun = 0;
@@ -204,7 +198,6 @@ export class CategoryRulesComponent implements OnInit {
 
   readonly color = (category: Category | null): string =>
     category ? category.color || getCategoryColor(category.name) : 'var(--p-surface-400)';
-  readonly limitText = amountLimitText;
 
   openRule(rule: CategoryRule): void {
     if (this.panelMode() === 'rule' && this.selectedRuleId() === rule.id) return;
@@ -215,7 +208,10 @@ export class CategoryRulesComponent implements OnInit {
   }
 
   startAdd(): void {
-    if (this.panelMode() === 'add') return;
+    if (this.panelMode() === 'add') {
+      this.shell()?.focusPanel();
+      return;
+    }
     this.confirmDiscardIfDirty((): void => {
       this.selectedRuleId.set(null);
       this.go('add');
@@ -242,10 +238,6 @@ export class CategoryRulesComponent implements OnInit {
   /** The panel's Save button: submits the form that is showing. */
   onPanelSave(): void {
     this.ruleForm()?.submit();
-  }
-
-  clearSearch(): void {
-    this.search.set('');
   }
 
   // ---- saving and deleting ----
@@ -423,7 +415,7 @@ export class CategoryRulesComponent implements OnInit {
         if (mode === 'overview' && target?.isConnected) {
           target.focus();
         } else {
-          this.panel()?.focus();
+          this.shell()?.focusPanel();
         }
         if (mode === 'overview') this.focusReturn = null;
       },
