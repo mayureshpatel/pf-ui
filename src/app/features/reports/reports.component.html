@@ -229,6 +229,8 @@
             [loading]="loading()"
             [groupBy]="state().groupBy"
             [groupLabel]="groupLabel()"
+            [total]="current.total"
+            [comparisonTotal]="current.comparisonTotal"
             (drill)="onDrill($event)"
             (filterOnly)="onFilterOnly($event)"
             (openTransactions)="onOpenTransactions($event)"
