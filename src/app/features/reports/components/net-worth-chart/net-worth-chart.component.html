@@ -4,12 +4,12 @@
     class="rounded-xl border border-surface-200 bg-surface-0 p-4 dark:border-surface-800 dark:bg-surface-900"
   >
     <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
-      <h3 id="net-worth-chart-title" class="heading-panel m-0">Month-end balances</h3>
-      <div class="flex items-center gap-2 text-sm">
+      <h3 id="net-worth-chart-title" class="heading-panel m-0">{{ title() }}</h3>
+      <div class="flex flex-col items-start gap-1 text-sm sm:flex-row sm:items-center sm:gap-2">
         <label for="net-worth-month" class="text-muted-color">Show accounts as of</label>
         <select
           id="net-worth-month"
-          class="rounded-lg border border-surface-300 bg-surface-0 px-2 py-1 dark:border-surface-700 dark:bg-surface-900"
+          class="rounded-lg border border-surface-300 bg-surface-0 px-3 py-1 text-color focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 max-md:min-h-11 dark:border-surface-700 dark:bg-surface-900 dark:focus-visible:outline-primary-400"
           (change)="onSelect($any($event.target).value)"
         >
           @for (option of monthOptions(); track option.value) {
@@ -21,16 +21,32 @@
       </div>
     </div>
 
-    <div class="h-64 w-full">
+    <div class="h-72 w-full sm:h-80">
       <p-chart
         type="bar"
         [data]="chartData()"
         [options]="chartOptions()"
         class="block h-full w-full"
+        [ariaLabel]="summary()"
         (onDataSelect)="onChartSelect($event)"
       />
     </div>
-    <p class="m-0 mt-2 text-xs text-muted-color">Click a month to see that month's accounts</p>
+    <p class="m-0 mt-2 text-sm text-muted-color">
+      Click a month, or use the menu, to see that month's accounts.
+    </p>
+    @if (startNote(); as note) {
+      <p class="m-0 mt-1 text-sm text-muted-color" data-testid="chart-start-note">{{ note }}</p>
+    }
+    @if (points().length === 1) {
+      <p class="m-0 mt-1 text-sm text-muted-color" data-testid="chart-one-point">
+        Only one month of history so far; the trend appears as more months are added.
+      </p>
+    }
+    @if (comparing()) {
+      <p class="m-0 mt-1 text-sm text-muted-color" data-testid="chart-compare-note">
+        The chart shows the chosen range. The comparison is shown in the summary cards.
+      </p>
+    }
 
     <table class="sr-only">
       <caption>

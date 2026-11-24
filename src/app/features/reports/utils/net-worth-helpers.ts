@@ -98,7 +98,7 @@ export function chartData(
   const years = new Set<string>(points.map((p) => p.date.slice(0, 4)));
   const labels: string[] = points.map((p) => {
     const name: string = MONTH_NAMES[Number(p.date.slice(5, 7)) - 1];
-    return years.size > 1 ? `${name} ${p.date.slice(2, 4)}` : name;
+    return years.size > 1 ? `${name} '${p.date.slice(2, 4)}` : name;
   });
   return {
     labels,
