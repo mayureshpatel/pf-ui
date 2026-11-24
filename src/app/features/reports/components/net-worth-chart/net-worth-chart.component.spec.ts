@@ -29,6 +29,8 @@ describe('NetWorthChartComponent (PF-887)', () => {
     fixture.detectChanges();
   }
   const datasets = () => component['chartData']().datasets;
+  const selectedColour = (set: number): unknown =>
+    (datasets()[set].backgroundColor as unknown[])[2];
 
   beforeEach(() => {
     TestBed.configureTestingModule({ imports: [NetWorthChartComponent] });
@@ -44,7 +46,7 @@ describe('NetWorthChartComponent (PF-887)', () => {
 
     // assert & verify
     expect(component['chartData']().labels).toEqual(['Aug', 'Sep', 'Oct']);
-    expect(datasets().map((d) => d.label)).toEqual(['Assets', 'Debts', 'Net worth']);
+    expect(datasets().map((d) => d.label)).toEqual(['Assets', 'Debts (below zero)', 'Net worth']);
     expect(datasets()[0].data).toEqual([5820, 5970, 6000]);
     expect(datasets()[1].data).toEqual([-300, -400, -400]);
     expect(datasets()[2].data).toEqual([5520, 5570, 5600]);
@@ -58,14 +60,14 @@ describe('NetWorthChartComponent (PF-887)', () => {
     // act & assert: light
     theme.isDarkMode.set(false);
     render();
-    expect(datasets()[0].backgroundColor).toBe(CHART_PALETTE.light.income);
-    expect(datasets()[1].backgroundColor).toBe(CHART_PALETTE.light.expense);
+    expect(selectedColour(0)).toBe(CHART_PALETTE.light.income);
+    expect((datasets()[1].borderColor as string[])[2]).toBe(CHART_PALETTE.light.expense);
 
     // act & assert: dark
     theme.isDarkMode.set(true);
     fixture.detectChanges();
-    expect(datasets()[0].backgroundColor).toBe(CHART_PALETTE.dark.income);
-    expect(datasets()[1].backgroundColor).toBe(CHART_PALETTE.dark.expense);
+    expect(selectedColour(0)).toBe(CHART_PALETTE.dark.income);
+    expect((datasets()[1].borderColor as string[])[2]).toBe(CHART_PALETTE.dark.expense);
     theme.isDarkMode.set(false);
   });
 
@@ -74,7 +76,7 @@ describe('NetWorthChartComponent (PF-887)', () => {
     render('ASSETS');
     expect(datasets().map((d) => d.label)).toEqual(['Assets']);
     render('DEBTS');
-    expect(datasets().map((d) => d.label)).toEqual(['Debts']);
+    expect(datasets().map((d) => d.label)).toEqual(['Debts (below zero)']);
   });
 
   it('should select a month from a click on the chart', () => {
@@ -122,7 +124,7 @@ describe('NetWorthChartComponent (PF-887)', () => {
 
     // assert & verify
     expect(fixture.nativeElement.textContent).toContain(
-      "Click a month to see that month's accounts",
+      "Click a month, or use the menu, to see that month's accounts.",
     );
     const cells = Array.from<HTMLElement>(
       fixture.nativeElement.querySelectorAll('table.sr-only tbody tr'),
@@ -144,5 +146,59 @@ describe('NetWorthChartComponent (PF-887)', () => {
 
     // assert & verify
     expect(fixture.nativeElement.querySelector('select')).toBeNull();
+  });
+
+  it('should keep the selected month at full colour and fade the others', () => {
+    // act
+    render('NET_WORTH', '2026-09');
+
+    // assert & verify
+    const colours = datasets()[0].backgroundColor as string[];
+    expect(colours[1]).toBe(CHART_PALETTE.light.income);
+    expect(colours[0]).toBe(CHART_PALETTE.light.income + '55');
+    expect(colours[2]).toBe(CHART_PALETTE.light.income + '55');
+  });
+
+  it('should name the canvas with a summary and title the chart by its measure', () => {
+    // act
+    render('DEBTS');
+
+    // assert & verify
+    expect(component['title']()).toBe('Month-end debts');
+    expect(component['summary']()).toContain('Aug 2026 to Oct 2026');
+    expect(fixture.nativeElement.querySelector('canvas').getAttribute('aria-label')).toContain(
+      'Month-end debts',
+    );
+  });
+
+  it('should say where balances start when the range begins with $0 months', () => {
+    // arrange
+    fixture.componentRef.setInput('points', [
+      point('2026-08-31', 0, 0),
+      point('2026-09-30', 100, 0),
+    ]);
+    fixture.componentRef.setInput('measure', 'NET_WORTH');
+    fixture.componentRef.setInput('month', null);
+
+    // act
+    fixture.detectChanges();
+
+    // assert & verify
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="chart-start-note"]').textContent,
+    ).toContain('Balances start in Sep 2026');
+  });
+
+  it('should explain that a comparison lives in the cards, and a lone month needs more history', () => {
+    // act
+    fixture.componentRef.setInput('points', [point('2026-08-31', 100, 0)]);
+    fixture.componentRef.setInput('measure', 'NET_WORTH');
+    fixture.componentRef.setInput('month', null);
+    fixture.componentRef.setInput('comparing', true);
+    fixture.detectChanges();
+
+    // assert & verify
+    expect(fixture.nativeElement.querySelector('[data-testid="chart-compare-note"]')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('[data-testid="chart-one-point"]')).toBeTruthy();
   });
 });

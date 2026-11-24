@@ -154,7 +154,7 @@ describe('net-worth-helpers (PF-887)', () => {
       const data = chartData([point('2025-12-31', 1, 0), point('2026-01-31', 1, 0)], 'NET_WORTH');
 
       // assert & verify
-      expect(data.labels).toEqual(['Dec 25', 'Jan 26']);
+      expect(data.labels).toEqual(["Dec '25", "Jan '26"]);
     });
 
     it('should give no points for no data', () => {

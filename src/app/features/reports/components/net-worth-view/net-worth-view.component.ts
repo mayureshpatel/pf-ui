@@ -126,21 +126,6 @@ export class NetWorthViewComponent implements OnInit {
     return this.types().find((t: AccountType) => t.code === code)?.label ?? code;
   });
 
-  /** A short note when the first points of the range are $0 because the accounts did not exist yet. */
-  protected readonly historyNote: Signal<string | null> = computed((): string | null => {
-    const points: NetWorthBreakdown['points'] | undefined = this.breakdown()?.points;
-    if (!points || points.length < 2) return null;
-    const first = points[0];
-    const index: number = points.findIndex(
-      (p) => p.netWorth !== 0 || p.assets !== 0 || p.debts !== 0,
-    );
-    if (index <= 0 || first.netWorth !== 0) return null;
-    const label: string = new Date(points[index].date + 'T00:00:00').toLocaleDateString('en-US', {
-      month: 'long',
-      year: 'numeric',
-    });
-    return `Your accounts start in ${label}; earlier months show $0.`;
-  });
   protected readonly noAccounts: Signal<boolean> = computed(
     (): boolean => this.accounts().length === 0,
   );

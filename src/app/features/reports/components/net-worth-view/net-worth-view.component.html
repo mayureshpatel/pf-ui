@@ -76,14 +76,12 @@
           [comparison]="data.comparison"
           [compareMode]="state().compare"
         />
-        @if (historyNote(); as history) {
-          <p class="m-0 text-sm text-muted-color" data-testid="history-note">{{ history }}</p>
-        }
         <app-net-worth-moved [moved]="data.moved" [compareLabel]="compareLabel()" />
         <app-net-worth-chart
           [points]="data.points"
           [measure]="state().measure"
           [month]="state().month"
+          [comparing]="state().compare !== 'NONE'"
           (monthSelect)="onMonth($event)"
         />
 
