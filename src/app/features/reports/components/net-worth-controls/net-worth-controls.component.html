@@ -1,8 +1,9 @@
 <section aria-label="Net worth controls" class="flex flex-col gap-3">
   <div class="flex flex-wrap items-center gap-2">
+    <span class="text-sm text-muted-color" aria-hidden="true">Chart shows</span>
     <div
       role="group"
-      aria-label="Measure"
+      aria-label="Chart shows"
       class="inline-flex overflow-hidden rounded-lg border border-surface-300 dark:border-surface-700"
     >
       @for (measure of measures; track measure.value) {
@@ -31,6 +32,7 @@
       optionValue="value"
       [ngModel]="rangeKey()"
       appendTo="body"
+      styleClass="max-md:min-h-11"
       (onChange)="onRange($event.value)"
     />
     <p-select
@@ -42,6 +44,7 @@
       optionValue="value"
       [ngModel]="state().compare"
       appendTo="body"
+      styleClass="max-md:min-h-11"
       (onChange)="onCompare($event.value)"
     />
   </div>
@@ -52,7 +55,10 @@
       <input
         id="net-worth-from"
         type="date"
-        class="rounded-lg border border-surface-300 bg-surface-0 px-2 py-1 dark:border-surface-700 dark:bg-surface-900"
+        class="rounded-lg border border-surface-300 bg-surface-0 px-2 py-1 max-md:min-h-11 dark:border-surface-700 dark:bg-surface-900"
+        [attr.max]="draftEnd() || state().endDate"
+        [attr.aria-invalid]="dateError() ? 'true' : null"
+        [attr.aria-describedby]="dateError() ? 'net-worth-date-error' : null"
         [value]="draftStart() || state().startDate"
         (input)="draftStart.set($any($event.target).value)"
       />
@@ -60,18 +66,32 @@
       <input
         id="net-worth-to"
         type="date"
-        class="rounded-lg border border-surface-300 bg-surface-0 px-2 py-1 dark:border-surface-700 dark:bg-surface-900"
+        class="rounded-lg border border-surface-300 bg-surface-0 px-2 py-1 max-md:min-h-11 dark:border-surface-700 dark:bg-surface-900"
+        [attr.min]="draftStart() || state().startDate"
+        [attr.aria-invalid]="dateError() ? 'true' : null"
+        [attr.aria-describedby]="dateError() ? 'net-worth-date-error' : null"
         [value]="draftEnd() || state().endDate"
         (input)="draftEnd.set($any($event.target).value)"
       />
       <button
         type="button"
-        class="cursor-pointer rounded-lg bg-primary-700 px-3 py-1 text-white hover:bg-primary-800"
+        class="cursor-pointer rounded-lg bg-primary-700 px-3 py-1 text-white hover:bg-primary-800 max-md:min-h-11"
+        [attr.aria-disabled]="dateError() ? 'true' : null"
         (click)="applyCustom()"
       >
         Apply
       </button>
     </div>
+    @if (dateError(); as message) {
+      <p
+        id="net-worth-date-error"
+        role="alert"
+        data-testid="date-error"
+        class="m-0 text-sm text-rose-700 dark:text-rose-400"
+      >
+        {{ message }}
+      </p>
+    }
   }
 
   <div class="flex flex-wrap items-center gap-2" aria-label="Filters" role="group">
@@ -82,7 +102,7 @@
         {{ account.name }}
         <button
           type="button"
-          class="cursor-pointer border-0 bg-transparent p-0 text-muted-color hover:text-surface-900 dark:hover:text-surface-0"
+          class="inline-flex cursor-pointer items-center justify-center border-0 bg-transparent p-0 text-muted-color hover:text-surface-900 max-md:size-11 dark:hover:text-surface-0"
           [attr.aria-label]="'Remove ' + account.name"
           (click)="removeAccount(account.id)"
         >
@@ -97,7 +117,7 @@
         Account type: {{ label }}
         <button
           type="button"
-          class="cursor-pointer border-0 bg-transparent p-0 text-muted-color hover:text-surface-900 dark:hover:text-surface-0"
+          class="inline-flex cursor-pointer items-center justify-center border-0 bg-transparent p-0 text-muted-color hover:text-surface-900 max-md:size-11 dark:hover:text-surface-0"
           [attr.aria-label]="'Remove Account type: ' + label"
           (click)="removeType()"
         >
@@ -115,18 +135,9 @@
         optionValue="id"
         [ngModel]="null"
         appendTo="body"
+        styleClass="max-md:min-h-11"
         (onChange)="onAddAccount($event.value)"
       />
-    }
-    @for (name of disabledFilters; track name) {
-      <button
-        type="button"
-        disabled
-        class="cursor-not-allowed rounded-full border border-surface-200 px-3 py-1 text-sm text-muted-color opacity-60 dark:border-surface-800"
-        aria-describedby="net-worth-filter-reason"
-      >
-        {{ name }}
-      </button>
     }
     <span id="net-worth-filter-reason" class="text-sm text-muted-color">
       Category, Merchant and Tag don't apply to balances.

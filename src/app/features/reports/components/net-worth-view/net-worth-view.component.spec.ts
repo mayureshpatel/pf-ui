@@ -225,7 +225,7 @@ describe('NetWorthViewComponent (PF-887)', () => {
 
     // assert & verify
     expect(component['state']().accountId).toBe(9);
-    expect(text()).toContain('Deposits $9,200');
+    expect(text()).toContain('Deposits +$9,200');
     expect(text()).toContain('Interest and adjustments +$610');
   });
 

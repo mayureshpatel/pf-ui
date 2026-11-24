@@ -97,7 +97,7 @@ describe('NetWorthCardsComponent (PF-887)', () => {
     render({ debts: 50000 }, yearAgo, 'YEAR_AGO');
 
     // assert & verify
-    expect(cell('card-debts-change')).toBe('▲ up 4.6% (grew by $2,180) vs a year ago');
+    expect(cell('card-debts-change')).toBe('▲ up 4.6% (owe $2,180 more) vs a year ago');
   });
 
   it('should say how many months liquid cash covers, or a dash when there is no spending', () => {
@@ -111,7 +111,7 @@ describe('NetWorthCardsComponent (PF-887)', () => {
     render({ monthsCovered: null });
 
     // assert & verify
-    expect(cell('card-liquid-change')).toBe('—');
+    expect(cell('card-liquid-change')).toBe('Not enough spending history');
   });
 
   it('should keep the sign and the words when net worth is negative', () => {

@@ -4,30 +4,36 @@
 >
   <h3 id="net-worth-story-title" class="heading-panel m-0">{{ group().label }}</h3>
   @if (story(); as s) {
-    <p class="m-0 text-sm tabular-nums">
-      Balance now {{ dollars(s.closingBalance) }}, from {{ dollars(s.openingBalance) }} at the start
-      of the range
-    </p>
+    @if (addedInRange()) {
+      <p class="m-0 text-sm tabular-nums" data-testid="story-added">
+        Added to your accounts during this range. Balance now {{ dollars(s.closingBalance) }}.
+      </p>
+    } @else {
+      <p class="m-0 text-sm tabular-nums">
+        Balance now {{ dollars(s.closingBalance) }}, from {{ dollars(s.openingBalance) }} at the
+        start of the range
+      </p>
+    }
     @if (quiet()) {
       <p class="m-0 text-sm text-muted-color">No activity in this range.</p>
     } @else {
       <p class="m-0 text-sm tabular-nums">
-        Deposits {{ dollars(s.deposits) }} &middot; Withdrawals
-        {{ dollars(s.withdrawals) }} &middot; Interest and adjustments {{ signed() }}
+        Deposits {{ inflow(s.deposits) }} &middot; Withdrawals {{ outflow(s.withdrawals) }} &middot;
+        Interest and adjustments {{ signed() }}
       </p>
     }
   }
   <div class="flex flex-wrap gap-4 text-sm">
     <button
       type="button"
-      class="cursor-pointer border-0 bg-transparent p-0 text-primary-700 underline dark:text-primary-400"
+      class="inline-flex cursor-pointer items-center border-0 bg-transparent p-0 text-primary-700 underline max-md:min-h-11 dark:text-primary-400"
       (click)="onExplorer()"
     >
       Open this account's transactions in the explorer
     </button>
     <button
       type="button"
-      class="cursor-pointer border-0 bg-transparent p-0 text-primary-700 underline dark:text-primary-400"
+      class="inline-flex cursor-pointer items-center border-0 bg-transparent p-0 text-primary-700 underline max-md:min-h-11 dark:text-primary-400"
       (click)="onAccounts()"
     >
       Open in Accounts

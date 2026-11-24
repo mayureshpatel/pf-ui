@@ -6,6 +6,14 @@
     (stateChange)="onState($event)"
   />
 
+  <h2 #viewHeading tabindex="-1" class="heading-section sr-only">Net worth</h2>
+  <p class="sr-only" role="status" aria-live="polite" data-testid="announcement">
+    {{ announcement() }}
+  </p>
+  @if (loading() && loadedOnce()) {
+    <p class="m-0 text-sm text-muted-color" data-testid="updating">Updating…</p>
+  }
+
   @if (note(); as message) {
     <p
       role="status"
@@ -29,7 +37,7 @@
       <p-skeleton height="12rem" borderRadius="0.75rem" />
     </div>
   } @else if (breakdown(); as data) {
-    @if (data.points.length === 0 || (data.groups.length === 0 && !filtered())) {
+    @if (noAccounts() || data.points.length === 0) {
       <div
         class="flex flex-col items-center gap-2 rounded-xl border border-surface-200 p-8 text-center dark:border-surface-800"
       >
@@ -37,7 +45,7 @@
         <p class="m-0 text-sm text-muted-color">Add an account to see your net worth here.</p>
         <button
           type="button"
-          class="cursor-pointer rounded-lg bg-primary-700 px-4 py-2 text-sm text-white hover:bg-primary-800"
+          class="cursor-pointer rounded-lg bg-primary-700 px-4 py-2 text-sm text-white hover:bg-primary-800 max-md:min-h-11"
           (click)="addAccount()"
         >
           Go to Accounts
@@ -47,14 +55,18 @@
       <div
         class="flex flex-col items-center gap-2 rounded-xl border border-surface-200 p-8 text-center dark:border-surface-800"
       >
-        <p class="m-0 font-semibold">No accounts match these filters</p>
-        <button
-          type="button"
-          class="cursor-pointer rounded-lg bg-primary-700 px-4 py-2 text-sm text-white hover:bg-primary-800"
-          (click)="clearFilters()"
-        >
-          Clear filters
-        </button>
+        <p class="m-0 font-semibold">
+          {{ filtered() ? 'No accounts match these filters' : 'No balances in this range' }}
+        </p>
+        @if (filtered()) {
+          <button
+            type="button"
+            class="cursor-pointer rounded-lg bg-primary-700 px-4 py-2 text-sm text-white hover:bg-primary-800 max-md:min-h-11"
+            (click)="clearFilters()"
+          >
+            Clear filters
+          </button>
+        }
       </div>
     } @else {
       <div class="flex flex-col gap-4" [class.opacity-60]="loading()">
@@ -64,6 +76,9 @@
           [comparison]="data.comparison"
           [compareMode]="state().compare"
         />
+        @if (historyNote(); as history) {
+          <p class="m-0 text-sm text-muted-color" data-testid="history-note">{{ history }}</p>
+        }
         <app-net-worth-moved [moved]="data.moved" [compareLabel]="compareLabel()" />
         <app-net-worth-chart
           [points]="data.points"
@@ -73,10 +88,10 @@
         />
 
         @if (state().typeCode !== null || state().accountId !== null) {
-          <nav aria-label="Drill path" class="flex flex-wrap items-center gap-1 text-sm">
+          <nav aria-label="Breadcrumb" class="flex flex-wrap items-center gap-x-2 text-sm">
             <button
               type="button"
-              class="cursor-pointer border-0 bg-transparent p-0 text-primary-700 underline dark:text-primary-400"
+              class="cursor-pointer border-0 bg-transparent p-0 text-primary-700 underline max-md:min-h-11 dark:text-primary-400"
               (click)="onState({ typeCode: null, accountId: null })"
             >
               All account types
@@ -85,7 +100,7 @@
               <span aria-hidden="true">&rsaquo;</span>
               <button
                 type="button"
-                class="cursor-pointer border-0 bg-transparent p-0 text-primary-700 underline dark:text-primary-400"
+                class="cursor-pointer border-0 bg-transparent p-0 text-primary-700 underline max-md:min-h-11 dark:text-primary-400"
                 [attr.aria-current]="state().accountId === null ? 'page' : null"
                 (click)="onState({ accountId: null })"
               >
@@ -103,6 +118,7 @@
           [groups]="data.groups"
           [groupBy]="groupBy()"
           [totalAssets]="data.summary.assets"
+          [totalDebts]="data.summary.debts"
           [compareLabel]="compareLabel()"
           (openGroup)="onOpenGroup($event)"
         />

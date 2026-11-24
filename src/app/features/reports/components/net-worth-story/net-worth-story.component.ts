@@ -43,6 +43,14 @@ export class NetWorthStoryComponent {
     (): NetWorthStory | null => this.group().story,
   );
 
+  /** The account was added during the range, so there was no balance to start from. */
+  protected readonly addedInRange: Signal<boolean> = computed((): boolean => {
+    const story: NetWorthStory | null = this.story();
+    return !!story && this.group().previousBalance === 0 && story.openingBalance !== 0;
+  });
+  protected readonly outflow = (value: number): string => `-${DOLLARS.format(Math.abs(value))}`;
+  protected readonly inflow = (value: number): string => `+${DOLLARS.format(Math.abs(value))}`;
+
   protected readonly quiet: Signal<boolean> = computed((): boolean => {
     const story: NetWorthStory | null = this.story();
     return (

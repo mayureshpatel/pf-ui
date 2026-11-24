@@ -95,7 +95,7 @@ describe('net-worth-helpers (PF-887)', () => {
 
     it('should say the debt grew when it rose, and no change at zero', () => {
       // assert & verify
-      expect(debtPaidDownText(-120)).toBe('grew by $120');
+      expect(debtPaidDownText(-120)).toBe('owe $120 more');
       expect(debtPaidDownText(0)).toBe('no change');
     });
   });
@@ -109,7 +109,7 @@ describe('net-worth-helpers (PF-887)', () => {
 
     it('should show a dash when there is no spending to compare with', () => {
       // assert & verify
-      expect(monthsCoveredText(null)).toBe('—');
+      expect(monthsCoveredText(null)).toBe('Not enough spending history');
     });
   });
 
@@ -121,7 +121,7 @@ describe('net-worth-helpers (PF-887)', () => {
       // assert & verify
       expect(movedRows(moved)).toEqual([
         { label: 'Saved: income minus spending', amount: 9860 },
-        { label: 'Investment growth and other adjustments', amount: 4260 },
+        { label: 'Everything else (market moves, interest, corrections)', amount: 4260 },
         { label: 'Total change', amount: 14120 },
       ]);
     });

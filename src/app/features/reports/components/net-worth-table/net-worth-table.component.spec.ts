@@ -122,4 +122,34 @@ describe('NetWorthTableComponent (PF-887)', () => {
     // assert & verify
     expect(fixture.nativeElement.textContent).toContain('No accounts to show');
   });
+
+  it('should size a debt bar by its share of all debts and say the percentage', () => {
+    // arrange
+    const loan = group({
+      key: 'LOAN',
+      label: 'Loan',
+      kind: 'DEBT',
+      typeCode: 'LOAN',
+      balance: -10000,
+    });
+    fixture.componentRef.setInput('totalDebts', 40000);
+
+    // act
+    render([card, loan]);
+
+    // assert & verify
+    const bar = (i: number) => rows()[i].querySelector('[data-bar]') as HTMLElement;
+    expect(Math.round(parseFloat(bar(1).style.width))).toBe(25);
+    expect(rows()[1].querySelector('[data-share]')?.textContent).toContain('25% of debts');
+    expect(rows()[0].querySelector('[data-share]')?.textContent).toContain('of debts');
+  });
+
+  it('should mark a debt row for screen readers and keep the asset share wording', () => {
+    // act
+    render([group(), card]);
+
+    // assert & verify
+    expect(text(rows()[1])).toContain('(debt)');
+    expect(rows()[0].querySelector('[data-share]')?.textContent).toContain('% of assets');
+  });
 });

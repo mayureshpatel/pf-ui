@@ -7,7 +7,7 @@
     @for (row of rows(); track row.label) {
       <li
         data-testid="moved-row"
-        class="flex items-baseline justify-between gap-3"
+        class="flex items-baseline justify-between gap-3 dark:border-surface-700"
         [class.border-t]="row.total"
         [class.border-surface-200]="row.total"
         [class.pt-1]="row.total"
@@ -23,5 +23,7 @@
       </li>
     }
   </ul>
-  <p class="m-0 mt-2 text-xs text-muted-color">Saved plus the rest adds up to the total change.</p>
+  <p class="m-0 mt-2 text-xs text-muted-color">
+    Everything else is the total change minus what you saved.
+  </p>
 </section>

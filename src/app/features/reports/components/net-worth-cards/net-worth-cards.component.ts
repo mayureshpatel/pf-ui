@@ -73,7 +73,10 @@ export class NetWorthCardsComponent {
   protected readonly debtsChange: Signal<string> = computed((): string => {
     const decrease: number = this.base().debts - this.summary().debts;
     if (decrease === 0) return `no change ${this.against()}`;
-    const share: string = this.sizeOf(decrease, this.base().debts, false);
+    const base: number = this.base().debts;
+    // new debt (nothing owed before) has no percentage; say how much more is owed instead
+    if (base === 0) return `▲ ${debtPaidDownText(decrease)} ${this.against()}`;
+    const share: string = this.sizeOf(decrease, base, false);
     return `${decrease > 0 ? '▼ down' : '▲ up'} ${share} (${debtPaidDownText(decrease)}) ${this.against()}`;
   });
 
