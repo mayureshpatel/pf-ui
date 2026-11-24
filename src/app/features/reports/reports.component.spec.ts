@@ -200,7 +200,7 @@ describe('ReportsComponent', () => {
     expect(component.result()?.rows).toHaveLength(2);
     expect(component.loadedOnce()).toBe(true);
     expect(text()).toContain('Food');
-    expect(text()).toContain('Transfers excluded, 38 left out');
+    expect(text()).toContain('38 transfers left out of these totals');
   });
 
   it('should hydrate from the URL and write every change back', async () => {
@@ -278,6 +278,23 @@ describe('ReportsComponent', () => {
     expect(fixture.nativeElement.querySelector('[aria-live="polite"]').textContent).toContain(
       'Showing Food by subcategory',
     );
+  });
+
+  it('should announce picking a bar and summarise the settings for the phone panel', async () => {
+    // arrange
+    await create();
+
+    // act
+    component.onSelectBucket({ start: '2026-02-01', value: 200, partial: false });
+    await settle();
+
+    // assert & verify
+    expect(component.announcement()).toMatch(/^Showing /);
+    const summary: HTMLElement = fixture.nativeElement.querySelector(
+      '[data-testid="settings-summary"]',
+    );
+    expect(summary.textContent).toContain('Spending');
+    expect(summary.textContent).toContain('by category');
   });
 
   it('should show the transaction list when the grouping is exhausted', async () => {
@@ -894,7 +911,7 @@ describe('ReportsComponent', () => {
 
       // assert & verify
       const message = fixture.nativeElement.querySelector('[data-testid="range-refused"]');
-      expect(message.textContent).toContain('The start date cannot be before 2000-01-01');
+      expect(message.textContent).toContain('The start date cannot be before Jan 1, 2000');
       expect(text()).not.toContain('Failed to load this report');
       expect(fixture.nativeElement.querySelector('app-explorer-controls')).toBeTruthy();
     });

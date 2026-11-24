@@ -5,7 +5,7 @@
       id="results-search"
       type="search"
       placeholder="Search"
-      class="rounded-lg border border-surface-300 bg-surface-0 px-3 py-1.5 text-sm dark:border-surface-700 dark:bg-surface-900"
+      class="rounded-lg border border-surface-300 bg-surface-0 px-3 py-1.5 text-sm max-md:min-h-11 dark:border-surface-700 dark:bg-surface-900"
       [value]="search()"
       (input)="onSearch($any($event.target).value)"
     />
@@ -19,6 +19,7 @@
         optionValue="value"
         [ngModel]="sort()"
         appendTo="body"
+        styleClass="max-md:min-h-11"
         (onChange)="sortChange.emit($event.value)"
       />
     </div>
@@ -62,7 +63,7 @@
         @if (drillable()) {
           <button
             type="button"
-            class="cursor-pointer truncate border-0 bg-transparent p-0 text-left font-semibold after:absolute after:inset-0 after:content-[''] hover:underline focus-visible:outline-2"
+            class="cursor-pointer truncate border-0 bg-transparent p-0 text-left font-semibold max-md:min-h-11 after:absolute after:inset-0 after:content-[''] hover:underline focus-visible:outline-2"
             (click)="act('drill', view.row)"
           >
             <span data-name>{{ view.row.label }}</span>
@@ -179,7 +180,7 @@
       >
         <button
           type="button"
-          class="cursor-pointer border-0 bg-transparent p-0 text-left font-semibold text-primary-700 hover:underline dark:text-primary-400"
+          class="cursor-pointer border-0 bg-transparent p-0 text-left font-semibold text-primary-700 max-md:min-h-11 hover:underline dark:text-primary-400"
           (click)="toggleOther.emit()"
         >
           {{ other.label }}
@@ -191,7 +192,7 @@
         <button
           type="button"
           data-fewer
-          class="cursor-pointer border-0 bg-transparent p-0 text-sm text-primary-700 hover:underline dark:text-primary-400"
+          class="cursor-pointer border-0 bg-transparent p-0 text-sm text-primary-700 max-md:min-h-11 hover:underline dark:text-primary-400"
           (click)="toggleOther.emit()"
         >
           Show fewer

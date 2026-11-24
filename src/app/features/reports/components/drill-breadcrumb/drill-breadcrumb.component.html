@@ -9,7 +9,7 @@
         } @else {
           <button
             type="button"
-            class="cursor-pointer text-muted-color underline hover:text-color"
+            class="inline-flex cursor-pointer items-center text-muted-color underline hover:text-color max-md:min-h-11 max-md:px-1"
             (click)="stepBack.emit($index)"
           >
             {{ crumb }}

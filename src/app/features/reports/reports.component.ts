@@ -32,6 +32,7 @@ import { ToastService } from '@core/services/toast.service';
 import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen-toolbar';
 import { PageErrorStateComponent } from '@shared/components/page-error-state/page-error-state.component';
 import { downloadCsv, toCsv } from '@shared/utils/csv.utils';
+import { fromLocalDateString } from '@shared/utils/transaction.utils';
 import { DrillBreadcrumbComponent } from './components/drill-breadcrumb/drill-breadcrumb.component';
 import { ExplorerControlsComponent } from './components/explorer-controls/explorer-controls.component';
 import { FilterBarComponent } from './components/filter-bar/filter-bar.component';
@@ -57,6 +58,7 @@ import { ReportApiService } from './services/report-api.service';
 import {
   biggestRow,
   bucketLabel,
+  COMPARE_LABELS,
   changeText,
   drill,
   filterOnly,
@@ -83,9 +85,18 @@ const LOOKUP_PAGE_SIZE = 20;
 function refusalOf(error: unknown): string | null {
   if (!(error instanceof HttpErrorResponse) || error.status !== 400) return null;
   const detail: unknown = error.error?.detail;
-  return typeof detail === 'string' && detail.trim()
-    ? detail
-    : 'The server could not use this range. Try a different one.';
+  if (typeof detail !== 'string' || !detail.trim()) {
+    return 'The server could not use this range. Try a different one.';
+  }
+  // the server quotes dates as 2027-11-24; read them the way the rest of the page does
+  const readable: string = detail.replace(/\d{4}-\d{2}-\d{2}/g, (iso: string): string =>
+    fromLocalDateString(iso).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    }),
+  );
+  return `${readable.replace(/\.$/, '')}. Choose a different range.`;
 }
 const LEAF_PAGE_SIZE = 20;
 
@@ -200,6 +211,17 @@ export class ReportsComponent {
     return s.leaf
       ? `Transactions: ${where}`
       : `${this.measureLabel()} by ${this.groupLabel().toLowerCase()}${s.drill.length ? `: ${where}` : ''}`;
+  });
+  /** The current choices in one line, so the collapsed phone panel still says what is showing. */
+  protected readonly settingsSummary: Signal<string> = computed((): string => {
+    const s: ExploreState = this.state();
+    const parts: string[] = [
+      this.measureLabel(),
+      `by ${this.groupLabel().toLowerCase()}`,
+      s.rangeLabel,
+    ];
+    if (s.compare !== 'NONE') parts.push(`vs ${COMPARE_LABELS[s.compare].toLowerCase()}`);
+    return parts.join(' · ');
   });
   protected readonly hasFilters: Signal<boolean> = computed((): boolean => {
     const f: ExploreFilters = this.state().filters;
@@ -389,9 +411,11 @@ export class ReportsComponent {
   /** Clicking a trend bar filters to its day, week or month. */
   onSelectBucket(bucket: TrendBucket): void {
     const granularity: Granularity = trendGranularity(this.trend());
-    this.commit(
-      selectPeriod(this.state(), bucket.start, granularity, bucketLabel(bucket.start, granularity)),
-    );
+    const label: string = bucketLabel(bucket.start, granularity);
+    this.pushNext = true;
+    this.announcement.set(`Showing ${label}`);
+    this.commit(selectPeriod(this.state(), bucket.start, granularity, label));
+    this.focusHeading();
   }
 
   /** Escape steps back one level, unless it is closing something or the user is typing. */

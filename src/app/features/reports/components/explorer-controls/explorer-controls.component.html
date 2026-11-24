@@ -3,12 +3,12 @@
     <div
       role="group"
       aria-label="Measure"
-      class="inline-flex overflow-hidden rounded-lg border border-surface-300 dark:border-surface-700"
+      class="flex flex-wrap gap-1 md:inline-flex md:gap-0 md:overflow-hidden md:rounded-lg md:border md:border-surface-300 md:dark:border-surface-700"
     >
       @for (measure of measures; track measure) {
         <button
           type="button"
-          class="cursor-pointer border-r border-surface-300 px-3 py-1.5 text-sm max-md:min-h-11 last:border-r-0 dark:border-surface-700"
+          class="cursor-pointer border-surface-300 px-3 py-1.5 text-sm max-md:min-h-11 max-md:rounded-lg max-md:border md:border-r md:last:border-r-0 dark:border-surface-700"
           [class]="
             state().measure === measure
               ? 'bg-primary-700 text-white hover:bg-primary-800'
@@ -26,12 +26,12 @@
       <div
         role="group"
         aria-label="Count and average look at"
-        class="inline-flex overflow-hidden rounded-lg border border-surface-300 dark:border-surface-700"
+        class="flex flex-wrap gap-1 md:inline-flex md:gap-0 md:overflow-hidden md:rounded-lg md:border md:border-surface-300 md:dark:border-surface-700"
       >
         @for (side of sides; track side) {
           <button
             type="button"
-            class="cursor-pointer border-r border-surface-300 px-3 py-1.5 text-sm max-md:min-h-11 last:border-r-0 dark:border-surface-700"
+            class="cursor-pointer border-surface-300 px-3 py-1.5 text-sm max-md:min-h-11 max-md:rounded-lg max-md:border md:border-r md:last:border-r-0 dark:border-surface-700"
             [class]="
               state().side === side
                 ? 'bg-primary-700 text-white hover:bg-primary-800'
@@ -54,6 +54,7 @@
       optionLabel="label"
       optionValue="value"
       optionDisabled="disabled"
+      styleClass="max-md:min-h-11"
       [ngModel]="state().groupBy"
       [attr.aria-describedby]="groupByHint() ? 'explore-group-by-hint' : null"
       appendTo="body"
@@ -74,6 +75,7 @@
       [options]="rangeOptions"
       optionLabel="label"
       optionValue="value"
+      styleClass="max-md:min-h-11"
       [ngModel]="rangeKey()"
       appendTo="body"
       (onChange)="onRange($event.value)"
@@ -85,6 +87,7 @@
       [options]="compareOptions"
       optionLabel="label"
       optionValue="value"
+      styleClass="max-md:min-h-11"
       [ngModel]="state().compare"
       appendTo="body"
       (onChange)="onCompare($event.value)"
@@ -92,25 +95,46 @@
   </div>
 
   @if (rangeKey() === 'custom') {
-    <div class="flex flex-wrap items-center gap-2 text-sm">
-      <label for="explore-start">From</label>
-      <input
-        pInputText
-        id="explore-start"
-        type="date"
-        min="2000-01-01"
-        [value]="draftStart() || state().startDate"
-        (change)="onDate('start', $any($event.target).value)"
-      />
-      <label for="explore-end">to</label>
-      <input
-        pInputText
-        id="explore-end"
-        type="date"
-        min="2000-01-01"
-        [value]="draftEnd() || state().endDate"
-        (change)="onDate('end', $any($event.target).value)"
-      />
+    <div class="flex flex-col gap-1">
+      <div class="flex flex-wrap items-center gap-2 text-sm">
+        <label for="explore-start">From</label>
+        <input
+          pInputText
+          id="explore-start"
+          type="date"
+          aria-label="Start date"
+          class="max-md:min-h-11"
+          min="2000-01-01"
+          [attr.max]="draftEnd() || state().endDate"
+          [attr.aria-invalid]="dateError() ? 'true' : null"
+          [attr.aria-describedby]="dateError() ? 'explore-date-error' : null"
+          [value]="draftStart() || state().startDate"
+          (change)="onDate('start', $any($event.target).value)"
+        />
+        <label for="explore-end">to</label>
+        <input
+          pInputText
+          id="explore-end"
+          type="date"
+          aria-label="End date"
+          class="max-md:min-h-11"
+          [attr.min]="draftStart() || state().startDate || '2000-01-01'"
+          [attr.aria-invalid]="dateError() ? 'true' : null"
+          [attr.aria-describedby]="dateError() ? 'explore-date-error' : null"
+          [value]="draftEnd() || state().endDate"
+          (change)="onDate('end', $any($event.target).value)"
+        />
+      </div>
+      @if (dateError(); as error) {
+        <p
+          id="explore-date-error"
+          role="alert"
+          data-testid="date-error"
+          class="m-0 text-sm text-rose-700 dark:text-rose-400"
+        >
+          {{ error }}
+        </p>
+      }
     </div>
   }
 

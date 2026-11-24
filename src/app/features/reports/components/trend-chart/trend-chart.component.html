@@ -4,40 +4,108 @@
     [attr.aria-busy]="loading()"
     [class.opacity-60]="loading()"
   >
-    <h3 class="stat-label m-0 mb-2">{{ measureLabel() }} by {{ granularity() }}</h3>
-    <div class="flex h-28 items-end gap-1">
+    <div class="mb-2 flex items-baseline justify-between gap-3">
+      <h3 class="stat-label m-0">{{ measureLabel() }} by {{ granularity() }}</h3>
+      <span data-testid="chart-scale" class="text-xs tabular-nums text-muted-color">
+        Top of chart {{ scaleTop() }}
+        @if (hasNegative()) {
+          · bottom {{ scaleBottom() }}
+        }
+      </span>
+    </div>
+    <div class="flex items-end gap-1" (mouseleave)="active.set(null)">
       @for (bar of bars(); track bar.bucket.start; let i = $index) {
-        <div class="relative flex h-full flex-1 items-end">
-          @if (bar.comparisonHeight !== null) {
-            <span
-              data-comparison
-              aria-hidden="true"
-              class="pointer-events-none absolute inset-x-0 bottom-0 rounded-t border-2 border-primary-300 dark:border-primary-800"
-              [style.height.%]="bar.comparisonHeight"
-            ></span>
-          }
-          <button
-            type="button"
-            data-bar
-            class="relative w-full min-h-0.5 cursor-pointer rounded-t border-0 p-0 hover:opacity-80"
-            [class]="bar.negative ? 'bg-amber-500 dark:bg-amber-600' : barClass()"
-            [style.height.%]="bar.height"
-            [style.background-image]="
-              bar.bucket.partial
-                ? 'repeating-linear-gradient(45deg, rgb(255 255 255 / 0.45) 0 4px, transparent 4px 8px)'
-                : null
-            "
-            [attr.data-partial]="bar.bucket.partial ? '' : null"
-            [attr.aria-label]="bar.ariaLabel"
-            [attr.title]="bar.ariaLabel"
-            [attr.tabindex]="i === tabStop() ? 0 : -1"
-            (focus)="onBarFocus(i)"
-            (keydown)="onBarKeydown($event, i)"
-            (click)="selectBucket.emit(bar.bucket)"
-          ></button>
+        <div class="flex min-w-0 flex-1 flex-col">
+          <div class="relative h-28">
+            @if (hasNegative()) {
+              <span
+                data-testid="zero-line"
+                aria-hidden="true"
+                class="pointer-events-none absolute inset-x-0 border-t border-dashed border-surface-500 dark:border-surface-400"
+                [style.bottom.%]="zeroLine()"
+              ></span>
+            }
+            @if (bar.comparisonHeight !== null) {
+              <span
+                data-comparison
+                aria-hidden="true"
+                class="pointer-events-none absolute inset-x-0 rounded-md border-2 border-dashed border-surface-700 dark:border-surface-200"
+                [style.height.%]="bar.comparisonHeight"
+                [style.bottom.%]="bar.comparisonBottom"
+              ></span>
+            }
+            <button
+              type="button"
+              data-bar
+              class="absolute inset-0 cursor-pointer rounded-md border-0 bg-transparent p-0 hover:bg-surface-100 dark:hover:bg-surface-800"
+              [attr.data-partial]="bar.bucket.partial ? '' : null"
+              [attr.aria-label]="bar.ariaLabel"
+              [attr.tabindex]="i === tabStop() ? 0 : -1"
+              (focus)="onBarFocus(i)"
+              (mouseenter)="onBarHover(i)"
+              (keydown)="onBarKeydown($event, i)"
+              (click)="onBarClick(i, bar.bucket)"
+            >
+              @if (bar.noData) {
+                <span
+                  data-no-data
+                  aria-hidden="true"
+                  class="absolute inset-x-0 border-t-2 border-dotted border-surface-500 dark:border-surface-400"
+                  [style.bottom.%]="zeroLine()"
+                ></span>
+              } @else {
+                <span
+                  data-fill
+                  aria-hidden="true"
+                  class="absolute inset-x-0 min-h-0.5 rounded-md"
+                  [class]="bar.negative ? 'bg-amber-600 dark:bg-amber-500' : barClass()"
+                  [style.height.%]="bar.height"
+                  [style.bottom.%]="bar.bottom"
+                  [style.background-image]="
+                    bar.bucket.partial
+                      ? 'repeating-linear-gradient(45deg, rgb(255 255 255 / 0.45) 0 4px, transparent 4px 8px)'
+                      : null
+                  "
+                ></span>
+              }
+            </button>
+          </div>
+          <span
+            aria-hidden="true"
+            class="mt-1 block h-7 truncate text-center text-[10px] leading-3 text-muted-color"
+          >
+            {{ bar.tick }}
+            @if (bar.tick && bar.tickYear) {
+              <span class="block">{{ bar.tickYear }}</span>
+            }
+          </span>
         </div>
       }
     </div>
+    <p
+      data-testid="chart-readout"
+      class="m-0 mt-1 min-h-5 text-sm tabular-nums"
+      [class.text-muted-color]="!readoutText()"
+    >
+      @if (readoutText()) {
+        {{ readoutText() }}
+        @if (armedHint()) {
+          · tap again to open
+        }
+      } @else {
+        Point at or tap a bar for its value.
+      }
+    </p>
+    @if (hasComparison() || hasNegative()) {
+      <p data-testid="chart-legend" class="m-0 mt-1 text-xs text-muted-color">
+        @if (hasComparison()) {
+          Dashed outline: the comparison period, bar for bar.
+        }
+        @if (hasNegative()) {
+          Bars below the dashed line are negative.
+        }
+      </p>
+    }
     <table class="sr-only">
       <caption>
         {{
