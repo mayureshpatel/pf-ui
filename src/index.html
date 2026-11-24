@@ -8,7 +8,16 @@
     // it runs before Angular bootstraps at all -- see ThemeService for the reachable toggle.
     (function () {
       try {
-        if (localStorage.getItem('pf_dark_mode') === 'true') {
+        var mode = localStorage.getItem('pf_theme');
+        var legacy = localStorage.getItem('pf_dark_mode');
+        if (mode !== 'light' && mode !== 'dark' && mode !== 'system') {
+          mode = legacy === 'true' ? 'dark' : legacy === 'false' ? 'light' : 'system';
+        }
+        var dark =
+          mode === 'system'
+            ? window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+            : mode === 'dark';
+        if (dark) {
           document.documentElement.classList.add('my-app-dark');
         }
       } catch (e) {

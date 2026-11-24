@@ -2,11 +2,16 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  afterNextRender,
+  ElementRef,
+  Injector,
   inject,
   signal,
+  viewChild,
   WritableSignal,
 } from '@angular/core';
 import { Location } from '@angular/common';
+import { Title } from '@angular/platform-browser';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, NavigationEnd, NavigationStart, Params, Router } from '@angular/router';
 import { ConfirmationService } from 'primeng/api';
@@ -17,7 +22,12 @@ import { CategoryRulesComponent } from './category-rules/category-rules.componen
 import { MerchantRulesComponent } from './merchant-rules/merchant-rules.component';
 import { TagsComponent } from './tags/tags.component';
 import { SettingsGuard } from './settings.guard';
-import { SettingsSection, sectionFromParam } from './utils/settings-helpers';
+import {
+  SECTION_TITLES,
+  SettingsSection,
+  isKnownSection,
+  sectionFromParam,
+} from './utils/settings-helpers';
 
 /**
  * The Settings page: a section list (Appearance, Category rules, Merchant rules, Tags) and the chosen section. The section
@@ -47,6 +57,9 @@ export class SettingsComponent {
   private readonly guard: SettingsGuard = inject(SettingsGuard);
   private readonly destroyRef: DestroyRef = inject(DestroyRef);
   private readonly location: Location = inject(Location);
+  private readonly title: Title = inject(Title);
+  private readonly injector: Injector = inject(Injector);
+  private readonly content = viewChild<ElementRef<HTMLElement>>('content');
 
   /** The id of the navigation that is on screen, to tell Back from Forward. */
   private currentNavigationId = 0;
@@ -61,6 +74,7 @@ export class SettingsComponent {
     this.router.events.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((event): void => {
       if (event instanceof NavigationEnd) {
         this.currentNavigationId = event.id;
+        this.setTitle();
       } else if (event instanceof NavigationStart) {
         const restored: number | undefined = event.restoredState?.navigationId;
         this.lastPop =
@@ -74,6 +88,40 @@ export class SettingsComponent {
     this.route.queryParams
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((params: Params): void => this.followUrl(params));
+    this.normaliseUrl(this.route.snapshot.queryParams['section']);
+    this.setTitle();
+  }
+
+  /** An unknown or missing section in the URL is replaced by the section shown, without a history entry. */
+  private normaliseUrl(value: unknown): void {
+    const first: unknown = Array.isArray(value) ? value[0] : value;
+    if (first !== undefined && !isKnownSection(first)) {
+      void this.router.navigate([], {
+        queryParams: { section: this.section() },
+        replaceUrl: true,
+      });
+    }
+  }
+
+  /** Deferred a tick so it lands after the router's own title update for the same navigation. */
+  private setTitle(): void {
+    setTimeout((): void =>
+      this.title.setTitle(`${SECTION_TITLES[this.section()]} · Settings · Personal Finance`),
+    );
+  }
+
+  /** Moves focus to the section's heading, so a screen reader hears where it landed. */
+  private focusHeading(): void {
+    afterNextRender(
+      (): void => {
+        const heading: HTMLElement | null | undefined =
+          this.content()?.nativeElement.querySelector('h2');
+        if (!heading) return;
+        heading.setAttribute('tabindex', '-1');
+        heading.focus();
+      },
+      { injector: this.injector },
+    );
   }
 
   /** The route's `canDeactivate`: leaving Settings with unsaved changes asks first. */
@@ -103,6 +151,7 @@ export class SettingsComponent {
     this.askIfDirty((): void => {
       this.section.set(next);
       void this.router.navigate([], { queryParams: { section: next } });
+      this.focusHeading();
     });
   }
 
@@ -111,7 +160,11 @@ export class SettingsComponent {
     const next: SettingsSection = sectionFromParam(params['section']);
     if (next === this.section()) return;
     this.askIfDirty(
-      (): void => this.section.set(next),
+      (): void => {
+        this.section.set(next);
+        this.setTitle();
+        this.focusHeading();
+      },
       (): void => this.undoPop(),
     );
   }

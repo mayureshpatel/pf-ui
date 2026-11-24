@@ -13,12 +13,13 @@ describe('AppearanceSettingsComponent', () => {
   beforeEach(() => {
     document.documentElement.classList.remove('my-app-dark');
     localStorage.removeItem('pf_dark_mode');
+    localStorage.removeItem('pf_theme');
     TestBed.configureTestingModule({ imports: [AppearanceSettingsComponent] });
     theme = TestBed.inject(ThemeService);
     fixture = TestBed.createComponent(AppearanceSettingsComponent);
   });
 
-  it('should be a labelled radio group with Light and Dark', () => {
+  it('should be a labelled radio group with Light, Dark and System', () => {
     // act
     fixture.detectChanges();
 
@@ -28,7 +29,8 @@ describe('AppearanceSettingsComponent', () => {
     ).toBe('Theme');
     expect(fixture.nativeElement.textContent).toContain('Light');
     expect(fixture.nativeElement.textContent).toContain('Dark');
-    expect(radios()).toHaveLength(2);
+    expect(fixture.nativeElement.textContent).toContain('System');
+    expect(radios()).toHaveLength(3);
   });
 
   it('should check the current theme', () => {
@@ -39,12 +41,12 @@ describe('AppearanceSettingsComponent', () => {
     fixture.detectChanges();
 
     // assert & verify
-    expect(radios().map((r) => r.checked)).toEqual([false, true]);
+    expect(radios().map((r) => r.checked)).toEqual([false, true, false]);
   });
 
   it('should switch the theme and persist it', () => {
     // arrange
-    const spy = vi.spyOn(theme, 'setDarkMode');
+    const spy = vi.spyOn(theme, 'setMode');
     fixture.detectChanges();
 
     // act
@@ -52,12 +54,40 @@ describe('AppearanceSettingsComponent', () => {
     fixture.detectChanges();
 
     // assert & verify
-    expect(spy).toHaveBeenCalledWith(true);
+    expect(spy).toHaveBeenCalledWith('dark');
     expect(localStorage.getItem('pf_dark_mode')).toBe('true');
-    expect(radios().map((r) => r.checked)).toEqual([false, true]);
+    expect(radios().map((r) => r.checked)).toEqual([false, true, false]);
 
     // act
     radios()[0].click();
-    expect(spy).toHaveBeenLastCalledWith(false);
+    expect(spy).toHaveBeenLastCalledWith('light');
+  });
+
+  it('should mark the chosen card with a check, not only a border colour', () => {
+    // arrange
+    theme.setMode('system');
+
+    // act
+    fixture.detectChanges();
+
+    // assert & verify
+    expect(fixture.nativeElement.querySelectorAll('[data-selected]')).toHaveLength(1);
+    expect(radios()[2].checked).toBe(true);
+  });
+
+  it('should choose System and announce the change', () => {
+    // arrange
+    theme.setMode('light');
+    fixture.detectChanges();
+
+    // act
+    radios()[2].click();
+    fixture.detectChanges();
+
+    // assert & verify
+    expect(theme.mode()).toBe('system');
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="theme-announcement"]').textContent,
+    ).toContain('Theme set to System.');
   });
 });
