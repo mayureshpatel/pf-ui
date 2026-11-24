@@ -572,7 +572,7 @@ describe('MerchantRulesComponent', () => {
           decidedBy: 'a rule with keywords "kroger fuel", "fuelperks" (priority 5)',
         },
       ]);
-      expect(dialog).toContain('Apply Merchant Rules');
+      expect(dialog).toContain('Apply merchant rules');
       expect(dialog).toContain('Decided by');
       expect(api.applyRules).toHaveBeenCalled();
       expect(toast.success).toHaveBeenCalledWith('3 transactions got a merchant.');

@@ -163,9 +163,9 @@ describe('RuleMatchListComponent for merchant rules', () => {
     expect(summary()).toContain('1 will be assigned to Kroger');
     expect(summary()).toContain('1 of them: no other rule affects it');
     expect(summary()).toContain('1 would lose to another rule');
-    expect(summary()).toContain('1 already have a merchant, the rule leaves them alone');
+    expect(summary()).toContain('1 already have a merchant - the rule leaves them alone');
     expect(summary()).toContain(
-      '1 linked to a merchant by an exact description link, the rule leaves them alone',
+      '1 linked to a merchant by an exact description link - the rule leaves them alone',
     );
     const verdicts = Array.from(el().querySelectorAll('[data-testid="verdict"]')).map((v) =>
       (v.textContent ?? '').replace(/\s+/g, ' ').trim(),
@@ -173,8 +173,8 @@ describe('RuleMatchListComponent for merchant rules', () => {
     expect(verdicts).toEqual([
       'Will be assigned to Kroger',
       'Loses to a rule with keywords "kroger", "431" (priority 5)',
-      'Already has a merchant, the rule leaves it alone',
-      'Linked to a merchant by an exact description link, the rule leaves it alone',
+      'Already has a merchant - the rule leaves it alone',
+      'Linked to a merchant by an exact description link - the rule leaves it alone',
     ]);
     expect(rowText(0)).toContain('No merchant');
     expect(rowText(2)).toContain('Costco');

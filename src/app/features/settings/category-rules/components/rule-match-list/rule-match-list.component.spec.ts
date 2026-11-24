@@ -184,7 +184,7 @@ describe('RuleMatchListComponent', () => {
     expect(s).toContain('2 will be categorized by this rule');
     expect(s).toContain('1 of them: no other rule affects it');
     expect(s).toContain('1 would lose to another rule');
-    expect(s).toContain('1 already categorized - Apply rules leaves them alone');
+    expect(s).toContain('1 already categorized - the rule leaves them alone');
     expect(rows().length).toBe(4);
     expect(rowText(0)).toContain('Oct 5, 2026');
     expect(rowText(0)).toContain('COSTCO WHSE #1');
@@ -228,7 +228,7 @@ describe('RuleMatchListComponent', () => {
     expect(verdicts[1].textContent!.replace(/\s+/g, ' ')).toContain(
       'Loses to a rule with keywords "costco", "gas" (priority 7)',
     );
-    expect(verdicts[2].textContent).toContain('Already categorized - Apply rules leaves it alone');
+    expect(verdicts[2].textContent).toContain('Already categorized - the rule leaves it alone');
     expect(rowText(1)).toContain('Also matches: a rule with keyword "whse"');
     expect(rowText(1)).toContain('Bulk (priority 2)');
     expect(rowText(2)).toContain('Also matches: a rule with keyword "costco"');
@@ -549,7 +549,7 @@ describe('RuleMatchListComponent', () => {
     const t = summary().textContent!.replace(/\s+/g, ' ');
     expect(t).toContain('0 will be categorized by this rule');
     expect(t).toContain('1 would lose to another rule');
-    expect(t).toContain('1 already categorized - Apply rules leaves them alone');
+    expect(t).toContain('1 already categorized - the rule leaves them alone');
   });
 
   it("names another rule's keywords neutrally, since its match type is not known", () => {
