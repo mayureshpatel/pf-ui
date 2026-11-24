@@ -10,6 +10,18 @@ const MAX_KEYWORD_LENGTH = 255;
 /** The most keywords one rule may hold, as the server allows. */
 export const MAX_KEYWORDS = 20;
 
+/** Page-title and label text for each section. */
+export const SECTION_TITLES: Record<SettingsSection, string> = {
+  appearance: 'Appearance',
+  rules: 'Category rules',
+  'merchant-rules': 'Merchant rules',
+  tags: 'Tags',
+};
+
+/** Whether a `section` value names a real section. */
+export const isKnownSection = (value: unknown): value is SettingsSection =>
+  SECTIONS.includes(value as SettingsSection);
+
 /** The section a `section` query parameter names; anything unknown shows the category rules. */
 export function sectionFromParam(value: unknown): SettingsSection {
   const first: unknown = Array.isArray(value) ? value[0] : value;

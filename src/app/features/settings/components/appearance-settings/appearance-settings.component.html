@@ -1,53 +1,63 @@
-<section class="flex flex-col gap-4">
-  <h2 class="heading-section m-0">Appearance</h2>
-  <div role="radiogroup" aria-label="Theme" class="grid max-w-xl grid-cols-1 gap-4 sm:grid-cols-2">
-    <label
-      class="flex cursor-pointer flex-col gap-3 rounded-xl border-2 p-3 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary-700"
-      [class]="
-        !theme.isDarkMode()
-          ? 'border-primary-700 dark:border-primary-400'
-          : 'border-surface-200 hover:border-surface-300 dark:border-surface-700'
-      "
-    >
-      <input
-        type="radio"
-        name="theme"
-        class="sr-only"
-        [checked]="!theme.isDarkMode()"
-        (change)="theme.setDarkMode(false)"
-      />
-      <span
-        aria-hidden="true"
-        class="flex h-20 flex-col gap-2 rounded-lg border border-stone-200 bg-stone-50 p-2"
+<section class="flex flex-col gap-4" aria-labelledby="appearance-title">
+  <h2 id="appearance-title" tabindex="-1" class="heading-section m-0 focus-visible:outline-none">
+    Appearance
+  </h2>
+  <div role="radiogroup" aria-label="Theme" class="grid max-w-2xl grid-cols-1 gap-4 sm:grid-cols-3">
+    @for (option of options; track option.mode) {
+      <label
+        class="relative flex cursor-pointer flex-col gap-3 rounded-xl border-2 p-3 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary-700 dark:has-[:focus-visible]:outline-primary-400"
+        [class]="
+          theme.mode() === option.mode
+            ? 'border-primary-700 bg-primary-50 dark:border-primary-400 dark:bg-primary-950'
+            : 'border-surface-500 hover:border-surface-600 dark:border-surface-400 dark:hover:border-surface-300'
+        "
       >
-        <span class="h-3 w-1/3 rounded-md bg-stone-300"></span>
-        <span class="flex-1 rounded-md bg-white shadow-sm"></span>
-      </span>
-      <span class="font-semibold">Light</span>
-    </label>
-    <label
-      class="flex cursor-pointer flex-col gap-3 rounded-xl border-2 p-3 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary-700"
-      [class]="
-        theme.isDarkMode()
-          ? 'border-primary-700 dark:border-primary-400'
-          : 'border-surface-200 hover:border-surface-300 dark:border-surface-700'
-      "
-    >
-      <input
-        type="radio"
-        name="theme"
-        class="sr-only"
-        [checked]="theme.isDarkMode()"
-        (change)="theme.setDarkMode(true)"
-      />
-      <span
-        aria-hidden="true"
-        class="flex h-20 flex-col gap-2 rounded-lg border border-stone-700 bg-stone-950 p-2"
-      >
-        <span class="h-3 w-1/3 rounded-md bg-stone-700"></span>
-        <span class="flex-1 rounded-md bg-stone-800"></span>
-      </span>
-      <span class="font-semibold">Dark</span>
-    </label>
+        <input
+          type="radio"
+          name="appearance-theme"
+          class="sr-only"
+          [value]="option.mode"
+          [attr.aria-describedby]="'theme-hint-' + option.mode"
+          [checked]="theme.mode() === option.mode"
+          (change)="choose(option.mode)"
+        />
+        @if (theme.mode() === option.mode) {
+          <i
+            data-selected
+            class="pi pi-check-circle absolute right-3 top-3 text-primary-700 dark:text-primary-400"
+            aria-hidden="true"
+          ></i>
+        }
+        <span
+          aria-hidden="true"
+          class="flex h-20 overflow-hidden rounded-lg border border-stone-400"
+        >
+          @if (option.mode !== 'dark') {
+            <span class="flex flex-1 flex-col gap-2 bg-stone-50 p-2">
+              <span class="h-3 w-1/2 rounded-md bg-stone-300"></span>
+              <span class="flex-1 rounded-md bg-white shadow-sm"></span>
+            </span>
+          }
+          @if (option.mode !== 'light') {
+            <span class="flex flex-1 flex-col gap-2 bg-stone-950 p-2">
+              <span class="h-3 w-1/2 rounded-md bg-stone-700"></span>
+              <span class="flex-1 rounded-md bg-stone-800"></span>
+            </span>
+          }
+        </span>
+        <span class="flex flex-col">
+          <span class="font-semibold">{{ option.label }}</span>
+          <span [id]="'theme-hint-' + option.mode" class="text-sm text-muted-color">{{
+            option.hint
+          }}</span>
+        </span>
+      </label>
+    }
   </div>
+  <p class="m-0 text-sm text-muted-color">
+    Saved on this device; other devices keep their own setting.
+  </p>
+  <p class="sr-only" role="status" aria-live="polite" data-testid="theme-announcement">
+    {{ announcement() }}
+  </p>
 </section>

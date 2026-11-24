@@ -365,4 +365,56 @@ describe('SettingsComponent', () => {
       expect(location.back).not.toHaveBeenCalled();
     });
   });
+
+  it('should replace an unknown section in the URL with the one shown, without a history entry', async () => {
+    // act
+    await create({ section: 'nope' });
+
+    // assert & verify
+    expect(router.navigate).toHaveBeenCalledWith([], {
+      queryParams: { section: 'rules' },
+      replaceUrl: true,
+    });
+  });
+
+  it('should leave a known or missing section in the URL alone', async () => {
+    // act
+    await create({ section: 'tags' });
+
+    // assert & verify
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('should move focus to the new section heading after choosing it', async () => {
+    // arrange
+    await create();
+
+    // act
+    navButton('Appearance').click();
+    fixture.detectChanges();
+    await new Promise((resolve) => setTimeout(resolve));
+
+    // assert & verify
+    expect(document.activeElement?.tagName).toBe('H2');
+    expect(document.activeElement?.textContent).toContain('Appearance');
+  });
+
+  it('should keep every section button at least 44px tall', async () => {
+    // arrange
+    await create();
+
+    // assert & verify
+    expect(navButton('Tags').className).toContain('min-h-11');
+  });
+
+  it('should put the section in the page title', async () => {
+    // arrange
+    await create({ section: 'tags' });
+
+    // act
+    await new Promise((resolve) => setTimeout(resolve));
+
+    // assert & verify
+    expect(document.title).toBe('Tags · Settings · Personal Finance');
+  });
 });
