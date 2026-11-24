@@ -54,7 +54,7 @@ describe('NetWorthControlsComponent (PF-887)', () => {
     render({ measure: 'ASSETS' });
 
     // assert & verify
-    expect(all('[aria-label="Measure"] button').map((b) => b.textContent?.trim())).toEqual([
+    expect(all('[aria-label="Chart shows"] button').map((b) => b.textContent?.trim())).toEqual([
       'Net worth',
       'Assets',
       'Debts',
@@ -119,18 +119,33 @@ describe('NetWorthControlsComponent (PF-887)', () => {
     expect(emitted).toEqual([{ compare: 'YEAR_AGO' }]);
   });
 
-  it('should disable Category, Merchant and Tag with the reason', () => {
+  it('should explain that Category, Merchant and Tag do not apply, with no dead chips', () => {
     // act
     render();
 
     // assert & verify
-    for (const name of ['Category', 'Merchant', 'Tag']) {
-      const chip = button(name);
-      expect(chip?.disabled).toBe(true);
-      expect(chip?.getAttribute('aria-describedby')).toBe('net-worth-filter-reason');
-    }
+    for (const name of ['Category', 'Merchant', 'Tag']) expect(button(name)).toBeUndefined();
     expect(fixture.nativeElement.querySelector('#net-worth-filter-reason').textContent).toContain(
       "don't apply to balances",
+    );
+  });
+
+  it('should refuse a custom range that ends before it starts, and say why', () => {
+    // arrange
+    render({ startDate: '2026-01-01', endDate: '2026-06-30' });
+    component['onRange']('custom');
+    component['draftStart'].set('2026-08-01');
+    component['draftEnd'].set('2026-07-01');
+    fixture.detectChanges();
+
+    // act
+    component['applyCustom']();
+    fixture.detectChanges();
+
+    // assert & verify
+    expect(emitted).toEqual([]);
+    expect(fixture.nativeElement.querySelector('[data-testid="date-error"]').textContent).toContain(
+      'end date must be on or after',
     );
   });
 

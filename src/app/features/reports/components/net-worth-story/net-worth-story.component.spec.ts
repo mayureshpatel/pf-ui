@@ -59,8 +59,8 @@ describe('NetWorthStoryComponent (PF-887)', () => {
     // assert & verify
     expect(text()).toContain('Ally High Yield');
     expect(text()).toContain('Balance now $30,000, from $27,990');
-    expect(text()).toContain('Deposits $9,200');
-    expect(text()).toContain('Withdrawals $7,800');
+    expect(text()).toContain('Deposits +$9,200');
+    expect(text()).toContain('Withdrawals -$7,800');
     expect(text()).toContain('Interest and adjustments +$610');
   });
 
@@ -110,5 +110,14 @@ describe('NetWorthStoryComponent (PF-887)', () => {
     // assert & verify
     expect(button('Open in Accounts')).toBeTruthy();
     expect(text()).not.toContain('Deposits');
+  });
+
+  it('should say an account was added during the range instead of quoting a $0 start', () => {
+    // act
+    render({ ...ally(story), previousBalance: 0 });
+
+    // assert & verify
+    expect(text()).toContain('Added to your accounts during this range');
+    expect(text()).not.toContain('from $27,990');
   });
 });

@@ -8,7 +8,7 @@
       <thead>
         <tr class="bg-surface-50 text-left text-xs font-semibold dark:bg-surface-800">
           <th scope="col" class="px-3 py-2">{{ firstHeading() }}</th>
-          <th scope="col" class="hidden px-3 py-2 sm:table-cell">Share of assets</th>
+          <th scope="col" class="hidden px-3 py-2 sm:table-cell">Share</th>
           <th scope="col" class="px-3 py-2 text-right">Balance</th>
           <th scope="col" class="px-3 py-2 text-right">{{ changeHeading() }}</th>
           <th scope="col" class="hidden px-3 py-2 sm:table-cell">Trend</th>
@@ -20,15 +20,22 @@
             <th scope="row" class="px-3 py-2 text-left font-semibold">
               <button
                 type="button"
-                class="cursor-pointer border-0 bg-transparent p-0 text-left font-semibold hover:underline focus-visible:outline-2"
+                class="block max-w-full cursor-pointer truncate border-0 bg-transparent p-0 text-left font-semibold hover:underline focus-visible:outline-2 max-md:min-h-11"
+                [attr.title]="view.group.label"
                 (click)="openGroup.emit(view.group)"
               >
                 {{ view.group.label }}
+                @if (view.group.kind === 'DEBT') {
+                  <span class="sr-only">(debt)</span>
+                }
                 <span aria-hidden="true" class="text-muted-color">&rsaquo;</span>
               </button>
             </th>
-            <td class="hidden px-3 py-2 sm:table-cell" aria-hidden="true">
-              <span class="block h-2 w-full rounded-full bg-surface-100 dark:bg-surface-800">
+            <td class="hidden px-3 py-2 sm:table-cell">
+              <span
+                class="block h-2 w-full rounded-full bg-surface-100 dark:bg-surface-800"
+                aria-hidden="true"
+              >
                 <span
                   data-bar
                   class="block h-2 rounded-full"
@@ -36,8 +43,14 @@
                   [style.width.%]="view.width"
                 ></span>
               </span>
+              <span data-share class="text-xs tabular-nums text-muted-color">{{ view.share }}</span>
             </td>
-            <td class="px-3 py-2 text-right row-amount">{{ view.balance }}</td>
+            <td class="px-3 py-2 text-right row-amount">
+              {{ view.balance }}
+              <span data-share-phone class="block text-xs font-normal text-muted-color sm:hidden">{{
+                view.share
+              }}</span>
+            </td>
             <td class="px-3 py-2 text-right tabular-nums" [class]="toneClass(view.change.tone)">
               {{ view.change.text }}
             </td>
@@ -60,3 +73,6 @@
     </table>
   }
 </div>
+<p class="m-0 text-xs text-muted-color" data-testid="table-legend">
+  Bars: an asset's share of all assets, a debt's share of all debts.
+</p>

@@ -14,6 +14,7 @@ const DOLLARS = new Intl.NumberFormat('en-US', {
   currency: 'USD',
   maximumFractionDigits: 0,
 });
+const CENTS = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 
 interface MovedRowView {
   label: string;
@@ -49,7 +50,8 @@ export class NetWorthMovedComponent {
       const sign: string = row.amount < 0 ? '-' : '+';
       return {
         label: row.label,
-        amount: `${sign}${DOLLARS.format(Math.abs(row.amount))}`,
+        // a small change must not read as "+$0"
+        amount: `${sign}${(Math.abs(row.amount) > 0 && Math.abs(row.amount) < 0.5 ? CENTS : DOLLARS).format(Math.abs(row.amount))}`,
         direction: row.amount < 0 ? 'down' : null,
         total: index === 2,
       };

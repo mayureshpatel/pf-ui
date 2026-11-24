@@ -7,12 +7,14 @@ import {
   inject,
   input,
   InputSignal,
+  ElementRef,
   OnInit,
   output,
   OutputEmitterRef,
   signal,
   Signal,
   untracked,
+  viewChild,
   WritableSignal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -90,6 +92,12 @@ export class NetWorthViewComponent implements OnInit {
   /** First-load skeleton only; after that results stay visible (dimmed) while re-querying. */
   protected readonly loadedOnce: WritableSignal<boolean> = signal(false);
   protected readonly note: WritableSignal<string | null> = signal(null);
+  /** Polite announcement for screen readers; alternates a trailing space so a repeat is still read. */
+  protected readonly announcement: WritableSignal<string> = signal('');
+  private readonly heading: Signal<ElementRef<HTMLElement> | undefined> =
+    viewChild<ElementRef<HTMLElement>>('viewHeading');
+  private focusAfterLoad = false;
+  private announceTick = false;
 
   private loadSubscription: Subscription | null = null;
   private loadRun = 0;
@@ -117,6 +125,25 @@ export class NetWorthViewComponent implements OnInit {
     if (code === null) return null;
     return this.types().find((t: AccountType) => t.code === code)?.label ?? code;
   });
+
+  /** A short note when the first points of the range are $0 because the accounts did not exist yet. */
+  protected readonly historyNote: Signal<string | null> = computed((): string | null => {
+    const points: NetWorthBreakdown['points'] | undefined = this.breakdown()?.points;
+    if (!points || points.length < 2) return null;
+    const first = points[0];
+    const index: number = points.findIndex(
+      (p) => p.netWorth !== 0 || p.assets !== 0 || p.debts !== 0,
+    );
+    if (index <= 0 || first.netWorth !== 0) return null;
+    const label: string = new Date(points[index].date + 'T00:00:00').toLocaleDateString('en-US', {
+      month: 'long',
+      year: 'numeric',
+    });
+    return `Your accounts start in ${label}; earlier months show $0.`;
+  });
+  protected readonly noAccounts: Signal<boolean> = computed(
+    (): boolean => this.accounts().length === 0,
+  );
 
   constructor() {
     effect((): void => {
@@ -153,6 +180,7 @@ export class NetWorthViewComponent implements OnInit {
     }
     const drilled: boolean =
       next.typeCode !== previous.typeCode || next.accountId !== previous.accountId;
+    if (drilled) this.focusAfterLoad = true;
     this.note.set(null);
     this.state.set(next);
     this.paramsChange.emit({ params: toNetWorthParams(next), push: drilled });
@@ -212,8 +240,14 @@ export class NetWorthViewComponent implements OnInit {
       )
       .subscribe({
         next: (breakdown: NetWorthBreakdown): void => {
+          const first = !this.loadedOnce();
           this.breakdown.set(breakdown);
           this.loadedOnce.set(true);
+          if (!first) this.announce();
+          if (this.focusAfterLoad) {
+            this.focusAfterLoad = false;
+            setTimeout((): void => this.heading()?.nativeElement.focus());
+          }
         },
         error: (error: unknown): void => {
           console.error('Failed to load the net worth breakdown:', error);
@@ -221,6 +255,12 @@ export class NetWorthViewComponent implements OnInit {
           this.loadError.set(true);
         },
       });
+  }
+
+  private announce(): void {
+    const where: string = this.selectedAccount()?.label ?? this.typeLabel() ?? 'all account types';
+    this.announceTick = !this.announceTick;
+    this.announcement.set(`Net worth updated. Showing ${where}.${this.announceTick ? ' ' : ''}`);
   }
 
   /** Follows the URL when it changes underneath (back and forward), ignoring what this view wrote itself. */

@@ -27,7 +27,7 @@ describe('NetWorthMovedComponent (PF-887)', () => {
     // assert & verify
     expect(rows()).toEqual([
       'Saved: income minus spending +$9,860',
-      'Investment growth and other adjustments +$4,260',
+      'Everything else (market moves, interest, corrections) +$4,260',
       'Total change +$14,120',
     ]);
     expect(fixture.nativeElement.textContent).toContain('What moved it (vs a year ago)');
@@ -56,6 +56,8 @@ describe('NetWorthMovedComponent (PF-887)', () => {
     render({ change: 14120, saved: 9860, other: 4260 });
 
     // assert & verify
-    expect(fixture.nativeElement.textContent).toContain('adds up to the total change');
+    expect(fixture.nativeElement.textContent).toContain(
+      'Everything else is the total change minus what you saved.',
+    );
   });
 });

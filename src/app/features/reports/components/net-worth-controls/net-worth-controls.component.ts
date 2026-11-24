@@ -87,7 +87,6 @@ export class NetWorthControlsComponent {
     if (code === null) return null;
     return this.types().find((t: AccountType) => t.code === code)?.label ?? code;
   });
-  protected readonly disabledFilters: string[] = ['Category', 'Merchant', 'Tag'];
 
   protected onMeasure(measure: NetWorthMeasure): void {
     this.stateChange.emit({ measure });
@@ -116,11 +115,21 @@ export class NetWorthControlsComponent {
     }
   }
 
+  /** Why the typed custom dates cannot be used yet, or null. */
+  protected readonly dateError: Signal<string | null> = computed((): string | null => {
+    if (this.rangeKey() !== CUSTOM) return null;
+    const start: string = this.draftStart() || this.state().startDate;
+    const end: string = this.draftEnd() || this.state().endDate;
+    if (!start || !end) return 'Enter both dates.';
+    if (start > end) return 'The end date must be on or after the start date.';
+    return null;
+  });
+
   /** Applies a typed custom range when both dates are there and in order. */
   protected applyCustom(): void {
-    const start: string = this.draftStart();
-    const end: string = this.draftEnd();
-    if (!start || !end || start > end) return;
+    if (this.dateError()) return;
+    const start: string = this.draftStart() || this.state().startDate;
+    const end: string = this.draftEnd() || this.state().endDate;
     this.customOpen.set(false);
     this.stateChange.emit({ startDate: start, endDate: end, rangeLabel: 'Custom', month: null });
   }

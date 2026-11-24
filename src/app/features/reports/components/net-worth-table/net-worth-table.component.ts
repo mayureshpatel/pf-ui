@@ -25,8 +25,10 @@ const DOLLARS = new Intl.NumberFormat('en-US', {
 interface GroupView {
   group: NetWorthGroup;
   balance: string;
-  /** Bar width as a percentage: an asset's share of all assets, a debt's size against the largest debt. */
+  /** Bar width as a percentage: an asset's share of all assets, a debt's share of all debts. */
   width: number;
+  /** "62% of assets" or "41% of debts". */
+  share: string;
   change: { text: string; tone: ChangeTone };
   trend: string;
 }
@@ -46,6 +48,8 @@ export class NetWorthTableComponent {
   readonly groups: InputSignal<NetWorthGroup[]> = input.required<NetWorthGroup[]>();
   readonly groupBy: InputSignal<'TYPE' | 'ACCOUNT'> = input.required<'TYPE' | 'ACCOUNT'>();
   readonly totalAssets: InputSignal<number> = input.required<number>();
+  /** All debts owed, so a debt row's bar is its share of the debts. */
+  readonly totalDebts: InputSignal<number> = input<number>(0);
   /** What the change is against ("a year ago"), or null for the range itself. */
   readonly compareLabel: InputSignal<string | null> = input.required<string | null>();
   readonly openGroup: OutputEmitterRef<NetWorthGroup> = output<NetWorthGroup>();
@@ -59,24 +63,29 @@ export class NetWorthTableComponent {
   });
 
   protected readonly views: Signal<GroupView[]> = computed((): GroupView[] => {
-    const largestDebt: number = Math.max(
-      0,
-      ...this.groups()
-        .filter((g: NetWorthGroup) => g.kind === 'DEBT')
-        .map((g: NetWorthGroup) => Math.abs(g.balance)),
-    );
-    return this.groups().map((group: NetWorthGroup): GroupView => ({
-      group,
-      balance: DOLLARS.format(group.balance),
-      width:
+    const debts: number =
+      this.totalDebts() > 0
+        ? this.totalDebts()
+        : this.groups()
+            .filter((g: NetWorthGroup) => g.kind === 'DEBT')
+            .reduce((sum: number, g: NetWorthGroup) => sum + Math.abs(g.balance), 0);
+    return this.groups().map((group: NetWorthGroup): GroupView => {
+      const width: number =
         group.kind === 'DEBT'
-          ? largestDebt === 0
+          ? debts === 0
             ? 0
-            : (Math.abs(group.balance) / largestDebt) * 100
-          : shareOfAssets(group, this.totalAssets()),
-      change: changeForGroup(group),
-      trend: sparkline(group.series),
-    }));
+            : Math.min(100, (Math.abs(group.balance) / debts) * 100)
+          : shareOfAssets(group, this.totalAssets());
+      const rounded: number = Math.round(width);
+      return {
+        group,
+        balance: DOLLARS.format(group.balance),
+        width,
+        share: `${width > 0 && rounded === 0 ? '<1' : rounded}% of ${group.kind === 'DEBT' ? 'debts' : 'assets'}`,
+        change: changeForGroup(group),
+        trend: sparkline(group.series),
+      };
+    });
   });
 
   protected toneClass(tone: ChangeTone): string {

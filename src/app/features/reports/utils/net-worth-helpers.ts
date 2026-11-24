@@ -62,12 +62,12 @@ export function debtPaidDownText(decrease: number): string {
   if (decrease === 0) return 'no change';
   return decrease > 0
     ? `paid down ${WHOLE_DOLLARS.format(decrease)}`
-    : `grew by ${WHOLE_DOLLARS.format(-decrease)}`;
+    : `owe ${WHOLE_DOLLARS.format(-decrease)} more`;
 }
 
 /** "covers 4.1 months of spending", or a dash when there is no spending to compare with. */
 export function monthsCoveredText(months: number | null): string {
-  if (months === null) return '—';
+  if (months === null) return 'Not enough spending history';
   const rounded: number = Math.round(months * 10) / 10;
   return `covers ${rounded === 1 ? '1 month' : `${rounded.toFixed(1)} months`} of spending`;
 }
@@ -76,7 +76,7 @@ export function monthsCoveredText(months: number | null): string {
 export function movedRows(moved: NetWorthMoved): { label: string; amount: number }[] {
   return [
     { label: 'Saved: income minus spending', amount: moved.saved },
-    { label: 'Investment growth and other adjustments', amount: moved.other },
+    { label: 'Everything else (market moves, interest, corrections)', amount: moved.other },
     { label: 'Total change', amount: moved.change },
   ];
 }
