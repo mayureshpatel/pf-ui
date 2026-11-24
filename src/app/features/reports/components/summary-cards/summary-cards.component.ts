@@ -44,6 +44,13 @@ export class SummaryCardsComponent {
   /** The row to feature: the biggest increase when comparing, else the biggest group. */
   readonly biggest: InputSignal<ExploreRow | null> = input.required<ExploreRow | null>();
 
+  /** The transactions behind a number have no "biggest group", and a rate has no share of a total. */
+  readonly leaf: InputSignal<boolean> = input<boolean>(false);
+  readonly loading: InputSignal<boolean> = input<boolean>(false);
+  protected readonly showBiggest: Signal<boolean> = computed(
+    (): boolean => !this.leaf() && this.measure() !== 'SAVINGS_RATE',
+  );
+
   protected readonly measureLabel: Signal<string> = computed(
     (): string => MEASURE_LABELS[this.measure()],
   );

@@ -8,7 +8,7 @@
         <span class="chip-label">{{ chip.text }}</span>
         <button
           type="button"
-          class="flex size-6 cursor-pointer items-center justify-center rounded-full max-md:size-9 hover:bg-surface-100 dark:hover:bg-surface-800"
+          class="flex size-6 cursor-pointer items-center justify-center rounded-full max-md:size-11 hover:bg-surface-100 dark:hover:bg-surface-800"
           [attr.aria-label]="'Remove ' + chip.text"
           (click)="remove(chip)"
         >
@@ -29,6 +29,7 @@
       type="button"
       id="add-filter"
       class="cursor-pointer rounded-full border border-dashed border-surface-300 px-3 py-0.5 text-sm max-md:min-h-11 text-muted-color hover:bg-surface-100 dark:border-surface-700 dark:hover:bg-surface-800"
+      aria-controls="add-filter-panel"
       [attr.aria-expanded]="addOpen()"
       (click)="toggleAdd()"
     >
@@ -39,6 +40,7 @@
 
   @if (addOpen()) {
     <div
+      id="add-filter-panel"
       class="flex flex-wrap items-center gap-2 rounded-lg border border-surface-300 p-3 dark:border-surface-700"
     >
       <p-select
@@ -114,7 +116,11 @@
             id="add-min"
             type="number"
             min="0"
+            step="0.01"
             inputmode="decimal"
+            aria-label="Minimum amount"
+            [attr.aria-invalid]="amountError() ? 'true' : null"
+            [attr.aria-describedby]="amountError() ? 'add-amount-error' : null"
             class="w-28 rounded-md border border-surface-300 bg-surface-0 px-2 py-1 max-md:min-h-11 dark:border-surface-700 dark:bg-surface-900"
             [value]="minDraft()"
             (input)="minDraft.set($any($event.target).value)"
@@ -124,7 +130,11 @@
             id="add-max"
             type="number"
             min="0"
+            step="0.01"
             inputmode="decimal"
+            aria-label="Maximum amount"
+            [attr.aria-invalid]="amountError() ? 'true' : null"
+            [attr.aria-describedby]="amountError() ? 'add-amount-error' : null"
             class="w-28 rounded-md border border-surface-300 bg-surface-0 px-2 py-1 max-md:min-h-11 dark:border-surface-700 dark:bg-surface-900"
             [value]="maxDraft()"
             (input)="maxDraft.set($any($event.target).value)"
@@ -137,6 +147,16 @@
           >
             Apply
           </button>
+          @if (amountError(); as error) {
+            <p
+              id="add-amount-error"
+              role="alert"
+              data-testid="amount-error"
+              class="m-0 basis-full text-sm text-rose-700 dark:text-rose-400"
+            >
+              {{ error }}
+            </p>
+          }
         }
       }
     </div>

@@ -30,6 +30,8 @@ describe('ResultsTableComponent', () => {
       expandedOther: boolean;
       loading: boolean;
       groupBy: GroupBy;
+      total: number | null;
+      comparisonTotal: number | null;
     }> = {},
   ): void {
     const groupBy = over.groupBy ?? 'CATEGORY';
@@ -40,6 +42,8 @@ describe('ResultsTableComponent', () => {
     fixture.componentRef.setInput('expandedOther', over.expandedOther ?? false);
     fixture.componentRef.setInput('loading', over.loading ?? false);
     fixture.componentRef.setInput('groupBy', groupBy);
+    fixture.componentRef.setInput('total', over.total ?? null);
+    fixture.componentRef.setInput('comparisonTotal', over.comparisonTotal ?? null);
     fixture.componentRef.setInput('groupLabel', groupBy === 'TAG' ? 'Tag' : 'Category');
     fixture.detectChanges();
   }
@@ -153,7 +157,8 @@ describe('ResultsTableComponent', () => {
 
     // assert & verify
     expect(byValue).toEqual(['Apple', 'Cherry', 'Banana']);
-    expect(byChange).toEqual(['Cherry', 'Apple', 'Banana']);
+    // by the percentage the Change column shows: Cherry +300%, Banana +11%, Apple +3%
+    expect(byChange).toEqual(['Cherry', 'Banana', 'Apple']);
     expect(byName).toEqual(['Apple', 'Banana', 'Cherry']);
     expect(byCount).toEqual(['Banana', 'Cherry', 'Apple']);
   });
@@ -437,7 +442,7 @@ describe('ResultsTableComponent', () => {
     const wide = fixture.nativeElement.querySelector('[data-change]') as HTMLElement;
     expect(phone).toBeTruthy();
     expect(phone.textContent?.trim()).toBe(wide.textContent?.trim());
-    expect(phone.className).toContain('sm:hidden');
+    expect(phone.closest('[data-phone-line]')?.className).toContain('sm:hidden');
   });
 
   it('should not add a phone change line to rows with no comparison', () => {
@@ -446,5 +451,124 @@ describe('ResultsTableComponent', () => {
 
     // assert & verify
     expect(fixture.nativeElement.querySelector('[data-change-phone]')).toBeNull();
+  });
+
+  it('should draw the bar as a share of the total, with the percentage as text', () => {
+    // act
+    render([row('1', 'Food', 300, 200), row('2', 'Rent', 100, 200)], {
+      total: 400,
+      comparisonTotal: 400,
+    });
+
+    // assert & verify
+    const bars = Array.from(fixture.nativeElement.querySelectorAll('[data-bar]')) as HTMLElement[];
+    expect(bars[0].style.width).toBe('75%');
+    expect(fixture.nativeElement.querySelector('[data-share]').textContent.trim()).toBe('75%');
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="share-header"]').textContent,
+    ).toContain('Share of total');
+    expect(fixture.nativeElement.querySelector('[data-share-text]').textContent).toContain(
+      '75% of the total, comparison 50%',
+    );
+  });
+
+  it('should mark a negative bar differently and say so in the legend', () => {
+    // act
+    render([row('1', 'Mar', -50), row('2', 'Apr', 100)], { measure: 'NET' });
+
+    // assert & verify
+    const bars = Array.from(fixture.nativeElement.querySelectorAll('[data-bar]')) as HTMLElement[];
+    expect(bars[0].hasAttribute('data-negative')).toBe(false);
+    expect(bars[1].hasAttribute('data-negative')).toBe(true);
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="table-legend"]').textContent,
+    ).toContain('Amber bars are negative');
+  });
+
+  it('should say when a search matches nothing and clear it', () => {
+    // arrange
+    const searches: string[] = [];
+    fixture.componentInstance.searchChange.subscribe((v: string) => searches.push(v));
+    render([row('1', 'Food', 10)], { search: 'zzz' });
+
+    // act
+    const clear = fixture.nativeElement.querySelector('[data-clear-search]') as HTMLButtonElement;
+    clear.click();
+
+    // assert & verify
+    expect(fixture.nativeElement.querySelector('[data-no-match]').textContent).toContain(
+      'No rows match',
+    );
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="table-status"]').textContent,
+    ).toContain('No rows match.');
+    expect(searches).toEqual(['']);
+  });
+
+  it('should show the count on a phone and give the table row and cell roles', () => {
+    // act
+    render([row('1', 'Food', 120, 100, 4)]);
+
+    // assert & verify
+    expect(fixture.nativeElement.querySelector('[data-count-phone]').textContent).toContain(
+      '4 transactions',
+    );
+    expect(fixture.nativeElement.querySelector('[role="table"]')).not.toBeNull();
+    expect(fixture.nativeElement.querySelectorAll('[role="columnheader"]').length).toBe(6);
+    expect(
+      fixture.nativeElement.querySelectorAll('[data-row] [role="cell"]').length,
+    ).toBeGreaterThan(4);
+  });
+
+  it('should offer the Change sort only when there is a comparison', () => {
+    // act
+    render([row('1', 'Food', 120, null)]);
+    const without = fixture.componentInstance['sortOptions']().map((o) => o.value);
+    render([row('1', 'Food', 120, 100)]);
+    const withComparison = fixture.componentInstance['sortOptions']().map((o) => o.value);
+
+    // assert & verify
+    expect(without).not.toContain('change');
+    expect(withComparison).toContain('change');
+  });
+
+  it('should close the menu when focus leaves it', () => {
+    // arrange
+    render([row('1', 'Food', 120)]);
+    (fixture.nativeElement.querySelector('[data-menu]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    const root = fixture.nativeElement.querySelector('[data-menu-root]') as HTMLElement;
+
+    // act
+    root.dispatchEvent(new FocusEvent('focusout', { relatedTarget: document.body, bubbles: true }));
+    fixture.detectChanges();
+
+    // assert & verify
+    expect(fixture.nativeElement.querySelector('[role="menu"]')).toBeNull();
+  });
+
+  it('should not draw a comparison tick when the comparison has no total', () => {
+    // act
+    render([row('1', 'Food', 300, 200)], { total: 400, comparisonTotal: 0 });
+
+    // assert & verify
+    expect(fixture.nativeElement.querySelector('[data-tick]')).toBeNull();
+  });
+
+  it('should open the menu of the last rows upwards', () => {
+    // arrange
+    render(rows(8));
+
+    // act
+    const buttons = Array.from(
+      fixture.nativeElement.querySelectorAll('[data-menu]'),
+    ) as HTMLElement[];
+    buttons[7].click();
+    fixture.detectChanges();
+
+    // assert & verify
+    const menu = fixture.nativeElement.querySelector('[role="menu"]') as HTMLElement;
+    expect(menu.classList).toContain('bottom-full');
+    expect(menu.classList).not.toContain('top-full');
   });
 });

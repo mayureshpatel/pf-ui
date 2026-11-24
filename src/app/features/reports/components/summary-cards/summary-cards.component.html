@@ -1,6 +1,10 @@
-<div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+<div
+  class="grid gap-3 max-sm:grid-cols-2 sm:grid-cols-3"
+  [attr.aria-busy]="loading() ? 'true' : null"
+  [class.opacity-60]="loading()"
+>
   <section
-    class="rounded-xl border border-surface-200 bg-surface-0 p-4 dark:border-surface-800 dark:bg-surface-900"
+    class="rounded-xl border border-surface-200 bg-surface-0 p-4 max-sm:col-span-2 dark:border-surface-800 dark:bg-surface-900"
   >
     <h3 class="stat-label m-0">{{ measureLabel() }}</h3>
     <p class="m-0 stat-figure">{{ totalText() }}</p>
@@ -15,24 +19,26 @@
     }
   </section>
 
-  <section
-    class="rounded-xl border border-surface-200 bg-surface-0 p-4 dark:border-surface-800 dark:bg-surface-900"
-  >
-    <h3 class="stat-label m-0">{{ biggestTitle() }}</h3>
-    @if (biggest(); as row) {
-      <p class="m-0 stat-figure">{{ row.label }}</p>
-      <p class="m-0 text-sm tabular-nums">
-        {{ biggestDetail() }}
-        @if (biggestChange(); as change) {
-          <span [attr.data-tone]="change.tone" [class]="toneClass(change.tone)">
-            {{ change.text }}
-          </span>
-        }
-      </p>
-    } @else {
-      <p class="m-0 stat-figure">—</p>
-    }
-  </section>
+  @if (showBiggest()) {
+    <section
+      class="rounded-xl border border-surface-200 bg-surface-0 p-4 dark:border-surface-800 dark:bg-surface-900"
+    >
+      <h3 class="stat-label m-0">{{ biggestTitle() }}</h3>
+      @if (biggest(); as row) {
+        <p class="m-0 stat-figure">{{ row.label }}</p>
+        <p class="m-0 text-sm tabular-nums">
+          {{ biggestDetail() }}
+          @if (biggestChange(); as change) {
+            <span [attr.data-tone]="change.tone" [class]="toneClass(change.tone)">
+              {{ change.text }}
+            </span>
+          }
+        </p>
+      } @else {
+        <p class="m-0 stat-figure">—</p>
+      }
+    </section>
+  }
 
   <section
     class="rounded-xl border border-surface-200 bg-surface-0 p-4 dark:border-surface-800 dark:bg-surface-900"

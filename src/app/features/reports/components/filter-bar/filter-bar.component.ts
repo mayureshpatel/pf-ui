@@ -1,4 +1,8 @@
 import {
+  afterNextRender,
+  ElementRef,
+  inject,
+  Injector,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -82,6 +86,11 @@ export class FilterBarComponent {
   protected readonly expanded: WritableSignal<boolean> = signal(false);
   protected readonly addOpen: WritableSignal<boolean> = signal(false);
   protected readonly addKind: WritableSignal<AddKind | null> = signal(null);
+  private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
+  private readonly injector: Injector = inject(Injector);
+
+  /** Why Apply did nothing, so a rejected range is never silent. */
+  protected readonly amountError: WritableSignal<string | null> = signal(null);
   protected readonly minDraft: WritableSignal<string> = signal('');
   protected readonly maxDraft: WritableSignal<string> = signal('');
 
@@ -169,7 +178,9 @@ export class FilterBarComponent {
   });
 
   protected readonly excludedText: Signal<string> = computed((): string =>
-    this.excluded() > 0 ? `Transfers excluded, ${this.excluded()} left out` : 'Transfers excluded',
+    this.excluded() > 0
+      ? `${this.excluded()} ${this.excluded() === 1 ? 'transfer' : 'transfers'} left out of these totals`
+      : 'Transfers are left out of these totals',
   );
 
   protected readonly visibleChips: Signal<Chip[]> = computed((): Chip[] =>
@@ -224,6 +235,16 @@ export class FilterBarComponent {
   protected toggleAdd(): void {
     this.addOpen.update((open: boolean) => !open);
     this.addKind.set(null);
+    this.amountError.set(null);
+    if (this.addOpen()) {
+      afterNextRender(
+        (): void =>
+          this.host.nativeElement
+            .querySelector<HTMLElement>('#add-kind [role="combobox"]')
+            ?.focus(),
+        { injector: this.injector },
+      );
+    }
     this.minDraft.set('');
     this.maxDraft.set('');
   }
@@ -285,12 +306,15 @@ export class FilterBarComponent {
   protected applyAmount(): void {
     const min: number | undefined = this.minDraft() === '' ? undefined : Number(this.minDraft());
     const max: number | undefined = this.maxDraft() === '' ? undefined : Number(this.maxDraft());
-    if (
-      (min === undefined && max === undefined) ||
-      (min !== undefined && max !== undefined && min > max)
-    ) {
+    if (min === undefined && max === undefined) {
+      this.amountError.set('Enter a minimum, a maximum or both.');
       return;
     }
+    if (min !== undefined && max !== undefined && min > max) {
+      this.amountError.set('The minimum must not be more than the maximum.');
+      return;
+    }
+    this.amountError.set(null);
     const next: ExploreFilters = { ...this.filters() };
     delete next.minAmount;
     delete next.maxAmount;

@@ -191,4 +191,42 @@ describe('ExplorerControlsComponent', () => {
       { startDate: '2026-03-05', endDate: '2026-03-20', rangeLabel: 'Custom' },
     ]);
   });
+
+  it('should say why the dates are refused when the end is before the start', () => {
+    // arrange
+    render();
+    select('explore-range', 'custom');
+    const start: HTMLInputElement = fixture.nativeElement.querySelector('#explore-start');
+    const end: HTMLInputElement = fixture.nativeElement.querySelector('#explore-end');
+
+    // act
+    start.value = '2026-03-05';
+    start.dispatchEvent(new Event('change'));
+    end.value = '2026-03-02';
+    end.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    // assert & verify
+    const error: HTMLElement = fixture.nativeElement.querySelector('[data-testid="date-error"]');
+    expect(error.textContent).toContain('The end date must be on or after the start date.');
+    expect(error.getAttribute('role')).toBe('alert');
+    expect(end.getAttribute('aria-invalid')).toBe('true');
+    expect(end.getAttribute('aria-describedby')).toBe('explore-date-error');
+  });
+
+  it('should label the custom date inputs', () => {
+    // arrange
+    render();
+
+    // act
+    select('explore-range', 'custom');
+
+    // assert & verify
+    expect(fixture.nativeElement.querySelector('#explore-start').getAttribute('aria-label')).toBe(
+      'Start date',
+    );
+    expect(fixture.nativeElement.querySelector('#explore-end').getAttribute('aria-label')).toBe(
+      'End date',
+    );
+  });
 });

@@ -31,6 +31,9 @@ describe('TrendChartComponent', () => {
   const bars = (): HTMLButtonElement[] =>
     Array.from(fixture.nativeElement.querySelectorAll('button[data-bar]'));
 
+  const fills = (): HTMLElement[] =>
+    Array.from(fixture.nativeElement.querySelectorAll('[data-fill]'));
+
   beforeEach(() => {
     TestBed.configureTestingModule({ imports: [TrendChartComponent] });
     fixture = TestBed.createComponent(TrendChartComponent);
@@ -43,8 +46,8 @@ describe('TrendChartComponent', () => {
     // assert & verify
     expect(bars()).toHaveLength(3);
     expect(bars()[0].getAttribute('aria-label')).toBe('Jan 2026: $100.00');
-    expect(bars()[0].style.height).toBe('100%');
-    expect(bars()[1].style.height).toBe('50%');
+    expect(fills()[0].style.height).toBe('100%');
+    expect(fills()[1].style.height).toBe('50%');
   });
 
   // PF-894
@@ -172,7 +175,7 @@ describe('TrendChartComponent', () => {
     );
 
     // assert & verify
-    expect(bars()[0].getAttribute('aria-label')).toBe('Jan 2026: —');
+    expect(bars()[0].getAttribute('aria-label')).toBe('Jan 2026: no data');
   });
 
   // PF-888: up to a year of daily bars must not be a year of tab stops
@@ -238,5 +241,68 @@ describe('TrendChartComponent', () => {
       // assert & verify
       expect(picked.map((b) => b.start)).toEqual(['2026-02-01']);
     });
+  });
+
+  it('should draw negative values below a zero line, not upward', () => {
+    // arrange
+    const trend: ExploreTrend = {
+      current: [bucket('2026-01-01', 50), bucket('2026-02-01', -50)],
+      comparison: [],
+    };
+
+    // act
+    render(trend, 'SAVINGS_RATE');
+
+    // assert & verify
+    const [up, down] = fills();
+    expect(up.style.bottom).toBe('50%');
+    expect(down.style.bottom).toBe('0%');
+    expect(down.style.height).toBe('50%');
+    expect(fixture.nativeElement.querySelector('[data-testid="zero-line"]')).toBeTruthy();
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="chart-legend"]').textContent,
+    ).toContain('below the dashed line are negative');
+  });
+
+  it('should mark a bucket with no figure as no data, not as zero', () => {
+    // act
+    render({ current: [bucket('2026-01-01', 40), bucket('2026-02-01', null)], comparison: [] });
+
+    // assert & verify
+    expect(fixture.nativeElement.querySelectorAll('[data-no-data]')).toHaveLength(1);
+    expect(fills()).toHaveLength(1);
+  });
+
+  it('should label the bars with month ticks and a year under the first', () => {
+    // act
+    render(MONTHS);
+
+    // assert & verify
+    const text: string = (fixture.nativeElement.textContent ?? '').replace(/\s+/g, ' ');
+    expect(text).toContain('Jan 2026 Feb Mar');
+  });
+
+  it('should show the focused bar value and what the comparison bar stands for', () => {
+    // arrange
+    render(MONTHS);
+
+    // act
+    bars()[1].dispatchEvent(new Event('focus'));
+    fixture.detectChanges();
+
+    // assert & verify
+    const readout: string = fixture.nativeElement.querySelector(
+      '[data-testid="chart-readout"]',
+    ).textContent;
+    expect(readout).toContain('Feb 2026: $50.00');
+    expect(readout).toContain('Feb 2025: $60.00');
+  });
+
+  it('should make the hit area the whole column, even for a zero bar', () => {
+    // act
+    render({ current: [bucket('2026-01-01', 0), bucket('2026-02-01', 10)], comparison: [] });
+
+    // assert & verify
+    expect(bars()[0].className).toContain('inset-0');
   });
 });

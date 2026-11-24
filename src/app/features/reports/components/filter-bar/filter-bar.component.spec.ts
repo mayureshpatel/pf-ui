@@ -154,7 +154,7 @@ describe('FilterBarComponent', () => {
     render({}, [], 38);
 
     // assert & verify
-    expect(fixture.nativeElement.textContent).toContain('Transfers excluded, 38 left out');
+    expect(fixture.nativeElement.textContent).toContain('38 transfers left out of these totals');
   });
 
   it('should say transfers are excluded when none were left out', () => {
@@ -162,8 +162,8 @@ describe('FilterBarComponent', () => {
     render({}, [], 0);
 
     // assert & verify
-    expect(fixture.nativeElement.textContent).toContain('Transfers excluded');
-    expect(fixture.nativeElement.textContent).not.toContain('left out');
+    expect(fixture.nativeElement.textContent).toContain('Transfers are left out of these totals');
+    expect(fixture.nativeElement.textContent).not.toMatch(/\d+ transfers? left out/);
   });
 
   const add = (kind: string, value: unknown): void => {
@@ -246,5 +246,58 @@ describe('FilterBarComponent', () => {
 
     // assert & verify
     expect(searches).toEqual(['whole']);
+  });
+
+  it('should say what is wrong when the minimum is above the maximum', () => {
+    // arrange
+    render();
+    (fixture.nativeElement.querySelector('#add-filter') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    pick('add-kind', 'amount');
+    const min: HTMLInputElement = fixture.nativeElement.querySelector('#add-min');
+    const max: HTMLInputElement = fixture.nativeElement.querySelector('#add-max');
+    min.value = '300';
+    min.dispatchEvent(new Event('input'));
+    max.value = '20';
+    max.dispatchEvent(new Event('input'));
+
+    // act
+    (fixture.nativeElement.querySelector('#add-apply') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    // assert & verify
+    const error: HTMLElement = fixture.nativeElement.querySelector('[data-testid="amount-error"]');
+    expect(error.textContent).toContain('The minimum must not be more than the maximum.');
+    expect(filterChanges).toEqual([]);
+  });
+
+  it('should say so when an amount filter is applied empty', () => {
+    // arrange
+    render();
+    (fixture.nativeElement.querySelector('#add-filter') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    pick('add-kind', 'amount');
+
+    // act
+    (fixture.nativeElement.querySelector('#add-apply') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    // assert & verify
+    const error: HTMLElement = fixture.nativeElement.querySelector('[data-testid="amount-error"]');
+    expect(error.textContent).toContain('Enter a minimum, a maximum or both.');
+  });
+
+  it('should point the Add filter button at its panel', () => {
+    // arrange
+    render();
+
+    // act
+    const button: HTMLButtonElement = fixture.nativeElement.querySelector('#add-filter');
+    button.click();
+    fixture.detectChanges();
+
+    // assert & verify
+    expect(button.getAttribute('aria-controls')).toBe('add-filter-panel');
+    expect(fixture.nativeElement.querySelector('#add-filter-panel')).not.toBeNull();
   });
 });

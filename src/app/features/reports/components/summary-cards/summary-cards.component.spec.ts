@@ -104,4 +104,36 @@ describe('SummaryCardsComponent', () => {
     expect(text).toContain('Biggest group');
     expect(text).toContain('—');
   });
+
+  it('should leave out Biggest group at the transactions level', () => {
+    // arrange
+    fixture.componentRef.setInput('leaf', true);
+
+    // act
+    const text = render(result());
+
+    // assert & verify
+    expect(text).not.toContain('Biggest');
+  });
+
+  it('should leave out Biggest group for a savings rate', () => {
+    // act
+    const text = render(result(), 'SAVINGS_RATE');
+
+    // assert & verify
+    expect(text).not.toContain('Biggest');
+  });
+
+  it('should mark the cards busy and dim while a new view loads', () => {
+    // arrange
+    fixture.componentRef.setInput('loading', true);
+
+    // act
+    render(result());
+
+    // assert & verify
+    const grid: HTMLElement = fixture.nativeElement.querySelector('[aria-busy="true"]');
+    expect(grid).not.toBeNull();
+    expect(grid.classList).toContain('opacity-60');
+  });
 });

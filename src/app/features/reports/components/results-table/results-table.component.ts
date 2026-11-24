@@ -31,6 +31,13 @@ import {
 import { TIME_GROUPINGS } from '../../utils/explore-state';
 
 const TOP_ROWS = 10;
+
+/** The change as a fraction of its comparison, for sorting; nothing to compare against ranks last. */
+function changeRank(row: ExploreRow): number {
+  const base: number = Math.abs(row.comparisonValue ?? 0);
+  if (row.comparisonValue === null || base === 0) return Number.NEGATIVE_INFINITY;
+  return ((row.value ?? 0) - (row.comparisonValue ?? 0)) / base;
+}
 /** How long a touch is held before it opens the row menu. */
 const LONG_PRESS_MS = 500;
 
@@ -38,9 +45,14 @@ interface RowView {
   row: ExploreRow;
   id: string;
   value: string;
-  /** Bar width and the comparison tick's position, as percentages of the largest value shown. */
+  /** Bar width and the comparison tick's position, as percentages of the bar's scale. */
   width: number;
   tick: number | null;
+  /** The share as text ("31%") beside the bar, or null when the bar is only relative. */
+  share: string | null;
+  /** The same for a screen reader, with the comparison. */
+  shareText: string;
+  negative: boolean;
   change: { text: string; tone: Tone } | null;
 }
 
@@ -71,6 +83,9 @@ export class ResultsTableComponent {
   readonly groupBy: InputSignal<GroupBy> = input.required<GroupBy>();
   /** The first column's heading ("Category", "Merchant", ...). */
   readonly groupLabel: InputSignal<string> = input.required<string>();
+  /** The period's total and the comparison's, for the bar to be a true share of the total. */
+  readonly total: InputSignal<number | null> = input<number | null>(null);
+  readonly comparisonTotal: InputSignal<number | null> = input<number | null>(null);
 
   readonly drill: OutputEmitterRef<ExploreRow> = output<ExploreRow>();
   readonly filterOnly: OutputEmitterRef<ExploreRow> = output<ExploreRow>();
@@ -99,10 +114,46 @@ export class ResultsTableComponent {
   );
   protected readonly sortOptions: Signal<{ value: SortKey; label: string }[]> = computed(() => [
     { value: 'value' as SortKey, label: this.measureLabel() },
-    { value: 'change' as SortKey, label: 'Change' },
+    // sorting by a change that is not shown would do nothing, so it is offered only with a comparison
+    ...(this.showChange() || this.sort() === 'change'
+      ? [{ value: 'change' as SortKey, label: 'Change' }]
+      : []),
     { value: 'name' as SortKey, label: this.timeBased() ? 'Date' : 'Name' },
     { value: 'count' as SortKey, label: 'Count' },
   ]);
+
+  /** The bar is a share of the total for the measures that add up (spending, income). */
+  protected readonly shareMode: Signal<boolean> = computed(
+    (): boolean =>
+      (this.measure() === 'SPENDING' || this.measure() === 'INCOME') && (this.total() ?? 0) > 0,
+  );
+  protected readonly shareHeader: Signal<string> = computed((): string =>
+    this.shareMode() ? 'Share of total' : 'Size',
+  );
+  protected readonly negativeBarClass = 'bg-amber-600 dark:bg-amber-400';
+  protected readonly hasNegative: Signal<boolean> = computed((): boolean =>
+    this.rows().some((r: ExploreRow) => (r.value ?? 0) < 0),
+  );
+  protected readonly legend: Signal<string> = computed((): string => {
+    const parts: string[] = [
+      this.shareMode() ? 'Bar: share of the total.' : 'Bar: size compared with the largest row.',
+    ];
+    if (this.showChange()) parts.push('The | mark is the comparison period.');
+    if (this.hasNegative()) parts.push('Amber bars are negative.');
+    return parts.join(' ');
+  });
+  /** The last rows open their menu upwards, so its last item is not pushed off the bottom of the page. */
+  protected readonly flipFrom: Signal<number> = computed((): number =>
+    this.views().length > 5 ? this.views().length - 3 : Number.POSITIVE_INFINITY,
+  );
+  protected readonly noMatch: Signal<boolean> = computed(
+    (): boolean => this.search().trim() !== '' && this.ordered().length === 0,
+  );
+  protected readonly statusText: Signal<string> = computed((): string => {
+    if (!this.search().trim()) return '';
+    const n: number = this.ordered().length;
+    return n === 0 ? 'No rows match.' : `${n} ${n === 1 ? 'row matches' : 'rows match'}.`;
+  });
   protected readonly showChange: Signal<boolean> = computed((): boolean =>
     this.rows().some((r: ExploreRow) => r.comparisonValue !== null),
   );
@@ -127,19 +178,36 @@ export class ResultsTableComponent {
       ...this.rows().map((r: ExploreRow) => Math.abs(r.comparisonValue ?? 0)),
       0,
     );
-    const percent = (value: number | null): number =>
-      largest === 0 ? 0 : (Math.abs(value ?? 0) / largest) * 100;
-    return shown.map((row: ExploreRow): RowView => ({
-      row,
-      id: row.key ?? 'none',
-      value: formatMeasure(measure, row.value),
-      width: percent(row.value),
-      tick: row.comparisonValue === null ? null : percent(row.comparisonValue),
-      change:
-        this.showChange() && row.comparisonValue !== null
-          ? changeText(row.value, row.comparisonValue, measure)
-          : null,
-    }));
+    const shareMode: boolean = this.shareMode();
+    const total: number = this.total() ?? 0;
+    const comparisonTotal: number = this.comparisonTotal() ?? 0;
+    const percent = (value: number | null, of: number): number =>
+      of === 0 ? 0 : Math.min(100, (Math.abs(value ?? 0) / of) * 100);
+    const asText = (n: number): string => (n > 0 && n < 1 ? '<1%' : `${Math.round(n)}%`);
+    return shown.map((row: ExploreRow): RowView => {
+      const width: number = percent(row.value, shareMode ? total : largest);
+      const tick: number | null =
+        row.comparisonValue === null || (shareMode && comparisonTotal <= 0)
+          ? null
+          : percent(row.comparisonValue, shareMode ? comparisonTotal : largest);
+      const share: string | null = shareMode ? asText(width) : null;
+      return {
+        row,
+        id: row.key ?? 'none',
+        value: formatMeasure(measure, row.value),
+        width,
+        tick,
+        share,
+        shareText: shareMode
+          ? `${asText(width)} of the total${tick === null ? '' : `, comparison ${asText(tick)}`}`
+          : '',
+        negative: (row.value ?? 0) < 0,
+        change:
+          this.showChange() && row.comparisonValue !== null
+            ? changeText(row.value, row.comparisonValue, measure)
+            : null,
+      };
+    });
   });
 
   protected readonly other: Signal<ExploreRow | null> = computed(
@@ -156,9 +224,8 @@ export class ResultsTableComponent {
       a.label.localeCompare(b.label);
     switch (this.sort()) {
       case 'change':
-        return (a, b): number =>
-          (b.value ?? 0) - (b.comparisonValue ?? 0) - ((a.value ?? 0) - (a.comparisonValue ?? 0)) ||
-          byValue(a, b);
+        // the percentage the column shows; a row with nothing to compare against sorts last
+        return (a, b): number => changeRank(b) - changeRank(a) || byValue(a, b);
       case 'count':
         return (a, b): number => b.count - a.count || byValue(a, b);
       case 'name':
@@ -172,6 +239,42 @@ export class ResultsTableComponent {
 
   protected onSearch(value: string): void {
     this.searchChange.emit(value);
+  }
+
+  protected clearSearch(): void {
+    this.searchChange.emit('');
+    afterNextRender(
+      (): void => this.host.nativeElement.querySelector<HTMLElement>('#results-search')?.focus(),
+      { injector: this.injector },
+    );
+  }
+
+  protected countText(count: number): string {
+    return `${count} ${count === 1 ? 'transaction' : 'transactions'}`;
+  }
+
+  /** Expanding or folding removes the button that was pressed, so focus goes to the nearest thing. */
+  protected onToggleOther(): void {
+    const expanding = !this.expandedOther();
+    this.toggleOther.emit();
+    afterNextRender(
+      (): void => {
+        const root: HTMLElement = this.host.nativeElement;
+        const target: HTMLElement | null = expanding
+          ? (root
+              .querySelectorAll<HTMLElement>('[data-row]')
+              [TOP_ROWS]?.querySelector<HTMLElement>('button') ?? null)
+          : root.querySelector<HTMLElement>('[data-other] button');
+        target?.focus();
+      },
+      { injector: this.injector },
+    );
+  }
+
+  /** Tabbing out of an open menu closes it (a click elsewhere already did). */
+  protected onMenuFocusOut(event: FocusEvent): void {
+    const next = event.relatedTarget as Element | null;
+    if (next && !(event.currentTarget as Element).contains(next)) this.openMenu.set(null);
   }
 
   private readonly host: ElementRef<HTMLElement> = inject(ElementRef);

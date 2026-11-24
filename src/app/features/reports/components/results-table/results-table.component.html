@@ -5,7 +5,7 @@
       id="results-search"
       type="search"
       placeholder="Search"
-      class="rounded-lg border border-surface-300 bg-surface-0 px-3 py-1.5 text-sm dark:border-surface-700 dark:bg-surface-900"
+      class="rounded-lg border border-surface-300 bg-surface-0 px-3 py-1.5 text-sm max-md:min-h-11 dark:border-surface-700 dark:bg-surface-900"
       [value]="search()"
       (input)="onSearch($any($event.target).value)"
     />
@@ -19,81 +19,104 @@
         optionValue="value"
         [ngModel]="sort()"
         appendTo="body"
+        styleClass="max-md:min-h-11"
         (onChange)="sortChange.emit($event.value)"
       />
     </div>
   </div>
 
+  <p class="sr-only" role="status" data-testid="table-status">{{ statusText() }}</p>
+
   <div
-    class="overflow-hidden rounded-xl border border-surface-200 bg-surface-0 dark:border-surface-800 dark:bg-surface-900"
+    role="table"
+    [attr.aria-label]="measureLabel() + ' by ' + currentLabel().toLowerCase()"
+    class="rounded-xl border border-surface-200 bg-surface-0 dark:border-surface-800 dark:bg-surface-900"
     [attr.aria-busy]="loading()"
     [class.opacity-60]="loading()"
   >
     <div
-      class="hidden grid-cols-[1.6fr_2fr_0.9fr_1fr_0.5fr_2rem] items-center gap-3 bg-surface-50 px-3 py-2 text-xs font-semibold dark:bg-surface-800 sm:grid"
+      role="row"
+      class="grid grid-cols-[1.6fr_2fr_0.9fr_1fr_0.5fr_2rem] items-center gap-3 rounded-t-xl bg-surface-50 px-3 py-2 text-xs font-semibold dark:bg-surface-800 max-sm:sr-only"
     >
-      <span>{{ groupLabel() }}</span>
-      <span
-        >Share
-        @if (showChange()) {
-          <span class="font-normal text-muted-color">(| = comparison)</span>
-        }
-      </span>
-      <span class="text-right">{{ measureLabel() }}</span>
-      <span class="text-right">
+      <span role="columnheader">{{ groupLabel() }}</span>
+      <span role="columnheader" data-testid="share-header">{{ shareHeader() }}</span>
+      <span role="columnheader" class="text-right">{{ measureLabel() }}</span>
+      <span role="columnheader" class="text-right">
         @if (showChange()) {
           Change
         }
       </span>
-      <span class="text-right">Count</span>
-      <span></span>
+      <span role="columnheader" class="text-right">Count</span>
+      <span role="columnheader" class="sr-only">Actions</span>
     </div>
 
-    @for (view of views(); track view.id) {
+    @for (view of views(); track view.id; let i = $index) {
       <div
         data-row
+        role="row"
         (contextmenu)="onContextMenu($event, view.id)"
         (pointerdown)="onPointerDown($event, view.id)"
         (pointerup)="cancelPress()"
         (pointercancel)="cancelPress()"
         (pointerleave)="cancelPress()"
-        class="relative grid grid-cols-[1fr_auto_2rem] items-center gap-x-3 gap-y-1 border-t border-surface-200 px-3 py-2 sm:grid-cols-[1.6fr_2fr_0.9fr_1fr_0.5fr_2rem] dark:border-surface-800"
+        class="relative grid grid-cols-[1fr_auto_2rem] items-center gap-x-3 gap-y-1 border-t border-surface-200 px-3 py-2 sm:grid-cols-[1.6fr_2fr_0.9fr_1fr_0.5fr_2rem] dark:border-surface-800 max-sm:select-none"
       >
-        @if (drillable()) {
-          <button
-            type="button"
-            class="cursor-pointer truncate border-0 bg-transparent p-0 text-left font-semibold after:absolute after:inset-0 after:content-[''] hover:underline focus-visible:outline-2"
-            (click)="act('drill', view.row)"
-          >
-            <span data-name>{{ view.row.label }}</span>
-            <span aria-hidden="true" class="text-muted-color">&rsaquo;</span>
-          </button>
-        } @else {
-          <span data-name class="truncate font-semibold">{{ view.row.label }}</span>
-        }
-
-        <span
-          class="relative order-last col-span-3 h-2 rounded-full bg-surface-100 dark:bg-surface-800 sm:order-none sm:col-span-1"
-          aria-hidden="true"
-        >
-          <span
-            data-bar
-            class="block h-2 rounded-full"
-            [class]="barClass()"
-            [style.width.%]="view.width"
-          ></span>
-          @if (view.tick !== null) {
-            <span
-              data-tick
-              class="absolute -top-0.5 h-3 w-0.5 bg-surface-500 dark:bg-surface-400"
-              [style.left.%]="view.tick"
-            ></span>
+        <span role="cell" class="min-w-0">
+          @if (drillable()) {
+            <button
+              type="button"
+              [attr.title]="view.row.label"
+              class="block max-w-full cursor-pointer truncate border-0 bg-transparent p-0 text-left font-semibold max-md:min-h-11 after:absolute after:inset-0 after:content-[''] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:focus-visible:outline-primary-400"
+              (click)="act('drill', view.row)"
+            >
+              <span data-name>{{ view.row.label }}</span>
+              <span aria-hidden="true" class="ml-1 text-muted-color">&rsaquo;</span>
+            </button>
+          } @else {
+            <span data-name class="block truncate font-semibold" [attr.title]="view.row.label">{{
+              view.row.label
+            }}</span>
           }
         </span>
 
-        <span data-value class="text-right row-amount">{{ view.value }}</span>
+        <span
+          role="cell"
+          class="relative order-last col-span-3 flex items-center gap-2 sm:order-none sm:col-span-1"
+        >
+          <span class="sr-only" data-share-text>{{ view.shareText }}</span>
+          <span
+            class="relative h-2 min-w-0 flex-1 rounded-full bg-surface-100 dark:bg-surface-800"
+            aria-hidden="true"
+          >
+            <span
+              data-bar
+              class="block h-2 rounded-full"
+              [class]="view.negative ? negativeBarClass : barClass()"
+              [attr.data-negative]="view.negative ? '' : null"
+              [style.width.%]="view.width"
+              [style.min-width.px]="view.width > 0 ? 3 : 0"
+            ></span>
+            @if (view.tick !== null) {
+              <span
+                data-tick
+                class="absolute -top-0.5 h-3 w-0.5 bg-surface-500 dark:bg-surface-400"
+                [style.left.%]="view.tick"
+              ></span>
+            }
+          </span>
+          @if (view.share) {
+            <span
+              data-share
+              class="w-10 shrink-0 text-right text-xs tabular-nums text-muted-color"
+              aria-hidden="true"
+              >{{ view.share }}</span
+            >
+          }
+        </span>
 
-        <span class="hidden text-right text-sm sm:block">
+        <span role="cell" data-value class="text-right row-amount">{{ view.value }}</span>
+
+        <span role="cell" class="hidden text-right text-sm sm:block">
           @if (view.change; as change) {
             <span data-change [attr.data-tone]="change.tone" [class]="toneClass(change.tone)">
               {{ change.text }}
@@ -101,20 +124,28 @@
           }
         </span>
 
-        @if (view.change; as change) {
-          <span
-            data-change-phone
-            class="order-last col-span-3 text-xs sm:hidden"
-            [class]="toneClass(change.tone)"
-          >
-            {{ change.text }}
-          </span>
-        }
+        <span
+          role="cell"
+          class="order-last col-span-3 flex flex-wrap gap-x-3 text-sm sm:hidden"
+          data-phone-line
+        >
+          @if (view.change; as change) {
+            <span data-change-phone [class]="toneClass(change.tone)">{{ change.text }}</span>
+          }
+          <span data-count-phone class="text-muted-color">{{ countText(view.row.count) }}</span>
+        </span>
 
-        <span class="hidden text-right text-sm tabular-nums sm:block">{{ view.row.count }}</span>
+        <span role="cell" class="hidden text-right text-sm tabular-nums sm:block">{{
+          view.row.count
+        }}</span>
 
         @if (drillable()) {
-          <span data-menu-root class="relative z-10 justify-self-end">
+          <span
+            role="cell"
+            data-menu-root
+            class="relative z-10 justify-self-end"
+            (focusout)="onMenuFocusOut($event)"
+          >
             <button
               type="button"
               data-menu
@@ -129,15 +160,17 @@
             @if (openMenu() === view.id) {
               <ul
                 role="menu"
+                [class.top-full]="i < flipFrom()"
+                [class.bottom-full]="i >= flipFrom()"
                 tabindex="-1"
-                class="absolute right-0 top-full z-20 m-0 min-w-64 list-none rounded-lg border border-surface-200 bg-surface-0 p-1 shadow-lg dark:border-surface-700 dark:bg-surface-900"
+                class="absolute right-0 z-20 m-0 min-w-56 max-w-[calc(100vw-2rem)] list-none rounded-lg border border-surface-200 bg-surface-0 p-1 shadow-lg dark:border-surface-700 dark:bg-surface-900"
                 (keydown)="onMenuKeydown($event)"
               >
                 <li role="none">
                   <button
                     type="button"
                     role="menuitem"
-                    class="w-full cursor-pointer rounded-md border-0 bg-transparent px-3 py-2 text-left text-sm hover:bg-surface-100 dark:hover:bg-surface-800"
+                    class="w-full cursor-pointer rounded-md border-0 bg-transparent px-3 py-2 text-left text-sm max-md:min-h-11 hover:bg-surface-100 dark:hover:bg-surface-800"
                     (click)="act('drill', view.row)"
                   >
                     Drill into {{ view.row.label }}
@@ -147,7 +180,7 @@
                   <button
                     type="button"
                     role="menuitem"
-                    class="w-full cursor-pointer rounded-md border-0 bg-transparent px-3 py-2 text-left text-sm hover:bg-surface-100 dark:hover:bg-surface-800"
+                    class="w-full cursor-pointer rounded-md border-0 bg-transparent px-3 py-2 text-left text-sm max-md:min-h-11 hover:bg-surface-100 dark:hover:bg-surface-800"
                     (click)="act('filterOnly', view.row)"
                   >
                     Filter to {{ view.row.label }} and keep grouping by {{ currentLabel() }}
@@ -157,7 +190,7 @@
                   <button
                     type="button"
                     role="menuitem"
-                    class="w-full cursor-pointer rounded-md border-0 bg-transparent px-3 py-2 text-left text-sm hover:bg-surface-100 dark:hover:bg-surface-800"
+                    class="w-full cursor-pointer rounded-md border-0 bg-transparent px-3 py-2 text-left text-sm max-md:min-h-11 hover:bg-surface-100 dark:hover:bg-surface-800"
                     (click)="act('openTransactions', view.row)"
                   >
                     Open transactions
@@ -167,40 +200,69 @@
             }
           </span>
         } @else {
-          <span></span>
+          <span role="cell"></span>
         }
+      </div>
+    }
+
+    @if (noMatch()) {
+      <div
+        role="row"
+        data-no-match
+        class="border-t border-surface-200 px-3 py-4 text-sm dark:border-surface-800"
+      >
+        <span role="cell" class="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span>No rows match &ldquo;{{ search().trim() }}&rdquo;.</span>
+          <button
+            type="button"
+            data-clear-search
+            class="cursor-pointer border-0 bg-transparent p-0 font-semibold text-primary-700 hover:underline dark:text-primary-400 max-md:min-h-11"
+            (click)="clearSearch()"
+          >
+            Clear search
+          </button>
+        </span>
       </div>
     }
 
     @if (other(); as other) {
       <div
         data-other
+        role="row"
         class="flex items-center justify-between gap-3 border-t border-surface-200 px-3 py-2 dark:border-surface-800"
       >
-        <button
-          type="button"
-          class="cursor-pointer border-0 bg-transparent p-0 text-left font-semibold text-primary-700 hover:underline dark:text-primary-400"
-          (click)="toggleOther.emit()"
-        >
-          {{ other.label }}
-        </button>
-        <span class="row-amount">{{ otherValue() }}</span>
+        <span role="cell">
+          <button
+            type="button"
+            class="cursor-pointer border-0 bg-transparent p-0 text-left font-semibold text-primary-700 max-md:min-h-11 hover:underline dark:text-primary-400"
+            aria-expanded="false"
+            (click)="onToggleOther()"
+          >
+            {{ other.label }} <span aria-hidden="true">&rsaquo;</span>
+          </button>
+        </span>
+        <span role="cell" class="row-amount">{{ otherValue() }}</span>
       </div>
     } @else if (expandedOther() && hiddenCount() > 0) {
-      <div class="border-t border-surface-200 px-3 py-2 dark:border-surface-800">
-        <button
-          type="button"
-          data-fewer
-          class="cursor-pointer border-0 bg-transparent p-0 text-sm text-primary-700 hover:underline dark:text-primary-400"
-          (click)="toggleOther.emit()"
-        >
-          Show fewer
-        </button>
+      <div role="row" class="border-t border-surface-200 px-3 py-2 dark:border-surface-800">
+        <span role="cell">
+          <button
+            type="button"
+            data-fewer
+            aria-expanded="true"
+            class="cursor-pointer border-0 bg-transparent p-0 text-sm text-primary-700 max-md:min-h-11 hover:underline dark:text-primary-400"
+            (click)="onToggleOther()"
+          >
+            Show fewer
+          </button>
+        </span>
       </div>
     }
   </div>
 
-  @if (groupBy() === 'TAG') {
+  <p class="m-0 text-xs text-muted-color" data-testid="table-legend">{{ legend() }}</p>
+
+  @if (groupBy() === 'TAG' && rows().length > 1) {
     <p class="m-0 text-xs text-muted-color">
       A transaction with more than one tag appears under each of its tags, so the rows can add up to
       more than the total.

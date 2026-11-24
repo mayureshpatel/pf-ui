@@ -86,7 +86,10 @@
       aria-controls="explorer-settings"
       (click)="controlsOpen.set(!controlsOpen())"
     >
-      Filters and settings
+      <span class="block">Filters and settings</span>
+      <span data-testid="settings-summary" class="block text-xs text-muted-color">
+        {{ settingsSummary() }}
+      </span>
     </button>
 
     <div
@@ -114,7 +117,7 @@
       <h2 id="results-heading" #heading tabindex="-1" class="heading-section m-0 outline-none">
         {{ headingText() }}
       </h2>
-      <p class="m-0 text-sm text-muted-color">
+      <p class="m-0 text-sm text-muted-color" [class.hidden]="refusal()">
         {{ rangeLine() }}
         @if (result()?.comparisonLabel; as label) {
           <span> · compared with {{ label }}</span>
@@ -172,6 +175,8 @@
           [measure]="state().measure"
           [compare]="state().compare"
           [biggest]="biggest()"
+          [leaf]="state().leaf"
+          [loading]="loading()"
         />
         @if (trendFailed()) {
           <div
@@ -224,6 +229,8 @@
             [loading]="loading()"
             [groupBy]="state().groupBy"
             [groupLabel]="groupLabel()"
+            [total]="current.total"
+            [comparisonTotal]="current.comparisonTotal"
             (drill)="onDrill($event)"
             (filterOnly)="onFilterOnly($event)"
             (openTransactions)="onOpenTransactions($event)"

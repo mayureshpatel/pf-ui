@@ -153,6 +153,13 @@ export class ExplorerControlsComponent {
     });
   }
 
+  /** Why the typed dates cannot be used yet, so the inputs never disagree with the results silently. */
+  protected readonly dateError: Signal<string | null> = computed((): string | null => {
+    const start: string = this.draftStart();
+    const end: string = this.draftEnd();
+    return start && end && start > end ? 'The end date must be on or after the start date.' : null;
+  });
+
   protected onDate(which: 'start' | 'end', value: string): void {
     (which === 'start' ? this.draftStart : this.draftEnd).set(value);
     const start: string = this.draftStart();
