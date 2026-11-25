@@ -920,6 +920,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/transactions/description-groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List description groups
+         * @description Transaction descriptions grouped by merchant text with store numbers and location stripped; look-alike groups are marked similar, never merged
+         */
+        get: operations["getDescriptionGroups"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/transactions/count-by-category": {
         parameters: {
             query?: never;
@@ -2175,6 +2195,30 @@ export interface components {
             transactionId?: number;
             categoryRuleCovers?: boolean;
             merchantRuleCovers?: boolean;
+        };
+        DescriptionGroupDto: {
+            key?: string;
+            displayName?: string;
+            /** Format: int32 */
+            variantCount?: number;
+            /** Format: int64 */
+            transactionCount?: number;
+            variants?: components["schemas"]["TransactionDescriptionDto"][];
+            similarKeys?: string[];
+        };
+        DescriptionGroupPageDto: {
+            content?: components["schemas"]["DescriptionGroupDto"][];
+            page?: components["schemas"]["PageMetadata"];
+            /** Format: int64 */
+            unlinkedDescriptionCount?: number;
+        };
+        TransactionDescriptionDto: {
+            description?: string;
+            /** Format: int64 */
+            transactionCount?: number;
+            /** Format: int64 */
+            merchantId?: number;
+            merchantName?: string;
         };
         CategoryTransactionsDto: {
             category?: components["schemas"]["CategoryDto"];
@@ -4476,6 +4520,30 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["PagedModel"];
+                };
+            };
+        };
+    };
+    getDescriptionGroups: {
+        parameters: {
+            query: {
+                search?: string;
+                unlinkedOnly?: boolean;
+                pageable: components["schemas"]["Pageable"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page of description groups returned */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DescriptionGroupPageDto"];
                 };
             };
         };
