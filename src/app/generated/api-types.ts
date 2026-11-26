@@ -516,6 +516,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/merchants/suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Suggest merchants for group names
+         * @description Read-only. For each description group name, the authenticated user's merchants whose names share a word with it, best fit first
+         */
+        post: operations["suggestMerchants"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/merchant-rules/match-preview": {
         parameters: {
             query?: never;
@@ -1976,6 +1996,15 @@ export interface components {
         };
         MerchantDescriptionLinkBulkCreateRequest: {
             descriptions: string[];
+        };
+        MerchantSuggestionRequest: {
+            names: string[];
+            /** Format: int32 */
+            limit?: number;
+        };
+        MerchantSuggestionDto: {
+            name?: string;
+            merchants?: components["schemas"]["MerchantDto"][];
         };
         MerchantRuleCreateRequest: {
             /** Format: int64 */
@@ -3950,6 +3979,39 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["DescriptionLinkResultDto"];
+                };
+            };
+        };
+    };
+    suggestMerchants: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MerchantSuggestionRequest"];
+            };
+        };
+        responses: {
+            /** @description Suggestions returned, one entry per name in order */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MerchantSuggestionDto"][];
+                };
+            };
+            /** @description More than 100 names, a null or too-long name, or a limit outside 1 to 20 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MerchantSuggestionDto"][];
                 };
             };
         };

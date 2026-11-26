@@ -1,0 +1,33 @@
+<div
+  role="tablist"
+  aria-label="Merchant views"
+  class="inline-flex gap-1 rounded-xl bg-surface-100 p-1 dark:bg-surface-800"
+>
+  @for (tab of tabs; track tab.view) {
+    <button
+      type="button"
+      role="tab"
+      class="cursor-pointer rounded-lg px-3 py-1.5 text-sm max-md:min-h-11 max-md:min-w-11 font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 dark:focus-visible:outline-primary-400"
+      [class]="
+        view() === tab.view
+          ? 'bg-surface-0 text-surface-900 shadow-sm dark:bg-surface-900 dark:text-surface-0'
+          : 'text-muted-color'
+      "
+      [id]="tabId(tab.view)"
+      [attr.aria-controls]="panelId"
+      [attr.tabindex]="view() === tab.view ? 0 : -1"
+      [attr.aria-selected]="view() === tab.view"
+      (keydown)="onKeydown($event)"
+      (click)="viewChange.emit(tab.view)"
+    >
+      {{ tab.label }}
+      @if (tab.view === 'unlinked' && (unlinkedCount() ?? 0) > 0) {
+        <span
+          data-testid="unlinked-badge"
+          class="ml-1 rounded-full bg-amber-700 px-1.5 text-xs row-amount text-white"
+          >{{ unlinkedCount() | number }}</span
+        >
+      }
+    </button>
+  }
+</div>

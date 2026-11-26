@@ -1,3 +1,4 @@
+import type { MerchantsComponent } from './features/merchants/merchants.component';
 import type { SettingsComponent } from './features/settings/settings.component';
 import { Routes } from '@angular/router';
 import { requireAuth, guestGuard } from '@core/auth/auth.guard';
@@ -59,6 +60,7 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/merchants/merchants.component').then((m) => m.MerchantsComponent),
         title: 'Merchants · Personal Finance',
+        canDeactivate: [(component: MerchantsComponent): Promise<boolean> => component.canLeave()],
       },
       {
         path: 'budgets',

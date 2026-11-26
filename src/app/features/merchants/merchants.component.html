@@ -4,181 +4,203 @@
       <h1 class="heading-page">Merchants</h1>
     </div>
     <div toolbarFilters>
-      @if (!onlyAddMode()) {
+      @if (!onlyAddMode() && view() !== 'rules') {
         <p-button label="Add merchant" icon="pi pi-plus" (onClick)="startAdd()" />
       }
     </div>
   </app-screen-toolbar>
 
-  @if (loadError() && !loadedOnce()) {
-    <app-page-error-state message="Failed to load merchants." (retry)="loadMerchants()" />
-  } @else if (loading() && !loadedOnce()) {
-    <div class="flex flex-col gap-4" aria-busy="true" role="status">
-      <span class="sr-only">Loading merchants</span>
-      <p-skeleton height="3rem" borderRadius="1rem" />
-      <p-skeleton height="16rem" borderRadius="1rem" />
-    </div>
-  } @else {
-    <div class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_26rem]">
-      <div class="flex min-w-0 flex-col gap-4">
-        @if (totalRecords() === 0 && !dataSearching() && !loadError()) {
-          <div
-            class="rounded-xl border border-surface-200 p-10 text-center dark:border-surface-800"
-          >
-            <p class="font-medium">No merchants yet</p>
-            <p class="text-muted-color">
-              Create a merchant, then link the transaction descriptions that belong to it.
-            </p>
-          </div>
-        } @else {
-          <input
-            #searchInput
-            type="search"
-            class="w-full rounded-lg border border-surface-300 bg-surface-0 px-3 py-2 text-sm max-lg:min-h-11 dark:border-surface-700 dark:bg-surface-900"
-            aria-label="Search merchants"
-            placeholder="Search by name or city"
-            [value]="searchTerm()"
-            (input)="onSearchInput($any($event.target).value)"
-          />
-          @if (loadError()) {
+  <app-merchant-tabs
+    [view]="view()"
+    [unlinkedCount]="unlinkedCount()"
+    (viewChange)="chooseView($event)"
+  />
+
+  <div
+    role="tabpanel"
+    class="flex flex-col gap-4"
+    [id]="tabPanelId"
+    [attr.aria-labelledby]="tabId(view())"
+  >
+    @if (view() === 'rules') {
+      <app-merchant-rules />
+    } @else if (view() === 'merchants' && loadError() && !loadedOnce()) {
+      <app-page-error-state message="Failed to load merchants." (retry)="loadMerchants()" />
+    } @else if (view() === 'merchants' && loading() && !loadedOnce()) {
+      <div class="flex flex-col gap-4" aria-busy="true" role="status">
+        <span class="sr-only">Loading merchants</span>
+        <p-skeleton height="3rem" borderRadius="1rem" />
+        <p-skeleton height="16rem" borderRadius="1rem" />
+      </div>
+    } @else {
+      <div class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_26rem]">
+        <div class="flex min-w-0 flex-col gap-4">
+          @if (view() === 'unlinked') {
+            <app-unlinked-groups
+              (linked)="onGroupsLinked()"
+              (unlinkedCountChange)="unlinkedCount.set($event)"
+              (createMerchant)="onCreateForGroup($event)"
+            />
+          } @else if (totalRecords() === 0 && !dataSearching() && !loadError()) {
             <div
-              role="alert"
-              data-testid="list-error"
-              class="flex flex-col items-center gap-3 rounded-xl border border-surface-200 bg-surface-0 p-8 text-center dark:border-surface-800 dark:bg-surface-900"
+              class="rounded-xl border border-surface-200 p-10 text-center dark:border-surface-800"
             >
-              <p class="m-0 font-medium">Couldn't load merchants.</p>
-              <button
-                type="button"
-                data-testid="list-retry"
-                class="cursor-pointer rounded-lg border border-surface-300 px-3 py-1.5 text-sm max-lg:min-h-11 dark:border-surface-700"
-                (click)="retryList()"
-              >
-                Retry
-              </button>
+              <p class="font-medium">No merchants yet</p>
+              <p class="text-muted-color">
+                Create a merchant, then link the transaction descriptions that belong to it.
+              </p>
             </div>
           } @else {
-            <app-merchant-list
-              [merchants]="merchants()"
-              [selectedId]="selected()?.id ?? null"
-              [loading]="loading()"
-              [totalRecords]="totalRecords()"
-              [page]="page()"
-              [pageSize]="pageSize"
-              [searching]="dataSearching()"
-              [term]="dataSearch()"
-              (openMerchant)="openMerchant($event)"
-              (pageChange)="setPage($event)"
-              (clearSearch)="clearSearch()"
-              (addMerchant)="startAdd($event)"
+            <input
+              #searchInput
+              type="search"
+              class="w-full rounded-lg border border-surface-300 bg-surface-0 px-3 py-2 text-sm max-lg:min-h-11 dark:border-surface-700 dark:bg-surface-900"
+              aria-label="Search merchants"
+              placeholder="Search by name or city"
+              [value]="searchTerm()"
+              (input)="onSearchInput($any($event.target).value)"
             />
+            @if (loadError()) {
+              <div
+                role="alert"
+                data-testid="list-error"
+                class="flex flex-col items-center gap-3 rounded-xl border border-surface-200 bg-surface-0 p-8 text-center dark:border-surface-800 dark:bg-surface-900"
+              >
+                <p class="m-0 font-medium">Couldn't load merchants.</p>
+                <button
+                  type="button"
+                  data-testid="list-retry"
+                  class="cursor-pointer rounded-lg border border-surface-300 px-3 py-1.5 text-sm max-lg:min-h-11 dark:border-surface-700"
+                  (click)="retryList()"
+                >
+                  Retry
+                </button>
+              </div>
+            } @else {
+              <app-merchant-list
+                [merchants]="merchants()"
+                [selectedId]="selected()?.id ?? null"
+                [loading]="loading()"
+                [totalRecords]="totalRecords()"
+                [page]="page()"
+                [pageSize]="pageSize"
+                [searching]="dataSearching()"
+                [term]="dataSearch()"
+                (openMerchant)="openMerchant($event)"
+                (pageChange)="setPage($event)"
+                (clearSearch)="clearSearch()"
+                (addMerchant)="startAdd($event)"
+              />
+            }
           }
-        }
-      </div>
+        </div>
 
-      <app-side-panel
-        class="order-first block lg:sticky lg:top-4 lg:order-none lg:self-start"
-        [title]="panelTitle()"
-        [saving]="saving()"
-        [showClose]="mode() !== 'overview' && !onlyAddMode()"
-        [sheet]="mode() !== 'overview' && !onlyAddMode()"
-        [capHeight]="true"
-        [moveFocus]="false"
-        [submitOnEnter]="true"
-        [showFooter]="mode() === 'merchant' || mode() === 'add'"
-        [saveLabel]="mode() === 'add' ? 'Add merchant' : 'Save changes'"
-        [showDelete]="false"
-        (save)="onPanelSave()"
-        (closePanel)="onPanelClose()"
-      >
-        @switch (mode()) {
-          @case ('overview') {
-            <app-merchant-overview
-              [merchantCount]="merchantTotal() ?? totalRecords()"
-              [unlinkedCount]="unlinkedCount()"
-              [hasTransactions]="hasTransactions()"
-              [statsFailed]="statsFailed()"
-              (retryStats)="loadStats()"
-              (linkDescriptions)="openPicker()"
-            />
-          }
-          @case ('merchant') {
-            @if (selected(); as merchant) {
+        <app-side-panel
+          class="order-first block lg:sticky lg:top-4 lg:order-none lg:self-start"
+          [class.max-lg:hidden]="view() === 'unlinked' && mode() === 'overview'"
+          [title]="panelTitle()"
+          [saving]="saving()"
+          [showClose]="mode() !== 'overview' && !onlyAddMode()"
+          [sheet]="mode() !== 'overview' && !onlyAddMode()"
+          [capHeight]="true"
+          [moveFocus]="false"
+          [submitOnEnter]="true"
+          [showFooter]="mode() === 'merchant' || mode() === 'add'"
+          [saveLabel]="mode() === 'add' ? 'Add merchant' : 'Save changes'"
+          [showDelete]="false"
+          (save)="onPanelSave()"
+          (closePanel)="onPanelClose()"
+        >
+          @switch (mode()) {
+            @case ('overview') {
+              <app-merchant-overview
+                [merchantCount]="merchantTotal() ?? totalRecords()"
+                [unlinkedCount]="unlinkedCount()"
+                [hasTransactions]="hasTransactions()"
+                [statsFailed]="statsFailed()"
+                (retryStats)="loadStats()"
+                (linkDescriptions)="chooseView('unlinked')"
+              />
+            }
+            @case ('merchant') {
+              @if (selected(); as merchant) {
+                <app-merchant-edit-form
+                  #editForm
+                  [merchant]="merchant"
+                  [links]="links()"
+                  [linksState]="linksState()"
+                  (retryLinks)="retryLinks()"
+                  (save)="saveMerchant($event)"
+                  (removeLink)="removeLink($event)"
+                  (openPicker)="openPicker(merchant, false)"
+                  (viewTransactions)="viewTransactions()"
+                  (deleteMerchant)="deleteMerchant()"
+                />
+              } @else {
+                <p-skeleton height="8rem" borderRadius="1rem" />
+              }
+            }
+            @case ('add') {
+              @if (!onlyAddMode()) {
+                <button
+                  type="button"
+                  class="mb-3 inline-flex cursor-pointer items-center rounded-md text-sm underline max-lg:min-h-11"
+                  (click)="back()"
+                >
+                  Back
+                </button>
+              }
               <app-merchant-edit-form
                 #editForm
-                [merchant]="merchant"
-                [links]="links()"
-                [linksState]="linksState()"
-                (retryLinks)="retryLinks()"
+                [merchant]="null"
+                [prefillName]="addPrefill()"
                 (save)="saveMerchant($event)"
-                (removeLink)="removeLink($event)"
-                (openPicker)="openPicker(merchant, false)"
-                (viewTransactions)="viewTransactions()"
-                (deleteMerchant)="deleteMerchant()"
               />
-            } @else {
-              <p-skeleton height="8rem" borderRadius="1rem" />
             }
-          }
-          @case ('add') {
-            @if (!onlyAddMode()) {
-              <button
-                type="button"
-                class="mb-3 inline-flex cursor-pointer items-center rounded-md text-sm underline max-lg:min-h-11"
-                (click)="back()"
-              >
-                Back
-              </button>
-            }
-            <app-merchant-edit-form
-              #editForm
-              [merchant]="null"
-              [prefillName]="addPrefill()"
-              (save)="saveMerchant($event)"
-            />
-          }
-          @case ('picker') {
-            @if (pickerTarget(); as target) {
-              <app-description-picker
-                [targetName]="target.name"
-                [targetId]="target.id"
-                [rows]="pickerRows()"
-                [totalRecords]="pickerTotal()"
-                [loading]="pickerLoading()"
-                [linking]="linking()"
-                [failed]="pickerFailed()"
-                [initialUnlinkedOnly]="pickerUnlinkedOnly()"
-                [unlinkedLeft]="unlinkedCount()"
-                [loadFailed]="pickerLoadFailed()"
-                [backToTarget]="selected()?.id === target.id"
-                (searchChange)="onPickerSearch($event)"
-                (unlinkedOnlyChange)="onPickerToggle($event)"
-                (showMore)="onPickerShowMore()"
-                (link)="onLink($event)"
-                (back)="back()"
-                (retryLoad)="retryPicker()"
-              />
-            } @else {
-              <div class="flex flex-col gap-1">
-                <label id="link-target-label" for="link-target" class="text-sm font-medium">
-                  Link to
-                </label>
-                <p-select
-                  inputId="link-target"
-                  ariaLabelledBy="link-target-label"
-                  [options]="targetOptions()"
-                  optionLabel="name"
-                  [filter]="true"
-                  filterBy="name"
-                  placeholder="Choose a merchant"
-                  appendTo="body"
-                  (onFilter)="onTargetFilter($event.filter)"
-                  (onChange)="chooseTarget($event.value)"
+            @case ('picker') {
+              @if (pickerTarget(); as target) {
+                <app-description-picker
+                  [targetName]="target.name"
+                  [targetId]="target.id"
+                  [rows]="pickerRows()"
+                  [totalRecords]="pickerTotal()"
+                  [loading]="pickerLoading()"
+                  [linking]="linking()"
+                  [failed]="pickerFailed()"
+                  [initialUnlinkedOnly]="pickerUnlinkedOnly()"
+                  [unlinkedLeft]="unlinkedCount()"
+                  [loadFailed]="pickerLoadFailed()"
+                  [backToTarget]="selected()?.id === target.id"
+                  (searchChange)="onPickerSearch($event)"
+                  (unlinkedOnlyChange)="onPickerToggle($event)"
+                  (showMore)="onPickerShowMore()"
+                  (link)="onLink($event)"
+                  (back)="back()"
+                  (retryLoad)="retryPicker()"
                 />
-              </div>
+              } @else {
+                <div class="flex flex-col gap-1">
+                  <label id="link-target-label" for="link-target" class="text-sm font-medium">
+                    Link to
+                  </label>
+                  <p-select
+                    inputId="link-target"
+                    ariaLabelledBy="link-target-label"
+                    [options]="targetOptions()"
+                    optionLabel="name"
+                    [filter]="true"
+                    filterBy="name"
+                    placeholder="Choose a merchant"
+                    appendTo="body"
+                    (onFilter)="onTargetFilter($event.filter)"
+                    (onChange)="chooseTarget($event.value)"
+                  />
+                </div>
+              }
             }
           }
-        }
-      </app-side-panel>
-    </div>
-  }
+        </app-side-panel>
+      </div>
+    }
+  </div>
 </div>

@@ -1,0 +1,196 @@
+<div class="flex flex-col gap-3">
+  <input
+    type="search"
+    class="w-full rounded-lg border border-surface-300 bg-surface-0 px-3 py-2 text-sm max-lg:min-h-11 dark:border-surface-700 dark:bg-surface-900"
+    aria-label="Search unlinked descriptions"
+    aria-describedby="unlinked-search-hint"
+    placeholder="Search, e.g. kroger -fuel"
+    [value]="search()"
+    (input)="onSearch($any($event.target).value)"
+  />
+  <p id="unlinked-search-hint" class="m-0 text-xs text-muted-color">
+    Put a minus before a word to leave it out.
+    <span class="max-lg:hidden">
+      In the list, ↑ and ↓ move between groups, → shows a group's descriptions, typing chooses a
+      merchant and Enter links.
+    </span>
+  </p>
+
+  @if (loadFailed() && groups().length === 0 && !loading()) {
+    <ng-container *ngTemplateOutlet="failedBlock" />
+  } @else if (!loadedOnce()) {
+    <div class="flex flex-col gap-2" aria-busy="true" role="status" data-testid="unlinked-loading">
+      <span class="sr-only">Loading descriptions</span>
+      @for (n of [1, 2, 3, 4]; track n) {
+        <p-skeleton height="4.5rem" borderRadius="0.75rem" />
+      }
+    </div>
+  } @else if (groups().length === 0 && !loading()) {
+    <div
+      data-testid="unlinked-empty"
+      class="rounded-xl border border-surface-200 p-10 text-center dark:border-surface-800"
+    >
+      @if (dataSearch() === '') {
+        <p class="m-0 font-medium">Every description is linked</p>
+        <p class="m-0 text-muted-color">New descriptions show up here after an import.</p>
+      } @else {
+        <p class="m-0 font-medium">No unlinked descriptions match</p>
+      }
+    </div>
+  } @else {
+    <p
+      data-testid="unlinked-progress"
+      role="status"
+      class="m-0 text-sm tabular-nums text-muted-color"
+    >
+      {{ progressText() }}
+    </p>
+    <ul
+      aria-label="Unlinked description groups"
+      class="m-0 flex list-none flex-col gap-2 p-0"
+      [attr.aria-busy]="loading() ? 'true' : null"
+      [class]="loading() ? 'opacity-60' : ''"
+    >
+      @for (group of groups(); track group.key; let i = $index) {
+        <li data-testid="group-row" class="@container">
+          <div
+            #row
+            role="group"
+            class="flex flex-col gap-3 rounded-xl border border-surface-200 bg-surface-0 p-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 dark:border-surface-800 dark:bg-surface-900 dark:focus-visible:outline-primary-400"
+            [attr.aria-label]="group.displayName"
+            [attr.tabindex]="activeKey() === group.key ? 0 : -1"
+            (keydown)="onRowKeydown($event, i)"
+            (focus)="activeKey.set(group.key)"
+          >
+            <div class="flex flex-col gap-3 @2xl:flex-row @2xl:items-center">
+              <div class="flex min-w-0 flex-1 items-start gap-2">
+                <button
+                  type="button"
+                  tabindex="-1"
+                  class="inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-lg text-muted-color hover:bg-surface-100 max-lg:size-11 dark:hover:bg-surface-800"
+                  [attr.aria-label]="
+                    (isExpanded(group) ? 'Hide' : 'Show') + ' descriptions for ' + group.displayName
+                  "
+                  [attr.aria-expanded]="isExpanded(group)"
+                  [attr.aria-controls]="'variants-' + i"
+                  (click)="setExpanded(group, !isExpanded(group))"
+                >
+                  <i
+                    class="pi text-xs"
+                    [class]="isExpanded(group) ? 'pi-chevron-down' : 'pi-chevron-right'"
+                    aria-hidden="true"
+                  ></i>
+                </button>
+                <div class="min-w-0 flex-1">
+                  <p class="m-0 break-words font-medium" data-testid="group-name">
+                    {{ group.displayName }}
+                  </p>
+                  <p
+                    class="m-0 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-color"
+                  >
+                    <span class="tabular-nums" data-testid="group-counts">
+                      {{ variantsLabel(group.variantCount) }} · {{ usage(group.transactionCount) }}
+                    </span>
+                    @if (group.similarKeys.length > 0) {
+                      <span
+                        data-testid="similar-marker"
+                        class="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"
+                        [attr.title]="'Looks like ' + similarNames(group)"
+                      >
+                        Similar names
+                      </span>
+                    }
+                    @if (isLinking(group)) {
+                      <span role="status">Linking…</span>
+                    }
+                  </p>
+                </div>
+              </div>
+              <div class="w-full @2xl:w-72 @2xl:shrink-0">
+                <app-merchant-combobox
+                  [comboId]="comboId(i)"
+                  [label]="'Merchant for ' + group.displayName"
+                  [suggestions]="suggestionsFor(group)"
+                  [createName]="group.displayName"
+                  [disabled]="isLinking(group)"
+                  (pick)="linkGroup(group, $event)"
+                  (create)="onCreate(group, $event)"
+                  (escape)="backToRow(group)"
+                />
+              </div>
+            </div>
+
+            @if (isExpanded(group)) {
+              <div [id]="'variants-' + i" class="flex flex-col gap-1">
+                @if (group.similarKeys.length > 0) {
+                  <p class="m-0 text-xs text-amber-700 dark:text-amber-400">
+                    Looks like {{ similarNames(group) }}. Check these belong together before
+                    linking.
+                  </p>
+                }
+                <ul class="m-0 flex list-none flex-col gap-1 p-0">
+                  @for (variant of group.variants; track variant.description; let v = $index) {
+                    <li data-testid="variant-row">
+                      <label
+                        class="flex cursor-pointer items-start gap-2 rounded-lg border border-surface-200 px-2 py-2 max-lg:min-h-11 dark:border-surface-700"
+                        (mousedown)="onVariantMousedown($event)"
+                      >
+                        <input
+                          type="checkbox"
+                          class="mt-1 size-4 cursor-pointer max-lg:size-6"
+                          [checked]="isTicked(group, variant)"
+                          [attr.aria-label]="'Include ' + variant.description"
+                          (click)="onVariantClick(group, v, $event)"
+                        />
+                        <span class="min-w-0 flex-1">
+                          <span class="block break-words font-mono text-xs">{{
+                            variant.description
+                          }}</span>
+                          <span class="block text-xs tabular-nums text-muted-color">
+                            {{ usage(variant.transactionCount) }}
+                          </span>
+                        </span>
+                      </label>
+                    </li>
+                  }
+                </ul>
+              </div>
+            }
+          </div>
+        </li>
+      }
+    </ul>
+
+    @if (loadFailed() && !loading()) {
+      <ng-container *ngTemplateOutlet="failedBlock" />
+    }
+
+    @if (canShowMore()) {
+      <button
+        type="button"
+        data-testid="show-more"
+        class="cursor-pointer self-start rounded-lg border border-surface-300 px-3 py-1.5 text-sm max-lg:min-h-11 dark:border-surface-700"
+        [class.cursor-not-allowed]="loading()"
+        [class.opacity-50]="loading()"
+        [attr.aria-disabled]="loading() ? 'true' : null"
+        (click)="showMore()"
+      >
+        Show more
+      </button>
+    }
+  }
+</div>
+
+<ng-template #failedBlock>
+  <div data-testid="unlinked-failed" role="alert" class="flex items-center gap-2 py-2 text-sm">
+    <span>Couldn't load the descriptions.</span>
+    <button
+      type="button"
+      data-testid="unlinked-retry"
+      class="cursor-pointer rounded-lg border border-surface-300 px-3 py-1.5 max-lg:min-h-11 dark:border-surface-700"
+      (click)="load()"
+    >
+      Retry
+    </button>
+  </div>
+</ng-template>

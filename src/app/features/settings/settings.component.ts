@@ -19,18 +19,18 @@ import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen
 import { AppearanceSettingsComponent } from './components/appearance-settings/appearance-settings.component';
 import { SettingsNavComponent } from './components/settings-nav/settings-nav.component';
 import { CategoryRulesComponent } from './category-rules/category-rules.component';
-import { MerchantRulesComponent } from './merchant-rules/merchant-rules.component';
 import { TagsComponent } from './tags/tags.component';
 import { SettingsGuard } from './settings.guard';
 import {
   SECTION_TITLES,
   SettingsSection,
   isKnownSection,
+  MOVED_MERCHANT_RULES_SECTION,
   sectionFromParam,
 } from './utils/settings-helpers';
 
 /**
- * The Settings page: a section list (Appearance, Category rules, Merchant rules, Tags) and the chosen section. The section
+ * The Settings page: a section list (Appearance, Category rules, Tags) and the chosen section. The section
  * lives in the URL (`?section=`) so Back and Forward move between sections, and leaving a section that
  * holds unsaved changes asks first.
  */
@@ -42,7 +42,6 @@ import {
     SettingsNavComponent,
     AppearanceSettingsComponent,
     CategoryRulesComponent,
-    MerchantRulesComponent,
     TagsComponent,
   ],
   providers: [SettingsGuard],
@@ -85,11 +84,24 @@ export class SettingsComponent {
             : null;
       }
     });
+    if (this.sendMovedSection(this.route.snapshot.queryParams['section'])) return;
     this.route.queryParams
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((params: Params): void => this.followUrl(params));
     this.normaliseUrl(this.route.snapshot.queryParams['section']);
     this.setTitle();
+  }
+
+  /**
+   * Merchant rules moved to the Merchants page: an old `?section=merchant-rules` link goes there,
+   * without leaving the old address in the history.
+   * @returns true when it sent the user away.
+   */
+  private sendMovedSection(value: unknown): boolean {
+    const first: unknown = Array.isArray(value) ? value[0] : value;
+    if (first !== MOVED_MERCHANT_RULES_SECTION) return false;
+    void this.router.navigate(['/merchants'], { queryParams: { view: 'rules' }, replaceUrl: true });
+    return true;
   }
 
   /** An unknown or missing section in the URL is replaced by the section shown, without a history entry. */
@@ -157,6 +169,7 @@ export class SettingsComponent {
 
   /** Browser Back or Forward changed the URL: follow it, or put it back if the user keeps editing. */
   private followUrl(params: Params): void {
+    if (this.sendMovedSection(params['section'])) return;
     const next: SettingsSection = sectionFromParam(params['section']);
     if (next === this.section()) return;
     this.askIfDirty(
