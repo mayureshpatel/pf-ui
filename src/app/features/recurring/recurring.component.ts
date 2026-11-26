@@ -585,7 +585,7 @@ export class RecurringComponent implements OnInit {
     if (foldName(merchantName) === foldName(detected)) {
       return of(undefined);
     }
-    return this.merchantApi.addDescriptionLink(merchantId, detected);
+    return this.merchantApi.addDescriptionLink(merchantId, detected).pipe(map(() => undefined));
   }
 
   /** Leaves the pattern form, deleting a merchant created for it that was never used. */

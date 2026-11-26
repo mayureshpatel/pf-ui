@@ -467,9 +467,29 @@ export interface paths {
         put?: never;
         /**
          * Link a description to a merchant
-         * @description Creates or overwrites the link from a raw description to a merchant owned by the authenticated user
+         * @description Creates or overwrites the link from a raw description to a merchant owned by the authenticated user, and fills that merchant in on existing transactions with the description and no merchant
          */
         post: operations["addDescriptionLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/merchants/{id}/description-links/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Undo a description link
+         * @description Reverses a link request from the result it returned, leaving anything changed since
+         */
+        post: operations["undoDescriptionLinks"];
         delete?: never;
         options?: never;
         head?: never;
@@ -487,7 +507,7 @@ export interface paths {
         put?: never;
         /**
          * Link many descriptions to a merchant
-         * @description Creates or overwrites the links from up to 500 raw descriptions to a merchant owned by the authenticated user, in one transaction
+         * @description Creates or overwrites the links from up to 500 raw descriptions to a merchant owned by the authenticated user, and fills that merchant in on existing transactions with those descriptions and no merchant, in one transaction
          */
         post: operations["addDescriptionLinks"];
         delete?: never;
@@ -1927,6 +1947,32 @@ export interface components {
         };
         MerchantDescriptionLinkCreateRequest: {
             description: string;
+        };
+        DescriptionLinkChangeDto: {
+            normalizedDescription: string;
+            /** Format: int64 */
+            previousMerchantId?: number;
+        };
+        DescriptionLinkResultDto: {
+            /** Format: int64 */
+            merchantId: number;
+            /** Format: int32 */
+            linkedCount?: number;
+            /** Format: int32 */
+            movedCount?: number;
+            /** Format: int32 */
+            transactionsFilled?: number;
+            linkChanges: components["schemas"]["DescriptionLinkChangeDto"][];
+            filledTransactionIds: number[];
+        };
+        DescriptionLinkUndoResultDto: {
+            /** Format: int32 */
+            linksRestored?: number;
+            /** Format: int32 */
+            linksSkipped?: number;
+            /** Format: int32 */
+            transactionsRestored?: number;
+            skippedTransactionIds?: number[];
         };
         MerchantDescriptionLinkBulkCreateRequest: {
             descriptions: string[];
@@ -3769,19 +3815,67 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Description link recorded */
-            204: {
+            /** @description Description link recorded; the body lists what changed for undo */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "*/*": components["schemas"]["DescriptionLinkResultDto"];
+                };
             };
             /** @description Forbidden -- the authenticated user does not own this merchant */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "*/*": components["schemas"]["DescriptionLinkResultDto"];
+                };
+            };
+        };
+    };
+    undoDescriptionLinks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DescriptionLinkResultDto"];
+            };
+        };
+        responses: {
+            /** @description Undo applied; the body says what was restored and what was skipped */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DescriptionLinkUndoResultDto"];
+                };
+            };
+            /** @description The result is malformed, too large, or for a different merchant */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DescriptionLinkUndoResultDto"];
+                };
+            };
+            /** @description Forbidden -- the authenticated user does not own this merchant */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DescriptionLinkUndoResultDto"];
+                };
             };
         };
     };
@@ -3800,26 +3894,32 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Description links recorded */
-            204: {
+            /** @description Description links recorded; the body lists what changed for undo */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "*/*": components["schemas"]["DescriptionLinkResultDto"];
+                };
             };
             /** @description No descriptions, more than 500, or a blank or too-long description */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "*/*": components["schemas"]["DescriptionLinkResultDto"];
+                };
             };
             /** @description Forbidden -- the authenticated user does not own this merchant */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "*/*": components["schemas"]["DescriptionLinkResultDto"];
+                };
             };
         };
     };
