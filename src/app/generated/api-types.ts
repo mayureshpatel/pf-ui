@@ -125,7 +125,7 @@ export interface paths {
         };
         /**
          * List merchant rules
-         * @description Returns the authenticated user's merchant rules in priority order
+         * @description Returns the authenticated user's merchant rules in priority order; with merchantId, only that merchant's rules, each with matchedDescriptionCount and matchedTransactionCount
          */
         get: operations["getMerchantRules"];
         /**
@@ -2016,6 +2016,7 @@ export interface components {
             truncated?: boolean;
             rows?: components["schemas"]["MerchantRuleMatchRowDto"][];
             willAssignIds?: number[];
+            overlaps?: components["schemas"]["MerchantRuleOverlapDto"][];
         };
         MerchantRuleMatchRowDto: {
             /** Format: int64 */
@@ -2030,6 +2031,21 @@ export interface components {
             verdict?: "WILL_ASSIGN" | "LOSES_TO_OTHER_RULE" | "ALREADY_HAS_MERCHANT" | "LINKED";
             otherRules?: components["schemas"]["MerchantRuleRefDto"][];
             winningRule?: components["schemas"]["MerchantRuleRefDto"];
+        };
+        MerchantRuleOverlapDto: {
+            /** @enum {string} */
+            outcome?: "THIS_RULE_WINS" | "OTHER_WINS";
+            /** @enum {string} */
+            reason?: "LINK" | "HIGHER_PRIORITY" | "LONGER_KEYWORDS" | "LOWER_ID";
+            /** Format: int64 */
+            merchantId?: number;
+            merchantName?: string;
+            rule?: components["schemas"]["MerchantRuleRefDto"];
+            /** Format: int32 */
+            descriptionCount?: number;
+            /** Format: int32 */
+            transactionCount?: number;
+            descriptions?: string[];
         };
         MerchantRuleRefDto: {
             /** Format: int64 */
@@ -2523,6 +2539,10 @@ export interface components {
             merchant?: components["schemas"]["MerchantDto"];
             minAmount?: number;
             maxAmount?: number;
+            /** Format: int32 */
+            matchedDescriptionCount?: number;
+            /** Format: int32 */
+            matchedTransactionCount?: number;
         };
         MerchantRuleChangePreviewDto: {
             /** Format: int64 */
@@ -2987,7 +3007,9 @@ export interface operations {
     };
     getMerchantRules: {
         parameters: {
-            query?: never;
+            query?: {
+                merchantId?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -2996,6 +3018,15 @@ export interface operations {
         responses: {
             /** @description Rules returned (possibly empty) */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MerchantRuleDto"][];
+                };
+            };
+            /** @description merchantId is not the authenticated user's */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
