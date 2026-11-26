@@ -1,3 +1,5 @@
+import { components } from '../generated/api-types';
+
 /**
  * Represents a merchant: a vendor the user deliberately named, never auto-created from a
  * transaction description.
@@ -63,6 +65,12 @@ export interface MerchantDescriptionLink {
   merchantId: number;
   description: string;
 }
+
+/**
+ * What linking descriptions to a merchant did: links created or moved, and existing transactions
+ * with no merchant that got it. Sent back as is to undo the link.
+ */
+export type DescriptionLinkResult = components['schemas']['DescriptionLinkResultDto'];
 
 /**
  * One distinct transaction description in the user's history, as offered by the description

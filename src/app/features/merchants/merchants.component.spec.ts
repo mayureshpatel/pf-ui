@@ -12,7 +12,21 @@ import { MerchantEditFormComponent } from './components/merchant-edit-form/merch
 import { TransactionApiService } from '@features/transactions/services/transaction-api.service';
 import { AuthService } from '@core/auth/auth.service';
 import { ToastService } from '@core/services/toast.service';
-import { Merchant, MerchantDescriptionLink, TransactionDescription } from '@models/merchant.model';
+import {
+  DescriptionLinkResult,
+  Merchant,
+  MerchantDescriptionLink,
+  TransactionDescription,
+} from '@models/merchant.model';
+
+const LINK_RESULT: DescriptionLinkResult = {
+  merchantId: 1,
+  linkedCount: 1,
+  movedCount: 0,
+  transactionsFilled: 0,
+  linkChanges: [],
+  filledTransactionIds: [],
+};
 
 const merchant = (id: number, name: string, over: Partial<Merchant> = {}): Merchant => ({
   id,
@@ -82,8 +96,8 @@ describe('MerchantsComponent', () => {
       updateMerchant: vi.fn().mockReturnValue(of(1)),
       deleteMerchant: vi.fn().mockReturnValue(of(undefined)),
       getDescriptionLinks: vi.fn().mockReturnValue(of(links)),
-      addDescriptionLink: vi.fn().mockReturnValue(of(undefined)),
-      addDescriptionLinks: vi.fn().mockReturnValue(of(undefined)),
+      addDescriptionLink: vi.fn().mockReturnValue(of(LINK_RESULT)),
+      addDescriptionLinks: vi.fn().mockReturnValue(of(LINK_RESULT)),
       deleteDescriptionLink: vi.fn().mockReturnValue(of(undefined)),
     };
     mockTransactions = {
@@ -287,7 +301,7 @@ describe('MerchantsComponent', () => {
 
     it('should leave the panel alone when a link batch finishes after the user has moved on', () => {
       // arrange
-      const pending = new Subject<void>();
+      const pending = new Subject<DescriptionLinkResult>();
       mockApi.addDescriptionLinks.mockReturnValue(pending);
       component.openMerchant(amazon);
       component.openPicker(amazon, false);
@@ -297,7 +311,7 @@ describe('MerchantsComponent', () => {
       component.openMerchant(costco);
 
       // act
-      pending.next();
+      pending.next(LINK_RESULT);
       pending.complete();
 
       // assert & verify
@@ -757,7 +771,7 @@ describe('MerchantsComponent', () => {
       mockApi.addDescriptionLinks.mockImplementation((_id: number, descriptions: string[]) =>
         descriptions.includes('BAD')
           ? throwError(() => ({ error: { detail: 'Too long.' } }))
-          : of(undefined),
+          : of(LINK_RESULT),
       );
 
       // act -- 501 descriptions go in two requests; the one holding BAD fails
@@ -885,7 +899,7 @@ describe('MerchantsComponent', () => {
 
     it('should block a second link while one is in flight', () => {
       // arrange
-      mockApi.addDescriptionLinks.mockReturnValue(new Subject<void>());
+      mockApi.addDescriptionLinks.mockReturnValue(new Subject<DescriptionLinkResult>());
       component.openMerchant(amazon);
       component.openPicker(amazon, false);
 

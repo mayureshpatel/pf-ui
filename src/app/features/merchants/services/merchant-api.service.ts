@@ -5,6 +5,7 @@ import { SKIP_GENERIC_ERROR_TOAST } from '@core/auth/error.interceptor';
 import { Observable } from 'rxjs';
 import { environment } from '@env';
 import {
+  DescriptionLinkResult,
   Merchant,
   MerchantCreateRequest,
   MerchantDescriptionLink,
@@ -99,12 +100,14 @@ export class MerchantApiService {
 
   /**
    * Explicitly links a raw description to a merchant -- overwrites any existing link for that
-   * description (last-write-wins).
+   * description (last-write-wins) and gives the merchant to existing transactions with that
+   * description and no merchant.
    * @param merchantId the merchant id to link the description to.
    * @param description the raw description to link.
+   * @returns what changed, in the shape the undo endpoint takes back.
    */
-  addDescriptionLink(merchantId: number, description: string): Observable<void> {
-    return this.http.post<void>(
+  addDescriptionLink(merchantId: number, description: string): Observable<DescriptionLinkResult> {
+    return this.http.post<DescriptionLinkResult>(
       `${this.apiUrl}/${merchantId}/description-links`,
       { description },
       { context: SKIP_TOAST_CONTEXT },
@@ -113,12 +116,17 @@ export class MerchantApiService {
 
   /**
    * Links many raw descriptions to a merchant in one request (all or nothing). A description
-   * already linked to another merchant is moved. The API accepts at most 500 at a time.
+   * already linked to another merchant is moved, and existing transactions with these
+   * descriptions and no merchant get it. The API accepts at most 500 at a time.
    * @param merchantId the merchant id to link the descriptions to.
    * @param descriptions the raw descriptions to link (1 to 500).
+   * @returns what changed, in the shape the undo endpoint takes back.
    */
-  addDescriptionLinks(merchantId: number, descriptions: string[]): Observable<void> {
-    return this.http.post<void>(
+  addDescriptionLinks(
+    merchantId: number,
+    descriptions: string[],
+  ): Observable<DescriptionLinkResult> {
+    return this.http.post<DescriptionLinkResult>(
       `${this.apiUrl}/${merchantId}/description-links/bulk`,
       { descriptions },
       { context: SKIP_TOAST_CONTEXT },
