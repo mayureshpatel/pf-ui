@@ -1,14 +1,18 @@
 import { vi, Mock, Mocked } from 'vitest';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
-import { Router } from '@angular/router';
-import { of, Subject, throwError } from 'rxjs';
+import { ActivatedRoute, Params, Router } from '@angular/router';
+import { BehaviorSubject, of, Subject, throwError } from 'rxjs';
 import { Confirmation, ConfirmationService } from 'primeng/api';
 
 import { MerchantsComponent } from './merchants.component';
 import { MerchantApiService } from './services/merchant-api.service';
 import { MerchantEditFormComponent } from './components/merchant-edit-form/merchant-edit-form.component';
+import { UnlinkedGroupsComponent } from './components/unlinked-groups/unlinked-groups.component';
+import { MerchantRulesComponent } from '@features/settings/merchant-rules/merchant-rules.component';
+import { SettingsGuard } from '@features/settings/settings.guard';
 import { TransactionApiService } from '@features/transactions/services/transaction-api.service';
 import { AuthService } from '@core/auth/auth.service';
 import { ToastService } from '@core/services/toast.service';
@@ -58,6 +62,14 @@ const page = <T>(content: T[], total = content.length) => ({
   page: { totalElements: total, totalPages: 1, number: 0, size: 20 },
 });
 
+@Component({
+  selector: 'app-merchant-rules',
+  standalone: true,
+  template: '<p>merchant rules section</p>',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+class MerchantRulesStubComponent {}
+
 describe('MerchantsComponent', () => {
   let component: MerchantsComponent;
   let fixture: ComponentFixture<MerchantsComponent>;
@@ -72,12 +84,18 @@ describe('MerchantsComponent', () => {
       | 'addDescriptionLink'
       | 'addDescriptionLinks'
       | 'deleteDescriptionLink'
+      | 'suggestMerchants'
     >
   >;
-  let mockTransactions: Mocked<Pick<TransactionApiService, 'getDescriptions'>>;
+  let mockTransactions: Mocked<
+    Pick<TransactionApiService, 'getDescriptions' | 'getDescriptionGroups'>
+  >;
   let mockToast: Mocked<Pick<ToastService, 'success' | 'error'>>;
   let mockConfirmation: { confirm: Mock<(confirmation: Confirmation) => void> };
   let mockRouter: Mocked<Pick<Router, 'navigate'>>;
+  let queryParams: BehaviorSubject<Params>;
+  /** The `?view=` the page opens with. */
+  let startParams: Params = {};
 
   const confirmAccept = (index = 0): void =>
     mockConfirmation.confirm.mock.calls[index][0].accept!();
@@ -89,6 +107,8 @@ describe('MerchantsComponent', () => {
   };
   const aside = (): HTMLElement => fixture.nativeElement.querySelector('app-side-panel aside');
 
+  afterEach(() => vi.unstubAllGlobals());
+
   beforeEach(async () => {
     mockApi = {
       getMerchants: vi.fn().mockReturnValue(of(page(list, 312))),
@@ -99,6 +119,7 @@ describe('MerchantsComponent', () => {
       addDescriptionLink: vi.fn().mockReturnValue(of(LINK_RESULT)),
       addDescriptionLinks: vi.fn().mockReturnValue(of(LINK_RESULT)),
       deleteDescriptionLink: vi.fn().mockReturnValue(of(undefined)),
+      suggestMerchants: vi.fn().mockReturnValue(of([])),
     };
     mockTransactions = {
       getDescriptions: vi
@@ -108,10 +129,36 @@ describe('MerchantsComponent', () => {
             ? of(page([], p.unlinkedOnly ? 47 : 100))
             : of(page([row('AMZN MKTP'), row('COSTCO #12', 2)], 2)),
         ),
+      getDescriptionGroups: vi.fn().mockReturnValue(
+        of({
+          content: [
+            {
+              key: 'kroger fuel ctr',
+              displayName: 'KROGER FUEL CTR',
+              variantCount: 1,
+              transactionCount: 3,
+              variants: [row('KROGER FUEL CTR #1')],
+              similarKeys: [],
+            },
+          ],
+          page: { totalElements: 1, totalPages: 1, number: 0, size: 25 },
+          unlinkedDescriptionCount: 45,
+        }),
+      ),
     };
     mockToast = { success: vi.fn(), error: vi.fn() };
     mockConfirmation = { confirm: vi.fn() };
     mockRouter = { navigate: vi.fn() };
+    // the test browser has no matchMedia (PF-989); these specs describe the desktop layout
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn().mockReturnValue({
+        matches: true,
+        addEventListener: (): void => undefined,
+        removeEventListener: (): void => undefined,
+      }),
+    );
+    queryParams = new BehaviorSubject<Params>(startParams);
 
     await TestBed.configureTestingModule({
       imports: [MerchantsComponent, NoopAnimationsModule],
@@ -122,8 +169,22 @@ describe('MerchantsComponent', () => {
         { provide: ToastService, useValue: mockToast },
         { provide: ConfirmationService, useValue: mockConfirmation },
         { provide: Router, useValue: mockRouter },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            queryParams,
+            get snapshot() {
+              return { queryParams: startParams };
+            },
+          },
+        },
       ],
-    }).compileComponents();
+    })
+      .overrideComponent(MerchantsComponent, {
+        remove: { imports: [MerchantRulesComponent] },
+        add: { imports: [MerchantRulesStubComponent] },
+      })
+      .compileComponents();
 
     fixture = TestBed.createComponent(MerchantsComponent);
     component = fixture.componentInstance;
@@ -963,6 +1024,200 @@ describe('MerchantsComponent', () => {
 
       // assert & verify
       expect(document.activeElement).toBe(row);
+    });
+  });
+
+  describe('tabs', () => {
+    const tab = (label: string): HTMLButtonElement =>
+      (
+        Array.from(fixture.nativeElement.querySelectorAll('[role=tab]')) as HTMLButtonElement[]
+      ).find((t) => t.textContent?.trim().startsWith(label))!;
+    const reopen = (params: Params): void => {
+      fixture.destroy();
+      startParams = params;
+      queryParams.next(params);
+      fixture = TestBed.createComponent(MerchantsComponent);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+    };
+
+    afterEach(() => {
+      startParams = {};
+    });
+
+    it('should open on the Merchants tab with the unlinked count on the Unlinked tab', () => {
+      // assert & verify
+      expect(component.view()).toBe('merchants');
+      expect(tab('Merchants').getAttribute('aria-selected')).toBe('true');
+      expect(tab('Unlinked').textContent).toContain('47');
+      expect(
+        fixture.nativeElement.querySelector('[role=tabpanel]').getAttribute('aria-labelledby'),
+      ).toBe('merchant-tab-merchants');
+    });
+
+    it('should deep-link to the Unlinked tab and take its count from the groups', () => {
+      // act
+      reopen({ view: 'unlinked' });
+
+      // assert & verify
+      expect(fixture.nativeElement.querySelector('app-unlinked-groups')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('app-merchant-list')).toBeNull();
+      expect(component.unlinkedCount()).toBe(45);
+      expect(fixture.nativeElement.textContent).toContain('KROGER FUEL CTR');
+    });
+
+    it('should write the chosen tab to the URL, leaving it out for Merchants', () => {
+      // act
+      tab('Unlinked').click();
+      fixture.detectChanges();
+      tab('Merchants').click();
+
+      // assert & verify
+      expect(mockRouter.navigate).toHaveBeenNthCalledWith(1, [], {
+        queryParams: { view: 'unlinked' },
+        queryParamsHandling: 'merge',
+      });
+      expect(mockRouter.navigate).toHaveBeenNthCalledWith(2, [], {
+        queryParams: { view: null },
+        queryParamsHandling: 'merge',
+      });
+    });
+
+    it("should open the Unlinked tab from the overview's Link descriptions", () => {
+      // act
+      const button: HTMLButtonElement = Array.from(
+        aside().querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
+      ).find((b) => b.textContent?.trim() === 'Link descriptions')!;
+      button.click();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(component.view()).toBe('unlinked');
+      expect(fixture.nativeElement.querySelector('app-unlinked-groups')).not.toBeNull();
+    });
+
+    it('should show the merchant rules on the Rules tab, without the panel or Add merchant', () => {
+      // act
+      reopen({ view: 'rules' });
+
+      // assert & verify
+      expect(fixture.nativeElement.textContent).toContain('merchant rules section');
+      expect(fixture.nativeElement.querySelector('app-side-panel')).toBeNull();
+      expect(fixture.nativeElement.textContent).not.toContain('Add merchant');
+    });
+
+    it('should follow Back and Forward between tabs', () => {
+      // act
+      queryParams.next({ view: 'rules' });
+      fixture.detectChanges();
+      const onRules: string = component.view();
+      queryParams.next({});
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(onRules).toBe('rules');
+      expect(component.view()).toBe('merchants');
+    });
+
+    it('should ask before leaving the Rules tab with unsaved rule changes', () => {
+      // arrange
+      reopen({ view: 'rules' });
+      fixture.debugElement.injector.get(SettingsGuard).register(() => true);
+
+      // act
+      tab('Merchants').click();
+      const stayed: string = component.view();
+      confirmAccept();
+
+      // assert & verify
+      expect(stayed).toBe('rules');
+      expect(component.view()).toBe('merchants');
+    });
+
+    it('should put the URL back when the user keeps editing after Back', () => {
+      // arrange
+      reopen({ view: 'rules' });
+      fixture.debugElement.injector.get(SettingsGuard).register(() => true);
+
+      // act
+      queryParams.next({});
+      mockConfirmation.confirm.mock.calls[0][0].reject!();
+
+      // assert & verify
+      expect(component.view()).toBe('rules');
+      expect(mockRouter.navigate).toHaveBeenLastCalledWith([], {
+        queryParams: { view: 'rules' },
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
+      });
+    });
+
+    it('should ask before the Rules tab hides an edit with unsaved changes', () => {
+      // arrange
+      component.openMerchant(amazon);
+      dirtyForm();
+
+      // act
+      tab('Rules').click();
+      const stayed: string = component.view();
+      confirmAccept();
+
+      // assert & verify
+      expect(stayed).toBe('merchants');
+      expect(component.view()).toBe('rules');
+    });
+
+    it('should guard leaving the page only for unsaved rule changes', async () => {
+      // arrange
+      const clean: boolean = await component.canLeave();
+      fixture.debugElement.injector.get(SettingsGuard).register(() => true);
+
+      // act
+      const pending: Promise<boolean> = component.canLeave();
+      mockConfirmation.confirm.mock.calls[0][0].reject!();
+
+      // assert & verify
+      expect(clean).toBe(true);
+      expect(await pending).toBe(false);
+    });
+
+    it("should create a merchant for an Unlinked group and hand it back to that group's field", () => {
+      // arrange
+      reopen({ view: 'unlinked' });
+      const groups: UnlinkedGroupsComponent = fixture.debugElement.query(
+        By.directive(UnlinkedGroupsComponent),
+      ).componentInstance;
+      const handBack = vi.spyOn(groups, 'merchantCreated');
+
+      // act
+      component.onCreateForGroup({ key: 'kroger fuel ctr', name: 'KROGER FUEL CTR' });
+      fixture.detectChanges();
+      const prefilled: string = component.addPrefill();
+      component.saveMerchant({ name: 'Kroger Fuel Center' });
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(prefilled).toBe('KROGER FUEL CTR');
+      expect(handBack).toHaveBeenCalledWith(
+        'kroger fuel ctr',
+        expect.objectContaining({ id: 99, name: 'Kroger Fuel Center' }),
+      );
+      expect(component.mode()).toBe('overview');
+    });
+
+    it('should refresh the merchants and totals after a link on the Unlinked tab', () => {
+      // arrange
+      mockApi.getMerchants.mockClear();
+      mockTransactions.getDescriptions.mockClear();
+
+      // act
+      component.onGroupsLinked();
+
+      // assert & verify
+      expect(mockApi.getMerchants).toHaveBeenCalled();
+      expect(mockTransactions.getDescriptions).toHaveBeenCalledWith(
+        expect.objectContaining({ unlinkedOnly: true, size: 1 }),
+      );
     });
   });
 });

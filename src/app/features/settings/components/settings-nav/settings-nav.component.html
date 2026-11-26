@@ -5,20 +5,28 @@
   >
     @for (item of items; track item.key) {
       <li class="shrink-0 snap-start">
-        <button
-          type="button"
-          class="flex w-full cursor-pointer items-center gap-2 rounded-full border px-4 py-2.5 text-left text-sm whitespace-nowrap min-h-11 lg:rounded-xl"
-          [class]="
-            section() === item.key
-              ? 'border-primary-700 bg-primary-50 font-semibold text-primary-700 dark:border-primary-400 dark:bg-primary-950 dark:text-primary-400'
-              : 'border-surface-200 bg-surface-0 hover:bg-surface-100 dark:border-surface-700 dark:bg-surface-900 dark:hover:bg-surface-800'
-          "
-          [attr.aria-current]="section() === item.key ? 'page' : null"
-          (click)="sectionChange.emit(item.key)"
-        >
-          <i class="pi" [class]="item.icon" aria-hidden="true"></i>
-          {{ item.label }}
-        </button>
+        @if (item.moved; as moved) {
+          <a
+            class="no-underline text-inherit"
+            [class]="itemClass + ' ' + idleClass"
+            [routerLink]="moved.path"
+            [queryParams]="moved.params"
+          >
+            <i class="pi" [class]="item.icon" aria-hidden="true"></i>
+            {{ item.label }}
+            <span class="text-xs font-normal text-muted-color">{{ moved.where }}</span>
+          </a>
+        } @else {
+          <button
+            type="button"
+            [class]="itemClass + ' ' + (section() === item.key ? activeClass : idleClass)"
+            [attr.aria-current]="section() === item.key ? 'page' : null"
+            (click)="sectionChange.emit(sectionOf(item))"
+          >
+            <i class="pi" [class]="item.icon" aria-hidden="true"></i>
+            {{ item.label }}
+          </button>
+        }
       </li>
     }
   </ul>

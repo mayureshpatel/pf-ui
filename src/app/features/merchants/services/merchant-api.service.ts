@@ -9,6 +9,7 @@ import {
   Merchant,
   MerchantCreateRequest,
   MerchantDescriptionLink,
+  MerchantSuggestion,
   MerchantUpdateRequest,
 } from '@models/merchant.model';
 import { PageRequest, PageResponse } from '@models/transaction.model';
@@ -52,6 +53,20 @@ export class MerchantApiService {
       params,
       context: SKIP_TOAST_CONTEXT,
     });
+  }
+
+  /**
+   * Ranks the user's merchants by how closely their names match each given name, best first.
+   * @param names the names to find merchants for (at most 100).
+   * @param limit how many merchants to return per name (1 to 20).
+   * @returns one entry per name, in the order asked.
+   */
+  suggestMerchants(names: string[], limit: number): Observable<MerchantSuggestion[]> {
+    return this.http.post<MerchantSuggestion[]>(
+      `${this.apiUrl}/suggestions`,
+      { names, limit },
+      { context: SKIP_TOAST_CONTEXT },
+    );
   }
 
   /**

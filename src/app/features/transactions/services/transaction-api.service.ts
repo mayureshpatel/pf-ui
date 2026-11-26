@@ -13,7 +13,7 @@ import {
   TransferSuggestion,
 } from '@models/transaction.model';
 import { Category } from '@models/category.model';
-import { TransactionDescription } from '@models/merchant.model';
+import { DescriptionGroupPage, TransactionDescription } from '@models/merchant.model';
 import { toLocalDateString } from '@shared/utils/transaction.utils';
 import { SKIP_GENERIC_ERROR_TOAST } from '@core/auth/error.interceptor';
 
@@ -203,6 +203,35 @@ export class TransactionApiService {
       httpParams = httpParams.set('unlinkedOnly', 'true');
     }
     return this.http.get<PageResponse<TransactionDescription>>(`${this.apiUrl}/descriptions`, {
+      params: httpParams,
+      ...SKIP_TOAST_OPTIONS,
+    });
+  }
+
+  /**
+   * Gets a page of the user's descriptions grouped into likely merchants (variants that differ only
+   * in case, spacing, store numbers and similar noise share a group), most used first.
+   * @param params the search (words to match, `-word` to exclude), whether to keep only unlinked
+   * descriptions, and the page to load.
+   * @returns the page of groups, with how many descriptions are still unlinked in all.
+   */
+  getDescriptionGroups(params: {
+    search?: string;
+    unlinkedOnly?: boolean;
+    page: number;
+    size: number;
+  }): Observable<DescriptionGroupPage> {
+    let httpParams: HttpParams = new HttpParams()
+      .set('page', params.page.toString())
+      .set('size', params.size.toString());
+    const search: string = params.search?.trim() ?? '';
+    if (search) {
+      httpParams = httpParams.set('search', search);
+    }
+    if (params.unlinkedOnly) {
+      httpParams = httpParams.set('unlinkedOnly', 'true');
+    }
+    return this.http.get<DescriptionGroupPage>(`${this.apiUrl}/description-groups`, {
       params: httpParams,
       ...SKIP_TOAST_OPTIONS,
     });

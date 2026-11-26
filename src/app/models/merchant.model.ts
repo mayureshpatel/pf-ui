@@ -87,3 +87,47 @@ export interface TransactionDescription {
   merchantId: number | null;
   merchantName: string | null;
 }
+
+/**
+ * One group of description variants that look like the same merchant (case, spacing, store
+ * numbers and similar noise removed), as listed by the Unlinked tab.
+ *
+ * @property key - The normalised text the variants share; stable across loads.
+ * @property displayName - A readable name for the group, taken from its most common variant.
+ * @property variantCount - How many distinct raw descriptions are in the group.
+ * @property transactionCount - How many transactions use any of those descriptions.
+ * @property variants - The raw descriptions in the group, most used first.
+ * @property similarKeys - Keys of other groups whose names look alike (a hint, never merged).
+ */
+export interface DescriptionGroup {
+  key: string;
+  displayName: string;
+  variantCount: number;
+  transactionCount: number;
+  variants: TransactionDescription[];
+  similarKeys: string[];
+}
+
+/**
+ * A page of description groups, plus how many descriptions in all are still unlinked.
+ *
+ * @property content - The groups on this page.
+ * @property page - Page number, size and totals.
+ * @property unlinkedDescriptionCount - Distinct descriptions not linked to any merchant.
+ */
+export interface DescriptionGroupPage {
+  content: DescriptionGroup[];
+  page: { size: number; number: number; totalElements: number; totalPages: number };
+  unlinkedDescriptionCount: number;
+}
+
+/**
+ * The user's merchants ranked by how closely their names match one description group's name.
+ *
+ * @property name - The name that was asked about.
+ * @property merchants - The closest merchants, best first.
+ */
+export interface MerchantSuggestion {
+  name: string;
+  merchants: Merchant[];
+}

@@ -3,9 +3,11 @@ import { CategoryRule } from '@models/category-rule.model';
 import { MerchantRule } from '@models/merchant-rule.model';
 import { Tag } from '@models/tag.model';
 
-export type SettingsSection = 'appearance' | 'rules' | 'merchant-rules' | 'tags';
+export type SettingsSection = 'appearance' | 'rules' | 'tags';
 
-const SECTIONS: SettingsSection[] = ['appearance', 'rules', 'merchant-rules', 'tags'];
+const SECTIONS: SettingsSection[] = ['appearance', 'rules', 'tags'];
+/** The old Merchant rules section, which now lives on the Merchants page (`?view=rules`). */
+export const MOVED_MERCHANT_RULES_SECTION = 'merchant-rules';
 const MAX_KEYWORD_LENGTH = 255;
 /** The most keywords one rule may hold, as the server allows. */
 export const MAX_KEYWORDS = 20;
@@ -14,7 +16,6 @@ export const MAX_KEYWORDS = 20;
 export const SECTION_TITLES: Record<SettingsSection, string> = {
   appearance: 'Appearance',
   rules: 'Category rules',
-  'merchant-rules': 'Merchant rules',
   tags: 'Tags',
 };
 

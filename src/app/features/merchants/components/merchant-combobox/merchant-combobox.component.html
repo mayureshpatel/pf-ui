@@ -1,0 +1,57 @@
+<div class="relative">
+  <input
+    #field
+    type="text"
+    role="combobox"
+    autocomplete="off"
+    aria-autocomplete="list"
+    class="w-full rounded-lg border border-surface-300 bg-surface-0 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60 max-lg:min-h-11 dark:border-surface-700 dark:bg-surface-900"
+    placeholder="Choose a merchant"
+    [id]="comboId()"
+    [attr.aria-label]="label()"
+    [attr.aria-expanded]="open()"
+    [attr.aria-controls]="listId()"
+    [attr.aria-activedescendant]="activeId()"
+    [disabled]="disabled()"
+    [value]="text()"
+    (input)="onInput($any($event.target).value)"
+    (keydown)="onKeydown($event)"
+    (focus)="focus()"
+    (blur)="close()"
+  />
+  @if (open() && options().length > 0) {
+    <ul
+      role="listbox"
+      data-testid="combobox-options"
+      class="absolute inset-x-0 top-full z-20 m-0 mt-1 max-h-64 list-none overflow-auto rounded-lg border border-surface-200 bg-surface-0 p-1 shadow-sm dark:border-surface-700 dark:bg-surface-900"
+      [id]="listId()"
+      [attr.aria-label]="label()"
+    >
+      @for (option of options(); track option.id; let i = $index) {
+        <!-- the options are reached from the field (aria-activedescendant), never focused -->
+        <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
+        <li
+          role="option"
+          class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm max-lg:min-h-11"
+          [class]="i === active() ? 'bg-surface-100 dark:bg-surface-800' : ''"
+          [id]="optionId(i)"
+          [attr.aria-selected]="i === active()"
+          (mousedown)="$event.preventDefault()"
+          (mouseenter)="active.set(i)"
+          (click)="commit(option)"
+        >
+          @if (option.id === newMerchantId) {
+            <i class="pi pi-plus text-xs" aria-hidden="true"></i>
+            <span class="min-w-0 break-words">Create "{{ option.name }}"</span>
+          } @else {
+            <span class="min-w-0 flex-1 break-words">{{ option.name }}</span>
+            @if (location(option); as place) {
+              <span class="sr-only">, </span>
+              <span class="shrink-0 text-xs text-muted-color">{{ place }}</span>
+            }
+          }
+        </li>
+      }
+    </ul>
+  }
+</div>

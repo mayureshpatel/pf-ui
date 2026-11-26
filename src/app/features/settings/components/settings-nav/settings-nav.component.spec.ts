@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { SettingsSection } from '../../utils/settings-helpers';
 import { SettingsNavComponent } from './settings-nav.component';
 
@@ -9,7 +10,10 @@ describe('SettingsNavComponent', () => {
     Array.from(fixture.nativeElement.querySelectorAll('nav button'));
 
   beforeEach(() => {
-    TestBed.configureTestingModule({ imports: [SettingsNavComponent] });
+    TestBed.configureTestingModule({
+      imports: [SettingsNavComponent],
+      providers: [provideRouter([])],
+    });
     fixture = TestBed.createComponent(SettingsNavComponent);
     fixture.componentRef.setInput('section', 'tags');
     fixture.detectChanges();
@@ -23,19 +27,13 @@ describe('SettingsNavComponent', () => {
     expect(buttons().map((b) => b.textContent?.trim())).toEqual([
       'Appearance',
       'Category rules',
-      'Merchant rules',
       'Tags',
     ]);
   });
 
   it('should mark the active section with aria-current', () => {
     // assert & verify
-    expect(buttons().map((b) => b.getAttribute('aria-current'))).toEqual([
-      null,
-      null,
-      null,
-      'page',
-    ]);
+    expect(buttons().map((b) => b.getAttribute('aria-current'))).toEqual([null, null, 'page']);
   });
 
   it('should emit the chosen section', () => {
@@ -51,24 +49,15 @@ describe('SettingsNavComponent', () => {
     expect(chosen).toEqual(['appearance', 'rules']);
   });
 
-  it('should offer merchant rules after category rules and mark it when active', () => {
+  it('should keep Merchant rules after Category rules as a link to the Merchants page', () => {
     // arrange
-    const chosen: SettingsSection[] = [];
-    fixture.componentInstance.sectionChange.subscribe((s: SettingsSection) => chosen.push(s));
-
-    // act
-    buttons()[2].click();
-    fixture.componentRef.setInput('section', 'merchant-rules');
-    fixture.detectChanges();
+    const items: string[] = Array.from(
+      fixture.nativeElement.querySelectorAll('nav li') as NodeListOf<HTMLElement>,
+    ).map((li) => li.textContent?.replace(/\s+/g, ' ').trim() ?? '');
+    const link: HTMLAnchorElement = fixture.nativeElement.querySelector('nav a');
 
     // assert & verify
-    expect(chosen).toEqual(['merchant-rules']);
-    expect(buttons()[2].textContent?.trim()).toBe('Merchant rules');
-    expect(buttons().map((b) => b.getAttribute('aria-current'))).toEqual([
-      null,
-      null,
-      'page',
-      null,
-    ]);
+    expect(items).toEqual(['Appearance', 'Category rules', 'Merchant rules on Merchants', 'Tags']);
+    expect(link.getAttribute('href')).toBe('/merchants?view=rules');
   });
 });

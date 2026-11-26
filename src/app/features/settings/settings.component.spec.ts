@@ -15,7 +15,6 @@ import { ConfirmationService } from 'primeng/api';
 import { SettingsComponent } from './settings.component';
 import { SettingsGuard } from './settings.guard';
 import { CategoryRulesComponent } from './category-rules/category-rules.component';
-import { MerchantRulesComponent } from './merchant-rules/merchant-rules.component';
 import { TagsComponent } from './tags/tags.component';
 
 @Component({
@@ -25,13 +24,6 @@ import { TagsComponent } from './tags/tags.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 class RulesStubComponent {}
-@Component({
-  selector: 'app-merchant-rules',
-  standalone: true,
-  template: '<p>merchant rules section</p>',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-})
-class MerchantRulesStubComponent {}
 @Component({
   selector: 'app-tags',
   standalone: true,
@@ -88,8 +80,8 @@ describe('SettingsComponent', () => {
       ],
     })
       .overrideComponent(SettingsComponent, {
-        remove: { imports: [CategoryRulesComponent, MerchantRulesComponent, TagsComponent] },
-        add: { imports: [RulesStubComponent, MerchantRulesStubComponent, TagsStubComponent] },
+        remove: { imports: [CategoryRulesComponent, TagsComponent] },
+        add: { imports: [RulesStubComponent, TagsStubComponent] },
       })
       .compileComponents();
   });
@@ -117,38 +109,36 @@ describe('SettingsComponent', () => {
     expect(text()).toContain('tags section');
   });
 
-  it('should deep-link to the merchant rules section', async () => {
+  it('should send an old merchant rules link to the Merchants page without a history entry', async () => {
     // act
     await create({ section: 'merchant-rules' });
 
     // assert & verify
-    expect(component.section()).toBe('merchant-rules');
-    expect(text()).toContain('merchant rules section');
-    expect(text()).not.toContain(' rules section tags');
-    expect(navButton('Merchant rules').getAttribute('aria-current')).toBe('page');
+    expect(router.navigate).toHaveBeenCalledTimes(1);
+    expect(router.navigate).toHaveBeenCalledWith(['/merchants'], {
+      queryParams: { view: 'rules' },
+      replaceUrl: true,
+    });
   });
 
-  it('should switch to merchant rules from the list and write it to the URL', async () => {
+  it('should follow Back or Forward to the old merchant rules section onto the Merchants page', async () => {
     // arrange
     await create();
 
     // act
-    navButton('Merchant rules').click();
-    await fixture.whenStable();
-    fixture.detectChanges();
+    queryParams.next({ section: 'merchant-rules' });
 
     // assert & verify
-    expect(component.section()).toBe('merchant-rules');
-    expect(router.navigate).toHaveBeenLastCalledWith([], {
-      queryParams: { section: 'merchant-rules' },
+    expect(router.navigate).toHaveBeenLastCalledWith(['/merchants'], {
+      queryParams: { view: 'rules' },
+      replaceUrl: true,
     });
-    expect(fixture.nativeElement.querySelector('app-merchant-rules')).not.toBeNull();
-    expect(fixture.nativeElement.querySelector('app-category-rules')).toBeNull();
+    expect(component.section()).toBe('rules');
   });
 
-  it('should ask before leaving a dirty merchant rules section', async () => {
+  it('should ask before leaving a dirty section', async () => {
     // arrange
-    await create({ section: 'merchant-rules' });
+    await create({ section: 'tags' });
     fixture.debugElement.injector.get(SettingsGuard).register(() => true);
 
     // act
@@ -159,7 +149,7 @@ describe('SettingsComponent', () => {
     // assert & verify
     expect(confirmation.confirm).toHaveBeenCalledTimes(1);
     expect(confirmation.confirm.mock.calls[0][0].header).toBe('Discard changes?');
-    expect(stayed).toBe('merchant-rules');
+    expect(stayed).toBe('tags');
     expect(component.section()).toBe('rules');
   });
 

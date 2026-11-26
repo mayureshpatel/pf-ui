@@ -17,7 +17,7 @@ import {
 } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Params, Router } from '@angular/router';
 import {
   catchError,
   concat,
@@ -56,6 +56,19 @@ import {
 } from './components/merchant-edit-form/merchant-edit-form.component';
 import { DescriptionPickerComponent } from './components/description-picker/description-picker.component';
 import { BULK_LINK_LIMIT, chunk } from './utils/merchant-helpers';
+import {
+  MERCHANT_TAB_PANEL_ID,
+  MerchantTabsComponent,
+  merchantTabId,
+  MerchantView,
+  viewFromParam,
+} from './components/merchant-tabs/merchant-tabs.component';
+import {
+  CreateForGroup,
+  UnlinkedGroupsComponent,
+} from './components/unlinked-groups/unlinked-groups.component';
+import { MerchantRulesComponent } from '@features/settings/merchant-rules/merchant-rules.component';
+import { SettingsGuard } from '@features/settings/settings.guard';
 
 /** Whether the selected merchant's linked descriptions are loading, loaded or failed to load. */
 export type LinksState = 'loading' | 'loaded' | 'failed';
@@ -69,9 +82,11 @@ const PICKER_PAGE_SIZE = 50;
 const DEBOUNCE_MS = 300;
 
 /**
- * The Merchants page: a searchable list of merchants beside an always-present panel. The panel
- * shows an overview by default, an editor (with linked descriptions) for the selected merchant, the
- * add form, or the picker for linking real transaction descriptions to a merchant.
+ * The Merchants page, in three tabs kept in the URL (`?view=`): Merchants, a searchable list of
+ * merchants; Unlinked, the descriptions not linked to a merchant yet, grouped so they can be linked
+ * a group at a time; and Rules, the merchant rules. The first two sit beside an always-present
+ * panel that shows an overview by default, an editor (with linked descriptions) for the selected
+ * merchant, the add form, or the picker for linking real transaction descriptions to a merchant.
  */
 @Component({
   selector: 'app-merchants',
@@ -87,7 +102,12 @@ const DEBOUNCE_MS = 300;
     MerchantOverviewComponent,
     MerchantEditFormComponent,
     DescriptionPickerComponent,
+    MerchantTabsComponent,
+    UnlinkedGroupsComponent,
+    MerchantRulesComponent,
   ],
+  // the rules tab registers its unsaved-changes check here, as it does on the Settings page
+  providers: [SettingsGuard],
   templateUrl: './merchants.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -98,10 +118,19 @@ export class MerchantsComponent implements OnInit {
   private readonly toast: ToastService = inject(ToastService);
   private readonly confirmationService: ConfirmationService = inject(ConfirmationService);
   private readonly router: Router = inject(Router);
+  private readonly route: ActivatedRoute = inject(ActivatedRoute);
+  private readonly rulesGuard: SettingsGuard = inject(SettingsGuard);
   private readonly destroyRef: DestroyRef = inject(DestroyRef);
   private readonly injector: Injector = inject(Injector);
 
   readonly pageSize: number = PAGE_SIZE;
+  readonly tabPanelId: string = MERCHANT_TAB_PANEL_ID;
+  readonly tabId = merchantTabId;
+
+  /** The tab shown, as named in the URL. */
+  readonly view: WritableSignal<MerchantView> = signal(
+    viewFromParam(this.route.snapshot.queryParams['view']),
+  );
 
   /** The merchants on the current page. */
   readonly merchants: WritableSignal<Merchant[]> = signal([]);
@@ -179,6 +208,9 @@ export class MerchantsComponent implements OnInit {
   private readonly panel = viewChild(SidePanelComponent);
   private readonly editForm = viewChild<MerchantEditFormComponent>('editForm');
   private readonly picker = viewChild(DescriptionPickerComponent);
+  private readonly unlinkedGroups = viewChild(UnlinkedGroupsComponent);
+  /** The Unlinked group the add form was opened for, to hand the new merchant back to. */
+  private createFor: string | null = null;
   private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
 
   /** The element that had focus when the panel left the overview, to hand focus back to. */
@@ -219,6 +251,93 @@ export class MerchantsComponent implements OnInit {
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe((res: PageResponse<Merchant>): void => this.targetOptions.set(res.content));
+    this.route.queryParams
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((params: Params): void => this.followUrl(params));
+  }
+
+  /** A tab was chosen: switch, after asking when what is about to be hidden has unsaved changes. */
+  chooseView(next: MerchantView): void {
+    if (next === this.view()) return;
+    this.askBeforeLeavingView(next, (): void => {
+      this.view.set(next);
+      void this.router.navigate([], {
+        queryParams: { view: next === 'merchants' ? null : next },
+        queryParamsHandling: 'merge',
+      });
+    });
+  }
+
+  /** The route's `canDeactivate`: leaving with unsaved rule changes asks first. */
+  canLeave(): Promise<boolean> {
+    if (!this.rulesGuard.dirty()) return Promise.resolve(true);
+    return new Promise<boolean>((resolve: (leave: boolean) => void): void => {
+      this.confirmationService.confirm({
+        header: 'Discard changes?',
+        message: 'You have unsaved changes. Discard them?',
+        acceptLabel: 'Discard',
+        rejectLabel: 'Keep editing',
+        acceptButtonStyleClass: 'p-button-danger',
+        accept: (): void => resolve(true),
+        reject: (): void => resolve(false),
+      });
+    });
+  }
+
+  /** "Create" was chosen for an Unlinked group: the add form opens with that name. */
+  onCreateForGroup(request: CreateForGroup): void {
+    this.startAdd(request.name, request.key);
+  }
+
+  /** Something was linked on the Unlinked tab: link counts and totals changed. */
+  onGroupsLinked(): void {
+    this.loadMerchants();
+    this.loadStats();
+  }
+
+  /** Back or Forward changed the view in the URL: follow it, or put the URL back. */
+  private followUrl(params: Params): void {
+    const next: MerchantView = viewFromParam(params['view']);
+    if (next === this.view()) return;
+    this.askBeforeLeavingView(
+      next,
+      (): void => this.view.set(next),
+      (): void => {
+        void this.router.navigate([], {
+          queryParams: { view: this.view() === 'merchants' ? null : this.view() },
+          queryParamsHandling: 'merge',
+          replaceUrl: true,
+        });
+      },
+    );
+  }
+
+  /**
+   * The rules tab and the panel are not shown together, so moving between them would drop unsaved
+   * work in whichever is hidden: ask first.
+   */
+  private askBeforeLeavingView(next: MerchantView, proceed: () => void, keep?: () => void): void {
+    if (this.view() === 'rules') {
+      if (!this.rulesGuard.dirty()) {
+        proceed();
+        return;
+      }
+      this.confirmationService.confirm({
+        header: 'Discard changes?',
+        message: 'You have unsaved changes. Discard them?',
+        acceptLabel: 'Discard',
+        rejectLabel: 'Keep editing',
+        acceptButtonStyleClass: 'p-button-danger',
+        accept: proceed,
+        reject: keep,
+      });
+      return;
+    }
+    if (next === 'rules') {
+      this.confirmDiscardIfDirty(proceed, keep);
+      return;
+    }
+    proceed();
   }
 
   ngOnInit(): void {
@@ -315,14 +434,19 @@ export class MerchantsComponent implements OnInit {
     });
   }
 
-  /** Opens the add form, optionally with the name already typed (from a search that found nothing). */
-  startAdd(prefill = ''): void {
+  /**
+   * Opens the add form, optionally with the name already typed (from a search that found nothing,
+   * or from an Unlinked group's Create, whose key is kept to hand the new merchant back to).
+   */
+  startAdd(prefill = '', forGroup: string | null = null): void {
     this.addPrefill.set(prefill);
     if (this.mode() === 'add') {
+      this.createFor = forGroup;
       if (prefill !== '') this.editForm()?.form.controls.name.setValue(prefill);
       return;
     }
     this.confirmDiscardIfDirty((): void => {
+      this.createFor = forGroup;
       this.selected.set(null);
       this.go('add');
     });
@@ -344,6 +468,7 @@ export class MerchantsComponent implements OnInit {
 
   /** Returns to the overview with nothing selected, without asking. */
   closePanel(): void {
+    this.createFor = null;
     this.selected.set(null);
     this.pickerTarget.set(null);
     this.go('overview');
@@ -410,9 +535,17 @@ export class MerchantsComponent implements OnInit {
               linkCount: 0,
               ...this.asMerchantFields(value),
             };
-            this.selected.set(created);
-            this.links.set([]);
-            this.showPicker(created, true);
+            const forGroup: string | null = this.createFor;
+            this.createFor = null;
+            if (forGroup !== null && this.view() === 'unlinked') {
+              // back to the group it was created for, with the new merchant chosen in its field
+              this.closePanel();
+              this.unlinkedGroups()?.merchantCreated(forGroup, created);
+            } else {
+              this.selected.set(created);
+              this.links.set([]);
+              this.showPicker(created, true);
+            }
           }
           this.loadMerchants();
           this.loadStats();
@@ -726,7 +859,7 @@ export class MerchantsComponent implements OnInit {
   }
 
   /** Runs an action that would replace a form, after asking when that form has unsaved changes. */
-  private confirmDiscardIfDirty(proceed: () => void): void {
+  private confirmDiscardIfDirty(proceed: () => void, keep?: () => void): void {
     const mode: MerchantPanelMode = this.mode();
     const tickedCount: number = mode === 'picker' ? (this.picker()?.tickedCount() ?? 0) : 0;
     const dirty: boolean =
@@ -745,6 +878,7 @@ export class MerchantsComponent implements OnInit {
       rejectLabel: 'Keep editing',
       acceptButtonStyleClass: 'p-button-danger',
       accept: proceed,
+      reject: keep,
     });
   }
 }

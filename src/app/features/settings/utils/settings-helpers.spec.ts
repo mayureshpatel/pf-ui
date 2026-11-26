@@ -51,8 +51,8 @@ describe('settings helpers', () => {
       expect(sectionFromParam('appearance')).toBe('appearance');
       expect(sectionFromParam('rules')).toBe('rules');
       expect(sectionFromParam('tags')).toBe('tags');
-      expect(sectionFromParam('merchant-rules')).toBe('merchant-rules');
-      expect(sectionFromParam(['merchant-rules'])).toBe('merchant-rules');
+      // merchant rules moved to the Merchants page; the settings page redirects that value itself
+      expect(sectionFromParam('merchant-rules')).toBe('rules');
       expect(sectionFromParam(undefined)).toBe('rules');
       expect(sectionFromParam('')).toBe('rules');
       expect(sectionFromParam('nope')).toBe('rules');
