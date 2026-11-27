@@ -17,7 +17,9 @@ import { TransactionApiService } from '@features/transactions/services/transacti
 import { AuthService } from '@core/auth/auth.service';
 import { ToastService } from '@core/services/toast.service';
 import {
+  DescriptionGroup,
   DescriptionLinkResult,
+  LookAlikeWarning,
   Merchant,
   MerchantDescriptionLink,
   TransactionDescription,
@@ -57,6 +59,14 @@ const row = (description: string, merchantId: number | null = null): Transaction
   merchantId,
   merchantName: merchantId === null ? null : 'Someone',
 });
+const group = (name: string, variants: string[] = [name]): DescriptionGroup => ({
+  key: name.toLowerCase(),
+  displayName: name,
+  variantCount: variants.length,
+  transactionCount: 3 * variants.length,
+  variants: variants.map((v) => row(v)),
+  similarKeys: [],
+});
 const page = <T>(content: T[], total = content.length) => ({
   content,
   page: { totalElements: total, totalPages: 1, number: 0, size: 20 },
@@ -85,6 +95,8 @@ describe('MerchantsComponent', () => {
       | 'addDescriptionLinks'
       | 'deleteDescriptionLink'
       | 'suggestMerchants'
+      | 'checkDescriptionLinks'
+      | 'undoDescriptionLinks'
     >
   >;
   let mockTransactions: Mocked<
@@ -120,6 +132,15 @@ describe('MerchantsComponent', () => {
       addDescriptionLinks: vi.fn().mockReturnValue(of(LINK_RESULT)),
       deleteDescriptionLink: vi.fn().mockReturnValue(of(undefined)),
       suggestMerchants: vi.fn().mockReturnValue(of([])),
+      checkDescriptionLinks: vi.fn().mockReturnValue(of({ merchantId: 1, warnings: [] })),
+      undoDescriptionLinks: vi.fn().mockReturnValue(
+        of({
+          linksRestored: 1,
+          linksSkipped: 0,
+          transactionsRestored: 0,
+          skippedTransactionIds: [],
+        }),
+      ),
     };
     mockTransactions = {
       getDescriptions: vi
@@ -375,8 +396,9 @@ describe('MerchantsComponent', () => {
       pending.next(LINK_RESULT);
       pending.complete();
 
-      // assert & verify
-      expect(mockToast.success).toHaveBeenCalledWith('Linked 1 description');
+      // assert & verify -- the status line stays with Amazon, not on Costco's panel
+      expect(component.lastLink()?.merchantId).toBe(1);
+      expect(component.shownLastLink()).toBeNull();
       expect(component.mode()).toBe('merchant');
       expect(component.selected()?.id).toBe(2);
     });
@@ -464,8 +486,8 @@ describe('MerchantsComponent', () => {
       expect(component.selected()?.id).toBe(99);
       expect(component.mode()).toBe('picker');
       expect(component.pickerTarget()?.id).toBe(99);
-      expect(mockTransactions.getDescriptions).toHaveBeenCalledWith(
-        expect.objectContaining({ unlinkedOnly: true, page: 0, size: 50 }),
+      expect(mockTransactions.getDescriptionGroups).toHaveBeenCalledWith(
+        expect.objectContaining({ unlinkedOnly: true, page: 0, size: 25 }),
       );
     });
 
@@ -764,20 +786,20 @@ describe('MerchantsComponent', () => {
     it('should load descriptions once a target is chosen', () => {
       // arrange
       component.openPicker();
-      mockTransactions.getDescriptions.mockClear();
+      mockTransactions.getDescriptionGroups.mockClear();
 
       // act
       component.chooseTarget(costco);
 
       // assert & verify
       expect(component.pickerTarget()?.id).toBe(2);
-      expect(mockTransactions.getDescriptions).toHaveBeenCalledWith({
+      expect(mockTransactions.getDescriptionGroups).toHaveBeenCalledWith({
         search: '',
         unlinkedOnly: true,
         page: 0,
-        size: 50,
+        size: 25,
       });
-      expect(component.pickerRows().map((r) => r.description)).toEqual(['AMZN MKTP', 'COSTCO #12']);
+      expect(component.pickerGroups().map((g) => g.displayName)).toEqual(['KROGER FUEL CTR']);
     });
 
     it('should pass search and the toggle to the api and load more pages', () => {
@@ -785,8 +807,10 @@ describe('MerchantsComponent', () => {
       vi.useFakeTimers();
       component.openMerchant(amazon);
       component.openPicker(amazon, false);
-      mockTransactions.getDescriptions.mockClear();
-      mockTransactions.getDescriptions.mockReturnValue(of(page([row('MORE')], 41)));
+      mockTransactions.getDescriptionGroups.mockClear();
+      mockTransactions.getDescriptionGroups.mockReturnValue(
+        of({ ...page([group('MORE')], 41), unlinkedDescriptionCount: 41 }),
+      );
 
       // act
       component.onPickerSearch('chick');
@@ -795,11 +819,11 @@ describe('MerchantsComponent', () => {
       component.onPickerShowMore();
 
       // assert & verify
-      const calls = mockTransactions.getDescriptions.mock.calls.map((c) => c[0]);
-      expect(calls[0]).toEqual({ search: 'chick', unlinkedOnly: false, page: 0, size: 50 });
-      expect(calls[1]).toEqual({ search: 'chick', unlinkedOnly: true, page: 0, size: 50 });
-      expect(calls[2]).toEqual({ search: 'chick', unlinkedOnly: true, page: 1, size: 50 });
-      expect(component.pickerRows().length).toBe(2);
+      const calls = mockTransactions.getDescriptionGroups.mock.calls.map((c) => c[0]);
+      expect(calls[0]).toEqual({ search: 'chick', unlinkedOnly: false, page: 0, size: 25 });
+      expect(calls[1]).toEqual({ search: 'chick', unlinkedOnly: true, page: 0, size: 25 });
+      expect(calls[2]).toEqual({ search: 'chick', unlinkedOnly: true, page: 1, size: 25 });
+      expect(component.pickerGroups().length).toBe(2);
       vi.useRealTimers();
     });
 
@@ -815,8 +839,9 @@ describe('MerchantsComponent', () => {
       component.onLink(['AMZN MKTP', 'AMAZON.COM']);
 
       // assert & verify
+      expect(mockApi.checkDescriptionLinks).toHaveBeenCalledWith(1, ['AMZN MKTP', 'AMAZON.COM']);
       expect(mockApi.addDescriptionLinks.mock.calls).toEqual([[1, ['AMZN MKTP', 'AMAZON.COM']]]);
-      expect(mockToast.success).toHaveBeenCalledWith('Linked 2 descriptions');
+      expect(mockToast.success).not.toHaveBeenCalled();
       expect(component.mode()).toBe('merchant');
       expect(mockApi.getDescriptionLinks).toHaveBeenCalledWith(1);
       expect(mockApi.getMerchants).toHaveBeenCalled();
@@ -867,19 +892,21 @@ describe('MerchantsComponent', () => {
 
     it('should show a retry, not an empty message, when the descriptions fail to load, and retry it', () => {
       // arrange
-      mockTransactions.getDescriptions.mockReturnValue(throwError(() => new Error('boom')));
+      mockTransactions.getDescriptionGroups.mockReturnValue(throwError(() => new Error('boom')));
       vi.spyOn(console, 'error').mockImplementation(() => undefined);
       component.openMerchant(amazon);
       component.openPicker(amazon, true);
       expect(component.pickerLoadFailed()).toBe(true);
-      mockTransactions.getDescriptions.mockReturnValue(of(page([row('AMZN MKTP')], 1)));
+      mockTransactions.getDescriptionGroups.mockReturnValue(
+        of({ ...page([group('AMZN MKTP')], 1), unlinkedDescriptionCount: 1 }),
+      );
 
       // act
       component.retryPicker();
 
       // assert & verify
       expect(component.pickerLoadFailed()).toBe(false);
-      expect(component.pickerRows().map((r) => r.description)).toEqual(['AMZN MKTP']);
+      expect(component.pickerGroups().map((g) => g.displayName)).toEqual(['AMZN MKTP']);
     });
 
     it('should ask before leaving the picker with descriptions ticked', () => {
@@ -970,6 +997,147 @@ describe('MerchantsComponent', () => {
 
       // assert & verify
       expect(mockApi.addDescriptionLinks).toHaveBeenCalledTimes(1);
+    });
+
+    describe('the look-alike guard and the status line', () => {
+      const kroger = merchant(4, 'Kroger');
+      const fuelCenter = merchant(5, 'Kroger Fuel Center');
+      const fuelWarning: LookAlikeWarning = {
+        groupName: 'KROGER FUEL CTR',
+        words: ['FUEL', 'CTR'],
+        descriptions: ['KROGER FUEL CTR #1', 'KROGER FUEL CTR #2'],
+        merchants: [fuelCenter],
+        nextToGroup: 'KROGER',
+      };
+      const ticked = ['KROGER #431', 'KROGER #12', 'KROGER FUEL CTR #1', 'KROGER FUEL CTR #2'];
+
+      beforeEach(() => {
+        mockApi.getMerchants.mockReturnValue(of(page([...list, kroger, fuelCenter])));
+        component.openMerchant(kroger);
+        component.openPicker(kroger, true);
+      });
+
+      it('should stop and show the warnings instead of linking when the check flags look-alikes', () => {
+        // arrange
+        mockApi.checkDescriptionLinks.mockReturnValue(
+          of({ merchantId: 4, warnings: [fuelWarning] }),
+        );
+
+        // act
+        component.onLink(ticked);
+        fixture.detectChanges();
+
+        // assert & verify
+        expect(mockApi.addDescriptionLinks).not.toHaveBeenCalled();
+        expect(component.pickerWarnings()).toEqual([fuelWarning]);
+        expect(component.linking()).toBe(false);
+        expect(aside().querySelector('[data-testid="link-guard"]')?.textContent).toContain(
+          "2 of these contain FUEL and CTR, which Kroger doesn't. Kroger Fuel Center exists.",
+        );
+      });
+
+      it('should link what the guard hands back without checking again', () => {
+        // arrange
+        mockApi.checkDescriptionLinks.mockReturnValue(
+          of({ merchantId: 4, warnings: [fuelWarning] }),
+        );
+        component.onLink(ticked);
+        mockApi.checkDescriptionLinks.mockClear();
+
+        // act -- "Leave those out"
+        component.onLinkChecked(['KROGER #431', 'KROGER #12']);
+
+        // assert & verify
+        expect(mockApi.checkDescriptionLinks).not.toHaveBeenCalled();
+        expect(mockApi.addDescriptionLinks).toHaveBeenCalledWith(4, ['KROGER #431', 'KROGER #12']);
+        expect(component.pickerWarnings()).toEqual([]);
+      });
+
+      it('should cancel the link when the picker is left while the check runs', () => {
+        // arrange
+        const check = new Subject<{ merchantId: number; warnings: LookAlikeWarning[] }>();
+        mockApi.checkDescriptionLinks.mockReturnValue(check);
+        component.onLink(['KROGER #431']);
+
+        // act
+        component.back();
+        check.next({ merchantId: 4, warnings: [] });
+        check.complete();
+
+        // assert & verify
+        expect(mockApi.addDescriptionLinks).not.toHaveBeenCalled();
+        expect(component.linking()).toBe(false);
+        expect(component.mode()).toBe('merchant');
+      });
+
+      it('should not start a link while an undo runs, and clear an old status line on another merchant', () => {
+        // arrange
+        component.onLink(['KROGER #431']);
+        const undo = new Subject<never>();
+        mockApi.undoDescriptionLinks.mockReturnValue(undo);
+        component.undoLastLink();
+        component.openPicker(kroger, true);
+        mockApi.checkDescriptionLinks.mockClear();
+
+        // act
+        component.onLink(['KROGER #12']);
+
+        // assert & verify
+        expect(mockApi.checkDescriptionLinks).not.toHaveBeenCalled();
+
+        // act
+        undo.complete();
+        component.back();
+        component.openMerchant(costco);
+
+        // assert & verify
+        expect(component.lastLink()).toBeNull();
+      });
+
+      it('should link anyway when the check itself fails', () => {
+        // arrange
+        mockApi.checkDescriptionLinks.mockReturnValue(throwError(() => new Error('down')));
+
+        // act
+        component.onLink(['KROGER #431']);
+
+        // assert & verify
+        expect(mockApi.addDescriptionLinks).toHaveBeenCalledWith(4, ['KROGER #431']);
+      });
+
+      it('should show the status line on the merchant after a link, then undo it and reload', () => {
+        // arrange
+        const result: DescriptionLinkResult = {
+          ...LINK_RESULT,
+          merchantId: 4,
+          linkedCount: 11,
+          transactionsFilled: 205,
+        };
+        mockApi.addDescriptionLinks.mockReturnValue(of(result));
+        component.onLink(['KROGER #431']);
+        fixture.detectChanges();
+        const status = (): string =>
+          aside().querySelector('[data-testid="link-result-announcement"]')?.textContent ?? '';
+        expect(component.mode()).toBe('merchant');
+        expect(status()).toContain('Linked 11 to Kroger · 205 transactions filled');
+        mockApi.getMerchants.mockClear();
+        mockApi.getDescriptionLinks.mockClear();
+        mockTransactions.getDescriptions.mockClear();
+
+        // act
+        aside().querySelector<HTMLButtonElement>('[data-testid="link-result-undo"]')?.click();
+        fixture.detectChanges();
+
+        // assert & verify
+        expect(mockApi.undoDescriptionLinks).toHaveBeenCalledWith(result);
+        expect(status()).toContain('Link undone');
+        expect(aside().querySelector('[data-testid="link-result-undo"]')).toBeNull();
+        expect(mockApi.getMerchants).toHaveBeenCalled();
+        expect(mockApi.getDescriptionLinks).toHaveBeenCalledWith(4);
+        expect(mockTransactions.getDescriptions).toHaveBeenCalledWith(
+          expect.objectContaining({ unlinkedOnly: true, size: 1 }),
+        );
+      });
     });
 
     it('should go back to the merchant, or to the overview when there is none', () => {

@@ -19,7 +19,7 @@ test.describe('Merchants', () => {
 
     // Create the merchant through the panel; saving opens the picker for it
     await page.getByRole('button', {name: 'Add merchant'}).first().click();
-    await expect(panel).toHaveAccessibleName('Add merchant');
+    await expect(panel).toHaveAccessibleName('New merchant');
     await panel.getByLabel('Name').fill(name);
     await panel.getByRole('button', {name: 'Add merchant'}).click();
     await expect(page.getByText('Merchant added')).toBeVisible();
@@ -28,7 +28,7 @@ test.describe('Merchants', () => {
 
     // The picker starts on unlinked descriptions; take the first one
     await expect(panel.getByRole('button', {name: 'Unlinked only'})).toHaveAttribute('aria-pressed', 'true');
-    const firstCheckbox = panel.getByRole('checkbox').first();
+    const firstCheckbox = panel.getByTestId('description-row').getByRole('checkbox').first();
     const hasDescriptions = await firstCheckbox.waitFor({timeout: 5000}).then(() => true, () => false);
     if (!hasDescriptions) {
       await panel.getByRole('button', {name: `Back to ${name}`}).click();
@@ -40,7 +40,12 @@ test.describe('Merchants', () => {
     const description = ((await firstCheckbox.getAttribute('aria-label')) ?? '').replace(/^Select /, '');
     await firstCheckbox.check();
     await panel.getByRole('button', {name: 'Link 1 description'}).click();
-    await expect(page.getByText('Linked 1 description')).toBeVisible();
+    // a real description may look like another merchant; this test links it on purpose
+    const linked = panel.getByRole('status').filter({hasText: `Linked 1 to ${name}`});
+    const linkAnyway = panel.getByRole('button', {name: 'Link anyway'});
+    await expect(linked.or(linkAnyway)).toBeVisible();
+    if (await linkAnyway.isVisible()) await linkAnyway.click();
+    await expect(linked).toBeVisible();
 
     // Back on the merchant: the description is listed, and the list shows the link count
     await expect(panel).toHaveAccessibleName(name);

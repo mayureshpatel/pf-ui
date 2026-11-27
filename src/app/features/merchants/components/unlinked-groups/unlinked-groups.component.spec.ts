@@ -8,6 +8,7 @@ import {
   DescriptionGroup,
   DescriptionGroupPage,
   DescriptionLinkResult,
+  LookAlikeWarning,
   Merchant,
 } from '@models/merchant.model';
 import { MerchantApiService } from '../../services/merchant-api.service';
@@ -76,7 +77,14 @@ describe('UnlinkedGroupsComponent', () => {
   let component: UnlinkedGroupsComponent;
   let transactions: Mocked<Pick<TransactionApiService, 'getDescriptionGroups'>>;
   let merchants: Mocked<
-    Pick<MerchantApiService, 'suggestMerchants' | 'addDescriptionLinks' | 'getMerchants'>
+    Pick<
+      MerchantApiService,
+      | 'suggestMerchants'
+      | 'addDescriptionLinks'
+      | 'getMerchants'
+      | 'checkDescriptionLinks'
+      | 'undoDescriptionLinks'
+    >
   >;
   let toast: Mocked<Pick<ToastService, 'success' | 'error'>>;
   let counts: number[];
@@ -92,6 +100,11 @@ describe('UnlinkedGroupsComponent', () => {
     ).map((e) => e.textContent!.trim());
   const checkboxes = (): HTMLInputElement[] =>
     Array.from(fixture.nativeElement.querySelectorAll('[data-testid=variant-row] input'));
+  const status = (): string =>
+    (
+      fixture.nativeElement.querySelector('[data-testid=link-result-announcement]')?.textContent ??
+      ''
+    ).trim();
   const key = (target: HTMLElement, k: string): KeyboardEvent => {
     const event = new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true });
     target.dispatchEvent(event);
@@ -126,6 +139,15 @@ describe('UnlinkedGroupsComponent', () => {
         ),
       ),
       addDescriptionLinks: vi.fn().mockReturnValue(of(RESULT)),
+      checkDescriptionLinks: vi.fn().mockReturnValue(of({ merchantId: 5, warnings: [] })),
+      undoDescriptionLinks: vi.fn().mockReturnValue(
+        of({
+          linksRestored: 1,
+          linksSkipped: 0,
+          transactionsRestored: 0,
+          skippedTransactionIds: [],
+        }),
+      ),
       getMerchants: vi
         .fn()
         .mockReturnValue(
@@ -301,7 +323,8 @@ describe('UnlinkedGroupsComponent', () => {
     expect(remaining.variants.map((v) => v.description)).toEqual(['KROGER FUEL CTR #2']);
     expect(counts).toEqual([40, 38]);
     expect(linked).toBe(1);
-    expect(toast.success).toHaveBeenCalledWith('Linked 2 descriptions to Kroger Fuel Center');
+    expect(toast.success).not.toHaveBeenCalled();
+    expect(status()).toBe('Linked 1 to Kroger Fuel Center · no transactions filled');
 
     // act: the variant left over is ticked again and linked, and the group leaves the list
     fixture.detectChanges();
@@ -396,6 +419,134 @@ describe('UnlinkedGroupsComponent', () => {
     expect(component.tickedVariants(component.groups()[1])).toHaveLength(3);
     expect(toast.error).toHaveBeenCalledWith('Linked 0, 3 failed: Bad description');
     expect(linked).toBe(0);
+  });
+
+  describe('the look-alike guard', () => {
+    const krogerMerchant = merchant(1, 'Kroger');
+    const fuelWarning: LookAlikeWarning = {
+      groupName: 'KROGER FUEL CTR',
+      words: ['FUEL', 'CTR'],
+      descriptions: ['KROGER FUEL CTR #1', 'KROGER FUEL CTR #2', 'KROGER FUEL CTR #3'],
+      merchants: [fuelCenter],
+      nextToGroup: null,
+    };
+    const guard = (): HTMLElement | null =>
+      fixture.nativeElement.querySelector('[data-testid=link-guard]');
+    const click = (testId: string): void => {
+      fixture.nativeElement.querySelector(`[data-testid=${testId}]`).click();
+      fixture.detectChanges();
+    };
+
+    beforeEach(async () => {
+      merchants.checkDescriptionLinks.mockReturnValue(
+        of({ merchantId: 1, warnings: [fuelWarning] }),
+      );
+      await create();
+      component.linkGroup(fuel, krogerMerchant);
+      fixture.detectChanges();
+    });
+
+    it('should hold the link and say why when the group looks like another merchant', () => {
+      // assert & verify
+      expect(merchants.checkDescriptionLinks).toHaveBeenCalledWith(1, fuelWarning.descriptions);
+      expect(merchants.addDescriptionLinks).not.toHaveBeenCalled();
+      expect(guard()?.textContent).toContain(
+        "All 3 of these contain FUEL and CTR, which Kroger doesn't. Kroger Fuel Center exists.",
+      );
+      expect(rows()[1].contains(guard())).toBe(true);
+    });
+
+    it('should link nothing and untick the group on Leave those out', () => {
+      // act
+      click('link-guard-leave-out');
+
+      // assert & verify
+      expect(merchants.addDescriptionLinks).not.toHaveBeenCalled();
+      expect(guard()).toBeNull();
+      expect(component.tickedVariants(fuel)).toEqual([]);
+      expect(names()).toContain('KROGER FUEL CTR');
+      expect(document.activeElement).toBe(rows()[1]);
+    });
+
+    it('should link every variant on Link anyway', () => {
+      // act
+      click('link-guard-anyway');
+
+      // assert & verify
+      expect(merchants.addDescriptionLinks).toHaveBeenCalledWith(1, fuelWarning.descriptions);
+      expect(names()).toEqual(['TACO BELL', 'KROGER']);
+    });
+
+    it('should cancel on Escape and go back to the row', () => {
+      // act
+      guard()!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(guard()).toBeNull();
+      expect(merchants.addDescriptionLinks).not.toHaveBeenCalled();
+      expect(document.activeElement).toBe(rows()[1]);
+    });
+  });
+
+  it('should link anyway when the look-alike check fails', async () => {
+    // arrange
+    merchants.checkDescriptionLinks.mockReturnValue(throwError(() => new Error('down')));
+    await create();
+
+    // act
+    component.linkGroup(taco, fuelCenter);
+    fixture.detectChanges();
+
+    // assert & verify
+    expect(merchants.addDescriptionLinks).toHaveBeenCalledWith(5, ['TACO BELL #1', 'TACO BELL #2']);
+  });
+
+  it('should undo the last link from the status line and reload the list and the counts', async () => {
+    // arrange
+    const result: DescriptionLinkResult = { ...RESULT, linkedCount: 3, transactionsFilled: 6 };
+    merchants.addDescriptionLinks.mockReturnValue(of(result));
+    await create();
+    component.linkGroup(fuel, fuelCenter);
+    fixture.detectChanges();
+    expect(status()).toBe('Linked 3 to Kroger Fuel Center · 6 transactions filled');
+    transactions.getDescriptionGroups.mockClear();
+    transactions.getDescriptionGroups.mockReturnValue(of(pageOf([taco, fuel, kroger], 30, 40)));
+
+    // act
+    fixture.nativeElement.querySelector('[data-testid=link-result-undo]').click();
+    fixture.detectChanges();
+
+    // assert & verify
+    expect(merchants.undoDescriptionLinks).toHaveBeenCalledWith(result);
+    expect(status()).toBe('Link undone');
+    expect(linked).toBe(2);
+    expect(transactions.getDescriptionGroups).toHaveBeenCalledTimes(1);
+    expect(names()).toEqual(['TACO BELL', 'KROGER FUEL CTR', 'KROGER']);
+    expect(counts.at(-1)).toBe(40);
+
+    // act
+    fixture.nativeElement.querySelector('[data-testid=link-result-dismiss]').click();
+    fixture.detectChanges();
+
+    // assert & verify
+    expect(fixture.nativeElement.querySelector('[data-testid=link-result]')).toBeNull();
+  });
+
+  it('should not start another link while an undo runs', async () => {
+    // arrange
+    await create();
+    component.linkGroup(fuel, fuelCenter);
+    fixture.detectChanges();
+    merchants.undoDescriptionLinks.mockReturnValue(new Subject<never>());
+    component.undoLastLink();
+    merchants.checkDescriptionLinks.mockClear();
+
+    // act
+    component.linkGroup(taco, fuelCenter);
+
+    // assert & verify
+    expect(merchants.checkDescriptionLinks).not.toHaveBeenCalled();
   });
 
   it('should refuse to link a group with nothing ticked', async () => {

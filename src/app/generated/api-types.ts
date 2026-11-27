@@ -496,6 +496,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/merchants/{id}/description-links/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check descriptions for look-alikes before linking
+         * @description Flags selected descriptions with words the merchant's name lacks when another merchant or selected group claims those words
+         */
+        post: operations["checkDescriptionLinks"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/merchants/{id}/description-links/bulk": {
         parameters: {
             query?: never;
@@ -1993,6 +2013,21 @@ export interface components {
             /** Format: int32 */
             transactionsRestored?: number;
             skippedTransactionIds?: number[];
+        };
+        DescriptionLinkCheckRequest: {
+            descriptions: string[];
+        };
+        DescriptionLinkCheckDto: {
+            /** Format: int64 */
+            merchantId?: number;
+            warnings?: components["schemas"]["LookAlikeWarningDto"][];
+        };
+        LookAlikeWarningDto: {
+            groupName?: string;
+            words?: string[];
+            descriptions?: string[];
+            merchants?: components["schemas"]["MerchantDto"][];
+            nextToGroup?: string;
         };
         MerchantDescriptionLinkBulkCreateRequest: {
             descriptions: string[];
@@ -3935,6 +3970,50 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["DescriptionLinkUndoResultDto"];
+                };
+            };
+        };
+    };
+    checkDescriptionLinks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DescriptionLinkCheckRequest"];
+            };
+        };
+        responses: {
+            /** @description Check done; the warnings may be empty */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DescriptionLinkCheckDto"];
+                };
+            };
+            /** @description No descriptions, more than 5000, or a null or too-long description */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DescriptionLinkCheckDto"];
+                };
+            };
+            /** @description Forbidden -- the authenticated user does not own this merchant */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DescriptionLinkCheckDto"];
                 };
             };
         };

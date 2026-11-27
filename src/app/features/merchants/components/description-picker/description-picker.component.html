@@ -8,17 +8,24 @@
   </button>
 
   <p class="m-0 text-sm text-muted-color">
-    Choose the transaction descriptions that belong to {{ targetName() }}, or pick them all at once.
+    Choose the descriptions that belong to {{ targetName() }}, a whole group at a time or one by
+    one.
   </p>
 
   <input
     type="search"
     class="w-full rounded-lg border border-surface-300 bg-surface-0 px-3 py-2 text-sm max-lg:min-h-11 dark:border-surface-700 dark:bg-surface-900"
+    #searchField
     aria-label="Search descriptions"
-    placeholder="Search descriptions"
+    aria-describedby="picker-search-hint"
+    placeholder="Search, e.g. kroger -fuel"
     [value]="search()"
     (input)="onSearch($any($event.target).value)"
   />
+
+  <p id="picker-search-hint" class="-mt-2 mb-0 text-xs text-muted-color">
+    Put a minus before a word to leave it out.
+  </p>
 
   <button
     type="button"
@@ -44,26 +51,15 @@
     </p>
   }
 
-  @if (selectableRows().length > 0) {
-    <button
-      type="button"
-      data-testid="select-all"
-      class="inline-flex cursor-pointer items-center self-start rounded-lg border border-surface-300 px-3 py-1.5 text-sm max-lg:min-h-11 dark:border-surface-700"
-      (click)="toggleSelectAll()"
-    >
-      {{ selectAllLabel() }}
-    </button>
-  }
-
   <div
     [attr.aria-busy]="loading() ? 'true' : null"
-    [class]="loading() && rows().length > 0 ? 'pointer-events-none opacity-60' : ''"
+    [class]="loading() && groups().length > 0 ? 'pointer-events-none opacity-60' : ''"
   >
-    @if (rows().length === 0 && !loading() && loadFailed()) {
+    @if (groups().length === 0 && !loading() && loadFailed()) {
       <ng-container *ngTemplateOutlet="failedBlock" />
-    } @else if (rows().length === 0 && !loading()) {
+    } @else if (groups().length === 0 && !loading()) {
       <p class="m-0 py-4 text-center text-sm text-muted-color">{{ emptyMessage() }}</p>
-    } @else if (rows().length === 0) {
+    } @else if (groups().length === 0) {
       <p
         data-testid="picker-loading"
         role="status"
@@ -72,41 +68,81 @@
         Loading descriptions
       </p>
     } @else {
-      <ul class="m-0 flex list-none flex-col gap-1 p-0">
-        @for (row of rows(); track row.description) {
-          <li data-testid="description-row">
+      <ul class="m-0 flex list-none flex-col gap-3 p-0">
+        @for (group of groups(); track group.key) {
+          <li
+            data-testid="picker-group"
+            class="rounded-lg border border-surface-200 dark:border-surface-700"
+          >
             <label
-              class="flex cursor-pointer items-start gap-2 rounded-lg border border-surface-200 px-2 py-2 max-lg:min-h-11 dark:border-surface-700"
+              class="flex cursor-pointer items-start gap-2 border-b border-surface-200 bg-surface-50 px-2 py-2 max-lg:min-h-11 dark:border-surface-700 dark:bg-surface-800"
             >
               <input
                 type="checkbox"
+                data-testid="select-group"
                 class="mt-1 size-4 cursor-pointer max-lg:size-6"
-                [checked]="ticked().has(row.description)"
-                [disabled]="alreadyLinkedHere(row)"
-                [attr.aria-label]="'Select ' + row.description"
-                (change)="toggleTick(row.description)"
+                [checked]="groupState(group) === 'all'"
+                [indeterminate]="groupState(group) === 'some'"
+                [disabled]="linking() || selectable(group).length === 0"
+                [attr.aria-label]="'Select group ' + group.displayName"
+                (change)="toggleGroup(group)"
               />
               <span class="min-w-0 flex-1">
-                <span class="block break-words font-mono text-xs">{{ row.description }}</span>
-                <span class="block text-xs tabular-nums text-muted-color">{{ usage(row) }}</span>
-                @if (alreadyLinkedHere(row)) {
-                  <span class="block text-xs text-muted-color">
-                    Already linked to {{ row.merchantName }}
-                  </span>
-                } @else if (moving(row)) {
-                  <span class="block text-xs text-amber-700 dark:text-amber-400">
-                    Linked to {{ row.merchantName }}; linking moves it
-                  </span>
-                }
+                <span class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span class="break-words text-sm font-medium">{{ group.displayName }}</span>
+                  @if (group.similarKeys.length > 0) {
+                    <span
+                      class="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"
+                    >
+                      Similar names
+                    </span>
+                  }
+                </span>
+                <span class="block text-xs tabular-nums text-muted-color">
+                  {{ groupUsage(group) }}
+                </span>
               </span>
             </label>
+            <ul class="m-0 flex list-none flex-col p-0">
+              @for (row of group.variants; track row.description) {
+                <li data-testid="description-row">
+                  <label
+                    class="flex cursor-pointer items-start gap-2 py-1.5 pl-6 pr-2 max-lg:min-h-11"
+                  >
+                    <input
+                      type="checkbox"
+                      class="mt-1 size-4 cursor-pointer max-lg:size-6"
+                      [checked]="ticked().has(row.description)"
+                      [disabled]="linking() || alreadyLinkedHere(row)"
+                      [attr.aria-label]="'Select ' + row.description"
+                      (change)="toggleTick(row.description)"
+                    />
+                    <span class="min-w-0 flex-1">
+                      <span class="block break-words font-mono text-xs">{{ row.description }}</span>
+                      <span class="block text-xs tabular-nums text-muted-color">{{
+                        usage(row)
+                      }}</span>
+                      @if (alreadyLinkedHere(row)) {
+                        <span class="block text-xs text-muted-color">
+                          Already linked to {{ row.merchantName }}
+                        </span>
+                      } @else if (moving(row)) {
+                        <span class="block text-xs text-amber-700 dark:text-amber-400">
+                          Linked to {{ row.merchantName }}; linking moves it
+                        </span>
+                      }
+                    </span>
+                  </label>
+                </li>
+              }
+            </ul>
           </li>
         }
       </ul>
     }
   </div>
 
-  @if (rows().length > 0 && loadFailed() && !loading()) {
+  @if (groups().length > 0 && loadFailed() && !loading()) {
     <ng-container *ngTemplateOutlet="failedBlock" />
   }
 
@@ -126,14 +162,27 @@
   <div
     class="sticky bottom-0 z-10 -mx-4 -mb-4 border-t border-surface-200 bg-surface-0 px-4 pb-4 pt-3 dark:border-surface-800 dark:bg-surface-900"
   >
-    <button
-      type="button"
-      class="w-full cursor-pointer rounded-lg bg-primary-700 px-3 py-2 text-sm font-medium text-white hover:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-50 max-lg:min-h-11"
-      [disabled]="tickedCount() === 0 || linking()"
-      (click)="submit()"
-    >
-      {{ linkLabel() }}
-    </button>
+    @if (guarding()) {
+      <app-link-guard
+        [targetName]="targetName()"
+        [warnings]="warnings()"
+        [descriptions]="pending()"
+        (leaveOut)="onLeaveOut($event)"
+        (linkAnyway)="linkChecked.emit($event)"
+        (dismiss)="dismissGuard()"
+      />
+    } @else {
+      <button
+        type="button"
+        #linkButton
+        data-testid="picker-link"
+        class="w-full cursor-pointer rounded-lg bg-primary-700 px-3 py-2 text-sm font-medium text-white hover:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-50 max-lg:min-h-11"
+        [disabled]="tickedCount() === 0 || linking()"
+        (click)="submit()"
+      >
+        {{ linkLabel() }}
+      </button>
+    }
   </div>
 </div>
 

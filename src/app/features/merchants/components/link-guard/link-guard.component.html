@@ -1,0 +1,31 @@
+<div
+  data-testid="link-guard"
+  role="group"
+  [attr.aria-labelledby]="titleId"
+  class="flex flex-col gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"
+  (keydown)="onKeydown($event)"
+>
+  <p [id]="titleId" class="m-0 font-medium">Check before linking to {{ targetName() }}</p>
+  @for (sentence of sentences(); track $index) {
+    <p data-testid="link-guard-warning" class="m-0">{{ sentence }}</p>
+  }
+  <div class="flex flex-wrap gap-2">
+    <button
+      #firstChoice
+      type="button"
+      data-testid="link-guard-leave-out"
+      class="cursor-pointer rounded-lg bg-primary-700 px-3 py-1.5 font-medium text-white hover:bg-primary-800 max-lg:min-h-11"
+      (click)="leaveOut.emit(remaining())"
+    >
+      {{ leaveOutLabel() }}
+    </button>
+    <button
+      type="button"
+      data-testid="link-guard-anyway"
+      class="cursor-pointer rounded-lg border border-amber-400 px-3 py-1.5 hover:bg-amber-100 max-lg:min-h-11 dark:border-amber-700 dark:hover:bg-amber-900/40"
+      (click)="linkAnyway.emit(descriptions())"
+    >
+      Link anyway
+    </button>
+  </div>
+</div>

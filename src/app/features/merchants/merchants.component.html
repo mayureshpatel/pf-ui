@@ -111,6 +111,15 @@
           (save)="onPanelSave()"
           (closePanel)="onPanelClose()"
         >
+          <!-- always present, so its live region is in place before the text arrives -->
+          <app-link-result
+            [class]="shownLastLink() ? 'mb-3 block' : 'contents'"
+            [link]="shownLastLink()"
+            [undoing]="linkUndoing()"
+            [undone]="linkUndone()"
+            (undo)="undoLastLink()"
+            (dismiss)="dismissLastLink()"
+          />
           @switch (mode()) {
             @case ('overview') {
               <app-merchant-overview
@@ -162,19 +171,22 @@
                 <app-description-picker
                   [targetName]="target.name"
                   [targetId]="target.id"
-                  [rows]="pickerRows()"
+                  [groups]="pickerGroups()"
                   [totalRecords]="pickerTotal()"
                   [loading]="pickerLoading()"
-                  [linking]="linking()"
+                  [linking]="linking() || linkUndoing()"
                   [failed]="pickerFailed()"
                   [initialUnlinkedOnly]="pickerUnlinkedOnly()"
                   [unlinkedLeft]="unlinkedCount()"
                   [loadFailed]="pickerLoadFailed()"
                   [backToTarget]="selected()?.id === target.id"
+                  [warnings]="pickerWarnings()"
                   (searchChange)="onPickerSearch($event)"
                   (unlinkedOnlyChange)="onPickerToggle($event)"
                   (showMore)="onPickerShowMore()"
                   (link)="onLink($event)"
+                  (linkChecked)="onLinkChecked($event)"
+                  (warningsDismissed)="dismissPickerWarnings()"
                   (back)="back()"
                   (retryLoad)="retryPicker()"
                 />

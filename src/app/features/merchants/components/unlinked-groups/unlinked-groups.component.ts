@@ -16,24 +16,14 @@ import {
   viewChildren,
   WritableSignal,
 } from '@angular/core';
-import { HttpErrorResponse } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import {
-  catchError,
-  concat,
-  debounceTime,
-  finalize,
-  map,
-  Observable,
-  of,
-  Subject,
-  Subscription,
-  toArray,
-} from 'rxjs';
+import { catchError, debounceTime, finalize, Observable, of, Subject, Subscription } from 'rxjs';
 import { SkeletonModule } from 'primeng/skeleton';
 import {
   DescriptionGroup,
   DescriptionGroupPage,
+  DescriptionLinkCheck,
+  LookAlikeWarning,
   Merchant,
   MerchantSuggestion,
   TransactionDescription,
@@ -41,7 +31,18 @@ import {
 import { TransactionApiService } from '@features/transactions/services/transaction-api.service';
 import { ToastService } from '@core/services/toast.service';
 import { MerchantApiService } from '../../services/merchant-api.service';
-import { BULK_LINK_LIMIT, chunk } from '../../utils/merchant-helpers';
+import {
+  LastLink,
+  lastLinkOf,
+  LinkOutcome,
+  linkInBatches,
+  UndoOutcome,
+  undoLink,
+  warnedDescriptions,
+} from '../../utils/link-helpers';
+import { chunk } from '../../utils/merchant-helpers';
+import { LinkGuardComponent } from '../link-guard/link-guard.component';
+import { LinkResultComponent } from '../link-result/link-result.component';
 import { MerchantComboboxComponent } from '../merchant-combobox/merchant-combobox.component';
 
 /** How many groups load at first, and how many more each "Show more" adds. */
@@ -57,27 +58,24 @@ export interface CreateForGroup {
   name: string;
 }
 
-/** One request's worth of linking: the descriptions sent, and whether it worked. */
-interface LinkOutcome {
-  items: string[];
-  ok: boolean;
-  message: string;
+/** A link held back by the look-alike guard until the user decides. */
+interface PendingGuard {
+  key: string;
+  merchant: Merchant;
+  descriptions: string[];
+  warnings: LookAlikeWarning[];
 }
 
-/**
- * The Unlinked tab: the user's unlinked descriptions grouped into likely merchants, each with a
- * merchant field to link the whole group in one go. Built to be worked through from the keyboard:
- * the arrow keys move between groups and open them, typing goes to the merchant field, Enter links
- * and moves on to the next group, and Escape comes back to the row.
- *
- * Linked groups leave the list in place rather than reloading it, so the list keeps its place.
- * "Show more" reloads from the top with a bigger page for the same reason: paging on from an offset
- * would skip as many groups as were linked meanwhile.
- */
 @Component({
   selector: 'app-unlinked-groups',
   standalone: true,
-  imports: [NgTemplateOutlet, SkeletonModule, MerchantComboboxComponent],
+  imports: [
+    NgTemplateOutlet,
+    SkeletonModule,
+    MerchantComboboxComponent,
+    LinkGuardComponent,
+    LinkResultComponent,
+  ],
   templateUrl: './unlinked-groups.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -110,6 +108,12 @@ export class UnlinkedGroupsComponent implements OnInit {
   readonly suggestions: WritableSignal<ReadonlyMap<string, Merchant[]>> = signal(new Map());
   /** Groups whose link is in flight. */
   readonly linking: WritableSignal<ReadonlySet<string>> = signal<ReadonlySet<string>>(new Set());
+  /** The link the look-alike guard is holding back, shown under its group's row. */
+  readonly guard: WritableSignal<PendingGuard | null> = signal<PendingGuard | null>(null);
+  /** The last finished link, for the status line and Undo. */
+  readonly lastLink: WritableSignal<LastLink | null> = signal<LastLink | null>(null);
+  readonly undoing: WritableSignal<boolean> = signal(false);
+  readonly undone: WritableSignal<UndoOutcome | null> = signal<UndoOutcome | null>(null);
   /** The group whose row takes Tab (roving focus). */
   readonly activeKey: WritableSignal<string | null> = signal<string | null>(null);
 
@@ -221,6 +225,8 @@ export class UnlinkedGroupsComponent implements OnInit {
 
   /** Ticks or unticks one variant; with Shift held, every variant from the last one clicked too. */
   onVariantClick(group: DescriptionGroup, index: number, event: MouseEvent): void {
+    // the guard was about the old ticks
+    if (this.guardFor(group)) this.guard.set(null);
     const variant: TransactionDescription = group.variants[index];
     const tick = !this.isTicked(group, variant);
     const last: number | undefined = this.lastClicked.get(group.key);
@@ -357,12 +363,12 @@ export class UnlinkedGroupsComponent implements OnInit {
   }
 
   /**
-   * Links a group's ticked variants to the merchant, in requests of at most 500. Linked variants
-   * leave the group, and a group with none left leaves the list, with focus moving on to the next
-   * one. Variants that failed stay in the group, still ticked.
+   * Checks a group's ticked variants for look-alikes, then links them to the merchant. Warnings
+   * hold the link back and show the guard under the row; a failed check links anyway, since the
+   * check only advises.
    */
   linkGroup(group: DescriptionGroup, merchant: Merchant): void {
-    if (this.isLinking(group)) return;
+    if (this.isLinking(group) || this.undoing()) return;
     const descriptions: string[] = this.tickedVariants(group).map(
       (v: TransactionDescription): string => v.description,
     );
@@ -370,20 +376,91 @@ export class UnlinkedGroupsComponent implements OnInit {
       this.toast.error('Tick at least one description to link.');
       return;
     }
+    this.guard.set(null);
+    this.setLinking(group.key, true);
+    this.merchantApi
+      .checkDescriptionLinks(merchant.id, descriptions)
+      .pipe(
+        catchError((): Observable<DescriptionLinkCheck | null> => of(null)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((check: DescriptionLinkCheck | null): void => {
+        if (check && check.warnings.length > 0) {
+          this.setLinking(group.key, false);
+          this.guard.set({ key: group.key, merchant, descriptions, warnings: check.warnings });
+          return;
+        }
+        this.send(group, merchant, descriptions);
+      });
+  }
+
+  guardFor(group: DescriptionGroup): PendingGuard | null {
+    const guard: PendingGuard | null = this.guard();
+    return guard?.key === group.key ? guard : null;
+  }
+
+  /** "Leave those out": the warned variants are unticked and stay; the rest are linked, if any. */
+  onGuardLeaveOut(group: DescriptionGroup, remaining: string[]): void {
+    const guard: PendingGuard | null = this.guardFor(group);
+    if (!guard) return;
+    const off: Set<string> = new Set<string>(this.unticked().get(group.key) ?? []);
+    warnedDescriptions(guard.warnings).forEach((d: string): void => {
+      off.add(d);
+    });
+    this.setUnticked(group.key, off);
+    this.guard.set(null);
+    if (remaining.length === 0) {
+      this.backToRow(group);
+      return;
+    }
+    this.send(group, guard.merchant, remaining);
+  }
+
+  onGuardAnyway(group: DescriptionGroup, descriptions: string[]): void {
+    const guard: PendingGuard | null = this.guardFor(group);
+    if (!guard) return;
+    this.guard.set(null);
+    this.send(group, guard.merchant, descriptions);
+  }
+
+  onGuardDismiss(group: DescriptionGroup): void {
+    this.guard.set(null);
+    this.backToRow(group);
+  }
+
+  /** Takes the last link back, then reloads the list and its count from the server. */
+  undoLastLink(): void {
+    const last: LastLink | null = this.lastLink();
+    if (!last || this.undoing() || this.undone()) return;
+    this.undoing.set(true);
+    undoLink(this.merchantApi, last)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize((): void => this.undoing.set(false)),
+      )
+      .subscribe((outcome: UndoOutcome): void => {
+        // a link made since replaced the status line; this undo's outcome is not about it
+        if (this.lastLink() === last) this.undone.set(outcome);
+        this.linked.emit();
+        this.load();
+      });
+  }
+
+  dismissLastLink(): void {
+    this.lastLink.set(null);
+    this.undone.set(null);
+  }
+
+  /**
+   * Links descriptions in requests of at most 500. Linked variants leave the group, and a group
+   * with none left leaves the list, with focus moving on to the next one. Variants that failed
+   * stay in the group, still ticked.
+   */
+  private send(group: DescriptionGroup, merchant: Merchant, descriptions: string[]): void {
     this.setLinking(group.key, true);
     const focusAtStart: Element | null = document.activeElement;
-
-    const send = (items: string[]): Observable<LinkOutcome> =>
-      this.merchantApi.addDescriptionLinks(merchant.id, items).pipe(
-        map((): LinkOutcome => ({ items, ok: true, message: '' })),
-        catchError((error: HttpErrorResponse) =>
-          of({ items, ok: false, message: error.error?.detail || 'Failed to link descriptions' }),
-        ),
-      );
-
-    concat(...chunk(descriptions, BULK_LINK_LIMIT).map(send))
+    linkInBatches(this.merchantApi, merchant.id, descriptions)
       .pipe(
-        toArray(),
         takeUntilDestroyed(this.destroyRef),
         finalize((): void => this.setLinking(group.key, false)),
       )
@@ -413,12 +490,12 @@ export class UnlinkedGroupsComponent implements OnInit {
       this.removeVariants(group, done, focusAtStart);
       if (this.loading()) this.load();
     }
-    if (failed.length === 0) {
-      this.toast.success(
-        `Linked ${done.size} ${done.size === 1 ? 'description' : 'descriptions'} to ${merchant.name}`,
-      );
-      return;
+    const finished: LastLink | null = lastLinkOf(merchant.name, outcomes);
+    if (finished) {
+      this.lastLink.set(finished);
+      this.undone.set(null);
     }
+    if (failed.length === 0) return;
     this.toast.error(`Linked ${done.size}, ${failedCount} failed: ${failed[0].message}`);
   }
 
