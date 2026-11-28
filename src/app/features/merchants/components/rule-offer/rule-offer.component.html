@@ -1,0 +1,122 @@
+<div
+  #card
+  data-testid="rule-offer"
+  role="group"
+  tabindex="-1"
+  aria-labelledby="rule-offer-title"
+  class="flex flex-col gap-3 rounded-lg border border-primary-200 bg-primary-50/60 p-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:border-primary-800 dark:bg-primary-950/30"
+  (keydown)="onCardKeydown($event)"
+>
+  @if (coverageLoading()) {
+    <p id="rule-offer-title" class="m-0 text-muted-color" aria-live="polite">
+      Checking the rules for {{ merchant().name }}…
+    </p>
+  } @else if (covered()) {
+    <div class="flex flex-col gap-1">
+      <p id="rule-offer-title" data-testid="rule-offer-covered" class="m-0 font-medium">
+        A rule already covers this
+      </p>
+      @for (rule of coveringRules(); track rule.id) {
+        <p class="m-0 text-muted-color">
+          <code>{{ ruleKeywords(rule) }}</code> → {{ rule.merchantName }}
+        </p>
+      }
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <button
+        type="button"
+        data-testid="rule-offer-ok"
+        class="cursor-pointer rounded-lg border border-surface-300 px-3 py-1.5 hover:bg-surface-100 max-lg:min-h-11 dark:border-surface-600 dark:hover:bg-surface-800"
+        (click)="skip.emit()"
+      >
+        OK
+      </button>
+    </div>
+  } @else {
+    <form [formGroup]="form" class="flex flex-col gap-3" (ngSubmit)="submit()">
+      <p id="rule-offer-title" class="m-0 font-medium">
+        Also create rule:
+        @if (keywords().length > 0) {
+          <code data-testid="rule-offer-keywords">{{ keywordsText() }}</code>
+        } @else {
+          <span class="text-muted-color">no keyword yet</span>
+        }
+        → {{ merchant().name }}
+      </p>
+      <p class="m-0 -mt-2 text-muted-color">
+        Later imports with these keywords get the merchant without a new link.
+      </p>
+
+      <div aria-live="polite" class="flex flex-col gap-1">
+        @if (previewLoading()) {
+          <p class="m-0 text-muted-color">Checking what it matches…</p>
+        } @else if (previewFailed()) {
+          <p class="m-0 text-rose-700 dark:text-rose-400">
+            Couldn't check what it matches. Editing the rule tries again.
+          </p>
+        } @else if (preview()) {
+          <p data-testid="rule-offer-matches" class="m-0">{{ matchText() }}</p>
+          @for (sentence of overlapSentences(); track $index) {
+            <p data-testid="rule-offer-overlap" class="m-0 text-amber-800 dark:text-amber-300">
+              {{ sentence }}
+            </p>
+          }
+        }
+      </div>
+
+      @if (fillIds().length > 0) {
+        <label class="flex cursor-pointer items-center gap-2 max-lg:min-h-11">
+          <input
+            type="checkbox"
+            data-testid="rule-offer-fill"
+            class="size-4 cursor-pointer max-lg:size-6"
+            [checked]="fillBlanks()"
+            (change)="fillBlanks.set(!fillBlanks())"
+          />
+          {{ fillLabel() }}
+        </label>
+      }
+
+      @if (editing()) {
+        <app-rule-form-fields
+          [keywordsError]="keywordsError()"
+          [priorityError]="priorityError()"
+          [amountError]="amountError()"
+        />
+      }
+
+      @if (errorMessage(); as message) {
+        <p role="alert" class="m-0 text-rose-700 dark:text-rose-400">{{ message }}</p>
+      }
+
+      <div class="flex flex-wrap gap-2">
+        <button
+          type="submit"
+          data-testid="rule-offer-create"
+          class="cursor-pointer rounded-lg bg-primary-700 px-3 py-1.5 font-medium text-white hover:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-50 max-lg:min-h-11"
+          [disabled]="!canCreate()"
+        >
+          {{ creating() ? 'Creating…' : 'Create rule' }}
+        </button>
+        @if (!editing()) {
+          <button
+            type="button"
+            data-testid="rule-offer-edit"
+            class="cursor-pointer rounded-lg border border-surface-300 px-3 py-1.5 hover:bg-surface-100 max-lg:min-h-11 dark:border-surface-600 dark:hover:bg-surface-800"
+            (click)="edit()"
+          >
+            Edit
+          </button>
+        }
+        <button
+          type="button"
+          data-testid="rule-offer-skip"
+          class="cursor-pointer rounded-lg px-3 py-1.5 text-muted-color hover:bg-surface-100 max-lg:min-h-11 dark:hover:bg-surface-800"
+          (click)="skip.emit()"
+        >
+          Skip
+        </button>
+      </div>
+    </form>
+  }
+</div>

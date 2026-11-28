@@ -1,5 +1,13 @@
 import {defineConfig, devices} from '@playwright/test';
+import * as fs from 'fs';
 import * as path from 'path';
+
+// e2e/.env (gitignored) may hold E2E_USERNAME / E2E_PASSWORD / E2E_API_URL so they need not be
+// typed on every run; variables already set in the shell win over the file
+const ENV_FILE = path.resolve(__dirname, 'e2e/.env');
+if (fs.existsSync(ENV_FILE)) {
+  process.loadEnvFile(ENV_FILE);
+}
 
 const AUTH_FILE = path.resolve(__dirname, 'e2e/.auth/user.json');
 

@@ -121,6 +121,49 @@ export interface MerchantRuleMatchPreview {
   rows: MerchantRuleMatchRow[];
   /** the ids of every transaction the draft would give a merchant, not only those in `rows` (PF-932) */
   willAssignIds?: number[];
+  /** where the draft meets another merchant (PF-981), most transactions first */
+  overlaps?: MerchantRuleOverlap[];
+}
+
+/** Whether the draft or the other merchant wins an overlap's descriptions. */
+export type MerchantRuleOverlapOutcome = 'THIS_RULE_WINS' | 'OTHER_WINS';
+
+/**
+ * Why an overlap's winner wins, in import's terms: an exact link beats any rule, then priority,
+ * then the longer keywords in total, then the rule saved first.
+ */
+export type MerchantRuleOverlapReason = 'LINK' | 'HIGHER_PRIORITY' | 'LONGER_KEYWORDS' | 'LOWER_ID';
+
+/**
+ * Descriptions a draft merchant rule shares with another merchant (PF-981), and who gets them.
+ *
+ * @property merchantName - The other merchant's name.
+ * @property rule - The other merchant's rule, or null when it wins through a description link.
+ * @property descriptionCount - How many distinct descriptions are shared.
+ * @property transactionCount - How many live transactions use them.
+ * @property descriptions - A few of the descriptions, most used first.
+ */
+export interface MerchantRuleOverlap {
+  outcome: MerchantRuleOverlapOutcome;
+  reason: MerchantRuleOverlapReason;
+  merchantId: number;
+  merchantName: string;
+  rule: MerchantRuleRef | null;
+  descriptionCount: number;
+  transactionCount: number;
+  descriptions: string[];
+}
+
+/**
+ * Which of a merchant's descriptions its rules already win as import would pick (PF-984).
+ *
+ * @property coveredDescriptions - The asked descriptions a rule of this merchant wins.
+ * @property rules - The rules that win them, in rule order.
+ */
+export interface MerchantRuleCoverage {
+  merchantId: number;
+  coveredDescriptions: string[];
+  rules: MerchantRuleRef[];
 }
 
 /**

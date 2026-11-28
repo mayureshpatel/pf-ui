@@ -115,6 +115,24 @@ describe('MerchantRuleApiService', () => {
     expect(changed).toBe(12);
   });
 
+  it('should ask which descriptions the merchant already covers, without the generic error toast', () => {
+    // arrange
+    let coveredDescriptions: string[] = [];
+
+    // act
+    service
+      .coverage(10, ['KROGER #431'])
+      .subscribe((c) => (coveredDescriptions = c.coveredDescriptions));
+
+    // assert & verify
+    const req = httpMock.expectOne(`${apiUrl}/coverage`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ merchantId: 10, descriptions: ['KROGER #431'] });
+    expect(req.request.context.get(SKIP_GENERIC_ERROR_TOAST)).toBe(true);
+    req.flush({ merchantId: 10, coveredDescriptions: ['KROGER #431'], rules: [] });
+    expect(coveredDescriptions).toEqual(['KROGER #431']);
+  });
+
   describe('previewMatches', () => {
     const draft: MerchantRuleDraft = {
       ruleId: null,

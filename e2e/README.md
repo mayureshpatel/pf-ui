@@ -28,6 +28,14 @@
 E2E_USERNAME=<username> E2E_PASSWORD=<password> npm run e2e
 ```
 
+Or put them in `e2e/.env` (gitignored), which `playwright.config.ts` loads when it exists, and
+run plain `npm run e2e`. Variables set in the shell take precedence over the file.
+
+```
+E2E_USERNAME=<username>
+E2E_PASSWORD=<password>
+```
+
 Optional env vars:
 - `E2E_API_URL` — backend base URL (default `http://localhost:8080/api/v1`).
 - `CI` — when set, disables reusing an already-running dev server and enables retries.

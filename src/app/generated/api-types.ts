@@ -596,6 +596,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/merchant-rules/coverage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check which descriptions a merchant's rules already win
+         * @description For each description, whether the rule import would pick for it points at this merchant; read-only
+         */
+        post: operations["merchantRuleCoverage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/merchant-rules/apply": {
         parameters: {
             query?: never;
@@ -2118,6 +2138,17 @@ export interface components {
             merchantName?: string;
             /** Format: int32 */
             priority?: number;
+        };
+        MerchantRuleCoverageRequest: {
+            /** Format: int64 */
+            merchantId: number;
+            descriptions: string[];
+        };
+        MerchantRuleCoverageDto: {
+            /** Format: int64 */
+            merchantId?: number;
+            coveredDescriptions?: string[];
+            rules?: components["schemas"]["MerchantRuleRefDto"][];
         };
         RuleMatchPreviewRequest: {
             /** Format: int64 */
@@ -4184,6 +4215,48 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["MerchantRuleApplyResultDto"];
+                };
+            };
+        };
+    };
+    merchantRuleCoverage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MerchantRuleCoverageRequest"];
+            };
+        };
+        responses: {
+            /** @description Coverage returned (possibly empty) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MerchantRuleCoverageDto"];
+                };
+            };
+            /** @description Validation failed, for example no descriptions or more than 5000 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MerchantRuleCoverageDto"];
+                };
+            };
+            /** @description merchantId is not the authenticated user's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MerchantRuleCoverageDto"];
                 };
             };
         };

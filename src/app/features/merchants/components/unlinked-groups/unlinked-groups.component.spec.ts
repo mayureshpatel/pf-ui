@@ -11,6 +11,7 @@ import {
   LookAlikeWarning,
   Merchant,
 } from '@models/merchant.model';
+import { MerchantRuleApiService } from '@features/settings/merchant-rules/merchant-rule-api.service';
 import { MerchantApiService } from '../../services/merchant-api.service';
 import {
   CreateForGroup,
@@ -87,13 +88,18 @@ describe('UnlinkedGroupsComponent', () => {
     >
   >;
   let toast: Mocked<Pick<ToastService, 'success' | 'error'>>;
+  let ruleApi: Mocked<
+    Pick<MerchantRuleApiService, 'coverage' | 'previewMatches' | 'createRule' | 'createAndApply'>
+  >;
   let counts: number[];
   let linked: number;
   let creates: CreateForGroup[];
 
   const text = (): string => fixture.nativeElement.textContent.replace(/\s+/g, ' ');
   const rows = (): HTMLElement[] =>
-    Array.from(fixture.nativeElement.querySelectorAll('[role=group]'));
+    Array.from(fixture.nativeElement.querySelectorAll('[data-testid=group-row] > [role=group]'));
+  const offer = (): HTMLElement | null =>
+    fixture.nativeElement.querySelector('[data-testid=rule-offer]');
   const names = (): string[] =>
     Array.from(
       fixture.nativeElement.querySelectorAll('[data-testid=group-name]') as NodeListOf<HTMLElement>,
@@ -155,12 +161,19 @@ describe('UnlinkedGroupsComponent', () => {
         ),
     };
     toast = { success: vi.fn(), error: vi.fn() };
+    ruleApi = {
+      coverage: vi.fn().mockReturnValue(of({ merchantId: 5, coveredDescriptions: [], rules: [] })),
+      previewMatches: vi.fn().mockReturnValue(new Subject()),
+      createRule: vi.fn().mockReturnValue(of(9)),
+      createAndApply: vi.fn(),
+    };
     TestBed.configureTestingModule({
       imports: [UnlinkedGroupsComponent],
       providers: [
         { provide: TransactionApiService, useValue: transactions },
         { provide: MerchantApiService, useValue: merchants },
         { provide: ToastService, useValue: toast },
+        { provide: MerchantRuleApiService, useValue: ruleApi },
       ],
     });
   });
@@ -337,8 +350,78 @@ describe('UnlinkedGroupsComponent', () => {
     expect(names()).toEqual(['TACO BELL', 'KROGER']);
     expect(text()).toContain('2 of 29 groups shown');
     expect(counts).toEqual([40, 38, 37]);
-    expect(document.activeElement).toBe(rows()[1]);
+    expect(document.activeElement).toBe(offer());
     expect(transactions.getDescriptionGroups).toHaveBeenCalledTimes(1);
+  });
+
+  describe('the rule offer', () => {
+    const title = (): string =>
+      (offer()?.querySelector('#rule-offer-title')?.textContent ?? '').replace(/\s+/g, ' ').trim();
+
+    beforeEach(async () => {
+      await create();
+      component.linkGroup(fuel, fuelCenter);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+    });
+
+    it('should offer a rule with the group key as its keyword, where the group was, with focus', () => {
+      // assert & verify
+      expect(ruleApi.coverage).toHaveBeenCalledWith(
+        5,
+        fuel.variants.map((v) => v.description),
+      );
+      expect(title()).toBe('Also create rule: `kroger fuel ctr` → Kroger Fuel Center');
+      const items: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('ul > li'));
+      expect(items.map((li) => li.dataset['testid'])).toEqual([
+        'group-row',
+        'rule-offer-row',
+        'group-row',
+      ]);
+      expect(document.activeElement).toBe(offer());
+      expect(ruleApi.createRule).not.toHaveBeenCalled();
+    });
+
+    it('should skip on Escape and move focus to the next group', async () => {
+      // act
+      key(offer()!, 'Escape');
+      await fixture.whenStable();
+
+      // assert & verify
+      expect(offer()).toBeNull();
+      expect(ruleApi.createRule).not.toHaveBeenCalled();
+      expect(document.activeElement).toBe(rows()[1]);
+      expect(names()[1]).toBe('KROGER');
+    });
+
+    it('should create the rule on Enter, then move focus to the next group', async () => {
+      // act
+      key(offer()!, 'Enter');
+      await fixture.whenStable();
+
+      // assert & verify
+      expect(ruleApi.createRule).toHaveBeenCalledWith({
+        keywords: ['kroger fuel ctr'],
+        matchType: 'OR',
+        priority: 0,
+        minAmount: null,
+        maxAmount: null,
+        merchantId: 5,
+      });
+      expect(offer()).toBeNull();
+      expect(linked).toBe(2);
+      expect(document.activeElement).toBe(rows()[1]);
+    });
+
+    it('should drop the offer when the link is undone', () => {
+      // act
+      fixture.nativeElement.querySelector('[data-testid=link-result-undo]').click();
+      fixture.detectChanges();
+
+      // assert & verify
+      expect(offer()).toBeNull();
+    });
   });
 
   it('should replace a load that was in flight when a link finished, so the group stays gone', async () => {
