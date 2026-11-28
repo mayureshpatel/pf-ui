@@ -20,19 +20,16 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Params, Router } from '@angular/router';
 import {
   catchError,
-  concat,
   debounceTime,
   distinctUntilChanged,
   EMPTY,
   finalize,
   forkJoin,
-  map,
   Observable,
   of,
   Subject,
   Subscription,
   switchMap,
-  toArray,
 } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
@@ -46,7 +43,14 @@ import { ToastService } from '@core/services/toast.service';
 import { ScreenToolbarComponent } from '@shared/components/screen-toolbar/screen-toolbar';
 import { SidePanelComponent } from '@shared/components/side-panel/side-panel.component';
 import { PageErrorStateComponent } from '@shared/components/page-error-state/page-error-state.component';
-import { Merchant, MerchantDescriptionLink, TransactionDescription } from '@models/merchant.model';
+import {
+  DescriptionGroup,
+  DescriptionGroupPage,
+  DescriptionLinkCheck,
+  LookAlikeWarning,
+  Merchant,
+  MerchantDescriptionLink,
+} from '@models/merchant.model';
 import { PageResponse } from '@models/transaction.model';
 import { MerchantListComponent } from './components/merchant-list/merchant-list.component';
 import { MerchantOverviewComponent } from './components/merchant-overview/merchant-overview.component';
@@ -55,7 +59,15 @@ import {
   MerchantFormValue,
 } from './components/merchant-edit-form/merchant-edit-form.component';
 import { DescriptionPickerComponent } from './components/description-picker/description-picker.component';
-import { BULK_LINK_LIMIT, chunk } from './utils/merchant-helpers';
+import { LinkResultComponent } from './components/link-result/link-result.component';
+import {
+  LastLink,
+  lastLinkOf,
+  LinkOutcome,
+  linkInBatches,
+  UndoOutcome,
+  undoLink,
+} from './utils/link-helpers';
 import {
   MERCHANT_TAB_PANEL_ID,
   MerchantTabsComponent,
@@ -78,7 +90,8 @@ export type MerchantPanelMode = 'overview' | 'merchant' | 'add' | 'picker';
 
 const PAGE_SIZE = 20;
 /** The picker works through a long backlog, so it pages in bigger steps than the list. */
-const PICKER_PAGE_SIZE = 50;
+/** Groups per picker page; each carries its variants, so fewer than the old flat rows. */
+const PICKER_PAGE_SIZE = 25;
 const DEBOUNCE_MS = 300;
 
 /**
@@ -102,6 +115,7 @@ const DEBOUNCE_MS = 300;
     MerchantOverviewComponent,
     MerchantEditFormComponent,
     DescriptionPickerComponent,
+    LinkResultComponent,
     MerchantTabsComponent,
     UnlinkedGroupsComponent,
     MerchantRulesComponent,
@@ -165,7 +179,9 @@ export class MerchantsComponent implements OnInit {
   readonly links: WritableSignal<MerchantDescriptionLink[]> = signal([]);
 
   readonly pickerTarget: WritableSignal<Merchant | null> = signal(null);
-  readonly pickerRows: WritableSignal<TransactionDescription[]> = signal([]);
+  readonly pickerGroups: WritableSignal<DescriptionGroup[]> = signal([]);
+  /** Look-alike warnings for the picker's pending link, shown in place of its Link button. */
+  readonly pickerWarnings: WritableSignal<LookAlikeWarning[]> = signal([]);
   readonly pickerTotal: WritableSignal<number> = signal(0);
   readonly pickerPage: WritableSignal<number> = signal(0);
   readonly pickerSearch: WritableSignal<string> = signal('');
@@ -174,6 +190,19 @@ export class MerchantsComponent implements OnInit {
   readonly pickerLoadFailed: WritableSignal<boolean> = signal(false);
   readonly pickerFailed: WritableSignal<string[]> = signal([]);
   readonly linking: WritableSignal<boolean> = signal(false);
+  /** The picker's last finished link, for its status line and Undo, with the merchant it went to. */
+  readonly lastLink: WritableSignal<{ merchantId: number; link: LastLink } | null> = signal(null);
+  readonly linkUndoing: WritableSignal<boolean> = signal(false);
+  readonly linkUndone: WritableSignal<UndoOutcome | null> = signal(null);
+  /** The status line shows only while the panel is on the merchant the link went to. */
+  readonly shownLastLink: Signal<LastLink | null> = computed((): LastLink | null => {
+    const last = this.lastLink();
+    if (!last) return null;
+    const mode: MerchantPanelMode = this.mode();
+    if (mode === 'merchant' && this.selected()?.id === last.merchantId) return last.link;
+    if (mode === 'picker' && this.pickerTarget()?.id === last.merchantId) return last.link;
+    return null;
+  });
   /** Merchants offered by the "Link to" choice when the picker opens from the overview. */
   readonly targetOptions: WritableSignal<Merchant[]> = signal([]);
 
@@ -426,6 +455,8 @@ export class MerchantsComponent implements OnInit {
   openMerchant(merchant: Merchant): void {
     if (this.mode() === 'merchant' && this.selected()?.id === merchant.id) return;
     this.confirmDiscardIfDirty((): void => {
+      // an older link's status line belongs to the moment it was made, not to a later visit
+      if (this.lastLink()?.merchantId !== merchant.id) this.dismissLastLink();
       this.selected.set(merchant);
       this.links.set([]);
       this.linksState.set('loading');
@@ -655,57 +686,114 @@ export class MerchantsComponent implements OnInit {
 
   /** Retries whatever picker load failed: the first page, or the page "Show more" asked for. */
   retryPicker(): void {
-    this.loadPickerRows(this.pickerRows().length === 0);
+    this.loadPickerRows(this.pickerGroups().length === 0);
   }
 
   onPickerShowMore(): void {
-    if (this.pickerLoading() || this.pickerRows().length >= this.pickerTotal()) return;
+    if (this.pickerLoading() || this.pickerGroups().length >= this.pickerTotal()) return;
     this.loadPickerRows(false);
   }
 
   /**
-   * Links the ticked descriptions to the target in bulk requests of at most 500 (one request for
-   * almost every selection). A failed request leaves its descriptions ticked in the picker and the
-   * toast names the counts and the first message.
+   * Checks the ticked descriptions for look-alikes, then links them. Warnings stop the link and
+   * show the guard in the picker; a failed check links anyway, since the check only advises.
    */
   onLink(descriptions: string[]): void {
     const target: Merchant | null = this.pickerTarget();
-    if (!target || this.linking() || descriptions.length === 0) return;
+    if (!target || this.linking() || this.linkUndoing() || descriptions.length === 0) return;
     this.linking.set(true);
     this.pickerFailed.set([]);
-
-    const linkGroup = (
-      items: string[],
-    ): Observable<{ items: string[]; ok: boolean; message: string }> =>
-      this.merchantApi.addDescriptionLinks(target.id, items).pipe(
-        map(() => ({ items, ok: true, message: '' })),
-        catchError((error: HttpErrorResponse) =>
-          of({
-            items,
-            ok: false,
-            message: error.error?.detail || 'Failed to link descriptions',
-          }),
-        ),
-      );
-
-    concat(...chunk(descriptions, BULK_LINK_LIMIT).map(linkGroup))
+    this.pickerWarnings.set([]);
+    this.merchantApi
+      .checkDescriptionLinks(target.id, descriptions)
       .pipe(
-        toArray(),
+        catchError((): Observable<DescriptionLinkCheck | null> => of(null)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((check: DescriptionLinkCheck | null): void => {
+        const stillHere: boolean =
+          this.mode() === 'picker' && this.pickerTarget()?.id === target.id;
+        // leaving the picker while the check ran cancels the link, warned or not
+        if (!stillHere) {
+          this.linking.set(false);
+          return;
+        }
+        if (check && check.warnings.length > 0) {
+          this.linking.set(false);
+          this.pickerWarnings.set(check.warnings);
+          return;
+        }
+        this.linkTo(target, descriptions);
+      });
+  }
+
+  /** The guard's choice in the picker: link these without checking again. */
+  onLinkChecked(descriptions: string[]): void {
+    const target: Merchant | null = this.pickerTarget();
+    this.pickerWarnings.set([]);
+    if (!target || this.linking() || this.linkUndoing() || descriptions.length === 0) return;
+    this.linking.set(true);
+    this.pickerFailed.set([]);
+    this.linkTo(target, descriptions);
+  }
+
+  dismissPickerWarnings(): void {
+    this.pickerWarnings.set([]);
+  }
+
+  /**
+   * Takes the last link back, then reloads what it changed: the counts, the merchant's links and
+   * the picker's groups.
+   */
+  undoLastLink(): void {
+    const last = this.lastLink();
+    if (!last || this.linkUndoing() || this.linkUndone()) return;
+    this.linkUndoing.set(true);
+    undoLink(this.merchantApi, last.link)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize((): void => this.linkUndoing.set(false)),
+      )
+      .subscribe((outcome: UndoOutcome): void => {
+        // a link made since replaced the status line; this undo's outcome is not about it
+        if (this.lastLink() === last) this.linkUndone.set(outcome);
+        this.loadMerchants();
+        this.loadStats();
+        if (this.selected()?.id === last.merchantId) this.loadLinks(last.merchantId);
+        if (this.mode() === 'picker') this.loadPickerRows(true);
+      });
+  }
+
+  dismissLastLink(): void {
+    this.lastLink.set(null);
+    this.linkUndone.set(null);
+  }
+
+  /**
+   * Links descriptions to the target in bulk requests of at most 500 (one request for almost
+   * every selection). The status line reports what was linked, with Undo. A failed request leaves
+   * its descriptions ticked in the picker and the toast names the counts and the first message.
+   */
+  private linkTo(target: Merchant, descriptions: string[]): void {
+    linkInBatches(this.merchantApi, target.id, descriptions)
+      .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize((): void => this.linking.set(false)),
       )
-      .subscribe((results): void => {
-        const linked: number = results
-          .filter((r): boolean => r.ok)
-          .reduce((total: number, r): number => total + r.items.length, 0);
-        const failed = results.filter((r): boolean => !r.ok);
-        const failedDescriptions: string[] = failed.flatMap((r): string[] => r.items);
+      .subscribe((results: LinkOutcome[]): void => {
+        const failed: LinkOutcome[] = results.filter((r: LinkOutcome): boolean => !r.ok);
+        const failedDescriptions: string[] = failed.flatMap((r: LinkOutcome): string[] => r.items);
+        const linked: number = descriptions.length - failedDescriptions.length;
+        const done: LastLink | null = lastLinkOf(target.name, results);
+        if (done) {
+          this.lastLink.set({ merchantId: target.id, link: done });
+          this.linkUndone.set(null);
+        }
         this.loadMerchants();
         this.loadStats();
         const stillHere: boolean =
           this.mode() === 'picker' && this.pickerTarget()?.id === target.id;
         if (failed.length === 0) {
-          this.toast.success(`Linked ${linked} ${linked === 1 ? 'description' : 'descriptions'}`);
           if (stillHere) {
             this.selected.set(target);
             this.go('merchant');
@@ -731,7 +819,8 @@ export class MerchantsComponent implements OnInit {
     this.pickerUnlinkedOnly.set(unlinkedOnly);
     this.pickerSearch.set('');
     this.pickerFailed.set([]);
-    this.pickerRows.set([]);
+    this.pickerGroups.set([]);
+    this.pickerWarnings.set([]);
     this.pickerLoadFailed.set(false);
     this.pickerTotal.set(0);
     this.pickerPage.set(0);
@@ -747,7 +836,7 @@ export class MerchantsComponent implements OnInit {
     this.pickerLoading.set(true);
     this.pickerLoadFailed.set(false);
     this.pickerSubscription = this.transactionApi
-      .getDescriptions({
+      .getDescriptionGroups({
         search: this.pickerSearch(),
         unlinkedOnly: this.pickerUnlinkedOnly(),
         page,
@@ -760,8 +849,8 @@ export class MerchantsComponent implements OnInit {
         }),
       )
       .subscribe({
-        next: (res: PageResponse<TransactionDescription>): void => {
-          this.pickerRows.set(reset ? res.content : [...this.pickerRows(), ...res.content]);
+        next: (res: DescriptionGroupPage): void => {
+          this.pickerGroups.set(reset ? res.content : [...this.pickerGroups(), ...res.content]);
           this.pickerTotal.set(res.page.totalElements);
           this.pickerPage.set(page);
         },

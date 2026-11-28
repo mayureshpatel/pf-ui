@@ -5,7 +5,9 @@ import { SKIP_GENERIC_ERROR_TOAST } from '@core/auth/error.interceptor';
 import { Observable } from 'rxjs';
 import { environment } from '@env';
 import {
+  DescriptionLinkCheck,
   DescriptionLinkResult,
+  DescriptionLinkUndoResult,
   Merchant,
   MerchantCreateRequest,
   MerchantDescriptionLink,
@@ -144,6 +146,37 @@ export class MerchantApiService {
     return this.http.post<DescriptionLinkResult>(
       `${this.apiUrl}/${merchantId}/description-links/bulk`,
       { descriptions },
+      { context: SKIP_TOAST_CONTEXT },
+    );
+  }
+
+  /**
+   * Checks descriptions about to be linked to a merchant for look-alikes: groups with words the
+   * merchant's name lacks while another merchant or selected group has them. Read-only.
+   * @param merchantId the merchant the descriptions would be linked to.
+   * @param descriptions the raw descriptions (1 to 5,000).
+   * @returns the warnings, empty when nothing looks out of place.
+   */
+  checkDescriptionLinks(
+    merchantId: number,
+    descriptions: string[],
+  ): Observable<DescriptionLinkCheck> {
+    return this.http.post<DescriptionLinkCheck>(
+      `${this.apiUrl}/${merchantId}/description-links/check`,
+      { descriptions },
+      { context: SKIP_TOAST_CONTEXT },
+    );
+  }
+
+  /**
+   * Takes a link back from the result it returned. Only what is unchanged since is reversed.
+   * @param result the link result, exactly as the link call returned it.
+   * @returns what was restored and what was left alone.
+   */
+  undoDescriptionLinks(result: DescriptionLinkResult): Observable<DescriptionLinkUndoResult> {
+    return this.http.post<DescriptionLinkUndoResult>(
+      `${this.apiUrl}/${result.merchantId}/description-links/undo`,
+      result,
       { context: SKIP_TOAST_CONTEXT },
     );
   }

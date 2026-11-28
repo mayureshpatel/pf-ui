@@ -1,0 +1,32 @@
+<p class="sr-only" role="status" data-testid="link-result-announcement">{{ text() }}</p>
+@if (link()) {
+  <div
+    data-testid="link-result"
+    class="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-surface-200 bg-surface-50 px-3 py-2 text-sm dark:border-surface-700 dark:bg-surface-800"
+  >
+    <!-- the live region above says it for screen readers -->
+    <p aria-hidden="true" data-testid="link-result-text" class="m-0 min-w-0 flex-1 tabular-nums">
+      {{ text() }}
+    </p>
+    @if (!undone()) {
+      <button
+        type="button"
+        data-testid="link-result-undo"
+        class="cursor-pointer rounded-lg px-2 py-1 font-medium text-primary-700 underline disabled:cursor-not-allowed disabled:opacity-50 max-lg:min-h-11 dark:text-primary-400"
+        [disabled]="undoing()"
+        (click)="undo.emit()"
+      >
+        {{ undoing() ? 'Undoing…' : 'Undo' }}
+      </button>
+    }
+    <button
+      type="button"
+      data-testid="link-result-dismiss"
+      class="inline-flex size-8 cursor-pointer items-center justify-center rounded-lg text-muted-color hover:bg-surface-100 max-lg:size-11 dark:hover:bg-surface-700"
+      aria-label="Dismiss"
+      (click)="dismiss.emit()"
+    >
+      <i class="pi pi-times text-xs" aria-hidden="true"></i>
+    </button>
+  </div>
+}

@@ -72,6 +72,33 @@ export interface MerchantDescriptionLink {
  */
 export type DescriptionLinkResult = components['schemas']['DescriptionLinkResultDto'];
 
+/** What undoing a link restored, and what it left alone because it changed since. */
+export type DescriptionLinkUndoResult = components['schemas']['DescriptionLinkUndoResultDto'];
+
+/**
+ * One group of selected descriptions with words the target merchant's name lacks, where those
+ * words point at another merchant or a look-alike group in the selection.
+ *
+ * @property groupName - The descriptions' group, e.g. "KROGER FUEL CTR".
+ * @property words - The flagged words, uppercase, e.g. ["FUEL", "CTR"].
+ * @property descriptions - The selected raw descriptions in that group.
+ * @property merchants - Other merchants with those words that fit the group better; may be empty.
+ * @property nextToGroup - Another selected group this one only adds words to, e.g. "KROGER".
+ */
+export interface LookAlikeWarning {
+  groupName: string;
+  words: string[];
+  descriptions: string[];
+  merchants: Merchant[];
+  nextToGroup: string | null;
+}
+
+/** The look-alike check of descriptions about to be linked; no warnings means link away. */
+export interface DescriptionLinkCheck {
+  merchantId: number;
+  warnings: LookAlikeWarning[];
+}
+
 /**
  * One distinct transaction description in the user's history, as offered by the description
  * picker. Descriptions differing only in case or spacing are one row.

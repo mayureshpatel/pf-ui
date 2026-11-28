@@ -1,9 +1,13 @@
 import { NgTemplateOutlet } from '@angular/common';
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
   effect,
+  ElementRef,
+  inject,
+  Injector,
   input,
   InputSignal,
   linkedSignal,
@@ -12,28 +16,33 @@ import {
   signal,
   Signal,
   untracked,
+  viewChild,
   WritableSignal,
 } from '@angular/core';
-import { TransactionDescription } from '@models/merchant.model';
+import { DescriptionGroup, LookAlikeWarning, TransactionDescription } from '@models/merchant.model';
 import { isMovingLink } from '../../utils/merchant-helpers';
+import { LinkGuardComponent } from '../link-guard/link-guard.component';
 
 /**
- * The panel's link-descriptions mode: a searchable list of the user's real transaction
- * descriptions to tick and link to one merchant. It loads nothing itself; the host feeds it rows and
- * reacts to search, toggle, show-more and link. Ticks are kept here by description text so they
- * survive new pages of rows, searches and the Unlinked only toggle.
+ * The panel's link-descriptions mode: a searchable list of the user's description groups, each
+ * with a "Select group" box over its raw variants, to tick and link to one merchant. It loads
+ * nothing itself; the host feeds it groups and reacts to search, toggle, show-more and link. Ticks
+ * are kept here by description text so they survive new pages, searches and the Unlinked only
+ * toggle. Before a link the host checks for look-alikes; when it hands back warnings the guard
+ * takes the place of the Link button until the user decides.
  */
 @Component({
   selector: 'app-description-picker',
   standalone: true,
-  imports: [NgTemplateOutlet],
+  imports: [NgTemplateOutlet, LinkGuardComponent],
   templateUrl: './description-picker.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DescriptionPickerComponent {
   readonly targetName: InputSignal<string> = input.required<string>();
   readonly targetId: InputSignal<number | null> = input.required<number | null>();
-  readonly rows: InputSignal<TransactionDescription[]> = input.required<TransactionDescription[]>();
+  readonly groups: InputSignal<DescriptionGroup[]> = input.required<DescriptionGroup[]>();
+  /** How many groups match in all (the page shows the first of them). */
   readonly totalRecords: InputSignal<number> = input.required<number>();
   readonly loading: InputSignal<boolean> = input<boolean>(false);
   readonly linking: InputSignal<boolean> = input<boolean>(false);
@@ -46,11 +55,18 @@ export class DescriptionPickerComponent {
   readonly loadFailed: InputSignal<boolean> = input<boolean>(false);
   /** False when Back lands on the overview (no merchant was open), so the label says so. */
   readonly backToTarget: InputSignal<boolean> = input<boolean>(true);
+  /** Look-alike warnings for the link just asked for; empty when there is nothing to decide. */
+  readonly warnings: InputSignal<LookAlikeWarning[]> = input<LookAlikeWarning[]>([]);
 
   readonly searchChange: OutputEmitterRef<string> = output<string>();
   readonly unlinkedOnlyChange: OutputEmitterRef<boolean> = output<boolean>();
   readonly showMore: OutputEmitterRef<void> = output<void>();
+  /** Asks to link the ticked descriptions; the host checks them for look-alikes first. */
   readonly link: OutputEmitterRef<string[]> = output<string[]>();
+  /** The guard's decision: link these, already checked. */
+  readonly linkChecked: OutputEmitterRef<string[]> = output<string[]>();
+  /** The guard was cancelled, or the ticks it was about changed. */
+  readonly warningsDismissed: OutputEmitterRef<void> = output<void>();
   /** Emits when the user goes back to the merchant (named so it is not a DOM event like cancel). */
   readonly back: OutputEmitterRef<void> = output<void>();
   readonly retryLoad: OutputEmitterRef<void> = output<void>();
@@ -60,10 +76,16 @@ export class DescriptionPickerComponent {
   );
   readonly search: WritableSignal<string> = signal('');
   readonly ticked: WritableSignal<ReadonlySet<string>> = signal<ReadonlySet<string>>(new Set());
+  private readonly injector: Injector = inject(Injector);
+  private readonly linkButton = viewChild<ElementRef<HTMLButtonElement>>('linkButton');
+  private readonly searchField = viewChild<ElementRef<HTMLInputElement>>('searchField');
+
+  /** The descriptions the shown warnings are about, as they were ticked when Link was pressed. */
+  readonly pending: WritableSignal<string[]> = signal<string[]>([]);
 
   readonly tickedCount: Signal<number> = computed((): number => this.ticked().size);
   readonly canShowMore: Signal<boolean> = computed(
-    (): boolean => this.rows().length < this.totalRecords(),
+    (): boolean => this.groups().length < this.totalRecords(),
   );
   readonly linkLabel: Signal<string> = computed((): string => {
     if (this.linking()) return 'Linking…';
@@ -71,27 +93,12 @@ export class DescriptionPickerComponent {
     if (count === 0) return 'Link descriptions';
     return count === 1 ? 'Link 1 description' : `Link ${count} descriptions`;
   });
-  /** The rows that can be ticked: one already linked to this merchant has nothing left to do. */
-  readonly selectableRows: Signal<TransactionDescription[]> = computed(
-    (): TransactionDescription[] =>
-      this.rows().filter((row: TransactionDescription): boolean => !this.alreadyLinkedHere(row)),
-  );
-  readonly allSelected: Signal<boolean> = computed(
-    (): boolean =>
-      this.selectableRows().length > 0 &&
-      this.selectableRows().every((row: TransactionDescription): boolean =>
-        this.ticked().has(row.description),
-      ),
-  );
-  readonly selectAllLabel: Signal<string> = computed((): string => {
-    const count: number = this.selectableRows().length;
-    if (this.allSelected()) return 'Clear selection';
-    return count === 1 ? 'Select the 1 shown' : `Select all ${count} shown`;
-  });
-  /** Where the user is in the backlog: how many are shown, and how many are still unlinked. */
+  readonly guarding: Signal<boolean> = computed((): boolean => this.warnings().length > 0);
+  /** Where the user is in the backlog: how many groups are shown, and how many are still unlinked. */
   readonly progressText: Signal<string> = computed((): string => {
     const parts: string[] = [];
-    if (this.rows().length > 0) parts.push(`${this.rows().length} of ${this.totalRecords()} shown`);
+    const shown: number = this.groups().length;
+    if (shown > 0) parts.push(`${shown} of ${this.totalRecords()} groups shown`);
     const left: number | null = this.unlinkedLeft();
     if (left !== null) parts.push(`${left} not linked yet`);
     return parts.join(' · ');
@@ -122,26 +129,47 @@ export class DescriptionPickerComponent {
     return row.transactionCount === 1 ? '1 transaction' : `${row.transactionCount} transactions`;
   }
 
+  groupUsage(group: DescriptionGroup): string {
+    const variants: string =
+      group.variantCount === 1 ? '1 description' : `${group.variantCount} descriptions`;
+    const uses: string =
+      group.transactionCount === 1 ? '1 transaction' : `${group.transactionCount} transactions`;
+    return `${variants} · ${uses}`;
+  }
+
+  /** The group's variants that can be ticked: one already linked to this merchant has nothing to do. */
+  selectable(group: DescriptionGroup): TransactionDescription[] {
+    return group.variants.filter(
+      (row: TransactionDescription): boolean => !this.alreadyLinkedHere(row),
+    );
+  }
+
+  /** Whether every, some or none of a group's selectable variants are ticked. */
+  groupState(group: DescriptionGroup): 'all' | 'some' | 'none' {
+    const rows: TransactionDescription[] = this.selectable(group);
+    const on: number = rows.filter((row: TransactionDescription): boolean =>
+      this.ticked().has(row.description),
+    ).length;
+    if (on === 0) return 'none';
+    return on === rows.length ? 'all' : 'some';
+  }
+
   toggleTick(description: string): void {
     const next: Set<string> = new Set<string>(this.ticked());
     if (next.has(description)) next.delete(description);
     else next.add(description);
-    this.ticked.set(next);
+    this.setTicks(next);
   }
 
-  /** Ticks every shown description that can be linked, or clears them all when they already are. */
-  toggleSelectAll(): void {
+  /** Ticks every selectable variant of a group, or clears them when they all already are. */
+  toggleGroup(group: DescriptionGroup): void {
     const next: Set<string> = new Set<string>(this.ticked());
-    if (this.allSelected()) {
-      this.selectableRows().forEach((row: TransactionDescription): void => {
-        next.delete(row.description);
-      });
-    } else {
-      this.selectableRows().forEach((row: TransactionDescription): void => {
-        next.add(row.description);
-      });
-    }
-    this.ticked.set(next);
+    const tick: boolean = this.groupState(group) !== 'all';
+    this.selectable(group).forEach((row: TransactionDescription): void => {
+      if (tick) next.add(row.description);
+      else next.delete(row.description);
+    });
+    this.setTicks(next);
   }
 
   onSearch(value: string): void {
@@ -157,6 +185,34 @@ export class DescriptionPickerComponent {
 
   submit(): void {
     if (this.tickedCount() === 0 || this.linking()) return;
-    this.link.emit([...this.ticked()]);
+    const descriptions: string[] = [...this.ticked()];
+    this.pending.set(descriptions);
+    this.link.emit(descriptions);
+  }
+
+  /** "Leave those out": the warned descriptions are unticked, and the rest linked if any are left. */
+  onLeaveOut(remaining: string[]): void {
+    this.ticked.set(new Set(remaining));
+    if (remaining.length === 0) this.dismissGuard();
+    else this.linkChecked.emit(remaining);
+  }
+
+  /** Cancels the guard and puts focus back where linking continues, since its buttons go away. */
+  dismissGuard(): void {
+    this.warningsDismissed.emit();
+    afterNextRender(
+      (): void => {
+        const link: HTMLButtonElement | undefined = this.linkButton()?.nativeElement;
+        if (link && !link.disabled) link.focus();
+        else this.searchField()?.nativeElement.focus();
+      },
+      { injector: this.injector },
+    );
+  }
+
+  /** A tick change makes any shown warnings out of date, so they are dropped. */
+  private setTicks(next: ReadonlySet<string>): void {
+    this.ticked.set(next);
+    if (this.guarding()) this.warningsDismissed.emit();
   }
 }
