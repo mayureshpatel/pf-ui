@@ -5,6 +5,7 @@ import { environment } from '@env';
 import {
   MerchantRule,
   MerchantRuleChangePreview,
+  MerchantRuleCoverage,
   MerchantRuleCreateRequest,
   MerchantRuleDraft,
   MerchantRuleMatchPreview,
@@ -85,6 +86,18 @@ export class MerchantRuleApiService {
     return this.http.post<MerchantRuleMatchPreview>(
       `${this.apiUrl}/match-preview`,
       body,
+      SKIP_TOAST_OPTIONS,
+    );
+  }
+
+  /**
+   * Which of the descriptions the merchant's own rules already win, as import would pick (PF-984):
+   * a description another merchant's rule ranks first for is not covered. Read-only.
+   */
+  coverage(merchantId: number, descriptions: string[]): Observable<MerchantRuleCoverage> {
+    return this.http.post<MerchantRuleCoverage>(
+      `${this.apiUrl}/coverage`,
+      { merchantId, descriptions },
       SKIP_TOAST_OPTIONS,
     );
   }

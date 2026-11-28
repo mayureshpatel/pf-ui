@@ -26,6 +26,12 @@
     (dismiss)="dismissLastLink()"
   />
 
+  @if (offer(); as pending) {
+    @if (offerAfter(null)) {
+      <ng-container *ngTemplateOutlet="offerCard; context: { $implicit: pending }" />
+    }
+  }
+
   @if (loadFailed() && groups().length === 0 && !loading()) {
     <ng-container *ngTemplateOutlet="failedBlock" />
   } @else if (!loadedOnce()) {
@@ -180,6 +186,11 @@
             }
           </div>
         </li>
+        @if (offerAfter(group)) {
+          <li data-testid="rule-offer-row">
+            <ng-container *ngTemplateOutlet="offerCard; context: { $implicit: offer() }" />
+          </li>
+        }
       }
     </ul>
 
@@ -215,4 +226,14 @@
       Retry
     </button>
   </div>
+</ng-template>
+
+<ng-template #offerCard let-pending>
+  <app-rule-offer
+    [merchant]="pending.merchant"
+    [descriptions]="pending.descriptions"
+    [initialKeyword]="pending.key"
+    (created)="closeOffer(true)"
+    (skip)="closeOffer(false)"
+  />
 </ng-template>

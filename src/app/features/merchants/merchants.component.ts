@@ -50,6 +50,7 @@ import {
   LookAlikeWarning,
   Merchant,
   MerchantDescriptionLink,
+  TransactionDescription,
 } from '@models/merchant.model';
 import { PageResponse } from '@models/transaction.model';
 import { MerchantListComponent } from './components/merchant-list/merchant-list.component';
@@ -77,8 +78,10 @@ import {
 } from './components/merchant-tabs/merchant-tabs.component';
 import {
   CreateForGroup,
+  RuleOffer,
   UnlinkedGroupsComponent,
 } from './components/unlinked-groups/unlinked-groups.component';
+import { RuleOfferComponent } from './components/rule-offer/rule-offer.component';
 import { MerchantRulesComponent } from '@features/settings/merchant-rules/merchant-rules.component';
 import { SettingsGuard } from '@features/settings/settings.guard';
 
@@ -119,6 +122,7 @@ const DEBOUNCE_MS = 300;
     MerchantTabsComponent,
     UnlinkedGroupsComponent,
     MerchantRulesComponent,
+    RuleOfferComponent,
   ],
   // the rules tab registers its unsaved-changes check here, as it does on the Settings page
   providers: [SettingsGuard],
@@ -203,6 +207,21 @@ export class MerchantsComponent implements OnInit {
     if (mode === 'picker' && this.pickerTarget()?.id === last.merchantId) return last.link;
     return null;
   });
+  /**
+   * The rule offered after a picker link that covered exactly one group (PF-984), shown in the
+   * merchant's panel the link returns to.
+   */
+  readonly pickerOffer: WritableSignal<RuleOffer | null> = signal<RuleOffer | null>(null);
+  readonly shownOffer: Signal<RuleOffer | null> = computed((): RuleOffer | null => {
+    const offer: RuleOffer | null = this.pickerOffer();
+    return offer && this.mode() === 'merchant' && this.selected()?.id === offer.merchant.id
+      ? offer
+      : null;
+  });
+  /** An offer the panel no longer shows (another merchant, another step) is dropped, never brought back. */
+  private readonly dropHiddenOffer = effect((): void => {
+    if (this.pickerOffer() && !this.shownOffer()) this.pickerOffer.set(null);
+  });
   /** Merchants offered by the "Link to" choice when the picker opens from the overview. */
   readonly targetOptions: WritableSignal<Merchant[]> = signal([]);
 
@@ -238,6 +257,7 @@ export class MerchantsComponent implements OnInit {
   private readonly editForm = viewChild<MerchantEditFormComponent>('editForm');
   private readonly picker = viewChild(DescriptionPickerComponent);
   private readonly unlinkedGroups = viewChild(UnlinkedGroupsComponent);
+  private readonly offerCard = viewChild(RuleOfferComponent);
   /** The Unlinked group the add form was opened for, to hand the new merchant back to. */
   private createFor: string | null = null;
   private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
@@ -737,6 +757,14 @@ export class MerchantsComponent implements OnInit {
     this.linkTo(target, descriptions);
   }
 
+  /** The picker's offer was answered: it closes and focus goes back to the panel. */
+  closePickerOffer(created: boolean): void {
+    if (!this.pickerOffer()) return;
+    this.pickerOffer.set(null);
+    if (created) this.loadStats();
+    afterNextRender((): void => this.panel()?.focus(), { injector: this.injector });
+  }
+
   dismissPickerWarnings(): void {
     this.pickerWarnings.set([]);
   }
@@ -748,6 +776,8 @@ export class MerchantsComponent implements OnInit {
   undoLastLink(): void {
     const last = this.lastLink();
     if (!last || this.linkUndoing() || this.linkUndone()) return;
+    // the offer was for the link being taken back
+    this.pickerOffer.set(null);
     this.linkUndoing.set(true);
     undoLink(this.merchantApi, last.link)
       .pipe(
@@ -775,6 +805,9 @@ export class MerchantsComponent implements OnInit {
    * its descriptions ticked in the picker and the toast names the counts and the first message.
    */
   private linkTo(target: Merchant, descriptions: string[]): void {
+    this.pickerOffer.set(null);
+    const group: DescriptionGroup | null = this.onlyGroupOf(descriptions);
+    const focusAtStart: Element | null = document.activeElement;
     linkInBatches(this.merchantApi, target.id, descriptions)
       .pipe(
         takeUntilDestroyed(this.destroyRef),
@@ -798,6 +831,7 @@ export class MerchantsComponent implements OnInit {
             this.selected.set(target);
             this.go('merchant');
             this.loadLinks(target.id);
+            if (group) this.offerRule(group, target, descriptions, focusAtStart);
           } else if (this.selected()?.id === target.id) {
             this.loadLinks(target.id);
           }
@@ -812,6 +846,39 @@ export class MerchantsComponent implements OnInit {
         }
         if (this.selected()?.id === target.id) this.loadLinks(target.id);
       });
+  }
+
+  /**
+   * The one picker group every description belongs to, or null when they span several: a rule is
+   * offered only for a single group, whose key is the keyword.
+   */
+  private onlyGroupOf(descriptions: string[]): DescriptionGroup | null {
+    const wanted = new Set<string>(descriptions);
+    const touched: DescriptionGroup[] = this.pickerGroups().filter((g: DescriptionGroup): boolean =>
+      g.variants.some((v: TransactionDescription): boolean => wanted.has(v.description)),
+    );
+    return touched.length === 1 ? touched[0] : null;
+  }
+
+  /** Offers a rule for the group just linked, with focus on the offer once the panel shows it. */
+  private offerRule(
+    group: DescriptionGroup,
+    merchant: Merchant,
+    descriptions: string[],
+    focusAtStart: Element | null,
+  ): void {
+    this.pickerOffer.set({
+      key: group.key,
+      merchant,
+      descriptions,
+      anchorKey: null,
+      nextKey: null,
+    });
+    // runs after go()'s own focus move, so the offer ends up with focus, unless the user moved
+    // focus elsewhere while the link ran (it was still in the picker, or dropped to the page)
+    const now: Element | null = document.activeElement;
+    if (now !== focusAtStart && now !== null && now !== document.body) return;
+    afterNextRender((): void => this.offerCard()?.focus(), { injector: this.injector });
   }
 
   private showPicker(target: Merchant | null, unlinkedOnly: boolean): void {

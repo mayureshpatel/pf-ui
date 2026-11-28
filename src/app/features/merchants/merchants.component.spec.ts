@@ -12,6 +12,7 @@ import { MerchantApiService } from './services/merchant-api.service';
 import { MerchantEditFormComponent } from './components/merchant-edit-form/merchant-edit-form.component';
 import { UnlinkedGroupsComponent } from './components/unlinked-groups/unlinked-groups.component';
 import { MerchantRulesComponent } from '@features/settings/merchant-rules/merchant-rules.component';
+import { MerchantRuleApiService } from '@features/settings/merchant-rules/merchant-rule-api.service';
 import { SettingsGuard } from '@features/settings/settings.guard';
 import { TransactionApiService } from '@features/transactions/services/transaction-api.service';
 import { AuthService } from '@core/auth/auth.service';
@@ -103,6 +104,9 @@ describe('MerchantsComponent', () => {
     Pick<TransactionApiService, 'getDescriptions' | 'getDescriptionGroups'>
   >;
   let mockToast: Mocked<Pick<ToastService, 'success' | 'error'>>;
+  let mockRuleApi: Mocked<
+    Pick<MerchantRuleApiService, 'coverage' | 'previewMatches' | 'createRule' | 'createAndApply'>
+  >;
   let mockConfirmation: { confirm: Mock<(confirmation: Confirmation) => void> };
   let mockRouter: Mocked<Pick<Router, 'navigate'>>;
   let queryParams: BehaviorSubject<Params>;
@@ -168,6 +172,12 @@ describe('MerchantsComponent', () => {
       ),
     };
     mockToast = { success: vi.fn(), error: vi.fn() };
+    mockRuleApi = {
+      coverage: vi.fn().mockReturnValue(of({ merchantId: 1, coveredDescriptions: [], rules: [] })),
+      previewMatches: vi.fn().mockReturnValue(new Subject()),
+      createRule: vi.fn().mockReturnValue(of(9)),
+      createAndApply: vi.fn(),
+    };
     mockConfirmation = { confirm: vi.fn() };
     mockRouter = { navigate: vi.fn() };
     // the test browser has no matchMedia (PF-989); these specs describe the desktop layout
@@ -188,6 +198,7 @@ describe('MerchantsComponent', () => {
         { provide: TransactionApiService, useValue: mockTransactions },
         { provide: AuthService, useValue: { user: () => ({ id: 1 }) } },
         { provide: ToastService, useValue: mockToast },
+        { provide: MerchantRuleApiService, useValue: mockRuleApi },
         { provide: ConfirmationService, useValue: mockConfirmation },
         { provide: Router, useValue: mockRouter },
         {
@@ -848,6 +859,73 @@ describe('MerchantsComponent', () => {
       expect(mockTransactions.getDescriptions).toHaveBeenCalledWith(
         expect.objectContaining({ unlinkedOnly: true, size: 1 }),
       );
+    });
+
+    describe('the rule offer', () => {
+      const offer = (): HTMLElement | null =>
+        fixture.nativeElement.querySelector('[data-testid=rule-offer]');
+
+      beforeEach(() => {
+        component.openMerchant(amazon);
+        component.openPicker(amazon, false);
+      });
+
+      it('should offer a rule in the merchant panel when the link covered one group', async () => {
+        // act
+        component.onLink(['KROGER FUEL CTR #1']);
+        fixture.detectChanges();
+        await fixture.whenStable();
+
+        // assert & verify
+        expect(component.mode()).toBe('merchant');
+        expect(component.shownOffer()?.key).toBe('kroger fuel ctr');
+        expect(mockRuleApi.coverage).toHaveBeenCalledWith(1, ['KROGER FUEL CTR #1']);
+        expect(offer()?.textContent?.replace(/\s+/g, ' ')).toContain(
+          'Also create rule: `kroger fuel ctr` → Amazon',
+        );
+        expect(document.activeElement).toBe(offer());
+        expect(mockRuleApi.createRule).not.toHaveBeenCalled();
+
+        // act
+        (
+          fixture.nativeElement.querySelector('[data-testid=rule-offer-skip]') as HTMLElement
+        ).click();
+        fixture.detectChanges();
+
+        // assert & verify
+        expect(offer()).toBeNull();
+      });
+
+      it('should drop the offer for good once another merchant is opened', async () => {
+        // arrange
+        component.onLink(['KROGER FUEL CTR #1']);
+        fixture.detectChanges();
+        await fixture.whenStable();
+
+        // act
+        component.openMerchant(costco);
+        fixture.detectChanges();
+        component.openMerchant(amazon);
+        fixture.detectChanges();
+
+        // assert & verify
+        expect(component.pickerOffer()).toBeNull();
+        expect(offer()).toBeNull();
+      });
+
+      it('should offer no rule when the link spanned several groups', () => {
+        // arrange
+        component.pickerGroups.set([group('KROGER #1'), group('COSTCO #12')]);
+
+        // act
+        component.onLink(['KROGER #1', 'COSTCO #12']);
+        fixture.detectChanges();
+
+        // assert & verify
+        expect(component.mode()).toBe('merchant');
+        expect(component.pickerOffer()).toBeNull();
+        expect(offer()).toBeNull();
+      });
     });
 
     it('should keep failed links in the picker and toast the first message', () => {

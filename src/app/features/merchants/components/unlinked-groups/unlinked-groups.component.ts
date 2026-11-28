@@ -13,6 +13,7 @@ import {
   OutputEmitterRef,
   Signal,
   signal,
+  viewChild,
   viewChildren,
   WritableSignal,
 } from '@angular/core';
@@ -44,6 +45,7 @@ import { chunk } from '../../utils/merchant-helpers';
 import { LinkGuardComponent } from '../link-guard/link-guard.component';
 import { LinkResultComponent } from '../link-result/link-result.component';
 import { MerchantComboboxComponent } from '../merchant-combobox/merchant-combobox.component';
+import { RuleOfferComponent } from '../rule-offer/rule-offer.component';
 
 /** How many groups load at first, and how many more each "Show more" adds. */
 export const GROUP_PAGE_SIZE = 25;
@@ -56,6 +58,25 @@ const SEARCH_DEBOUNCE_MS = 300;
 export interface CreateForGroup {
   key: string;
   name: string;
+}
+
+/**
+ * The rule offered after a group was linked (PF-984), shown in the list where the group was.
+ * `anchorKey` is the row it follows (null: above the list); `nextKey` is the row focus moves to
+ * once the offer is answered.
+ */
+export interface RuleOffer {
+  key: string;
+  merchant: Merchant;
+  descriptions: string[];
+  anchorKey: string | null;
+  nextKey: string | null;
+}
+
+/** Where a link leaves the list: the row an offer would follow, and the row to focus next. */
+interface AfterRemoval {
+  anchorKey: string | null;
+  nextKey: string | null;
 }
 
 /** A link held back by the look-alike guard until the user decides. */
@@ -75,6 +96,7 @@ interface PendingGuard {
     MerchantComboboxComponent,
     LinkGuardComponent,
     LinkResultComponent,
+    RuleOfferComponent,
   ],
   templateUrl: './unlinked-groups.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -114,6 +136,8 @@ export class UnlinkedGroupsComponent implements OnInit {
   readonly lastLink: WritableSignal<LastLink | null> = signal<LastLink | null>(null);
   readonly undoing: WritableSignal<boolean> = signal(false);
   readonly undone: WritableSignal<UndoOutcome | null> = signal<UndoOutcome | null>(null);
+  /** The rule offered after the last link, until it is created or skipped. */
+  readonly offer: WritableSignal<RuleOffer | null> = signal<RuleOffer | null>(null);
   /** The group whose row takes Tab (roving focus). */
   readonly activeKey: WritableSignal<string | null> = signal<string | null>(null);
 
@@ -134,6 +158,7 @@ export class UnlinkedGroupsComponent implements OnInit {
 
   private readonly rows = viewChildren<ElementRef<HTMLElement>>('row');
   private readonly comboboxes = viewChildren(MerchantComboboxComponent);
+  private readonly offerCard = viewChild(RuleOfferComponent);
 
   private size: number = GROUP_PAGE_SIZE;
   /** Descriptions still unlinked in all, as last loaded and less what was linked since. */
@@ -329,6 +354,34 @@ export class UnlinkedGroupsComponent implements OnInit {
     this.rows()[index]?.nativeElement.focus();
   }
 
+  /**
+   * Where the offer shows: after its anchor row, or above the list when that row is gone (a reload
+   * since) or there was none.
+   */
+  offerAfter(group: DescriptionGroup | null): boolean {
+    const offer: RuleOffer | null = this.offer();
+    if (!offer) return false;
+    const anchored: boolean =
+      offer.anchorKey !== null &&
+      this.groups().some((g: DescriptionGroup): boolean => g.key === offer.anchorKey);
+    return group === null ? !anchored : anchored && offer.anchorKey === group.key;
+  }
+
+  /** The offer was answered (a rule created, or skipped): it closes and focus moves to the next group. */
+  closeOffer(created: boolean): void {
+    const offer: RuleOffer | null = this.offer();
+    if (!offer) return;
+    this.offer.set(null);
+    if (created) this.linked.emit();
+    const index: number = this.groups().findIndex(
+      (g: DescriptionGroup): boolean => g.key === offer.nextKey,
+    );
+    afterNextRender(
+      { read: (): void => this.focusRow(index >= 0 ? index : 0) },
+      { injector: this.injector },
+    );
+  }
+
   /** Escape in a group's merchant field hands focus back to its row. */
   backToRow(group: DescriptionGroup): void {
     const index: number = this.groups().indexOf(group);
@@ -377,6 +430,7 @@ export class UnlinkedGroupsComponent implements OnInit {
       return;
     }
     this.guard.set(null);
+    this.offer.set(null);
     this.setLinking(group.key, true);
     this.merchantApi
       .checkDescriptionLinks(merchant.id, descriptions)
@@ -432,6 +486,8 @@ export class UnlinkedGroupsComponent implements OnInit {
   undoLastLink(): void {
     const last: LastLink | null = this.lastLink();
     if (!last || this.undoing() || this.undone()) return;
+    // the offer was for the link being taken back
+    this.offer.set(null);
     this.undoing.set(true);
     undoLink(this.merchantApi, last)
       .pipe(
@@ -487,8 +543,9 @@ export class UnlinkedGroupsComponent implements OnInit {
 
     if (done.size > 0) {
       this.linked.emit();
-      this.removeVariants(group, done, focusAtStart);
+      const after: AfterRemoval | null = this.removeVariants(group, done);
       if (this.loading()) this.load();
+      if (after) this.offerRule(group, merchant, [...done], after, focusAtStart);
     }
     const finished: LastLink | null = lastLinkOf(merchant.name, outcomes);
     if (finished) {
@@ -499,15 +556,41 @@ export class UnlinkedGroupsComponent implements OnInit {
     this.toast.error(`Linked ${done.size}, ${failedCount} failed: ${failed[0].message}`);
   }
 
-  /** Takes linked variants out of a group (and the group out of the list once it is empty). */
-  private removeVariants(
+  /**
+   * Offers a rule for the group just linked, in the list where the group was, with focus on it so
+   * Enter creates and Escape skips.
+   */
+  private offerRule(
     group: DescriptionGroup,
-    done: ReadonlySet<string>,
+    merchant: Merchant,
+    descriptions: string[],
+    after: AfterRemoval,
     focusAtStart: Element | null,
   ): void {
+    this.offer.set({
+      key: group.key,
+      merchant,
+      descriptions,
+      anchorKey: after.anchorKey,
+      nextKey: after.nextKey,
+    });
+    afterNextRender(
+      (): void => {
+        if (!this.mayMoveFocus(focusAtStart)) return;
+        this.offerCard()?.focus();
+      },
+      { injector: this.injector },
+    );
+  }
+
+  /**
+   * Takes linked variants out of a group (and the group out of the list once it is empty).
+   * @returns where that leaves the list, or null when the group is no longer listed
+   */
+  private removeVariants(group: DescriptionGroup, done: ReadonlySet<string>): AfterRemoval | null {
     const list: DescriptionGroup[] = this.groups();
     const index: number = list.findIndex((g: DescriptionGroup): boolean => g.key === group.key);
-    if (index < 0) return;
+    if (index < 0) return null;
     const current: DescriptionGroup = list[index];
     const left: TransactionDescription[] = current.variants.filter(
       (v: TransactionDescription): boolean => !done.has(v.description),
@@ -529,8 +612,10 @@ export class UnlinkedGroupsComponent implements OnInit {
         ),
       };
       this.groups.set(next);
-      this.backToRowAfterRender(current.key, focusAtStart);
-      return;
+      return {
+        anchorKey: current.key,
+        nextKey: list[index + 1]?.key ?? current.key,
+      };
     }
 
     const next: DescriptionGroup[] = list.filter((_, i: number): boolean => i !== index);
@@ -543,25 +628,19 @@ export class UnlinkedGroupsComponent implements OnInit {
     });
     const following: DescriptionGroup | undefined = next[index] ?? next[index - 1];
     this.activeKey.set(following?.key ?? null);
-    if (following) this.backToRowAfterRender(following.key, focusAtStart);
+    return {
+      anchorKey: next[index - 1]?.key ?? null,
+      nextKey: following?.key ?? null,
+    };
   }
 
   /**
-   * Focuses a row once it has rendered, unless the user moved focus elsewhere while the link ran:
-   * focus still where it was, or dropped to the page because its row left, means it is ours to move.
+   * Whether focus is still ours to move once a link finished: still where it was, or dropped to
+   * the page because its row left. Focus the user moved elsewhere meanwhile is left alone.
    */
-  private backToRowAfterRender(key: string, focusAtStart: Element | null): void {
-    afterNextRender(
-      (): void => {
-        const now: Element | null = document.activeElement;
-        if (now !== focusAtStart && now !== null && now !== document.body) return;
-        const index: number = this.groups().findIndex(
-          (g: DescriptionGroup): boolean => g.key === key,
-        );
-        if (index >= 0) this.focusRow(index);
-      },
-      { injector: this.injector },
-    );
+  private mayMoveFocus(focusAtStart: Element | null): boolean {
+    const now: Element | null = document.activeElement;
+    return now === focusAtStart || now === null || now === document.body;
   }
 
   /** Asks for merchant suggestions for any loaded group name that has none yet. */

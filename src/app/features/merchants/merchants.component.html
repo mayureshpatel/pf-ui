@@ -120,6 +120,16 @@
             (undo)="undoLastLink()"
             (dismiss)="dismissLastLink()"
           />
+          @if (shownOffer(); as offer) {
+            <app-rule-offer
+              class="mb-3 block"
+              [merchant]="offer.merchant"
+              [descriptions]="offer.descriptions"
+              [initialKeyword]="offer.key"
+              (created)="closePickerOffer(true)"
+              (skip)="closePickerOffer(false)"
+            />
+          }
           @switch (mode()) {
             @case ('overview') {
               <app-merchant-overview
